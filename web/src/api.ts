@@ -1,0 +1,44 @@
+let csrf: string | null = null;
+
+export class ApiError extends Error {
+  constructor(public status: number, message: string, public errors?: Record<string, string[]>) {
+    super(message);
+  }
+}
+
+async function ensureCsrf(force = false) {
+  if (csrf && !force) return csrf;
+  const r = await fetch('/api/auth/csrf', { credentials: 'same-origin' });
+  csrf = (await r.json()).token;
+  return csrf!;
+}
+
+export async function api<T = unknown>(method: string, url: string, body?: unknown): Promise<T> {
+  const headers: Record<string, string> = {};
+  const isForm = body instanceof FormData;
+  if (method !== 'GET') headers['X-CSRF-TOKEN'] = await ensureCsrf();
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';
+  const send = () =>
+    fetch(url, { method, headers, credentials: 'same-origin', body: body === undefined ? undefined : isForm ? body : JSON.stringify(body) });
+  let r = await send();
+  if (r.status === 400 && method !== 'GET') {
+    const peek = await r.clone().json().catch(() => null);
+    if (peek?.title?.includes('CSRF')) {
+      headers['X-CSRF-TOKEN'] = await ensureCsrf(true);
+      r = await send();
+    }
+  }
+  if (!r.ok) {
+    const p = await r.json().catch(() => ({}));
+    throw new ApiError(r.status, p.title ?? `Request failed (${r.status})`, p.errors);
+  }
+  if (r.status === 204) return undefined as T;
+  const text = await r.text();
+  return (text ? JSON.parse(text) : undefined) as T;
+}
+
+export const get = <T,>(url: string) => api<T>('GET', url);
+export const post = <T = unknown,>(url: string, body?: unknown) => api<T>('POST', url, body ?? {});
+export const put = <T = unknown,>(url: string, body: unknown) => api<T>('PUT', url, body);
+export const del = <T = unknown,>(url: string) => api<T>('DELETE', url);
+export const resetCsrf = () => { csrf = null; };
