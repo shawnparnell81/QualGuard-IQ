@@ -15,6 +15,7 @@ The application and organization names are configuration (Organization settings,
 | `src/QualGuardIQ.Infrastructure` | EF Core (PostgreSQL), Identity, audit trail, numbering, storage |
 | `src/QualGuardIQ.Api` | REST API, authentication, authorization, OpenAPI |
 | `src/QualGuardIQ.Worker` | Background jobs (Hangfire on PostgreSQL) |
+| `web` | React web application |
 | `tests/QualGuardIQ.Tests` | Unit, integration and API tests against a local test database |
 
 ## Run locally (without Docker)
@@ -33,6 +34,14 @@ Requirements: .NET 10 SDK, PostgreSQL 18, MinIO.
    Migrations and configuration seeding run on startup in Development.
 5. Start the worker: `cd src/QualGuardIQ.Worker && DOTNET_ENVIRONMENT=Development dotnet run`.
 6. Health: `http://localhost:5080/health/ready`. API description: `http://localhost:5080/openapi/v1.json`.
+
+## Web app (development)
+
+```
+cd web
+npm install
+npm run dev        # http://localhost:5173, proxies /api to http://localhost:5080
+```
 
 ## Run with Docker
 
