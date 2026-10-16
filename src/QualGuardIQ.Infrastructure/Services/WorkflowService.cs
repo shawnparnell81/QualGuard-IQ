@@ -21,7 +21,7 @@ public sealed class WorkflowService(
     public async Task<ApprovalRequest> SubmitAsync(string recordType, Guid recordId, CancellationToken ct)
     {
         var record = await records.RequireEditAsync(recordType, recordId, ct);
-        var route = await db.ApprovalRoutes.Include(r => r.Steps).FirstOrDefaultAsync(r => r.RecordType == record.Type, ct)
+        var route = await db.ApprovalRoutes.Include(r => r.Steps).FirstOrDefaultAsync(r => r.RecordType == record.Type && r.IsActive, ct)
             ?? throw new AppException($"No approval route is configured for {record.Type}. An administrator must set one up.");
         if (route.Steps.Count == 0) throw new AppException("The approval route has no steps.");
         if (await db.ApprovalRequests.AnyAsync(a => a.RecordType == record.Type && a.RecordId == record.Id && a.Status == ApprovalStatus.Pending, ct))

@@ -13,7 +13,7 @@ using QualGuardIQ.Infrastructure.Persistence;
 namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261016234030_SharedEnginesAndDocuments")]
+    [Migration("20261016234252_SharedEnginesAndDocuments")]
     partial class SharedEnginesAndDocuments
     {
         /// <inheritdoc />
@@ -217,7 +217,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Common.NumberSequence", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<long>("NextValue")
@@ -261,7 +260,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Documents.ControlledDocument", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("ArchivedAt")
@@ -361,7 +359,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Documents.DocumentRevision", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("ApprovedAt")
@@ -445,7 +442,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Organization.Department", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("ArchivedAt")
@@ -496,7 +492,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Organization.OrganizationSettings", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("ApplicationName")
@@ -552,7 +547,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Organization.Site", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("Address")
@@ -603,7 +597,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Security.Role", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -703,7 +696,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Security.UserRoleAssignment", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -758,7 +750,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.ActionItem", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("ActionType")
@@ -858,7 +849,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.ApprovalDecision", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<bool>("Approved")
@@ -905,7 +895,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.ApprovalRequest", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("CompletedAt")
@@ -978,7 +967,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.ApprovalRoute", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -986,6 +974,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uuid");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1012,10 +1003,17 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
-                    b.HasIndex("RecordType")
+                    b.HasIndex("RecordType", "Version")
                         .IsUnique();
+
+                    b.HasIndex(new[] { "RecordType" }, "ux_route_active")
+                        .IsUnique()
+                        .HasFilter("\"IsActive\"");
 
                     b.ToTable("approval_routes", "qms");
                 });
@@ -1023,7 +1021,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.ApprovalRouteStep", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<string>("Name")
@@ -1058,7 +1055,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.Attachment", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("ArchivedAt")
@@ -1167,7 +1163,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.Comment", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("AuthorId")
@@ -1219,7 +1214,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.CustomFieldDefinition", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -1282,7 +1276,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.CustomFieldValues", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -1380,7 +1373,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.RecordLink", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")
@@ -1524,7 +1516,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.Tag", b =>
                 {
                     b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset>("CreatedAt")

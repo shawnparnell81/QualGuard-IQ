@@ -46,7 +46,7 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
         }
         foreach (var (type, name, perm) in DefaultRoutes)
         {
-            if (!await db.ApprovalRoutes.AnyAsync(r => r.RecordType == type, ct))
+            if (!await db.ApprovalRoutes.AnyAsync(r => r.RecordType == type && r.IsActive, ct))
                 db.ApprovalRoutes.Add(new ApprovalRoute
                 {
                     RecordType = type, Name = name, PreventSelfApproval = true,

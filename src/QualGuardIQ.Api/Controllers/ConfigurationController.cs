@@ -16,14 +16,14 @@ namespace QualGuardIQ.Api.Controllers;
 public sealed class ConfigurationController(AppDbContext db, IRecordRegistry records) : ControllerBase
 {
     public sealed record StepDto(int Order, string Name, string RequiredPermission, string SignatureMeaning);
-    public sealed record RouteDto(Guid Id, string RecordType, string Name, bool PreventSelfApproval, IReadOnlyList<StepDto> Steps);
+    public sealed record RouteDto(Guid Id, string RecordType, string Name, int Version, bool PreventSelfApproval, IReadOnlyList<StepDto> Steps);
     public sealed record SaveRouteRequest(string Name, bool PreventSelfApproval, IReadOnlyList<StepDto> Steps);
     public sealed record SaveFieldRequest(string RecordType, string Key, string Label, CustomFieldType FieldType, bool IsRequired, List<string>? Options, int SortOrder);
 
     [HttpGet("approval-routes")]
     public async Task<IEnumerable<RouteDto>> Routes(CancellationToken ct) =>
-        (await db.ApprovalRoutes.AsNoTracking().Include(r => r.Steps).OrderBy(r => r.RecordType).ToListAsync(ct))
-        .Select(r => new RouteDto(r.Id, r.RecordType, r.Name, r.PreventSelfApproval, r.Steps.OrderBy(s => s.Order).Select(s => new StepDto(s.Order, s.Name, s.RequiredPermission, s.SignatureMeaning)).ToList()));
+        (await db.ApprovalRoutes.AsNoTracking().Include(r => r.Steps).Where(r => r.IsActive).OrderBy(r => r.RecordType).ToListAsync(ct))
+        .Select(r => new RouteDto(r.Id, r.RecordType, r.Name, r.Version, r.PreventSelfApproval, r.Steps.OrderBy(s => s.Order).Select(s => new StepDto(s.Order, s.Name, s.RequiredPermission, s.SignatureMeaning)).ToList()));
 
     /// <summary>Replaces a route's steps. Requests already in progress keep the step numbers they started with.</summary>
     [HttpPut("approval-routes/{recordType}")]
@@ -37,16 +37,20 @@ public sealed class ConfigurationController(AppDbContext db, IRecordRegistry rec
             if (!Permissions.All.Contains(s.RequiredPermission)) throw new AppException($"Unknown permission '{s.RequiredPermission}'.");
             if (string.IsNullOrWhiteSpace(s.Name) || string.IsNullOrWhiteSpace(s.SignatureMeaning)) throw new AppException("Each step needs a name and a signature meaning.");
         }
-        if (await db.ApprovalRequests.AnyAsync(a => a.RecordType == recordType && a.Status == ApprovalStatus.Pending, ct))
-            throw new ConflictException("Approvals are in progress for this record type. Finish or withdraw them before changing the route.");
-        var route = await db.ApprovalRoutes.Include(r => r.Steps).FirstOrDefaultAsync(r => r.RecordType == recordType, ct);
-        if (route is null) { route = new ApprovalRoute { RecordType = recordType }; db.ApprovalRoutes.Add(route); }
-        route.Name = req.Name;
-        route.PreventSelfApproval = req.PreventSelfApproval;
-        db.ApprovalRouteSteps.RemoveRange(route.Steps);
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var current = await db.ApprovalRoutes.FirstOrDefaultAsync(r => r.RecordType == recordType && r.IsActive, ct);
+        var version = 1;
+        if (current is not null)
+        {
+            current.IsActive = false;
+            version = await db.ApprovalRoutes.Where(r => r.RecordType == recordType).MaxAsync(r => r.Version, ct) + 1;
+            await db.SaveChangesAsync(ct);
+        }
+        var route = new ApprovalRoute { RecordType = recordType, Name = req.Name.Trim(), PreventSelfApproval = req.PreventSelfApproval, Version = version };
         route.Steps = req.Steps.Select(s => new ApprovalRouteStep { RouteId = route.Id, Order = s.Order, Name = s.Name.Trim(), RequiredPermission = s.RequiredPermission, SignatureMeaning = s.SignatureMeaning.Trim() }).ToList();
-        db.Entry(route).Property(r => r.UpdatedAt).IsModified = true;
+        db.ApprovalRoutes.Add(route);
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         return NoContent();
     }
 

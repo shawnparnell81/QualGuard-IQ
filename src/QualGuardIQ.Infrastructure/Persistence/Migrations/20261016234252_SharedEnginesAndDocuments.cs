@@ -71,6 +71,8 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     RecordType = table.Column<string>(type: "character varying(50)", maxLength: 50, nullable: false),
                     Name = table.Column<string>(type: "character varying(100)", maxLength: 100, nullable: false),
                     PreventSelfApproval = table.Column<bool>(type: "boolean", nullable: false),
+                    IsActive = table.Column<bool>(type: "boolean", nullable: false),
+                    Version = table.Column<int>(type: "integer", nullable: false),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
@@ -546,11 +548,19 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_approval_routes_RecordType",
+                name: "IX_approval_routes_RecordType_Version",
+                schema: "qms",
+                table: "approval_routes",
+                columns: new[] { "RecordType", "Version" },
+                unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "ux_route_active",
                 schema: "qms",
                 table: "approval_routes",
                 column: "RecordType",
-                unique: true);
+                unique: true,
+                filter: "\"IsActive\"");
 
             migrationBuilder.CreateIndex(
                 name: "IX_attachments_LineageId_Version",

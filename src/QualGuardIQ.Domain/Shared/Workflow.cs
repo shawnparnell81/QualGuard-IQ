@@ -8,6 +8,9 @@ public class ApprovalRoute : Entity, IAudited
     public string RecordType { get; set; } = "";
     public string Name { get; set; } = "";
     public bool PreventSelfApproval { get; set; } = true;
+    /// <summary>Routes are versioned: a change creates a new active route, and requests in progress keep the version they started on.</summary>
+    public bool IsActive { get; set; } = true;
+    public int Version { get; set; } = 1;
     public List<ApprovalRouteStep> Steps { get; set; } = [];
     public string AuditLabel => $"approval route {RecordType}";
 }

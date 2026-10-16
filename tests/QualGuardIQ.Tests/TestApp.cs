@@ -104,6 +104,12 @@ public sealed class ApiClient(HttpClient http)
         return req;
     }
 
+    public Task<HttpResponseMessage> SendWithCsrfAsync(HttpRequestMessage req)
+    {
+        if (_csrf is not null) req.Headers.Add("X-CSRF-TOKEN", _csrf);
+        return http.SendAsync(req);
+    }
+
     public Task<HttpResponseMessage> GetAsync(string url) => http.GetAsync(url);
     public Task<HttpResponseMessage> PostAsync(string url, object? body = null) => http.SendAsync(Req(HttpMethod.Post, url, body ?? new { }));
     public Task<HttpResponseMessage> PutAsync(string url, object body) => http.SendAsync(Req(HttpMethod.Put, url, body));

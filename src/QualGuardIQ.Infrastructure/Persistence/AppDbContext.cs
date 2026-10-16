@@ -50,6 +50,13 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
         {
             b.Entity(et.ClrType).Property(nameof(Entity.RowVersion)).IsRowVersion();
         }
+        // Ids are assigned in code (UUIDv7); tell EF so new children added through navigations are inserted, not updated.
+        foreach (var et in b.Model.GetEntityTypes())
+        {
+            var pk = et.FindPrimaryKey();
+            if (pk is { Properties.Count: 1 } && pk.Properties[0].ClrType == typeof(Guid) && pk.Properties[0].Name == "Id" && et.ClrType.Namespace!.StartsWith("QualGuardIQ.Domain"))
+                pk.Properties[0].ValueGenerated = Microsoft.EntityFrameworkCore.Metadata.ValueGenerated.Never;
+        }
 
         b.Entity<ApplicationUser>(e =>
         {
@@ -245,7 +252,8 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.ToTable("approval_routes");
             e.Property(x => x.RecordType).HasMaxLength(50).IsRequired();
             e.Property(x => x.Name).HasMaxLength(100).IsRequired();
-            e.HasIndex(x => x.RecordType).IsUnique();
+            e.HasIndex(x => x.RecordType, "ux_route_active").IsUnique().HasFilter("\"IsActive\"");
+            e.HasIndex(x => new { x.RecordType, x.Version }).IsUnique();
             e.HasMany(x => x.Steps).WithOne().HasForeignKey(s => s.RouteId).OnDelete(DeleteBehavior.Cascade);
         });
         b.Entity<ApprovalRouteStep>(e =>
