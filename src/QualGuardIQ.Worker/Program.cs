@@ -1,14 +1,35 @@
 using Hangfire;
 using Hangfire.PostgreSql;
+using QualGuardIQ.Application.Abstractions;
+using QualGuardIQ.Infrastructure;
+using QualGuardIQ.Infrastructure.Jobs;
 
-// Background job host. Jobs (notification delivery, due-date reminders, retention) are registered
-// by the modules that own them; this process only runs the Hangfire server.
+// Background job host: notification email delivery and scheduled releases.
 var builder = Host.CreateApplicationBuilder(args);
 var cs = builder.Configuration.GetConnectionString("Default") ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ICurrentUser, SystemCurrentUser>();
+builder.Services.AddInfrastructure(builder.Configuration);
+builder.Services.AddIdentityCore<QualGuardIQ.Infrastructure.Identity.ApplicationUser>()
+    .AddEntityFrameworkStores<QualGuardIQ.Infrastructure.Persistence.AppDbContext>();
+builder.Services.AddScoped<NotificationEmailJob>();
+builder.Services.AddScoped<DocumentReleaseJob>();
 builder.Services.AddHangfire(c => c
     .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
     .UseSimpleAssemblyNameTypeSerializer()
     .UseRecommendedSerializerSettings()
     .UsePostgreSqlStorage(o => o.UseNpgsqlConnection(cs), new PostgreSqlStorageOptions { SchemaName = "jobs" }));
 builder.Services.AddHangfireServer();
+builder.Services.AddHostedService<JobRegistration>();
 builder.Build().Run();
+
+sealed class JobRegistration(IRecurringJobManager jobs) : IHostedService
+{
+    public Task StartAsync(CancellationToken ct)
+    {
+        jobs.AddOrUpdate<NotificationEmailJob>("notification-email", j => j.RunAsync(CancellationToken.None), Cron.Minutely());
+        jobs.AddOrUpdate<DocumentReleaseJob>("document-release", j => j.RunAsync(CancellationToken.None), "5 * * * *");
+        return Task.CompletedTask;
+    }
+    public Task StopAsync(CancellationToken ct) => Task.CompletedTask;
+}
