@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using QualGuardIQ.Domain.Common;
 using QualGuardIQ.Domain.Organization;
 using QualGuardIQ.Domain.Security;
+using QualGuardIQ.Domain.Shared;
 using QualGuardIQ.Infrastructure.Identity;
 
 namespace QualGuardIQ.Infrastructure.Persistence;
@@ -43,6 +44,15 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
             if (!await db.NumberSequences.AnyAsync(s => s.RecordType == type && s.SiteId == null, ct))
                 db.NumberSequences.Add(new NumberSequence { RecordType = type, Prefix = prefix, Padding = 4, ResetYearly = false });
         }
+        foreach (var (type, name, perm) in DefaultRoutes)
+        {
+            if (!await db.ApprovalRoutes.AnyAsync(r => r.RecordType == type, ct))
+                db.ApprovalRoutes.Add(new ApprovalRoute
+                {
+                    RecordType = type, Name = name, PreventSelfApproval = true,
+                    Steps = [new ApprovalRouteStep { Order = 1, Name = "Approval", RequiredPermission = perm, SignatureMeaning = "Approved" }]
+                });
+        }
         await db.SaveChangesAsync(ct);
 
         var email = seed["AdminEmail"];
@@ -58,6 +68,13 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
             log.LogInformation("Initial administrator {Email} created", email);
         }
     }
+
+    /// <summary>Default one-step routes; administrators can add review steps.</summary>
+    public static readonly (string Type, string Name, string Permission)[] DefaultRoutes =
+    [
+        ("DocumentRevision", "Document revision approval", Permissions.DocumentsApprove),
+        ("DrawingRevision", "Drawing revision approval", Permissions.DrawingsApprove),
+    ];
 
     public static readonly (string Type, string Prefix)[] DefaultSequences =
     [

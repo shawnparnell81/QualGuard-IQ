@@ -29,4 +29,13 @@ public sealed class AccessService(AppDbContext db) : IAccessService
 
     public async Task<AccessScope> GetScopeAsync(Guid userId, string permission, CancellationToken ct = default) =>
         AccessResolver.Resolve(await GetGrantsAsync(userId, ct), permission);
+
+    public async Task<IReadOnlyList<Guid>> UsersWithPermissionAsync(string permission, Guid siteId, Guid? departmentId, CancellationToken ct = default) =>
+        await (
+            from a in db.UserRoleAssignments
+            join p in db.RolePermissions on a.RoleId equals p.RoleId
+            join u in db.Users on a.UserId equals u.Id
+            where p.Permission == permission && u.IsActive &&
+                  (a.SiteId == null || (a.SiteId == siteId && (a.DepartmentId == null || a.DepartmentId == departmentId)))
+            select a.UserId).Distinct().ToListAsync(ct);
 }

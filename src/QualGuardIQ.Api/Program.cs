@@ -95,6 +95,7 @@ if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
     await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
     await scope.ServiceProvider.GetRequiredService<Seeder>().SeedAsync();
 }
+await app.Services.GetRequiredService<QualGuardIQ.Infrastructure.Storage.IFileStorage>().EnsureReadyAsync(CancellationToken.None);
 
 app.UseForwardedHeaders();
 app.UseExceptionHandler();

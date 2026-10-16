@@ -16,6 +16,9 @@ public interface IAccessService
 
     /// <summary>Scope filter for list/search queries. AllSites=true means no site restriction.</summary>
     Task<AccessScope> GetScopeAsync(Guid userId, string permission, CancellationToken ct = default);
+
+    /// <summary>Active users who hold the permission for the given site/department.</summary>
+    Task<IReadOnlyList<Guid>> UsersWithPermissionAsync(string permission, Guid siteId, Guid? departmentId, CancellationToken ct = default);
 }
 
 public sealed record AccessScope(bool AllSites, IReadOnlySet<Guid> SiteIds, IReadOnlySet<(Guid Site, Guid Dept)> DepartmentPairs)

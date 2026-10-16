@@ -34,6 +34,17 @@ public sealed class AuditInterceptor(ICurrentUser user, IClock clock) : SaveChan
         var entries = ctx.ChangeTracker.Entries<Entity>()
             .Where(x => x.State is EntityState.Added or EntityState.Modified or EntityState.Deleted).ToList();
         var audits = new List<AuditEntry>();
+        foreach (var entry in entries.Where(x => x.Entity is IContentLock && x.State is EntityState.Modified or EntityState.Deleted))
+        {
+            var lockable = (IContentLock)entry.Entity;
+            if (!lockable.IsLockedState(entry.Property(lockable.StatusProperty).OriginalValue)) continue;
+            if (entry.State == EntityState.Deleted)
+                throw new AppException($"{entry.Metadata.ClrType.Name} is locked and cannot be deleted.", 409);
+            var illegal = entry.Properties.Where(p => p.IsModified && !Equals(p.OriginalValue, p.CurrentValue) &&
+                !Ignored.Contains(p.Metadata.Name) && !lockable.MutableWhenLocked.Contains(p.Metadata.Name)).Select(p => p.Metadata.Name).ToList();
+            if (illegal.Count > 0)
+                throw new AppException($"{entry.Metadata.ClrType.Name} is locked; {string.Join(", ", illegal)} cannot be changed.", 409);
+        }
         foreach (var entry in entries)
         {
             if (entry.State == EntityState.Added)
