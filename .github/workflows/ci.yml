@@ -1,0 +1,21 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env: { POSTGRES_USER: qgiq, POSTGRES_PASSWORD: ci_only, POSTGRES_DB: qgiq_test }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    env:
+      QMS_TEST_DB: Host=localhost;Port=5432;Database=qgiq_test;Username=qgiq;Password=ci_only
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: "10.0.x" }
+      - run: dotnet restore
+      - run: dotnet build --no-restore -warnaserror
+      - run: dotnet test --no-build
+      - run: dotnet list package --vulnerable --include-transitive

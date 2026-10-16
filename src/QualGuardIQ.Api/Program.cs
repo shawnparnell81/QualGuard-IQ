@@ -40,7 +40,8 @@ builder.Services.AddIdentityCore<ApplicationUser>(o =>
     .AddRoles<IdentityRole<Guid>>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddSignInManager()
-    .AddDefaultTokenProviders();
+    .AddDefaultTokenProviders()
+    .AddClaimsPrincipalFactory<AppClaimsFactory>();
 
 builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
     .AddIdentityCookies(c => c.ApplicationCookie!.Configure(o =>
