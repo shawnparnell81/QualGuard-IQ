@@ -1,0 +1,33 @@
+namespace QualGuardIQ.Domain.Common;
+
+/// <summary>Base for all persisted records. RowVersion maps to the PostgreSQL xmin column for optimistic concurrency.</summary>
+public abstract class Entity
+{
+    public Guid Id { get; set; } = Guid.CreateVersion7();
+    public DateTimeOffset CreatedAt { get; set; }
+    public Guid? CreatedById { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public Guid? UpdatedById { get; set; }
+    public uint RowVersion { get; set; }
+}
+
+/// <summary>Records that are archived instead of deleted.</summary>
+public interface IArchivable
+{
+    bool IsArchived { get; set; }
+    DateTimeOffset? ArchivedAt { get; set; }
+}
+
+/// <summary>Records whose changes are written to the business audit trail.</summary>
+public interface IAudited
+{
+    /// <summary>Human-readable identifier used in audit descriptions, such as a record number.</summary>
+    string AuditLabel { get; }
+}
+
+/// <summary>Records owned by a site (and optionally a department) for scope-based access.</summary>
+public interface ISiteScoped
+{
+    Guid SiteId { get; }
+    Guid? DepartmentId { get; }
+}

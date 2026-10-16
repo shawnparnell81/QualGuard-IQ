@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/QualGuardIQ.Api/QualGuardIQ.Api.csproj" />
+    <Project Path="src/QualGuardIQ.Application/QualGuardIQ.Application.csproj" />
+    <Project Path="src/QualGuardIQ.Domain/QualGuardIQ.Domain.csproj" />
+    <Project Path="src/QualGuardIQ.Infrastructure/QualGuardIQ.Infrastructure.csproj" />
+    <Project Path="src/QualGuardIQ.Worker/QualGuardIQ.Worker.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/QualGuardIQ.Tests/QualGuardIQ.Tests.csproj" />
+  </Folder>
+</Solution>
