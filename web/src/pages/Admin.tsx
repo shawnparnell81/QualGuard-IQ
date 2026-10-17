@@ -14,11 +14,12 @@ import { DataTable } from '../components/DataTable';
 import { fmtDateTime } from '../components/Status';
 import { mono } from '../theme';
 import { useTypeLabel } from '../components/Kit';
+import { NewPasswordFields, passwordReady, usePasswordPolicy } from '../components/SignInParts';
 
 const mod = modules.find((m) => m.key === 'admin')!;
 interface Site { id: string; code: string; name: string; address?: string | null; timeZone: string; isArchived: boolean; departments: { id: string; code: string; name: string }[] }
-interface Role { id: string; name: string; description: string | null; isSystem: boolean; permissions: string[]; rowVersion: number }
-interface User { id: string; email: string; displayName: string; isActive: boolean; isLockedOut: boolean; lastSignInAt: string | null; roles: { id: string; roleId: string; roleName: string; siteId: string | null; departmentId: string | null }[] }
+interface Role { id: string; name: string; description: string | null; isSystem: boolean; requiresMfa: boolean; permissions: string[]; rowVersion: number }
+interface User { id: string; email: string; displayName: string; isActive: boolean; isLockedOut: boolean; lastSignInAt: string | null; mfaEnabled: boolean; mustChangePassword: boolean; passwordChangedAt: string | null; roles: { id: string; roleId: string; roleName: string; siteId: string | null; departmentId: string | null }[] }
 
 const useSites = () => useQuery({ queryKey: ['sites'], queryFn: () => get<Site[]>('/api/organization/sites') });
 const Err = ({ e }: { e: string | null }) => (e ? <Alert severity="error" sx={{ mb: 2 }}>{e}</Alert> : null);
@@ -29,13 +30,16 @@ export function AdminHome() {
   return <Navigate to={first?.path ?? '/'} replace />;
 }
 
-const userSchema = z.object({ email: z.string().email(), displayName: z.string().trim().min(1).max(200), password: z.string().min(12, 'At least 12 characters') });
+const userSchema = z.object({ email: z.string().email(), displayName: z.string().trim().min(1).max(200), password: z.string().min(12, 'At least 12 characters'), mustChangePassword: z.boolean() });
 
 export function UsersPage() {
   const qc = useQueryClient();
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [assignFor, setAssignFor] = useState<User | null>(null);
+  const [tempFor, setTempFor] = useState<User | null>(null);
+  const [mfaFor, setMfaFor] = useState<User | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [assign, setAssign] = useState({ roleId: '', siteId: '', departmentId: '' });
   const users = useQuery({ queryKey: ['users'], queryFn: () => get<User[]>('/api/admin/users') });
   const roles = useQuery({ queryKey: ['roles'], queryFn: () => get<Role[]>('/api/admin/roles') });
@@ -53,7 +57,9 @@ export function UsersPage() {
           onDelete={() => run(() => del(`/api/admin/users/${c.row.original.id}/roles/${r.id}`))} />)}
         <Chip size="small" variant="outlined" label="+ Role" onClick={() => { setAssignFor(c.row.original); setAssign({ roleId: '', siteId: '', departmentId: '' }); }} />
       </Stack>) },
-    { header: 'Status', id: 'st', cell: (c) => <Stack direction="row" gap={0.5}>{c.row.original.isActive ? <Chip size="small" color="success" label="Active" /> : <Chip size="small" label="Disabled" />}{c.row.original.isLockedOut && <Chip size="small" color="error" label="Locked" />}</Stack> },
+    { header: 'Status', id: 'st', cell: (c) => <Stack direction="row" gap={0.5}>{c.row.original.isActive ? <Chip size="small" color="success" label="Active" /> : <Chip size="small" label="Disabled" />}{c.row.original.isLockedOut && <Chip size="small" color="error" label="Locked" />}
+      {c.row.original.mfaEnabled && <Chip size="small" color="primary" variant="outlined" label="2-step on" />}
+      {c.row.original.mustChangePassword && <Chip size="small" color="warning" variant="outlined" label="Must change password" />}</Stack> },
     { header: 'Last sign-in', accessorKey: 'lastSignInAt', cell: (c) => fmtDateTime(c.getValue()) },
     { header: '', id: 'ops', cell: (c) => {
       const u = c.row.original;
@@ -63,20 +69,24 @@ export function UsersPage() {
           {u.isActive ? <Button size="small" color="error" onClick={() => run(() => post(`/api/admin/users/${u.id}/disable`))}>Disable</Button>
             : <Button size="small" onClick={() => run(() => post(`/api/admin/users/${u.id}/enable`))}>Enable</Button>}
           <Button size="small" onClick={() => run(() => post(`/api/admin/users/${u.id}/revoke-sessions`))}>Sign out everywhere</Button>
+          <Button size="small" onClick={() => setTempFor(u)}>Set temporary password</Button>
+          {u.mfaEnabled && <Button size="small" color="error" onClick={() => setMfaFor(u)}>Reset 2-step</Button>}
         </Stack>);
     } },
   ];
   const selSite = sites.data?.find((s) => s.id === assign.siteId);
   return (
-    <ModuleWorkspace module={mod} crumbs={[{ label: 'Users' }]} title="Users" actions={<Button variant="contained" onClick={() => { reset(); setAdding(true); }}>Add user</Button>}>
+    <ModuleWorkspace module={mod} crumbs={[{ label: 'Users' }]} title="Users" actions={<Button variant="contained" onClick={() => { reset({ mustChangePassword: true }); setAdding(true); }}>Add user</Button>}>
       <Err e={error} />
+      {notice && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice(null)}>{notice}</Alert>}
       <DataTable data={users.data ?? []} columns={cols} />
       <Dialog open={adding} onClose={() => setAdding(false)} fullWidth maxWidth="xs">
         <DialogTitle>Add user</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
           <TextField label="Full name" {...register('displayName')} error={!!errors.displayName} />
           <TextField label="Email" {...register('email')} error={!!errors.email} helperText={errors.email?.message} />
-          <TextField label="Temporary password" type="password" {...register('password')} error={!!errors.password} helperText={errors.password?.message} />
+          <TextField label="Temporary password" type="password" {...register('password')} error={!!errors.password} helperText={errors.password?.message ?? 'Give it to the person by a separate channel.'} />
+          <FormControlLabel control={<Checkbox defaultChecked {...register('mustChangePassword')} />} label="Ask for a new password at first sign-in" />
         </DialogContent>
         <DialogActions><Button onClick={() => setAdding(false)}>Cancel</Button>
           <Button variant="contained" onClick={handleSubmit(async (v) => { if (await run(() => post('/api/admin/users', v))) setAdding(false); })}>Create</Button></DialogActions>
@@ -99,7 +109,55 @@ export function UsersPage() {
             if (await run(() => post(`/api/admin/users/${assignFor!.id}/roles`, { roleId: assign.roleId, siteId: assign.siteId || null, departmentId: assign.departmentId || null }))) setAssignFor(null);
           }}>Assign</Button></DialogActions>
       </Dialog>
+      {tempFor && <TemporaryPasswordDialog user={tempFor} onClose={() => setTempFor(null)} onDone={(m) => { setTempFor(null); setNotice(m); qc.invalidateQueries({ queryKey: ['users'] }); }} />}
+      {mfaFor && <ResetMfaDialog user={mfaFor} onClose={() => setMfaFor(null)} onDone={(m) => { setMfaFor(null); setNotice(m); qc.invalidateQueries({ queryKey: ['users'] }); }} />}
     </ModuleWorkspace>
+  );
+}
+
+function TemporaryPasswordDialog({ user, onClose, onDone }: { user: User; onClose: () => void; onDone: (message: string) => void }) {
+  const [pw, setPw] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [must, setMust] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const min = usePasswordPolicy().data?.minLength ?? 12;
+  const save = async () => {
+    setError(null);
+    try { await post(`/api/admin/users/${user.id}/temporary-password`, { password: pw, mustChangePassword: must }); onDone(`Temporary password set for ${user.displayName}. Their sessions were ended${must ? '; they choose a new password at the next sign-in' : ''}.`); }
+    catch (e) { const x = e as { message: string; errors?: Record<string, string[]> }; setError(x.errors?.password?.join(' ') ?? x.message); }
+  };
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs" aria-labelledby="temp-title">
+      <DialogTitle id="temp-title">Set temporary password for {user.displayName}</DialogTitle>
+      <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+        <Err e={error} />
+        <Typography variant="body2">Signs {user.email} out everywhere. Share the password by a separate channel, never in the same message as the address.</Typography>
+        <NewPasswordFields value={pw} confirm={confirm} onChange={setPw} onConfirm={setConfirm} email={user.email} label="Temporary password" />
+        <FormControlLabel control={<Checkbox checked={must} onChange={(e) => setMust(e.target.checked)} />} label="Ask for a new password at next sign-in" />
+      </DialogContent>
+      <DialogActions><Button onClick={onClose}>Cancel</Button><Button variant="contained" disabled={!passwordReady(pw, confirm, min)} onClick={save}>Set password</Button></DialogActions>
+    </Dialog>
+  );
+}
+
+function ResetMfaDialog({ user, onClose, onDone }: { user: User; onClose: () => void; onDone: (message: string) => void }) {
+  const [reason, setReason] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const save = async () => {
+    setError(null);
+    try { await post(`/api/admin/users/${user.id}/reset-mfa`, { reason }); onDone(`Two-step verification reset for ${user.displayName}. If it is required for them, they set it up again at the next sign-in.`); }
+    catch (e) { setError((e as Error).message); }
+  };
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs" aria-labelledby="mfa-reset-title">
+      <DialogTitle id="mfa-reset-title">Reset two-step verification</DialogTitle>
+      <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+        <Err e={error} />
+        <Typography variant="body2">For when {user.displayName} has lost their phone and recovery codes. Their authenticator, recovery codes and trusted browsers are removed and they are signed out. Confirm who they are first.</Typography>
+        <TextField label="Reason (recorded in the audit trail)" value={reason} onChange={(e) => setReason(e.target.value)} multiline minRows={2} required />
+      </DialogContent>
+      <DialogActions><Button onClick={onClose}>Cancel</Button><Button color="error" variant="contained" disabled={reason.trim().length < 5} onClick={save}>Reset</Button></DialogActions>
+    </Dialog>
   );
 }
 
@@ -113,18 +171,23 @@ export function RolesPage() {
   const save = async () => {
     setError(null);
     try {
-      const body = { name: edit!.name, description: edit!.description ?? null, permissions: edit!.permissions ?? [], rowVersion: edit!.rowVersion ?? null };
+      const body = { name: edit!.name, description: edit!.description ?? null, permissions: edit!.permissions ?? [], requiresMfa: edit!.requiresMfa ?? false, rowVersion: edit!.rowVersion ?? null };
       if (edit!.id) await put(`/api/admin/roles/${edit!.id}`, body); else await post('/api/admin/roles', body);
       setEdit(null); qc.invalidateQueries({ queryKey: ['roles'] });
     } catch (e) { setError((e as Error).message); }
   };
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Roles' }]} title="Roles" actions={<Button variant="contained" onClick={() => setEdit({ name: '', permissions: [] })}>New role</Button>}>
-      <Typography color="text.secondary" sx={{ mb: 2 }}>Roles are sets of permissions. A role is granted to a user for all sites, one site, or one department.</Typography>
+      <Typography color="text.secondary" sx={{ mb: 2 }}>Roles are sets of permissions. A role is granted to a user for all sites, one site, or one department. Anyone holding a role marked "2-step required" must use two-step verification.</Typography>
+      {!edit && <Err e={error} />}
       <DataTable data={roles.data ?? []} onRowClick={(r) => !r.isSystem && setEdit(r)} columns={[
         { header: 'Role', accessorKey: 'name', cell: (c) => <b>{c.getValue()}</b> },
         { header: 'Description', accessorKey: 'description' },
         { header: 'Permissions', accessorKey: 'permissions', cell: (c) => `${c.getValue().length} permissions` },
+        { header: '2-step required', accessorKey: 'requiresMfa', cell: (c) => (
+          <Switch size="small" checked={c.getValue()} inputProps={{ 'aria-label': `Require two-step verification for ${c.row.original.name}` }}
+            onClick={(e) => e.stopPropagation()}
+            onChange={async (e) => { setError(null); try { await put(`/api/admin/roles/${c.row.original.id}/mfa`, { requiresMfa: e.target.checked }); qc.invalidateQueries({ queryKey: ['roles'] }); } catch (x) { setError((x as Error).message); } }} />) },
         { header: '', accessorKey: 'isSystem', cell: (c) => (c.getValue() ? <Chip size="small" label="Built-in" /> : null) },
       ]} />
       <Dialog open={!!edit} onClose={() => setEdit(null)} fullWidth maxWidth="md">
@@ -133,6 +196,7 @@ export function RolesPage() {
           <Err e={error} />
           <TextField label="Name" value={edit?.name ?? ''} onChange={(e) => setEdit({ ...edit!, name: e.target.value })} />
           <TextField label="Description" value={edit?.description ?? ''} onChange={(e) => setEdit({ ...edit!, description: e.target.value })} />
+          <FormControlLabel control={<Switch checked={!!edit?.requiresMfa} onChange={(e) => setEdit({ ...edit!, requiresMfa: e.target.checked })} />} label="Require two-step verification for people with this role" />
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
             {groups.map(([g, perms]) => (
               <Paper key={g} sx={{ p: 1.5 }}>
@@ -324,5 +388,92 @@ function TimeZoneSelect({ value, onChange }: { value: string; onChange: (tz: str
     <TextField select size="small" label="Time zone" value={value} onChange={(e) => onChange(e.target.value)} sx={{ width: 220 }}>
       {(zones.includes(value) ? zones : [value, ...zones]).map((z) => <MenuItem key={z} value={z}>{z}</MenuItem>)}
     </TextField>
+  );
+}
+
+interface PolicyView {
+  policy: { mfaRequiredForStaff: boolean; mfaRequiredForPortal: boolean; trustedDevicesEnabled: boolean; trustedDeviceDays: number; rowVersion: number };
+  configuration: { challengeMinutes: number; trustedDeviceMaxDays: number; mfaRequiredForAll: boolean; clockSkewSteps: number; recoveryCodeCount: number; passwordMinLength: number; passwordMaxLength: number;
+    passwordHistory: number; blockCommonPasswords: boolean; commonPasswordListSize: number; lockoutAttempts: number; lockoutMinutes: number; resetLinkMinutes: number; resetEmailsPerHour: number };
+  roles: { id: string; name: string; requiresMfa: boolean; people: number }[];
+  coverage: { activeStaff: number; staffWithMfa: number; activePortal: number; portalWithMfa: number };
+}
+
+/** Who must use two-step verification, trusted browser rules, and the configured password and lockout rules. */
+export function SignInSecurityPage() {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ['sign-in-policy'], queryFn: () => get<PolicyView>('/api/admin/sign-in-policy') });
+  const [draft, setDraft] = useState<PolicyView['policy'] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+  const v = q.data;
+  if (!v) return null;
+  const p = draft ?? v.policy;
+  const c = v.configuration;
+  const set = (patch: Partial<PolicyView['policy']>) => { setSaved(false); setDraft({ ...p, ...patch }); };
+  const save = async () => {
+    setError(null);
+    try { await put('/api/admin/sign-in-policy', p); setDraft(null); setSaved(true); qc.invalidateQueries({ queryKey: ['sign-in-policy'] }); }
+    catch (e) { setError((e as Error).message); }
+  };
+  const toggleRole = async (id: string, requiresMfa: boolean) => {
+    setError(null);
+    try { await put(`/api/admin/roles/${id}/mfa`, { requiresMfa }); qc.invalidateQueries({ queryKey: ['sign-in-policy'] }); qc.invalidateQueries({ queryKey: ['roles'] }); }
+    catch (e) { setError((e as Error).message); }
+  };
+  const pct = (a: number, b: number) => (b === 0 ? '—' : `${Math.round((a * 100) / b)}%`);
+  const rule = (label: string, value: string) => (
+    <Stack direction="row" justifyContent="space-between" gap={2} sx={{ py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
+      <Typography variant="body2">{label}</Typography><Typography variant="body2" fontWeight={600} textAlign="right">{value}</Typography>
+    </Stack>
+  );
+  return (
+    <ModuleWorkspace module={mod} crumbs={[{ label: 'Sign-in security' }]} title="Sign-in security">
+      <Err e={error} />
+      {saved && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSaved(false)}>Sign-in policy saved. People it now applies to set up two-step verification at their next sign-in.</Alert>}
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, alignItems: 'start' }}>
+        <Paper sx={{ p: 2.5 }} component="section" aria-labelledby="pol-mfa">
+          <Typography variant="h3" component="h2" id="pol-mfa" sx={{ mb: 1 }}>Two-step verification</Typography>
+          {c.mfaRequiredForAll && <Alert severity="info" sx={{ mb: 1 }}>Required for every account by configuration (Auth:Mfa:RequiredForAll).</Alert>}
+          <FormControlLabel control={<Switch checked={p.mfaRequiredForStaff} onChange={(e) => set({ mfaRequiredForStaff: e.target.checked })} />} label="Require for all staff accounts" />
+          <FormControlLabel control={<Switch checked={p.mfaRequiredForPortal} onChange={(e) => set({ mfaRequiredForPortal: e.target.checked })} />} label="Require for customer and supplier portal accounts" />
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>API keys, OAuth service clients and shop-floor device clients never use two-step verification; they have their own credentials.</Typography>
+          <Typography variant="overline" component="h3" sx={{ display: 'block', mt: 2 }}>Required by role</Typography>
+          {v.roles.map((r) => (
+            <FormControlLabel key={r.id} sx={{ display: 'flex' }} control={<Switch size="small" checked={r.requiresMfa} onChange={(e) => toggleRole(r.id, e.target.checked)} />}
+              label={<span>{r.name} <Typography component="span" variant="caption" color="text.secondary">· {r.people} {r.people === 1 ? 'person' : 'people'}</Typography></span>} />
+          ))}
+        </Paper>
+        <Box sx={{ display: 'grid', gap: 2 }}>
+          <Paper sx={{ p: 2.5 }} component="section" aria-labelledby="pol-cov">
+            <Typography variant="h3" component="h2" id="pol-cov" sx={{ mb: 1 }}>Coverage</Typography>
+            {rule('Staff with two-step verification', `${v.coverage.staffWithMfa} of ${v.coverage.activeStaff} (${pct(v.coverage.staffWithMfa, v.coverage.activeStaff)})`)}
+            {rule('Portal accounts with two-step verification', `${v.coverage.portalWithMfa} of ${v.coverage.activePortal} (${pct(v.coverage.portalWithMfa, v.coverage.activePortal)})`)}
+          </Paper>
+          <Paper sx={{ p: 2.5 }} component="section" aria-labelledby="pol-trust">
+            <Typography variant="h3" component="h2" id="pol-trust" sx={{ mb: 1 }}>Trusted browsers</Typography>
+            <FormControlLabel control={<Switch checked={p.trustedDevicesEnabled} onChange={(e) => set({ trustedDevicesEnabled: e.target.checked })} />} label="Allow people to trust a browser" />
+            <TextField label="Days a browser stays trusted" type="number" size="small" sx={{ mt: 1, maxWidth: 240 }} disabled={!p.trustedDevicesEnabled}
+              value={p.trustedDeviceDays} onChange={(e) => set({ trustedDeviceDays: Number(e.target.value) })}
+              inputProps={{ min: 1, max: c.trustedDeviceMaxDays }} helperText={`1 to ${c.trustedDeviceMaxDays} days`} />
+          </Paper>
+        </Box>
+        <Paper sx={{ p: 2.5 }} component="section" aria-labelledby="pol-rules">
+          <Typography variant="h3" component="h2" id="pol-rules" sx={{ mb: 0.5 }}>Password and lockout rules</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Set in configuration (Auth section) by whoever runs the server.</Typography>
+          {rule('Password length', `${c.passwordMinLength} to ${c.passwordMaxLength} characters`)}
+          {rule('Common and breached passwords refused', c.blockCommonPasswords ? `Yes (${c.commonPasswordListSize.toLocaleString()} known passwords)` : 'No')}
+          {rule('Recent passwords that cannot be reused', `${c.passwordHistory}`)}
+          {rule('Lockout', `${c.lockoutMinutes} minutes after ${c.lockoutAttempts} wrong passwords or codes`)}
+          {rule('Password reset link lasts', `${c.resetLinkMinutes} minutes, ${c.resetEmailsPerHour} emails per hour at most`)}
+          {rule('Time to finish a sign-in step', `${c.challengeMinutes} minutes`)}
+          {rule('Recovery codes per person', `${c.recoveryCodeCount}`)}
+        </Paper>
+      </Box>
+      <Stack direction="row" gap={1} sx={{ mt: 2 }}>
+        <Button variant="contained" disabled={!draft} onClick={save}>Save policy</Button>
+        {draft && <Button onClick={() => setDraft(null)}>Discard changes</Button>}
+      </Stack>
+    </ModuleWorkspace>
   );
 }
