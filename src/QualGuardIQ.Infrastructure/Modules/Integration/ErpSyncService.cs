@@ -65,7 +65,7 @@ public sealed class ErpAdapterRegistry(IEnumerable<IErpAdapter> adapters)
 }
 
 public sealed record ConnectionInput(string Name, ErpSystem System, string? Edition, string? BaseUrl, string? Account, string? Company, string? ClientId, string? Username,
-    Dictionary<string, JsonElement>? Options, int? MaxConcurrency, int? RequestsPerMinute, bool InventorySystemOfRecord, string? AdminNotes, Guid SiteId, Guid? DepartmentId);
+    Dictionary<string, JsonElement>? Options, int? MaxConcurrency, int? RequestsPerMinute, bool InventorySystemOfRecord, string? AdminNotes, Guid SiteId, Guid? DepartmentId, ErpEnvironment? Environment = null);
 /// <summary>Write-only secrets: null leaves the stored value unchanged, empty string clears it.</summary>
 public sealed record SecretInput(string? Secret, string? SecondarySecret);
 public sealed record MappingInput(SyncDirection Direction, SyncMode Mode, ConflictPolicy Conflict, string Cron, Dictionary<string, string>? FieldMap, JsonElement? ValidationRules);
@@ -76,7 +76,7 @@ public sealed record SyncResult(Guid RunId, SyncRunStatus Status, int Read, int 
 /// and the inbound change queue routed through the shared approval engine.
 /// </summary>
 public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessService access, ICurrentUser current, ErpAdapterRegistry adapters, SecretProtector secrets,
-    ErpHttpHandlerProvider handlers, ErpTokenCache tokens, INumberingService numbers, INotifier notifier, WorkflowService workflow, ISiteCalendar calendar, IClock clock)
+    ErpHttpHandlerProvider handlers, ErpTokenCache tokens, INumberingService numbers, INotifier notifier, WorkflowService workflow, ISiteCalendar calendar, IClock clock, ErpValidationService validation)
 {
     public const string ChangeType = "ErpChange";
     public const int MaxPagesPerRun = 200;
@@ -117,6 +117,7 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessServ
             db.ErpConnections.Add(c);
         }
         var cap = adapter.Capabilities(edition);
+        var before = id is null ? null : ErpValidationService.Fingerprint(c);
         c.Name = r.Name.Trim(); c.Edition = edition; c.BaseUrl = r.BaseUrl?.Trim() ?? ""; c.Account = r.Account?.Trim(); c.Company = r.Company?.Trim();
         c.ClientId = r.ClientId?.Trim(); c.Username = r.Username?.Trim();
         c.Options = JsonSerializer.Serialize(r.Options ?? new());
@@ -124,7 +125,9 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessServ
         c.RequestsPerMinute = Math.Clamp(r.RequestsPerMinute ?? cap.DefaultRequestsPerMinute, 0, 100000);
         c.InventorySystemOfRecord = r.InventorySystemOfRecord;
         c.AdminNotes = r.AdminNotes; c.SiteId = r.SiteId; c.DepartmentId = r.DepartmentId;
+        if (r.Environment is { } env) c.Environment = env;
         c.SetupNotes = adapters.SetupNotes(c.System, edition);
+        ConfigChanged(c, before);
         if (id is null)
             foreach (var e in cap.Read)
                 db.ErpEntityMappings.Add(new ErpEntityMapping { ConnectionId = c.Id, Entity = e, Direction = SyncDirection.Inbound, Mode = SyncMode.ApprovalRequired, Conflict = ConflictPolicy.Manual, Cron = "0 * * * *" });
@@ -136,8 +139,10 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessServ
     public async Task SetSecretsAsync(Guid id, SecretInput r, CancellationToken ct)
     {
         var c = await EditableAsync(id, ct);
+        var before = ErpValidationService.Fingerprint(c);
         if (r.Secret is not null) { c.EncryptedSecret = r.Secret.Length == 0 ? null : secrets.Protect(r.Secret); c.SecretSetAt = r.Secret.Length == 0 ? null : clock.UtcNow; }
         if (r.SecondarySecret is not null) c.EncryptedSecondarySecret = r.SecondarySecret.Length == 0 ? null : secrets.Protect(r.SecondarySecret);
+        ConfigChanged(c, before);
         await db.SaveChangesAsync(ct);
         tokens.InvalidateAll(c.Id);
     }
@@ -146,9 +151,22 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessServ
     {
         var c = await EditableAsync(id, ct);
         if (enabled && c.LastTestOk != true) throw new AppException("Run Test connection successfully before enabling.");
+        if (enabled) await validation.RequireGateAsync(c, ct);
         c.Enabled = enabled;
         await db.SaveChangesAsync(ct);
     }
+
+    /// <summary>A configuration change invalidates earlier test results: the connection is disabled and must pass its gates again.</summary>
+    static void ConfigChanged(ErpConnection c, string? before)
+    {
+        if (before is null || before == ErpValidationService.Fingerprint(c)) return;
+        c.Enabled = false; c.LastTestOk = null; c.LastTestMessage = "Configuration changed: run Test connection again.";
+    }
+
+    public async Task<ErpValidationService.Status> ValidationAsync(Guid id, CancellationToken ct) => await validation.StatusAsync(await GetAsync(id, ct), ct);
+    public async Task<List<ErpValidationEvent>> ValidationHistoryAsync(Guid id, CancellationToken ct) { await GetAsync(id, ct); return await validation.HistoryAsync(id, ct); }
+    public async Task RecordAssumptionAsync(Guid id, AssumptionInput r, CancellationToken ct) => await validation.RecordAssumptionAsync(await GetAsync(id, ct), r, ct);
+    public async Task ApproveProductionAsync(Guid id, ProductionApprovalInput r, CancellationToken ct) => await validation.ApproveProductionAsync(await GetAsync(id, ct), r, ct);
 
     async Task<ErpConnection> EditableAsync(Guid id, CancellationToken ct)
     {
@@ -201,10 +219,11 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessServ
     {
         var c = await EditableAsync(id, ct);
         using var http = handlers.Create();
-        string msg; bool ok;
+        string msg; bool ok; Exception? error = null;
         try { msg = await adapters.Get(c.System).TestAsync(await ContextAsync(c, null, http), ct); ok = true; }
         catch (Exception e) when (e is ErpException or HttpRequestException or TaskCanceledException or CryptographicException or JsonException or AppException)
-        { msg = e.Message; ok = false; tokens.InvalidateAll(c.Id); }
+        { msg = e.Message; ok = false; error = e; tokens.InvalidateAll(c.Id); }
+        await validation.RecordTestAsync(c, ok, error, msg.Length > 1000 ? msg[..1000] : msg, ct);
         c.LastTestAt = clock.UtcNow; c.LastTestOk = ok; c.LastTestMessage = msg.Length > 1000 ? msg[..1000] : msg;
         await db.SaveChangesAsync(ct);
         return (ok, msg);
@@ -298,6 +317,7 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessServ
         db.ErpSyncRuns.Add(run);
         await ProcessPageAsync(c, map, run, records, ct);
         run.Status = run.Rejected > 0 ? SyncRunStatus.PartiallySucceeded : SyncRunStatus.Succeeded; run.FinishedAt = clock.UtcNow;
+        if (run.Read > run.Rejected) await validation.RecordCsvReadAsync(c, run.Read - run.Rejected, ct);
         await db.SaveChangesAsync(ct);
         return new SyncResult(run.Id, run.Status, run.Read, run.Created, run.Updated, run.Unchanged, run.Queued, run.Rejected, 0, null);
     }

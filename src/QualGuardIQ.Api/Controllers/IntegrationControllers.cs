@@ -27,7 +27,7 @@ public sealed class IntegrationsController(ErpSyncService svc, ErpAdapterRegistr
     {
         c.Id, c.Name, System = c.System.ToString(), c.Edition, c.BaseUrl, c.Account, c.Company, c.ClientId, c.Username, Options = System.Text.Json.JsonDocument.Parse(c.Options).RootElement,
         HasSecret = c.EncryptedSecret != null, HasSecondarySecret = c.EncryptedSecondarySecret != null, c.SecretSetAt, c.Enabled, c.AllowWrites, c.MaxConcurrency, c.RequestsPerMinute,
-        c.InventorySystemOfRecord, c.SetupNotes, c.AdminNotes, c.LastTestAt, c.LastTestOk, c.LastTestMessage, c.OwnerId, c.SiteId, c.DepartmentId, c.RowVersion, c.UpdatedAt
+        c.InventorySystemOfRecord, c.SetupNotes, c.AdminNotes, c.LastTestAt, c.LastTestOk, c.LastTestMessage, Environment = c.Environment.ToString(), c.OwnerId, c.SiteId, c.DepartmentId, c.RowVersion, c.UpdatedAt
     };
 
     /// <summary>Supported ERP systems with editions, capabilities and the vendor details still unverified.</summary>
@@ -46,6 +46,11 @@ public sealed class IntegrationsController(ErpSyncService svc, ErpAdapterRegistr
     [HttpPut("{id:guid}/secrets")] public async Task<IActionResult> Secrets(Guid id, SecretInput r, CancellationToken ct) { await svc.SetSecretsAsync(id, r, ct); return NoContent(); }
     [HttpPost("{id:guid}/test")] public async Task<object> Test(Guid id, CancellationToken ct) { var (ok, msg) = await svc.TestAsync(id, ct); return new { Ok = ok, Message = msg }; }
     [HttpPost("{id:guid}/enabled")] public async Task<IActionResult> Enable(Guid id, EnableRequest r, CancellationToken ct) { await svc.SetEnabledAsync(id, r.Enabled, ct); return NoContent(); }
+    /// <summary>Live-validation status: gates for the current configuration, unverified vendor assumptions, entities and the guided checklist.</summary>
+    [HttpGet("{id:guid}/validation")] public Task<ErpValidationService.Status> Validation(Guid id, CancellationToken ct) => svc.ValidationAsync(id, ct);
+    [HttpGet("{id:guid}/validation/history")] public Task<List<ErpValidationEvent>> ValidationHistory(Guid id, CancellationToken ct) => svc.ValidationHistoryAsync(id, ct);
+    [HttpPost("{id:guid}/validation/assumptions")] public async Task<IActionResult> Assumption(Guid id, AssumptionInput r, CancellationToken ct) { await svc.RecordAssumptionAsync(id, r, ct); return NoContent(); }
+    [HttpPost("{id:guid}/validation/production-approval")] public async Task<IActionResult> ApproveProduction(Guid id, ProductionApprovalInput r, CancellationToken ct) { await svc.ApproveProductionAsync(id, r, ct); return NoContent(); }
     [HttpGet("{id:guid}/mappings")] public Task<List<ErpEntityMapping>> Mappings(Guid id, CancellationToken ct) => svc.MappingsAsync(id, ct);
     [HttpPut("{id:guid}/mappings/{entity}")] public async Task<IActionResult> SaveMapping(Guid id, ErpEntity entity, MappingInput r, CancellationToken ct) { await svc.SaveMappingAsync(id, entity, r, ct); return NoContent(); }
     [HttpPost("{id:guid}/mappings/{entity}/run")] public Task<SyncResult> Run(Guid id, ErpEntity entity, CancellationToken ct) => svc.RunNowAsync(id, entity, ct);

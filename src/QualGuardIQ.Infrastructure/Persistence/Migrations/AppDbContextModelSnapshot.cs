@@ -3576,6 +3576,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<string>("EncryptedSecret")
                         .HasColumnType("text");
 
+                    b.Property<int>("Environment")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("InventorySystemOfRecord")
                         .HasColumnType("boolean");
 
@@ -3890,6 +3893,72 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasIndex("ConnectionId", "StartedAt");
 
                     b.ToTable("erp_sync_runs", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Integration.ErpValidationEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ByName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("ConfigFingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid>("ConnectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Environment")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Gate")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("Result")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("Topic")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConnectionId", "At");
+
+                    b.ToTable("erp_validation_events", "qms");
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Integration.MesEvent", b =>
@@ -17425,6 +17494,15 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ConnectionId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Integration.ErpValidationEvent", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Integration.ErpConnection", null)
+                        .WithMany()
+                        .HasForeignKey("ConnectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

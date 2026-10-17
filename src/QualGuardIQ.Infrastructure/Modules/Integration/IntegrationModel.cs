@@ -13,6 +13,7 @@ public partial class AppDbContext
     public DbSet<ErpExternalLink> ErpExternalLinks => Set<ErpExternalLink>();
     public DbSet<ErpSyncRun> ErpSyncRuns => Set<ErpSyncRun>();
     public DbSet<ErpChange> ErpChanges => Set<ErpChange>();
+    public DbSet<ErpValidationEvent> ErpValidationEvents => Set<ErpValidationEvent>();
     public DbSet<MesEvent> MesEvents => Set<MesEvent>();
     public DbSet<PurchaseOrder> PurchaseOrders => Set<PurchaseOrder>();
     public DbSet<PurchaseOrderLine> PurchaseOrderLines => Set<PurchaseOrderLine>();
@@ -38,6 +39,12 @@ public partial class AppDbContext
     private static void ConfigureIntegration(ModelBuilder b)
     {
         const DeleteBehavior R = DeleteBehavior.Restrict, C = DeleteBehavior.Cascade;
+        b.Entity<ErpValidationEvent>(e =>
+        {
+            e.ToTable("erp_validation_events"); e.HasIndex(x => new { x.ConnectionId, x.At });
+            e.Property(x => x.Topic).HasMaxLength(200); e.Property(x => x.ConfigFingerprint).HasMaxLength(64); e.Property(x => x.ByName).HasMaxLength(300); e.Property(x => x.Notes).HasMaxLength(4000);
+            e.HasOne<ErpConnection>().WithMany().HasForeignKey(x => x.ConnectionId).OnDelete(DeleteBehavior.Restrict);
+        });
         b.Entity<ErpConnection>(e =>
         {
             e.ToTable("erp_connections");

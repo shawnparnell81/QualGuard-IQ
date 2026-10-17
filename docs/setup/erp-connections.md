@@ -39,6 +39,32 @@ This guide covers the Integrations module (Admin → Integrations). The vendor r
 | Generic REST | Rest | `auth` = bearer, basic or apikey (`apiKeyHeader`) | options `url.<Entity>`, `items.<Entity>`, `id.<Entity>`, `modified.<Entity>`, `next.<Entity>`, `since.<Entity>`, `testEntity` |
 | CSV exchange | Csv | none (upload) | `id.<Entity>` |
 
+## Live validation (connection → Live validation tab)
+
+No connector in this build has been validated against a live customer system. Every adapter is covered by fixture tests
+(recorded vendor responses), which prove the adapter's wire handling, not that it works against a given tenant. Live
+validation is recorded per connection:
+
+| Gate | How it is recorded | Required to enable |
+|---|---|---|
+| Fixture tested | Static: the automated fixture tests that cover the adapter | — |
+| Connection | Test connection reached the host | Yes (not for CSV) |
+| Authentication | Test connection obtained a token or session | Yes (not for CSV) |
+| Read | Test connection read one page (CSV: first accepted upload) | Yes (not for CSV) |
+| Write | Not applicable: all adapters are read-only | — |
+| Production approval | A second person with *integrations.approve* (not the tester) approves | Production environment only |
+
+- Each result records time, who, environment (Sandbox, Test, Production) and notes, and counts only for the
+  configuration it was recorded against. Changing the URL, edition, account, company, client, user, options, secrets or
+  environment disables the connection and puts every gate back to "not run"; the history keeps the old results.
+- Every UNVERIFIED item listed below is shown on the tab as Unverified until a person records Confirmed or Rejected with
+  notes, which is only allowed after a passing read test for the current configuration. The following key items block
+  production approval until confirmed: NetSuite transaction codes; SAP entity and field names; Oracle Fusion pod host;
+  Plex paths, fields/paging and Customer Id header; DELMIAworks contract and login.
+- The tab lists supported and unsupported entities and a guided checklist for each system (SAP, Oracle, Epicor, Infor,
+  Microsoft Dynamics, NetSuite, Acumatica, Plex, DELMIAworks, Generic REST, CSV).
+- Connections that were enabled before this change stay enabled, but their gates show "not run" until tested again.
+
 ## UNVERIFIED items (confirm with each customer before go-live)
 
 The live list is on each connection's **Setup notes** panel, and on `GET /api/integrations/adapters`. Summary:

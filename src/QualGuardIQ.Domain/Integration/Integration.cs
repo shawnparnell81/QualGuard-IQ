@@ -51,6 +51,8 @@ public class ErpConnection : Entity, IAudited, ISiteScoped
     public DateTimeOffset? LastTestAt { get; set; }
     public bool? LastTestOk { get; set; }
     public string? LastTestMessage { get; set; }
+    /// <summary>Which customer environment the connection points at. Production connections need a production approval before they can be enabled.</summary>
+    public ErpEnvironment Environment { get; set; } = ErpEnvironment.Sandbox;
     public Guid OwnerId { get; set; }
     public Guid SiteId { get; set; }
     public Guid? DepartmentId { get; set; }
@@ -156,4 +158,29 @@ public class MesEvent : Entity
     public DateTimeOffset? ProcessedAt { get; set; }
     public string? Error { get; set; }
     public Guid SiteId { get; set; }
+}
+
+public enum ErpEnvironment { Sandbox = 0, Test = 1, Production = 2 }
+public enum ErpValidationGate { Connection = 1, Authentication = 2, Read = 3, Write = 4, ProductionApproval = 5, Assumption = 6 }
+public enum ErpValidationResult { Passed = 0, Failed = 1, NotApplicable = 2, Confirmed = 3, Rejected = 4, Revoked = 5 }
+
+/// <summary>
+/// One validation result for an ERP connection (append-only): a gate result from a connection test, a person's confirmation of an
+/// unverified vendor assumption, or a production approval. Results count only for the configuration fingerprint they were recorded
+/// against, so changing the URL, edition, options, secrets or environment puts every gate back to "not run".
+/// </summary>
+public class ErpValidationEvent : Entity, IAudited, IAppendOnly
+{
+    public Guid ConnectionId { get; set; }
+    public ErpValidationGate Gate { get; set; }
+    public ErpValidationResult Result { get; set; }
+    /// <summary>Assumption topic (Gate = Assumption).</summary>
+    public string? Topic { get; set; }
+    public ErpEnvironment Environment { get; set; }
+    public string ConfigFingerprint { get; set; } = "";
+    public Guid? ById { get; set; }
+    public string ByName { get; set; } = "";
+    public DateTimeOffset At { get; set; }
+    public string? Notes { get; set; }
+    public string AuditLabel => $"ERP validation {Gate} {Result}";
 }
