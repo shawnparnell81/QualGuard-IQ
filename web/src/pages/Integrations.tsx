@@ -18,6 +18,8 @@ const conflict = ['ERP wins', 'QMS wins', 'Manual'];
 const runStatus = ['Running', 'Succeeded', 'Failed', 'PartiallySucceeded'];
 export const changeStatus = ['Pending', 'PendingApproval', 'Applied', 'Rejected', 'Failed', 'Superseded'];
 const systems: [string, string][] = [['NetSuite', 'Oracle NetSuite'], ['Sap', 'SAP'], ['Oracle', 'Oracle Fusion Cloud SCM'], ['Dynamics', 'Microsoft Dynamics 365'], ['Acumatica', 'Acumatica'], ['Infor', 'Infor'], ['Epicor', 'Epicor Kinetic'], ['Plex', 'Plex Smart Manufacturing'], ['DelmiaWorks', 'DELMIAworks (IQMS)'], ['CustomRest', 'Generic REST'], ['CsvExchange', 'CSV exchange']];
+/** Wire values of the server's ErpSystem enum. */
+const sysCode: Record<string, number> = { NetSuite: 0, Sap: 1, Oracle: 2, Dynamics: 3, Acumatica: 4, Infor: 5, Epicor: 6, Plex: 7, DelmiaWorks: 8, CustomRest: 20, CsvExchange: 21 };
 const sysLabel = (s: string) => systems.find(([k]) => k === s)?.[1] ?? s;
 const mnum = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue() ?? '')}</span>;
 
@@ -86,7 +88,7 @@ function ConnectionForm({ initial, onSaved }: { initial?: Conn; onSaved: (id: st
             setError(null);
             let options: unknown;
             try { options = JSON.parse(v.options || '{}'); } catch { setError('Options must be valid JSON.'); return; }
-            const body = { name: v.name, system: v.system, edition: ed?.edition ?? null, baseUrl: v.baseUrl || null, account: v.account || null, company: v.company || null, clientId: v.clientId || null, username: v.username || null, options,
+            const body = { name: v.name, system: sysCode[v.system], edition: ed?.edition ?? null, baseUrl: v.baseUrl || null, account: v.account || null, company: v.company || null, clientId: v.clientId || null, username: v.username || null, options,
               maxConcurrency: v.maxConcurrency ? Number(v.maxConcurrency) : null, requestsPerMinute: v.requestsPerMinute ? Number(v.requestsPerMinute) : null, inventorySystemOfRecord: initial?.inventorySystemOfRecord ?? false, adminNotes: v.adminNotes || null, siteId: v.siteId, departmentId: null };
             try { const r = initial ? await put<Conn>(`/api/integrations/${initial.id}`, body) : await post<Conn>('/api/integrations', body); onSaved(r.id); }
             catch (e) { setError((e as Error).message); }

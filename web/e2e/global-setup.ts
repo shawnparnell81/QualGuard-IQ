@@ -1,8 +1,8 @@
 import { Api, saveState, users } from './support';
 
-const view = ['documents.view', 'drawings.view', 'forms.view', 'ncr.view', 'capa.view', 'audits.view', 'training.view', 'calibration.view', 'masterdata.view', 'suppliers.view', 'complaints.view', 'inspection.view', 'changes.view'];
-const edit = ['documents.edit', 'drawings.edit', 'forms.edit', 'ncr.edit', 'capa.edit', 'audits.edit', 'training.edit', 'calibration.edit', 'masterdata.edit', 'suppliers.edit', 'complaints.edit', 'inspection.edit', 'changes.edit'];
-const approve = ['documents.approve', 'drawings.approve', 'forms.approve', 'ncr.approve', 'capa.approve', 'audits.approve', 'calibration.approve', 'suppliers.approve', 'complaints.approve', 'inspection.approve', 'changes.approve'];
+const view = ['documents.view', 'drawings.view', 'forms.view', 'ncr.view', 'capa.view', 'audits.view', 'training.view', 'calibration.view', 'masterdata.view', 'suppliers.view', 'complaints.view', 'inspection.view', 'changes.view', 'production.view', 'trace.view', 'recalls.view', 'returns.view', 'integrations.view', 'analytics.view'];
+const edit = ['documents.edit', 'drawings.edit', 'forms.edit', 'ncr.edit', 'capa.edit', 'audits.edit', 'training.edit', 'calibration.edit', 'masterdata.edit', 'suppliers.edit', 'complaints.edit', 'inspection.edit', 'changes.edit', 'production.edit', 'trace.edit', 'recalls.edit', 'returns.edit', 'integrations.edit', 'copilot.use'];
+const approve = ['documents.approve', 'drawings.approve', 'forms.approve', 'ncr.approve', 'capa.approve', 'audits.approve', 'calibration.approve', 'suppliers.approve', 'complaints.approve', 'inspection.approve', 'changes.approve', 'recalls.approve', 'returns.approve', 'integrations.approve'];
 
 /** Creates the site, roles and people the UI tests sign in as. Runs once against a fresh database. */
 export default async function globalSetup() {
