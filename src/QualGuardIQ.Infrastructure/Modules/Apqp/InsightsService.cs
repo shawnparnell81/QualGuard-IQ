@@ -244,6 +244,16 @@ public sealed class InsightsService(AppDbContext db, ModuleSupport m, IAccessSer
         var comps = frontier.Where(x => x.Type == "Complaint").Select(x => x.Id).ToList();
         foreach (var c in await db.Complaints.AsNoTracking().Where(x => comps.Contains(x.Id)).Select(x => new { x.Id, x.ProductId }).ToListAsync(ct))
             if (c.ProductId is { } p) e.Add(new("Product", p, "Complaint", c.Id, "Complaint"));
+        var prods = frontier.Where(x => x.Type == "Product").Select(x => x.Id).ToList();
+        if (prods.Count > 0)
+        {
+            foreach (var c in await db.ControlPlans.AsNoTracking().Where(x => x.ProductId != null && prods.Contains(x.ProductId.Value) && x.Status != ApqpStatus.Obsolete).Select(x => new { x.Id, x.ProductId }).Take(50).ToListAsync(ct))
+                e.Add(new("Product", c.ProductId!.Value, ApqpService.PlanType, c.Id, "Control plan"));
+            foreach (var f in await db.Fais.AsNoTracking().Where(x => prods.Contains(x.ProductId)).Select(x => new { x.Id, x.ProductId }).Take(50).ToListAsync(ct))
+                e.Add(new("Product", f.ProductId, "Fai", f.Id, "First article"));
+            foreach (var c in await db.Complaints.AsNoTracking().Where(x => x.ProductId != null && prods.Contains(x.ProductId.Value)).Select(x => new { x.Id, x.ProductId }).Take(50).ToListAsync(ct))
+                e.Add(new("Product", c.ProductId!.Value, "Complaint", c.Id, "Complaint"));
+        }
         var scars = frontier.Where(x => x.Type == "Supplier").Select(x => x.Id).ToList();
         foreach (var c in await db.SupplierCorrectiveActions.AsNoTracking().Where(x => scars.Contains(x.SupplierId)).Select(x => new { x.Id, x.SupplierId }).Take(50).ToListAsync(ct))
             e.Add(new("Supplier", c.SupplierId, "SupplierCorrectiveAction", c.Id, "SCAR"));

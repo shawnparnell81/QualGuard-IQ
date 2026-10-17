@@ -94,7 +94,9 @@ public sealed class SpcService(AppDbContext db, ModuleSupport m, INumberingServi
     {
         var c = await LoadAsync(id, false, ct);
         var samples = await Recent(id, ct);
-        return (c, samples, samples.Count == 0 ? null : Compute(c, samples));
+        SpcResult? res = null;
+        if (samples.Count > 0) try { res = Compute(c, samples); } catch (ArgumentException) { }
+        return (c, samples, res);
     }
 
     async Task<List<SpcSample>> Recent(Guid id, CancellationToken ct) =>
@@ -132,9 +134,10 @@ public sealed class SpcService(AppDbContext db, ModuleSupport m, INumberingServi
         var all = await Recent(id, ct);
         all.Add(s);
         all = all.OrderBy(x => x.TakenAt).ToList();
-        var result = Compute(c, all);
-        var idx = all.IndexOf(s);
-        var hits = result.Points[idx].Violations;
+        // too few samples for limits (e.g. the first individuals reading): store it without rule checks
+        List<string> hits;
+        try { hits = Compute(c, all).Points[all.IndexOf(s)].Violations; }
+        catch (ArgumentException) { hits = []; }
         s.Violations = hits.Count == 0 ? null : string.Join("; ", hits);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         db.SpcSamples.Add(s);

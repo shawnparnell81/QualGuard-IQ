@@ -24,7 +24,7 @@ public sealed record ReportResult(ReportDefinition Definition, ReportParams Para
 /// Permission-aware report engine. Every report reads through ModuleSupport.ScopeAsync with its module's view permission,
 /// so rows outside the user's sites/departments never appear in tables, charts or exports. Rows carry "_url" for drill-down.
 /// </summary>
-public sealed class ReportService(AppDbContext db, ModuleSupport m, IAccessService access)
+public sealed partial class ReportService(AppDbContext db, ModuleSupport m, IAccessService access, IServiceProvider services)
 {
     private delegate Task<(List<ReportColumn>, List<Dictionary<string, object?>>, ReportChart?)> Runner(ReportParams p, DateOnly from, DateOnly to, CancellationToken ct);
     private Dictionary<string, (ReportDefinition Def, Runner Run)>? _built;
@@ -421,6 +421,7 @@ public sealed class ReportService(AppDbContext db, ModuleSupport m, IAccessServi
                 .Select(x => R(("month", x.Key.Month), ("supplier", names.GetValueOrDefault(x.Key.SupplierId!.Value)), ("units", x.Sum(r => r.SampleSize)), ("defects", x.Sum(r => r.D)), ("ppm", Modules.Fai.AqlService.Ppm(x.Sum(r => r.D), x.Sum(r => r.SampleSize))))).ToList();
             return ([C("month", "Month"), C("supplier", "Supplier"), C("units", "Units sampled", "number"), C("defects", "Defects", "number"), C("ppm", "PPM", "number")], g, null);
         });
+        AddAdvanced((k, t, c, pm, d, u, run) => Add(k, t, c, pm, d, u, run), C, R, Months);
         return r;
     }
 }
