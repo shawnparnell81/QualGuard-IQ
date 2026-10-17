@@ -157,6 +157,11 @@ export const modules: ModuleDef[] = [
         { label: 'Suspended', path: '/suppliers?status=4' },
         { label: 'Add supplier', path: '/suppliers/new', permission: 'suppliers.edit' },
       ] },
+      { label: 'Corrective action requests', path: '/suppliers/scar', children: [
+        { label: 'Open SCARs', path: '/suppliers/scar' },
+        { label: 'All SCARs', path: '/suppliers/scar?all=1' },
+      ] },
+      { label: 'Periodic reviews due', path: '/suppliers/reviews-due' },
     ],
   },
   {

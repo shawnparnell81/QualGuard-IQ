@@ -27,6 +27,8 @@ export const dispositions = ['None', 'Use as is', 'Rework', 'Repair', 'Scrap', '
 /** Dispositions that need written instructions (rework/repair method, deviation terms, sort criteria). */
 export const dispositionNeedsInstructions = [2, 3, 7, 10, 11, 12];
 export const supplierStatus = ['Prospective', 'PendingApproval', 'Approved', 'Conditional', 'Suspended', 'Disqualified'];
+export const scarStatus = ['Issued', 'ResponseReceived', 'Verification', 'Closed', 'Cancelled'];
+export const reviewOutcome = ['Continue', 'Conditional', 'Suspend', 'Disqualify'];
 export const masterStatus = ['Active', 'Inactive', 'Obsolete'];
 export const partTypes: [number, string][] = [[0, 'Component'], [1, 'Assembly'], [2, 'Material'], [3, 'Subassembly'], [4, 'Consumable'], [5, 'Packaging'], [9, 'Other']];
 export const criticality = ['Low', 'Medium', 'High', 'Critical'];
