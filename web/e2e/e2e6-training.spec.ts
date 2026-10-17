@@ -27,6 +27,9 @@ test.describe('E2E 6: training assignment and e-signed completion', () => {
 
     const trainee = await browser.newPage();
     await signIn(trainee, users.viewer);
+    await trainee.goto('/my-work');
+    await trainee.getByRole('tab', { name: /^Training \(/ }).click();
+    await expect(trainee.getByRole('row', { name: new RegExp(title) })).toBeVisible();
     await trainee.goto('/training');
     const row = trainee.getByRole('row', { name: new RegExp(title) });
     await row.getByRole('button', { name: 'Sign off' }).click();

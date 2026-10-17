@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Box, Button, Paper, Stack, Tab, Tabs, TextField, Typography, Alert } from '@mui/material';
 import type { ColumnDef } from '@tanstack/react-table';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link as RouterLink } from 'react-router-dom';
 import { useWork, type WorkAction } from '../work';
 import { DataTable } from '../components/DataTable';
 import { SignDialog } from '../components/SignDialog';
 import { fmtDate } from '../components/Status';
-import { post } from '../api';
+import { get, post } from '../api';
 import { mono } from '../theme';
 
 export function MyWork() {
@@ -18,6 +19,8 @@ export function MyWork() {
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const w = work.data;
+  const training = useQuery({ queryKey: ['mytraining'], queryFn: () => get<{ id: string; courseNumber: string; courseTitle: string; documentRevision: string | null; dueOn: string; status: number; reason: string; overdue: boolean }[]>('/api/training/my') });
+  const openTraining = (training.data ?? []).filter((t) => t.status === 0);
   const actionCols: ColumnDef<WorkAction, any>[] = [
     { header: 'Number', accessorKey: 'number', cell: (c) => <span style={{ fontFamily: mono }}>{c.getValue()}</span> },
     { header: 'Action', accessorKey: 'title' },
@@ -31,6 +34,7 @@ export function MyWork() {
         <Tab value="approvals" label={`Approvals (${w?.approvals.length ?? 0})`} />
         <Tab value="assigned" label={`Assigned (${w?.assigned.length ?? 0})`} />
         <Tab value="overdue" label={`Overdue (${w?.overdue.length ?? 0})`} />
+        <Tab value="training" label={`Training (${openTraining.length})`} />
         <Tab value="waiting" label={`Waiting on others (${w?.waitingOnOthers.length ?? 0})`} />
       </Tabs>
       {tab === 'approvals' && (
@@ -44,6 +48,14 @@ export function MyWork() {
       )}
       {tab === 'assigned' && <DataTable data={w?.assigned ?? []} columns={actionCols} empty="No open actions." />}
       {tab === 'overdue' && <DataTable data={w?.overdue ?? []} columns={actionCols} empty="Nothing overdue." />}
+      {tab === 'training' && (
+        <DataTable data={openTraining} empty="No training waiting for you." columns={[
+          { header: 'Course', accessorKey: 'courseNumber', cell: (c) => <span style={{ fontFamily: mono }}>{c.getValue()}</span> },
+          { header: 'Title', accessorKey: 'courseTitle' }, { header: 'Reason', accessorKey: 'reason' },
+          { header: 'Due', accessorKey: 'dueOn', cell: (c) => <Typography fontSize="inherit" color={c.row.original.overdue ? 'error' : undefined}>{fmtDate(c.getValue())}</Typography> },
+          { header: '', id: 'go', cell: () => <Button size="small" variant="contained" component={RouterLink} to="/training">Sign off</Button> },
+        ]} />
+      )}
       {tab === 'waiting' && (
         <DataTable data={w?.waitingOnOthers ?? []} empty="Nothing waiting." columns={[
           { header: 'Record', accessorKey: 'recordNumber' }, { header: 'Type', accessorKey: 'recordType' },
