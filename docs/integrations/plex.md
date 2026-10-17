@@ -10,3 +10,6 @@
 - Errors: 400 malformed/validation, 401, 403, 404, 500. https://developers.plex.com/getstarted
 - Events: none documented in Connect (**UNVERIFIED**). Legacy alternatives: Plex Data Source web services (SOAP, `ExecuteDataSource`) and Plex Smart Forms/EDI (**UNVERIFIED**).
 - Sandbox: test.connect.plex.com tier (above). Writes: read-only default.
+
+## Verification status (pass 2, 2026-10-16)
+developers.plex.com is a client-rendered app. Plain fetches return only section headings, and product/API pages need a portal account (Plex IAM via a support case). The confirmed items are the auth header, 401/403/404/500 meanings and section names. The remaining items need a portal login.

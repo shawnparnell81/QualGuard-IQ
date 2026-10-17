@@ -8,3 +8,6 @@
 - Auth: session login with ERP user, password, database alias, then a token sent on later calls. The IQMS SDK sample uses `IQMSServiceClient(BASE_URL, user, pwd, pwd, db).Authenticate()`. Base example `http://<server>:8080/WebAPI`. Endpoints `/CRM/CustomerCentral/Customers/` and `/CRM/CustomerCentral/UpdateCustomer/`. Source: IQMS whitepaper hosted by a reseller, https://manufacturingerp.co.uk/wp-content/uploads/Growing-Your-Manufacturing-Business-with-Application-Programming-Interfaces-API-Whitepaper.pdf (older IQMS-era material, **UNVERIFIED** for current releases). `POST /User/Login` returning AuthToken is also **UNVERIFIED**.
 - Paging, delta, rate limits, errors, webhooks, sandbox: all **UNVERIFIED** (not public). On-prem/HMS, so the customer's test DB is the sandbox.
 - Recommendation: build this adapter last, against customer-provided SDK docs. Use CSV exchange or DB views as the fallback. Read-only.
+
+## Verification status (pass 2, 2026-10-16)
+No public DELMIAworks API reference exists. The endpoint and entity contract ships only in the licensed WebAPI SDK help. Nothing more could be confirmed from official public sources. Every item marked unconfirmed needs the customer's SDK documentation.
