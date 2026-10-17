@@ -8,6 +8,7 @@ import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
 import SpeedOutlined from '@mui/icons-material/SpeedOutlined';
 import LocalShippingOutlined from '@mui/icons-material/LocalShippingOutlined';
 import SupportAgentOutlined from '@mui/icons-material/SupportAgentOutlined';
+import GridViewOutlined from '@mui/icons-material/GridViewOutlined';
 import RuleOutlined from '@mui/icons-material/RuleOutlined';
 import ChangeCircleOutlined from '@mui/icons-material/ChangeCircleOutlined';
 
@@ -218,6 +219,26 @@ export const modules: ModuleDef[] = [
         { label: 'Record complaint', path: '/complaints/new', permission: 'complaints.edit' },
       ] },
       { label: 'Trends', path: '/complaints/trends' },
+    ],
+  },
+  {
+    key: 'risks',
+    label: 'Risk',
+    description: 'Risk and opportunity register, heat map, residual risk acceptance and periodic reviews',
+    icon: <GridViewOutlined fontSize="small" />,
+    basePath: '/risks',
+    permissions: ['risks.view'],
+    sidebar: [
+      { label: 'Register', path: '/risks', children: [
+        { label: 'Open', path: '/risks' },
+        { label: 'Pending acceptance', path: '/risks?view=2' },
+        { label: 'Reviews due', path: '/risks?view=review' },
+        { label: 'Opportunities', path: '/risks?view=opportunities' },
+        { label: 'All', path: '/risks?view=all' },
+        { label: 'Add', path: '/risks/new', permission: 'risks.edit' },
+      ] },
+      { label: 'Heat map', path: '/risks/matrix' },
+      { label: 'Matrix settings', path: '/risks/settings', permission: 'admin.organization' },
     ],
   },
   {
