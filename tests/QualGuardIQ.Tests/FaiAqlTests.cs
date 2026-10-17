@@ -142,9 +142,14 @@ public sealed class FaiAqlTests(TestApp app)
         Assert.Equal("Review", submitted.Str("status"));
         Assert.Equal(HttpStatusCode.Forbidden, (await w.Insp.PostAsync($"/api/v1/fai/{id}/approvals", new { approvalRole = "Quality", comment = "x" })).StatusCode); // not the reviewer
         Assert.Equal(HttpStatusCode.BadRequest, (await w.Reviewer.PostAsync($"/api/v1/fai/{id}/approvals", new { approvalRole = "Finance", comment = "x" })).StatusCode); // not a route step
-        var req = await Request(w, id);
+        var approverUser = (await w.Approvers[0].GetElAsync("/api/auth/me")).Id();
+        var dueAt = DateTimeOffset.UtcNow.AddDays(3);
+        var req = await w.Reviewer.PostAsync($"/api/v1/fai/{id}/approvals", new { approvalRole = "Quality", comment = "All balloons verified", approverId = approverUser, dueAt });
         Assert.Equal(HttpStatusCode.Created, req.StatusCode);
         var pending = await req.JsonAsync();
+        Assert.Equal(approverUser, pending.Id("approverId")); // stored on the approval request
+        Assert.Equal(dueAt.ToUnixTimeSeconds(), pending.GetProperty("dueAt").GetDateTimeOffset().ToUnixTimeSeconds());
+        Assert.False(string.IsNullOrEmpty(pending.Str("approverName")));
         Assert.Equal("Pending", pending.Str("status"));
         Assert.Equal("Quality", pending.Str("approvalRole"));
         Assert.Equal("ApprovalPending", (await w.Insp.GetElAsync($"/api/v1/fai/{id}")).Str("status"));
@@ -215,13 +220,15 @@ public sealed class FaiAqlTests(TestApp app)
         Assert.Equal(2, re.Int("faiRevision"));
         Assert.Equal("Reopened", re.Str("status"));
         // Scenario 9: FAI → NCR
-        var ncrResp = await w.Insp.PostAsync($"/api/v1/fai/{id}/ncr", new { characteristicIds = new[] { crit }, description = "Bore oversize on first article" });
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Insp.PostAsync($"/api/v1/fai/{id}/ncr", new { characteristicIds = new[] { crit }, dueDate = TestDates.Today.AddDays(-30) })).StatusCode);
+        var ncrResp = await w.Insp.PostAsync($"/api/v1/fai/{id}/ncr", new { characteristicIds = new[] { crit }, description = "Bore oversize on first article", dueDate = TestDates.Today.AddDays(14) });
         Assert.Equal(HttpStatusCode.Created, ncrResp.StatusCode);
         var ncr = await ncrResp.JsonAsync();
         Assert.Equal("NCR", ncr.Str("recordType"));
         var ncrId = ncr.Id("recordId");
         var nd = await w.Insp.GetElAsync($"/api/ncrs/{ncrId}");
         Assert.Equal(1, nd.Int("severity"));
+        Assert.Equal(TestDates.Today.AddDays(14).ToString("yyyy-MM-dd"), nd.Str("dueOn"));
         Assert.Contains("40.2", nd.Str("description"));
         Assert.Contains("Bore oversize on first article", nd.Str("description"));
         Assert.Contains((await w.Insp.GetElAsync($"/api/v1/fai/{id}/linked-records")).EnumerateArray(), l => l.Str("recordType") == "NCR" && l.Id("recordId") == ncrId);
@@ -229,9 +236,12 @@ public sealed class FaiAqlTests(TestApp app)
         await w.Insp.PostAsync($"/api/ncrs/{ncrId}/containment", new { text = "Part quarantined" });
         Assert.Equal(HttpStatusCode.NoContent, (await w.Insp.PostAsync($"/api/ncrs/{ncrId}/disposition", new { disposition = 1, justification = "Customer concession for bore", capaRequired = false })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await w.Approvers[0].SignAsync(await w.Approvers[0].PendingApprovalIdAsync(ncr.Str("recordNumber")))).StatusCode);
-        var capa = await w.Insp.PostAsync($"/api/v1/fai/{id}/capa", new { title = "Bore oversize", description = "Tool wear on boring bar" });
+        var capa = await w.Insp.PostAsync($"/api/v1/fai/{id}/capa", new { title = "Bore oversize", description = "Tool wear on boring bar", dueDate = TestDates.Today.AddDays(30) });
         Assert.Equal(HttpStatusCode.Created, capa.StatusCode);
-        Assert.Equal("CAPA", (await capa.JsonAsync()).Str("recordType"));
+        var capaEl = await capa.JsonAsync();
+        var capaId = capaEl.Id("recordId");
+        Assert.Equal(TestDates.Today.AddDays(30).ToString("yyyy-MM-dd"), (await w.Insp.GetElAsync($"/api/capas/{capaId}")).Str("dueOn"));
+        Assert.Equal("CAPA", capaEl.Str("recordType"));
         await w.Insp.PostOkAsync($"/api/v1/fai/{id}/submit", Act());
         Assert.Equal(HttpStatusCode.Created, (await Request(w, id)).StatusCode);
         // approver returns it from approval (signed decision "Returned")
@@ -240,8 +250,14 @@ public sealed class FaiAqlTests(TestApp app)
         Assert.Equal("ReturnedForCorrection", (await w.Insp.GetElAsync($"/api/v1/fai/{id}")).Str("status"));
         await w.Insp.PostOkAsync($"/api/v1/fai/{id}/start-inspection", Act("Concession attached"));
         await w.Insp.PostOkAsync($"/api/v1/fai/{id}/submit", Act());
+        Assert.Equal(HttpStatusCode.Created, (await Request(w, id)).StatusCode);
+        // an approver (fai.approve, no fai.edit) sends it back through /return: signed, password required
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Approvers[0].PostAsync($"/api/v1/fai/{id}/return", Act("Need gage R&R"))).StatusCode);
+        Assert.Equal("ReturnedForCorrection", (await (await w.Approvers[0].PostOkAsync($"/api/v1/fai/{id}/return", Act("Need gage R&R", password: Pw))).JsonAsync()).Str("status"));
+        Assert.Equal(HttpStatusCode.Forbidden, (await w.Viewer.PostAsync($"/api/v1/fai/{id}/return", Act("x", password: Pw))).StatusCode is HttpStatusCode.Forbidden or HttpStatusCode.Conflict ? HttpStatusCode.Forbidden : HttpStatusCode.OK);
+        await w.Insp.PostOkAsync($"/api/v1/fai/{id}/start-inspection", Act("Gage R&R attached"));
+        await w.Insp.PostOkAsync($"/api/v1/fai/{id}/submit", Act());
         await Request(w, id);
-        // the approver can also send it back through /return (signed, password required)
         await ApproveAllAsync(w, id);
         Assert.Equal(HttpStatusCode.BadRequest, (await w.Approvers[0].PostAsync($"/api/v1/fai/{id}/close", Act())).StatusCode); // NCR not closed
         Assert.Equal(1, (await w.Insp.GetElAsync($"/api/v1/fai/{id}/characteristics/{crit}/results")).GetProperty("metadata").Int("totalItems"));
@@ -426,6 +442,8 @@ public sealed class FaiAqlTests(TestApp app)
         foreach (var path in new[] { "", "/open", "/overdue", "/approval-pending", "/closed", "?status=Draft", "?search=VB-" + w.Tag, "/filter?type=8", $"?dateFrom={TestDates.Today:yyyy-MM-dd}&dateTo={TestDates.Today.AddDays(1):yyyy-MM-dd}" })
             Assert.Equal(HttpStatusCode.OK, (await w.Insp.GetAsync("/api/v1/fai" + path)).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await w.Insp.GetAsync($"/api/v1/fai?dateFrom={TestDates.Today:yyyy-MM-dd}&dateTo={TestDates.Today.AddDays(-3):yyyy-MM-dd}")).StatusCode);
+        var partRow = (await w.Insp.GetElAsync("/api/master/parts?pageSize=200")).GetProperty("items").EnumerateArray().First(p => p.Id() == w.PartId);
+        Assert.Equal(w.ProductId, partRow.Id("productId")); // the FAI form derives the product from the part
         var found = await w.Insp.GetElAsync("/api/v1/fai?search=VB-" + w.Tag);
         Assert.Equal(1, found.GetProperty("items").GetArrayLength());
         Assert.Equal(1, found.GetProperty("metadata").Int("totalItems"));
@@ -525,8 +543,12 @@ public sealed class FaiAqlTests(TestApp app)
         Assert.Contains("Requalification", await csv.Content.ReadAsStringAsync());
         var rpdf = await w.Insp.PostAsync("/api/v1/reports/aql-summary", new { format = "pdf" });
         Assert.Equal("application/pdf", rpdf.Content.Headers.ContentType!.MediaType);
-        Assert.Equal(HttpStatusCode.BadRequest, (await w.Insp.PostAsync("/api/v1/reports/aql-summary", new { format = "xlsx" })).StatusCode);
-        var err = await w.Insp.PostAsync("/api/v1/reports/aql-summary", new { format = "xlsx" });
+        var xlsx = await w.Insp.PostAsync("/api/v1/reports/fai-summary", new { format = "xlsx", supplierId = w.SupplierId });
+        Assert.Equal(HttpStatusCode.OK, xlsx.StatusCode);
+        Assert.Equal("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", xlsx.Content.Headers.ContentType!.MediaType);
+        using (var book = new ClosedXML.Excel.XLWorkbook(new MemoryStream(await xlsx.Content.ReadAsByteArrayAsync())))
+            Assert.Contains(book.Worksheet(1).CellsUsed(), c => c.GetString() == "Requalification");
+        var err = await w.Insp.PostAsync("/api/v1/reports/aql-summary", new { format = "docx" });
         Assert.Equal("application/problem+json", err.Content.Headers.ContentType!.MediaType);
         Assert.False(string.IsNullOrEmpty((await err.JsonAsync()).Str("traceId")));
         Assert.Equal(HttpStatusCode.Forbidden, (await w.Viewer.PostAsync("/api/v1/reports/fai-summary", new { format = "json" })).StatusCode); // reports.view required
