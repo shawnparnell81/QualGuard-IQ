@@ -36,6 +36,7 @@
 | `App:BaseUrl` | Public address of the web app (for example `https://qms.example.com`), used in password reset links. Required in production |
 | `Email:SmtpHost`, `Email:SmtpPort`, `Email:UseTls`, `Email:Username`, `Email:Password`, `Email:From` | Outgoing mail for reset links and password-changed notices. `Email:PickupDirectory` writes `.eml` files instead (test installations) |
 | `Auth:ChallengeMinutes` | Minutes each sign-in step after the password stays open (default 5) |
+| `Sso:AllowHttp` | Development and tests only: allow `http://` single sign-on authorities (local fake provider). Leave unset in production. Single sign-on also needs `App:BaseUrl` (redirect URI `<App:BaseUrl>/api/auth/sso/callback`) and persistent `DataProtection:KeyPath` keys (client secrets are encrypted with them). See [setup/sso.md](../setup/sso.md) |
 | `Auth:TrustedDeviceMaxDays` | Upper limit for the trusted browser period an administrator can choose (default 30) |
 | `Auth:Mfa:RequiredForAll`, `Auth:Mfa:Issuer`, `Auth:Mfa:ClockSkewSteps`, `Auth:Mfa:SetupMinutes`, `Auth:Mfa:RecoveryCodeCount` | Two-step verification: required for every account (default false), name shown in authenticator apps (default the application name), accepted clock drift in 30-second steps (default 1), time to finish set-up (15), recovery codes issued (10) |
 | `Auth:Password:MinLength`, `MaxLength`, `HistoryCount`, `BlockCommon` | Password rules: 12 to 256 characters, last 5 passwords not reused, common and breached passwords refused (offline list) |

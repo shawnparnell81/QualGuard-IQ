@@ -63,6 +63,29 @@ and the answer is the same whether or not an account exists.
 **First administrator.** A new installation's seeded administrator (`Seed:AdminEmail`, `Seed:AdminPassword`) must
 choose a new password at the first sign-in.
 
+## Single sign-on (Admin › People › Single sign-on, needs *admin.users*)
+
+![Single sign-on](../screenshots/sign-in/sign-in-42-admin-single-sign-on.png)
+
+People can sign in with Microsoft Entra ID, Google Workspace, Okta or another OpenID Connect provider. Step-by-step
+provider set-up is in [setup/sso.md](../setup/sso.md).
+
+- **Add identity provider**: provider type, button name ("Sign in with …"), authority (issuer URL), client ID and
+  secret (stored encrypted, never shown again), allowed email domains. Register the **Redirect URI** shown at the top
+  of the page at the provider.
+- **Check connection** reads the provider's discovery document and signing keys. **Test sign-in** signs you in at the
+  provider and records each step on the card; **Turn on** is only available after a test with the current settings
+  passed. Changing the authority, client ID, secret, scopes or type turns the provider off until it is tested again.
+- **Account matching.** People are matched by a verified email in an allowed domain, then remembered by the provider's
+  subject. **Create an account at first sign-in** is off by default; when on you choose the role new people get (roles
+  with administration permissions are not offered).
+- **Domains that must use single sign-on** stop password sign-in, API tokens and reset emails for those addresses.
+  Mark at least one administrator as a **break-glass account** first; break-glass accounts keep password sign-in.
+- **Trust the provider's multi-factor sign-in** skips the app's own code after the provider. Leave it off unless the
+  provider enforces MFA for everyone using this application.
+- Provider changes, tests, account links and creations, and break-glass changes are in the audit trail; every
+  single sign-on attempt and failure (with its reason) is in Security events.
+
 ## Workflow designer (Platform › Workflow designer, needs *admin.organization*)
 
 Approval routes are defined per record type, optionally overridden per site.
