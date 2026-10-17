@@ -2249,6 +2249,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateOnly?>("DueOn")
+                        .HasColumnType("date");
+
                     b.Property<string>("EffectivenessCriteria")
                         .HasColumnType("text");
 
@@ -4544,6 +4547,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<string>("DispositionJustification")
                         .HasColumnType("text");
 
+                    b.Property<DateOnly?>("DueOn")
+                        .HasColumnType("date");
+
                     b.Property<string>("Investigation")
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
@@ -5953,6 +5959,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<DateTimeOffset?>("DueAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid>("RecordId")
                         .HasColumnType("uuid");
 
@@ -5965,6 +5974,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)");
+
+                    b.Property<Guid?>("RequestedApproverId")
+                        .HasColumnType("uuid");
 
                     b.Property<Guid>("RouteId")
                         .HasColumnType("uuid");

@@ -40,6 +40,9 @@ public class ApprovalRequest : Entity, IAudited, ISiteScoped
     public ApprovalStatus Status { get; set; }
     public int CurrentStep { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
+    /// <summary>Approver named by the requester (informational; the route's signer rules still apply).</summary>
+    public Guid? RequestedApproverId { get; set; }
+    public DateTimeOffset? DueAt { get; set; }
     public List<ApprovalDecision> Decisions { get; set; } = [];
     public string AuditLabel => $"approval of {RecordNumber}";
 }

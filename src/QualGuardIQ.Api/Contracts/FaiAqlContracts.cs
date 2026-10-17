@@ -53,7 +53,8 @@ public sealed record ApprovalDecision(
     [Description("The signer's password; required by the server: an approval decision is an electronic signature that re-authenticates the signer.")] string? Password = null);
 
 public sealed record Approval(Guid Id, string ApprovalRole, Guid? ApproverId, ApprovalStatusCode Status, string? Comment, DateTimeOffset CreatedAt, DateTimeOffset? DecidedAt,
-    [Description("Extension.")] Guid RequestId, [Description("Extension.")] int Step, [Description("Extension. Signature meaning.")] string? Meaning, [Description("Extension.")] string? ApproverName);
+    [Description("Extension.")] Guid RequestId, [Description("Extension.")] int Step, [Description("Extension. Signature meaning.")] string? Meaning, [Description("Extension.")] string? ApproverName,
+    [Description("Extension. Due time given when approval was requested (pending step).")] DateTimeOffset? DueAt = null);
 
 public sealed record Attachment(Guid Id, string FileName, string ContentType, long SizeBytes, string? ChecksumSha256, DateTimeOffset CreatedAt, Guid CreatedBy,
     [Description("Extension.")] string? Category, [Description("Extension.")] int Version);

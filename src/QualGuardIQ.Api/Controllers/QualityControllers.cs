@@ -131,7 +131,7 @@ public sealed class NcrsController(AppDbContext db, NcrService ncrs, CapaService
             ("actions", canEdit && s < NcrStatus.Closed));
         return new
         {
-            n.Id, n.Number, n.Title, n.Description, n.Source, n.SiteId, n.DepartmentId, n.OwnerId, n.PartNumber, n.LotNumber, n.QuantityAffected, n.DetectedOn, n.Severity,
+            n.Id, n.Number, n.Title, n.Description, n.Source, n.SiteId, n.DepartmentId, n.OwnerId, n.PartNumber, n.LotNumber, n.QuantityAffected, n.DetectedOn, n.DueOn, n.Severity,
             n.Status, n.ContainmentSummary, n.Disposition, n.DispositionJustification, n.CapaRequired, n.ClosureNotes, n.ClosedAt, n.CreatedAt,
             n.ProductId, n.PartId, n.PartRevision, n.SupplierId, n.CustomerId, n.Process, n.Operation, n.WorkOrder, n.PurchaseOrder, n.BatchNumber, n.SerialNumber,
             n.DetectionPoint, n.DefectCode, n.Requirement, n.ActualCondition, n.Segregation, n.Investigation, n.DispositionInstructions, n.QuantityDispositioned,
@@ -218,7 +218,7 @@ public sealed class CapasController(AppDbContext db, CapaService capas, ModuleSu
         return new
         {
             c.Id, c.Number, c.Title, c.ProblemStatement, c.CapaType, c.Source, c.SiteId, c.DepartmentId, c.OwnerId, c.Status, c.RootCauseMethod, c.RootCause,
-            c.EffectivenessCriteria, c.EffectivenessDueOn, c.EffectivenessResult, c.WasEffective, c.ClosedAt, c.CreatedAt,
+            c.EffectivenessCriteria, c.EffectivenessDueOn, c.EffectivenessResult, c.WasEffective, c.ClosedAt, c.CreatedAt, c.DueOn,
             c.Scope, c.Impact, c.Risk, c.ImmediateCorrection, c.Containment, c.ContributingCauses, c.EscapePoint, c.RecurrenceMonitoring, c.RecurrenceReviewOn,
             c.ReopenCount, c.ReopenReason, c.RowVersion, Analysis = System.Text.Json.JsonDocument.Parse(c.AnalysisJson).RootElement.Clone(),
             Team = await db.Users.Where(u => team.Contains(u.Id)).Select(u => new { u.Id, u.DisplayName }).ToListAsync(ct),
