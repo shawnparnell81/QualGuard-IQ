@@ -202,6 +202,7 @@ const RolesPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.R
 const RoutesPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.RoutesPage })));
 const SecurityPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.SecurityPage })));
 const SignInSecurityPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.SignInSecurityPage })));
+const SingleSignOnPage = lazy(() => import('./pages/SingleSignOn').then((m) => ({ default: m.SingleSignOnPage })));
 const SitesPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.SitesPage })));
 const UsersPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.UsersPage })));
 
@@ -418,6 +419,7 @@ export function App() {
               <Route path="/admin/audit" element={<AuditPage />} />
               <Route path="/admin/security" element={<SecurityPage />} />
               <Route path="/admin/sign-in-security" element={<SignInSecurityPage />} />
+              <Route path="/admin/single-sign-on" element={<SingleSignOnPage />} />
               <Route path="/production" element={<LiveMonitor />} />
               <Route path="/production/entry" element={<ShopFloorEntry />} />
               <Route path="/production/entries" element={<EntryLog />} />

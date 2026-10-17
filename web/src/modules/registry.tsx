@@ -709,6 +709,7 @@ export const modules: ModuleDef[] = [
         { label: 'Roles', path: '/admin/roles', permission: 'admin.roles' },
         { label: 'Portal accounts', path: '/admin/portal', permission: 'portal.admin' },
         { label: 'Sign-in security', path: '/admin/sign-in-security', permission: 'admin.users' },
+        { label: 'Single sign-on', path: '/admin/single-sign-on', permission: 'admin.users' },
       ] },
       { label: 'Organization', path: '/admin/organization', children: [
         { label: 'Settings & branding', path: '/admin/organization', permission: 'admin.organization' },

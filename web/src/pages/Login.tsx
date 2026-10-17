@@ -3,13 +3,14 @@ import { Alert, Box, Button, Checkbox, CircularProgress, FormControlLabel, Link,
 import { ApiError, post } from '../api';
 import { useAuth, useBranding } from '../auth';
 import { AuthShell } from '../components/AuthShell';
-import { AuthenticatorSetup, CodeField, NewPasswordFields, PasswordField, RecoveryCodes, StepTimer, passwordReady, usePasswordPolicy, type MfaSetupInfo } from '../components/SignInParts';
+import { AuthenticatorSetup, CodeField, NewPasswordFields, PasswordField, RecoveryCodes, SsoButtons, StepTimer, passwordReady, usePasswordPolicy, type MfaSetupInfo } from '../components/SignInParts';
 
 interface StepResponse { next: 'mfa' | 'enrol' | 'change-password'; challenge: string; expiresInSeconds: number; email: string; trustAvailable: boolean; trustDays: number; reason: string | null; recoveryCodesLeft: number }
 interface Step extends StepResponse { deadline: number }
 
 type View =
-  | { kind: 'credentials'; notice?: string }
+  | { kind: 'credentials'; notice?: string; error?: string }
+  | { kind: 'sso' }
   | { kind: 'step'; step: Step }
   | { kind: 'codes'; codes: string[]; email: string }
   | { kind: 'expired'; message: string }
@@ -20,6 +21,32 @@ type View =
 const msg = (e: unknown) => (e as Error).message;
 const isStepEnd = (e: unknown) => e instanceof ApiError && (e.code === 'challenge_expired' || e.code === 'challenge_invalid' || e.status === 423);
 
+/** Why a single sign-on did not finish (the API's callback sends the browser back with one of these codes). */
+const ssoErrors: Record<string, string> = {
+  cancelled: 'Sign-in was cancelled at your identity provider.',
+  state: 'That sign-in could not be matched to this browser, or it took too long. Start again.',
+  provider: 'Your identity provider\'s answer could not be verified, so you were not signed in. Try again; if it keeps happening, tell your administrator.',
+  provider_disabled: 'That sign-in option is turned off. Sign in another way or ask your administrator.',
+  unavailable: 'Your identity provider could not be reached. Try again in a moment.',
+  unverified: 'Your identity provider did not confirm your email address, so it cannot be matched to an account. Ask your administrator.',
+  domain: 'Your email domain is not allowed to sign in with that provider.',
+  no_account: 'There is no account for you yet. Ask your administrator to add you.',
+  conflict: 'This account is already linked to a different identity at that provider. Ask your administrator.',
+  disabled: 'This account is disabled. Contact your administrator.',
+  locked: 'This account is locked. Try again later or contact an administrator.',
+};
+
+/** Reads (and removes) the single sign-on result the API's callback put in the address fragment. */
+function takeSsoFragment(): { ticket?: string; error?: string } {
+  const h = window.location.hash;
+  if (!h.startsWith('#sso')) return {};
+  window.history.replaceState(null, '', window.location.pathname + window.location.search);
+  const p = new URLSearchParams(h.slice(1));
+  return { ticket: p.get('sso') ?? undefined, error: p.get('sso-error') ?? undefined };
+}
+const fragment = takeSsoFragment();
+let ssoTicketUsed = false; // the ticket works once; React's development double effects must not spend it twice
+
 /**
  * Every signed-out screen, all on the shared AuthShell frame: email and password, then (only when needed) a new password,
  * an authenticator or recovery code, or authenticator set-up with recovery codes; plus forgot and reset password.
@@ -29,17 +56,35 @@ export function Login() {
   const { data: brand } = useBranding();
   const appName = brand?.applicationName ?? 'QualGuard IQ';
   const resetToken = window.location.pathname === '/reset-password' ? new URLSearchParams(window.location.search).get('token') : null;
-  const [view, setView] = useState<View>(resetToken ? { kind: 'reset', token: resetToken } : { kind: 'credentials' });
+  const [view, setView] = useState<View>(() => {
+    if (resetToken) return { kind: 'reset', token: resetToken };
+    if (fragment.ticket && !ssoTicketUsed) return { kind: 'sso' };
+    const code = fragment.error; fragment.error = undefined; // shown once, not again after a later sign-out
+    return { kind: 'credentials', error: code ? ssoErrors[code] ?? 'Single sign-on did not finish. Try again.' : undefined };
+  });
   const [email, setEmail] = useState('');
   const { signedIn } = useAuth();
   const toStep = (s: StepResponse) => setView({ kind: 'step', step: { ...s, deadline: Date.now() + s.expiresInSeconds * 1000 } });
   const startAgain = (notice?: string) => setView({ kind: 'credentials', notice });
   const leaveResetUrl = () => { if (window.location.pathname === '/reset-password') window.history.replaceState(null, '', '/'); };
   const org = brand?.organizationName;
+  useEffect(() => {
+    if (view.kind !== 'sso' || ssoTicketUsed || !fragment.ticket) return;
+    ssoTicketUsed = true;
+    post<StepResponse | undefined>('/api/auth/sso/complete', { challenge: fragment.ticket })
+      .then((r) => (r?.next ? toStep(r) : signedIn()))
+      .catch((x) => setView({ kind: 'credentials', error: isStepEnd(x) ? 'That single sign-on took too long or was already used. Start again.' : msg(x) }));
+  }, [view.kind]); // eslint-disable-line react-hooks/exhaustive-deps
 
   switch (view.kind) {
     case 'credentials':
-      return <Credentials email={email} setEmail={setEmail} notice={view.notice} org={org} onStep={toStep} onDone={signedIn} onForgot={() => setView({ kind: 'forgot' })} />;
+      return <Credentials email={email} setEmail={setEmail} notice={view.notice} initialError={view.error} org={org} onStep={toStep} onDone={signedIn} onForgot={() => setView({ kind: 'forgot' })} />;
+    case 'sso':
+      return (
+        <AuthShell title="Signing you in" organization={org}>
+          <Box sx={{ display: 'grid', placeItems: 'center', py: 3 }}><CircularProgress aria-label="Finishing single sign-on" /></Box>
+        </AuthShell>
+      );
     case 'expired':
       return (
         <AuthShell title="Start again" organization={org}>
@@ -77,32 +122,39 @@ export function Login() {
   }
 }
 
-function Credentials({ email, setEmail, notice, org, onStep, onDone, onForgot }: { email: string; setEmail: (v: string) => void; notice?: string; org?: string; onStep: (s: StepResponse) => void; onDone: () => Promise<void>; onForgot: () => void }) {
+function Credentials({ email, setEmail, notice, initialError, org, onStep, onDone, onForgot }: { email: string; setEmail: (v: string) => void; notice?: string; initialError?: string; org?: string; onStep: (s: StepResponse) => void; onDone: () => Promise<void>; onForgot: () => void }) {
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialError ?? null);
+  const [ssoOnly, setSsoOnly] = useState<{ id: string; name: string; message: string } | null>(null);
   const [busy, setBusy] = useState(false);
   const [touched, setTouched] = useState(false);
   const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const submit = async (e: FormEvent) => {
-    e.preventDefault(); setTouched(true); setError(null);
+    e.preventDefault(); setTouched(true); setError(null); setSsoOnly(null);
     if (!emailOk || !password) return;
     setBusy(true);
     try {
       const r = await post<StepResponse | undefined>('/api/auth/login', { email, password });
       if (r?.next) onStep(r); else await onDone();
-    } catch (x) { setError(msg(x)); setBusy(false); }
+    } catch (x) {
+      setBusy(false);
+      if (x instanceof ApiError && x.code === 'sso_required' && x.body) { setPassword(''); setSsoOnly({ id: String(x.body.providerId), name: String(x.body.providerName), message: msg(x) }); }
+      else setError(msg(x));
+    }
   };
   return (
     <AuthShell title="Sign in" subtitle="Use your work email and password." organization={org}>
       <Box component="form" noValidate onSubmit={submit} sx={{ display: 'grid', gap: 2 }}>
         {notice && <Alert severity="success">{notice}</Alert>}
         {error && <Alert severity="error">{error}</Alert>}
+        {ssoOnly && <Alert severity="info">{ssoOnly.message}</Alert>}
         <TextField label="Email" type="email" autoComplete="username" autoFocus value={email} onChange={(e) => setEmail(e.target.value)}
           error={touched && !emailOk} helperText={touched && !emailOk ? 'Enter a valid email' : undefined} />
         <PasswordField label="Password" value={password} onChange={setPassword} autoComplete="current-password" error={touched && !password ? 'Required' : null} />
         <Button type="submit" variant="contained" size="large" disabled={busy} sx={{ mt: 0.5, py: 1.1 }}>{busy ? <CircularProgress size={22} color="inherit" aria-label="Signing in" /> : 'Sign in'}</Button>
         <Box sx={{ textAlign: 'center' }}><Link component="button" type="button" variant="body2" onClick={onForgot}>Forgot your password?</Link></Box>
       </Box>
+      <SsoButtons email={email} highlight={ssoOnly?.id} />
     </AuthShell>
   );
 }

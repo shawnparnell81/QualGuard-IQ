@@ -1,7 +1,7 @@
 let csrf: string | null = null;
 
 export class ApiError extends Error {
-  constructor(public status: number, message: string, public errors?: Record<string, string[]>, public code?: string) {
+  constructor(public status: number, message: string, public errors?: Record<string, string[]>, public code?: string, public body?: Record<string, unknown>) {
     super(message);
   }
 }
@@ -37,7 +37,7 @@ export async function api<T = unknown>(method: string, url: string, body?: unkno
   }
   if (!r.ok) {
     const p = await r.json().catch(() => ({}));
-    throw new ApiError(r.status, p.title ?? `Request failed (${r.status})`, p.errors, p.code);
+    throw new ApiError(r.status, p.title ?? `Request failed (${r.status})`, p.errors, p.code, p);
   }
   if (r.status === 204) return undefined as T;
   const text = await r.text();
