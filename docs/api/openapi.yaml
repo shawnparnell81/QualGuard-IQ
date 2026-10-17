@@ -9747,7 +9747,7 @@ paths:
     post:
       tags:
         - FAI Workflow
-      description: 'Requires permission: `fai.edit` (site/department scoped).'
+      description: 'Requires permission: `fai.view` (site/department scoped).'
       operationId: returnFai
       parameters:
         - name: faiId
@@ -19489,6 +19489,11 @@ components:
           type:
             - 'null'
             - string
+        dueAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
     ApprovalDecision:
       required:
         - decision
