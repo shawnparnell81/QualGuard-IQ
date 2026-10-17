@@ -118,7 +118,7 @@ public sealed class KnowledgeService(AppDbContext db, ModuleSupport m, INumberin
         return await s.OrderByDescending(a => a.UpdatedAt).Take(300).ToListAsync(ct);
     }
 
-    /// <summary>Similar-issue discovery ("AI search"): TF-IDF cosine similarity of the text against knowledge entries, closed CAPAs and NCRs the user can view.</summary>
+    /// <summary>Similar-issue discovery: TF-IDF cosine similarity of the text against knowledge entries, closed CAPAs and NCRs the user can view.</summary>
     public async Task<List<KnowledgeHit>> SimilarAsync(string text, CancellationToken ct)
     {
         ModuleSupport.Required(text, "Text", 20000);

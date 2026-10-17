@@ -47,7 +47,7 @@ export function KnowledgeLibrary() {
         <Paper variant="outlined" sx={{ p: 2 }}>
           <TextField fullWidth multiline minRows={3} label="Describe the issue" value={text} onChange={(e) => setText(e.target.value)} />
           <Button sx={{ mt: 1 }} variant="contained" disabled={!text.trim()} onClick={() => r.run(async () => setHits(await post<any[]>('/api/knowledge/similar', { text })))}>Find similar</Button>
-          <Typography variant="caption" display="block" color="text.secondary">Text similarity over knowledge entries, CAPAs and NCRs you can view. No external AI service.</Typography>
+          <Typography variant="caption" display="block" color="text.secondary">Text similarity over knowledge entries, CAPAs and NCRs you can view. No external service is used.</Typography>
         </Paper>
         {r.error && <Alert severity="error">{r.error}</Alert>}
         {hits && (hits.length === 0 ? <Alert severity="info">Nothing similar found.</Alert> : hits.map((h) => <Paper key={h.type + h.id} sx={{ p: 1.5, display: 'flex', gap: 2, alignItems: 'center', cursor: 'pointer' }} onClick={() => nav(h.url)} data-testid="similar-hit">

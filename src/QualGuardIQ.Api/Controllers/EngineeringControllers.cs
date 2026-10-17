@@ -105,11 +105,11 @@ public sealed class SecurityGovernanceController(SecurityGovernanceService svc) 
 }
 
 /// <summary>Quality advisor: explanations, conversation, management review drafts (human approval), document and audit assistants.</summary>
-[ApiController, Authorize, Route("api/advisor"), RequirePermission(Permissions.CopilotUse)]
+[ApiController, Authorize, Route("api/advisor"), RequirePermission(Permissions.AssistantUse)]
 public sealed class AdvisorController(AdvisorService svc) : ControllerBase
 {
     [HttpGet("explain/{topic}")] public Task<AdvisorAnswer> Explain(string topic, [FromQuery] Guid? id, CancellationToken ct) => svc.ExplainAsync(topic, id, ct);
-    [HttpPost("chat")] public Task<CopilotAnswer> Chat(ChatRequest r, CancellationToken ct) => svc.ChatAsync(r.Messages, ct);
+    [HttpPost("chat")] public Task<AssistAnswer> Chat(ChatRequest r, CancellationToken ct) => svc.ChatAsync(r.Messages, ct);
     [HttpPost("management-reviews/{id:guid}/draft")] public async Task<object> Draft(Guid id, CancellationToken ct) => new { Draft = await svc.DraftManagementReviewAsync(id, ct) };
     [HttpPost("management-reviews/{id:guid}/approve-draft")] public async Task<IActionResult> ApproveDraft(Guid id, OptionalTextRequest r, CancellationToken ct) { await svc.ApproveManagementReviewDraftAsync(id, r.Text, ct); return NoContent(); }
     [HttpPost("documents")] public Task<DocumentAssistResult> Document(DocumentAssistInput r, CancellationToken ct) => svc.DocumentAsync(r, ct);

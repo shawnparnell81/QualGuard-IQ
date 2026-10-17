@@ -56,9 +56,9 @@ public sealed class BarcodeService(AppDbContext db, ModuleSupport m)
         // GS1 element strings: (10) batch/lot, (21) serial, (01) GTIN. Accept the human-readable form.
         if (v.StartsWith("(01)") || v.StartsWith("(10)") || v.StartsWith("(21)"))
         {
-            var ai = System.Text.RegularExpressions.Regex.Matches(v, "\\((\\d{2})\\)([^(]+)").ToDictionary(x => x.Groups[1].Value, x => x.Groups[2].Value);
-            if (ai.TryGetValue("21", out var sn) && await SerialAsync(v, sn, null, ct) is { } s) return s;
-            if (ai.TryGetValue("10", out var lot) && await LotAsync(v, lot, ct) is { } l) return l;
+            var appIds = System.Text.RegularExpressions.Regex.Matches(v, "\\((\\d{2})\\)([^(]+)").ToDictionary(x => x.Groups[1].Value, x => x.Groups[2].Value);
+            if (appIds.TryGetValue("21", out var sn) && await SerialAsync(v, sn, null, ct) is { } s) return s;
+            if (appIds.TryGetValue("10", out var lot) && await LotAsync(v, lot, ct) is { } l) return l;
         }
         var hits = new List<ScanResult>();
         foreach (var r in new[] { await LotAsync(v, v, ct), await SerialAsync(v, v, null, ct), await WoAsync(v, v, ct), await PoAsync(v, v, ct), await LocAsync(v, v, ct) }) if (r is not null) hits.Add(r);

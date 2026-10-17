@@ -9,13 +9,13 @@ using QualGuardIQ.Infrastructure.Persistence;
 
 namespace QualGuardIQ.Infrastructure.Modules.Analytics;
 
-public sealed record CopilotRecord(string Type, Guid Id, string Number, string Title, string Status, string Url, string? Detail = null);
+public sealed record AssistRecord(string Type, Guid Id, string Number, string Title, string Status, string Url, string? Detail = null);
 /// <summary>Every answer states how it was produced (Method) and lists the records it used; nothing is changed, closed or approved.</summary>
-public sealed record CopilotAnswer(string Question, string Intent, string Answer, List<CopilotRecord> Records, List<TrendRow> Trend, string Method, decimal? Confidence);
+public sealed record AssistAnswer(string Question, string Intent, string Answer, List<AssistRecord> Records, List<TrendRow> Trend, string Method, decimal? Confidence);
 public sealed record TrendRow(string Label, decimal Current, decimal Previous, decimal Change);
-public sealed record SimilarNcr(CopilotRecord Ncr, decimal Similarity, List<string> SharedTerms);
+public sealed record SimilarNcr(AssistRecord Ncr, decimal Similarity, List<string> SharedTerms);
 public sealed record Suggestion(string Text, int Support, decimal Confidence, List<string> Sources);
-public sealed record Investigation(CopilotRecord Subject, List<SimilarNcr> Similar, List<Suggestion> RootCauses, List<Suggestion> Actions, List<TrendRow> RecurringDefects, string Method, string Disclaimer);
+public sealed record Investigation(AssistRecord Subject, List<SimilarNcr> Similar, List<Suggestion> RootCauses, List<Suggestion> Actions, List<TrendRow> RecurringDefects, string Method, string Disclaimer);
 public sealed record RiskScore(string Kind, Guid Id, string Label, decimal Score, decimal Confidence, int Observations, List<string> Drivers);
 public sealed record ExecutiveSummary(string Period, string Text, List<string> Highlights, List<string> Risks, List<KpiSeries> Kpis);
 
@@ -25,14 +25,14 @@ public sealed record ExecutiveSummary(string Period, string Text, List<string> H
 /// root causes and actions of linked CAPAs on similar NCRs, and every estimate carries a confidence based on sample size.
 /// No external text-generation service is called and no record is created, closed or approved.
 /// </summary>
-public sealed class CopilotService(AppDbContext db, ModuleSupport m, KpiEngine kpis)
+public sealed class AssistService(AppDbContext db, ModuleSupport m, KpiEngine kpis)
 {
-    public const string Method = "Built-in rule-based assistant over records you can view (no external AI service).";
+    public const string Method = "Built-in rule-based assistant over records you can view (no external text-generation service).";
     static readonly HashSet<string> Stop = ["the", "a", "an", "of", "on", "in", "for", "to", "and", "or", "with", "at", "by", "is", "was", "are", "from", "this", "that", "be", "not", "no", "per", "after", "before", "found", "during"];
 
     static List<string> Terms(string? s) => Regex.Matches((s ?? "").ToLowerInvariant(), "[a-z0-9][a-z0-9\\-]{1,}").Select(x => x.Value).Where(t => !Stop.Contains(t) && t.Length > 2).ToList();
 
-    public async Task<CopilotAnswer> AskAsync(string question, CancellationToken ct)
+    public async Task<AssistAnswer> AskAsync(string question, CancellationToken ct)
     {
         ModuleSupport.Required(question, "Question", 1000);
         var q = question.Trim(); var ql = q.ToLowerInvariant();
@@ -45,7 +45,7 @@ public sealed class CopilotService(AppDbContext db, ModuleSupport m, KpiEngine k
             var eff = await capas.Where(c => c.Status == CapaStatus.EffectivenessCheck && c.EffectivenessDueOn < today).ToListAsync(ct);
             var all = due.Concat(eff).DistinctBy(c => c.Id).ToList();
             return new(q, "overdue-capas", all.Count == 0 ? "No CAPAs are overdue." : $"{all.Count} CAPA(s) are overdue: {due.Count} with overdue actions, {eff.Count} past their effectiveness check date.",
-                all.Select(c => new CopilotRecord("Capa", c.Id, c.Number, c.Title, c.Status.ToString(), $"/capa/{c.Id}")).ToList(), [], Method, null);
+                all.Select(c => new AssistRecord("Capa", c.Id, c.Number, c.Title, c.Status.ToString(), $"/capa/{c.Id}")).ToList(), [], Method, null);
         }
         if (ql.Contains("supplier") && ql.Contains("ncr"))
         {
@@ -55,7 +55,7 @@ public sealed class CopilotService(AppDbContext db, ModuleSupport m, KpiEngine k
             var supplier = sups is null || name.Length == 0 ? null : await sups.FirstOrDefaultAsync(s => s.Code == name || s.LegalName.ToLower().Contains(name.ToLower()), ct);
             var list = await ncrs.Where(n => n.SupplierId != null && (supplier == null || n.SupplierId == supplier.Id)).OrderByDescending(n => n.DetectedOn).Take(100).ToListAsync(ct);
             var text = supplier is null && name.Length > 0 ? $"No supplier you can view matches \"{name}\". Showing all supplier NCRs ({list.Count})." : $"{list.Count} supplier NCR(s){(supplier is null ? "" : $" for {supplier.LegalName}")}.";
-            return new(q, "supplier-ncrs", text, list.Select(n => new CopilotRecord("Ncr", n.Id, n.Number, n.Title, n.Status.ToString(), $"/ncr/{n.Id}", n.DetectedOn.ToString("yyyy-MM-dd"))).ToList(), [], Method, null);
+            return new(q, "supplier-ncrs", text, list.Select(n => new AssistRecord("Ncr", n.Id, n.Number, n.Title, n.Status.ToString(), $"/ncr/{n.Id}", n.DetectedOn.ToString("yyyy-MM-dd"))).ToList(), [], Method, null);
         }
         if (ql.Contains("complaint") && (ql.Contains("trend") || ql.Contains("by product")))
         {
@@ -75,10 +75,10 @@ public sealed class CopilotService(AppDbContext db, ModuleSupport m, KpiEngine k
         // fall back to permission-filtered record discovery through the shared search
         var hits = await (await m.TryScopeAsync(db.Ncrs.AsNoTracking(), Permissions.NcrView, ct) ?? db.Ncrs.Where(_ => false)).Where(n => EF.Functions.ILike(n.Title, $"%{q}%") || EF.Functions.ILike(n.Description, $"%{q}%")).Take(20).ToListAsync(ct);
         return new(q, "search", hits.Count == 0 ? "I could not match that question to a known query. Try: \"Show overdue CAPAs\", \"Show me all supplier NCRs for <supplier>\", \"Show complaint trends by product\", \"Explain the increase in scrap\", or \"Audit preparation\"." : $"{hits.Count} NCR(s) mention \"{q}\".",
-            hits.Select(n => new CopilotRecord("Ncr", n.Id, n.Number, n.Title, n.Status.ToString(), $"/ncr/{n.Id}")).ToList(), [], Method, null);
+            hits.Select(n => new AssistRecord("Ncr", n.Id, n.Number, n.Title, n.Status.ToString(), $"/ncr/{n.Id}")).ToList(), [], Method, null);
     }
 
-    async Task<CopilotAnswer> ExplainScrapAsync(string q, DateOnly today, CancellationToken ct)
+    async Task<AssistAnswer> ExplainScrapAsync(string q, DateOnly today, CancellationToken ct)
     {
         var scrap = await m.TryScopeAsync(db.ScrapEvents.AsNoTracking(), Permissions.CoqView, ct);
         var pe = await m.TryScopeAsync(db.ProductionEntries.AsNoTracking(), Permissions.ProductionView, ct);
@@ -104,27 +104,27 @@ public sealed class CopilotService(AppDbContext db, ModuleSupport m, KpiEngine k
         return new(q, "explain-scrap", text, [], ranked, Method + " Compares the last 30 days with the previous 30 by part, supplier and reason.", Confidence(rows.Count + floor.Count));
     }
 
-    async Task<CopilotAnswer> AuditPrepAsync(string q, DateOnly today, CancellationToken ct)
+    async Task<AssistAnswer> AuditPrepAsync(string q, DateOnly today, CancellationToken ct)
     {
-        var recs = new List<CopilotRecord>();
+        var recs = new List<AssistRecord>();
         if (await m.TryScopeAsync(db.Capas.AsNoTracking(), Permissions.CapaView, ct) is { } c)
-            recs.AddRange((await c.Where(x => x.Status != CapaStatus.Closed && x.Status != CapaStatus.Cancelled).Take(20).ToListAsync(ct)).Select(x => new CopilotRecord("Capa", x.Id, x.Number, x.Title, x.Status.ToString(), $"/capa/{x.Id}", "Open CAPA")));
+            recs.AddRange((await c.Where(x => x.Status != CapaStatus.Closed && x.Status != CapaStatus.Cancelled).Take(20).ToListAsync(ct)).Select(x => new AssistRecord("Capa", x.Id, x.Number, x.Title, x.Status.ToString(), $"/capa/{x.Id}", "Open CAPA")));
         if (await m.TryScopeAsync(db.AuditFindings.AsNoTracking(), Permissions.AuditsView, ct) is { } f)
-            recs.AddRange((await f.Where(x => x.Status != FindingStatus.Closed).Take(20).ToListAsync(ct)).Select(x => new CopilotRecord("AuditFinding", x.Id, x.Number, x.Statement.Length > 100 ? x.Statement[..100] : x.Statement, x.Status.ToString(), $"/audits/findings/{x.Id}", "Open finding")));
+            recs.AddRange((await f.Where(x => x.Status != FindingStatus.Closed).Take(20).ToListAsync(ct)).Select(x => new AssistRecord("AuditFinding", x.Id, x.Number, x.Statement.Length > 100 ? x.Statement[..100] : x.Statement, x.Status.ToString(), $"/audits/findings/{x.Id}", "Open finding")));
         if (await m.TryScopeAsync(db.Equipment.AsNoTracking(), Permissions.CalibrationView, ct) is { } e)
-            recs.AddRange((await e.Where(x => x.NextDueOn < today && x.Status != EquipmentStatus.Retired).Take(20).ToListAsync(ct)).Select(x => new CopilotRecord("Equipment", x.Id, x.Number, x.Name, x.Status.ToString(), $"/calibration/equipment/{x.Id}", "Calibration overdue")));
+            recs.AddRange((await e.Where(x => x.NextDueOn < today && x.Status != EquipmentStatus.Retired).Take(20).ToListAsync(ct)).Select(x => new AssistRecord("Equipment", x.Id, x.Number, x.Name, x.Status.ToString(), $"/calibration/equipment/{x.Id}", "Calibration overdue")));
         if (await m.TryScopeAsync(db.Ncrs.AsNoTracking(), Permissions.NcrView, ct) is { } n)
-            recs.AddRange((await n.Where(x => x.Status != NcrStatus.Closed && x.Status != NcrStatus.Cancelled && x.DetectedOn < today.AddDays(-30)).Take(20).ToListAsync(ct)).Select(x => new CopilotRecord("Ncr", x.Id, x.Number, x.Title, x.Status.ToString(), $"/ncr/{x.Id}", "Open over 30 days")));
+            recs.AddRange((await n.Where(x => x.Status != NcrStatus.Closed && x.Status != NcrStatus.Cancelled && x.DetectedOn < today.AddDays(-30)).Take(20).ToListAsync(ct)).Select(x => new AssistRecord("Ncr", x.Id, x.Number, x.Title, x.Status.ToString(), $"/ncr/{x.Id}", "Open over 30 days")));
         return new(q, "audit-prep", recs.Count == 0 ? "Nothing open that an auditor would flag in the records you can view." : $"{recs.Count} item(s) to resolve or explain before the audit: open CAPAs, open findings, overdue calibration and NCRs open over 30 days.", recs, [], Method, null);
     }
 
     static decimal Confidence(int n) => n <= 0 ? 0 : Math.Round(1 - 1 / (decimal)Math.Sqrt(n + 1), 2);
 
     /// <summary>Summary of one record (NCR, CAPA or complaint) from its own fields.</summary>
-    public async Task<CopilotAnswer> SummarizeAsync(string type, Guid id, CancellationToken ct)
+    public async Task<AssistAnswer> SummarizeAsync(string type, Guid id, CancellationToken ct)
     {
         await m.ViewAsync(type, id, ct);
-        string text; CopilotRecord rec;
+        string text; AssistRecord rec;
         switch (type)
         {
             case "Ncr":

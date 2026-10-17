@@ -12049,7 +12049,7 @@ paths:
     get:
       tags:
         - Advisor
-      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      description: 'Requires permission: `assistant.use` (site/department scoped).'
       parameters:
         - name: topic
           in: path
@@ -12082,7 +12082,7 @@ paths:
     post:
       tags:
         - Advisor
-      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      description: 'Requires permission: `assistant.use` (site/department scoped).'
       requestBody:
         content:
           application/json:
@@ -12101,13 +12101,13 @@ paths:
           content:
             text/plain:
               schema:
-                $ref: '#/components/schemas/CopilotAnswer'
+                $ref: '#/components/schemas/AssistAnswer'
             application/json:
               schema:
-                $ref: '#/components/schemas/CopilotAnswer'
+                $ref: '#/components/schemas/AssistAnswer'
             text/json:
               schema:
-                $ref: '#/components/schemas/CopilotAnswer'
+                $ref: '#/components/schemas/AssistAnswer'
         '401':
           description: Not signed in
         '403':
@@ -12116,7 +12116,7 @@ paths:
     post:
       tags:
         - Advisor
-      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      description: 'Requires permission: `assistant.use` (site/department scoped).'
       parameters:
         - name: id
           in: path
@@ -12135,7 +12135,7 @@ paths:
     post:
       tags:
         - Advisor
-      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      description: 'Requires permission: `assistant.use` (site/department scoped).'
       parameters:
         - name: id
           in: path
@@ -12166,7 +12166,7 @@ paths:
     post:
       tags:
         - Advisor
-      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      description: 'Requires permission: `assistant.use` (site/department scoped).'
       requestBody:
         content:
           application/json:
@@ -12200,7 +12200,7 @@ paths:
     get:
       tags:
         - Advisor
-      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      description: 'Requires permission: `assistant.use` (site/department scoped).'
       parameters:
         - name: siteId
           in: path
@@ -15660,13 +15660,13 @@ paths:
           content:
             text/plain:
               schema:
-                $ref: '#/components/schemas/AiSettings'
+                $ref: '#/components/schemas/GenerationSettings'
             application/json:
               schema:
-                $ref: '#/components/schemas/AiSettings'
+                $ref: '#/components/schemas/GenerationSettings'
             text/json:
               schema:
-                $ref: '#/components/schemas/AiSettings'
+                $ref: '#/components/schemas/GenerationSettings'
         '401':
           description: Not signed in
         '403':
@@ -15679,13 +15679,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AiSettingsInput'
+              $ref: '#/components/schemas/GenerationSettingsInput'
           text/json:
             schema:
-              $ref: '#/components/schemas/AiSettingsInput'
+              $ref: '#/components/schemas/GenerationSettingsInput'
           application/*+json:
             schema:
-              $ref: '#/components/schemas/AiSettingsInput'
+              $ref: '#/components/schemas/GenerationSettingsInput'
         required: true
       responses:
         '200':
@@ -15707,17 +15707,17 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AiProviderRow'
+                  $ref: '#/components/schemas/GenerationProviderRow'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AiProviderRow'
+                  $ref: '#/components/schemas/GenerationProviderRow'
             text/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AiProviderRow'
+                  $ref: '#/components/schemas/GenerationProviderRow'
         '401':
           description: Not signed in
         '403':
@@ -15730,13 +15730,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AiProviderInput'
+              $ref: '#/components/schemas/GenerationProviderInput'
           text/json:
             schema:
-              $ref: '#/components/schemas/AiProviderInput'
+              $ref: '#/components/schemas/GenerationProviderInput'
           application/*+json:
             schema:
-              $ref: '#/components/schemas/AiProviderInput'
+              $ref: '#/components/schemas/GenerationProviderInput'
         required: true
       responses:
         '200':
@@ -15761,13 +15761,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AiProviderInput'
+              $ref: '#/components/schemas/GenerationProviderInput'
           text/json:
             schema:
-              $ref: '#/components/schemas/AiProviderInput'
+              $ref: '#/components/schemas/GenerationProviderInput'
           application/*+json:
             schema:
-              $ref: '#/components/schemas/AiProviderInput'
+              $ref: '#/components/schemas/GenerationProviderInput'
         required: true
       responses:
         '200':
@@ -15889,17 +15889,17 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AiFunctionRow'
+                  $ref: '#/components/schemas/GenerationFunctionRow'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AiFunctionRow'
+                  $ref: '#/components/schemas/GenerationFunctionRow'
             text/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AiFunctionRow'
+                  $ref: '#/components/schemas/GenerationFunctionRow'
         '401':
           description: Not signed in
         '403':
@@ -15919,13 +15919,13 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/AiFunctionInput'
+              $ref: '#/components/schemas/GenerationFunctionInput'
           text/json:
             schema:
-              $ref: '#/components/schemas/AiFunctionInput'
+              $ref: '#/components/schemas/GenerationFunctionInput'
           application/*+json:
             schema:
-              $ref: '#/components/schemas/AiFunctionInput'
+              $ref: '#/components/schemas/GenerationFunctionInput'
         required: true
       responses:
         '200':
@@ -16040,7 +16040,7 @@ paths:
         - name: outcome
           in: query
           schema:
-            $ref: '#/components/schemas/AiOutcome'
+            $ref: '#/components/schemas/GenerationOutcome'
       responses:
         '200':
           description: OK
@@ -16049,17 +16049,17 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AiLogRow'
+                  $ref: '#/components/schemas/GenerationLogRow'
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AiLogRow'
+                  $ref: '#/components/schemas/GenerationLogRow'
             text/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/AiLogRow'
+                  $ref: '#/components/schemas/GenerationLogRow'
         '401':
           description: Not signed in
         '403':
@@ -24728,7 +24728,7 @@ paths:
     post:
       tags:
         - Intelligence
-      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      description: 'Requires permission: `assistant.use` (site/department scoped).'
       requestBody:
         content:
           application/json:
@@ -24747,13 +24747,13 @@ paths:
           content:
             text/plain:
               schema:
-                $ref: '#/components/schemas/CopilotAnswer'
+                $ref: '#/components/schemas/AssistAnswer'
             application/json:
               schema:
-                $ref: '#/components/schemas/CopilotAnswer'
+                $ref: '#/components/schemas/AssistAnswer'
             text/json:
               schema:
-                $ref: '#/components/schemas/CopilotAnswer'
+                $ref: '#/components/schemas/AssistAnswer'
         '401':
           description: Not signed in
         '403':
@@ -24762,7 +24762,7 @@ paths:
     get:
       tags:
         - Intelligence
-      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      description: 'Requires permission: `assistant.use` (site/department scoped).'
       parameters:
         - name: type
           in: path
@@ -24781,13 +24781,13 @@ paths:
           content:
             text/plain:
               schema:
-                $ref: '#/components/schemas/CopilotAnswer'
+                $ref: '#/components/schemas/AssistAnswer'
             application/json:
               schema:
-                $ref: '#/components/schemas/CopilotAnswer'
+                $ref: '#/components/schemas/AssistAnswer'
             text/json:
               schema:
-                $ref: '#/components/schemas/CopilotAnswer'
+                $ref: '#/components/schemas/AssistAnswer'
         '401':
           description: Not signed in
         '403':
@@ -24796,7 +24796,7 @@ paths:
     get:
       tags:
         - Intelligence
-      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      description: 'Requires permission: `assistant.use` (site/department scoped).'
       parameters:
         - name: ncrId
           in: path
@@ -37870,437 +37870,9 @@ components:
         records:
           type: array
           items:
-            $ref: '#/components/schemas/CopilotRecord'
+            $ref: '#/components/schemas/AssistRecord'
         method:
           type: string
-    AiFunctionInput:
-      required:
-        - enabled
-        - providerId
-        - allowConfidential
-      type: object
-      properties:
-        enabled:
-          type: boolean
-        providerId:
-          type:
-            - 'null'
-            - string
-          format: uuid
-        allowConfidential:
-          type: boolean
-    AiFunctionRow:
-      required:
-        - function
-        - label
-        - description
-        - enabled
-        - providerId
-        - allowConfidential
-      type: object
-      properties:
-        function:
-          type: string
-        label:
-          type: string
-        description:
-          type: string
-        enabled:
-          type: boolean
-        providerId:
-          type:
-            - 'null'
-            - string
-          format: uuid
-        allowConfidential:
-          type: boolean
-    AiLogRow:
-      required:
-        - id
-        - function
-        - userId
-        - user
-        - recordType
-        - recordId
-        - providerName
-        - model
-        - outcome
-        - fallbackReason
-        - createdAt
-        - durationMs
-        - sourceCount
-        - excludedSources
-        - sourceRefs
-        - redactions
-        - injectionFlags
-        - promptChars
-        - responseChars
-        - promptHash
-        - responseHash
-        - promptText
-        - responseText
-        - contentPurgedAt
-        - review
-        - reviewedAt
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        function:
-          type: string
-        userId:
-          type: string
-          format: uuid
-        user:
-          type:
-            - 'null'
-            - string
-        recordType:
-          type:
-            - 'null'
-            - string
-        recordId:
-          type:
-            - 'null'
-            - string
-          format: uuid
-        providerName:
-          type:
-            - 'null'
-            - string
-        model:
-          type:
-            - 'null'
-            - string
-        outcome:
-          $ref: '#/components/schemas/AiOutcome'
-        fallbackReason:
-          type:
-            - 'null'
-            - string
-        createdAt:
-          type: string
-          format: date-time
-        durationMs:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        sourceCount:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        excludedSources:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        sourceRefs:
-          type: array
-          items:
-            type: string
-        redactions:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        injectionFlags:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        promptChars:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        responseChars:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        promptHash:
-          type:
-            - 'null'
-            - string
-        responseHash:
-          type:
-            - 'null'
-            - string
-        promptText:
-          type:
-            - 'null'
-            - string
-        responseText:
-          type:
-            - 'null'
-            - string
-        contentPurgedAt:
-          type:
-            - 'null'
-            - string
-          format: date-time
-        review:
-          $ref: '#/components/schemas/AiReview'
-        reviewedAt:
-          type:
-            - 'null'
-            - string
-          format: date-time
-    AiMode:
-      type: integer
-    AiOutcome:
-      type: integer
-    AiProviderInput:
-      required:
-        - name
-        - kind
-        - endpoint
-        - model
-        - secretReference
-      type: object
-      properties:
-        name:
-          type: string
-        kind:
-          $ref: '#/components/schemas/AiProviderKind'
-        endpoint:
-          type:
-            - 'null'
-            - string
-        model:
-          type:
-            - 'null'
-            - string
-        secretReference:
-          type:
-            - 'null'
-            - string
-    AiProviderKind:
-      type: integer
-    AiProviderRow:
-      required:
-        - id
-        - name
-        - kind
-        - endpoint
-        - model
-        - secretReference
-        - secretStored
-        - enabled
-        - lastTestAt
-        - lastTestOk
-        - lastTestMessage
-        - testCurrent
-        - approvedAt
-        - needsApproval
-        - canEnable
-        - enableBlocker
-      type: object
-      properties:
-        id:
-          type: string
-          format: uuid
-        name:
-          type: string
-        kind:
-          $ref: '#/components/schemas/AiProviderKind'
-        endpoint:
-          type:
-            - 'null'
-            - string
-        model:
-          type:
-            - 'null'
-            - string
-        secretReference:
-          type:
-            - 'null'
-            - string
-        secretStored:
-          type: boolean
-        enabled:
-          type: boolean
-        lastTestAt:
-          type:
-            - 'null'
-            - string
-          format: date-time
-        lastTestOk:
-          type:
-            - 'null'
-            - boolean
-        lastTestMessage:
-          type:
-            - 'null'
-            - string
-        testCurrent:
-          type: boolean
-        approvedAt:
-          type:
-            - 'null'
-            - string
-          format: date-time
-        needsApproval:
-          type: boolean
-        canEnable:
-          type: boolean
-        enableBlocker:
-          type:
-            - 'null'
-            - string
-    AiReview:
-      type: integer
-    AiSettings:
-      type: object
-      properties:
-        mode:
-          $ref: '#/components/schemas/AiMode'
-        timeoutSeconds:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        storeContent:
-          type: boolean
-        contentRetentionDays:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        metadataRetentionDays:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        redactionPatterns:
-          type: array
-          items:
-            type: string
-        redactEmails:
-          type: boolean
-        redactPhoneNumbers:
-          type: boolean
-        maxSourceRecords:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        auditLabel:
-          type:
-            - 'null'
-            - string
-        id:
-          type: string
-          format: uuid
-        createdAt:
-          type: string
-          format: date-time
-        createdById:
-          type:
-            - 'null'
-            - string
-          format: uuid
-        updatedAt:
-          type: string
-          format: date-time
-        updatedById:
-          type:
-            - 'null'
-            - string
-          format: uuid
-        rowVersion:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: uint32
-    AiSettingsInput:
-      required:
-        - mode
-        - timeoutSeconds
-        - storeContent
-        - contentRetentionDays
-        - metadataRetentionDays
-        - redactionPatterns
-        - redactEmails
-        - redactPhoneNumbers
-        - maxSourceRecords
-      type: object
-      properties:
-        mode:
-          $ref: '#/components/schemas/AiMode'
-        timeoutSeconds:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        storeContent:
-          type: boolean
-        contentRetentionDays:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        metadataRetentionDays:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-        redactionPatterns:
-          type: array
-          items:
-            type: string
-        redactEmails:
-          type: boolean
-        redactPhoneNumbers:
-          type: boolean
-        maxSourceRecords:
-          pattern: '^-?(?:0|[1-9]\d*)$'
-          type:
-            - integer
-            - string
-          format: int32
-    AiSource:
-      required:
-        - ref
-        - type
-        - id
-        - label
-        - url
-      type: object
-      properties:
-        ref:
-          type: string
-        type:
-          type: string
-        id:
-          type:
-            - 'null'
-            - string
-          format: uuid
-        label:
-          type: string
-        url:
-          type:
-            - 'null'
-            - string
     AlertEvent:
       type: object
       properties:
@@ -39851,6 +39423,67 @@ components:
             - 'null'
             - string
           format: uuid
+    AssistAnswer:
+      required:
+        - question
+        - intent
+        - answer
+        - records
+        - trend
+        - method
+        - confidence
+      type: object
+      properties:
+        question:
+          type: string
+        intent:
+          type: string
+        answer:
+          type: string
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssistRecord'
+        trend:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendRow'
+        method:
+          type: string
+        confidence:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+    AssistRecord:
+      required:
+        - type
+        - id
+        - number
+        - title
+        - status
+        - url
+      type: object
+      properties:
+        type:
+          type: string
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        url:
+          type: string
+        detail:
+          type:
+            - 'null'
+            - string
     AssumptionInput:
       required:
         - topic
@@ -42861,67 +42494,6 @@ components:
     ControlPlanPhase:
       type: integer
       default: 2
-    CopilotAnswer:
-      required:
-        - question
-        - intent
-        - answer
-        - records
-        - trend
-        - method
-        - confidence
-      type: object
-      properties:
-        question:
-          type: string
-        intent:
-          type: string
-        answer:
-          type: string
-        records:
-          type: array
-          items:
-            $ref: '#/components/schemas/CopilotRecord'
-        trend:
-          type: array
-          items:
-            $ref: '#/components/schemas/TrendRow'
-        method:
-          type: string
-        confidence:
-          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
-          type:
-            - 'null'
-            - number
-            - string
-          format: double
-    CopilotRecord:
-      required:
-        - type
-        - id
-        - number
-        - title
-        - status
-        - url
-      type: object
-      properties:
-        type:
-          type: string
-        id:
-          type: string
-          format: uuid
-        number:
-          type: string
-        title:
-          type: string
-        status:
-          type: string
-        url:
-          type: string
-        detail:
-          type:
-            - 'null'
-            - string
     CopyRequest:
       required:
         - type
@@ -47703,6 +47275,291 @@ components:
           type:
             - 'null'
             - string
+    GenerationFunctionInput:
+      required:
+        - enabled
+        - providerId
+        - allowConfidential
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        providerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        allowConfidential:
+          type: boolean
+    GenerationFunctionRow:
+      required:
+        - function
+        - label
+        - description
+        - enabled
+        - providerId
+        - allowConfidential
+      type: object
+      properties:
+        function:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        enabled:
+          type: boolean
+        providerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        allowConfidential:
+          type: boolean
+    GenerationLogRow:
+      required:
+        - id
+        - function
+        - userId
+        - user
+        - recordType
+        - recordId
+        - providerName
+        - model
+        - outcome
+        - fallbackReason
+        - createdAt
+        - durationMs
+        - sourceCount
+        - excludedSources
+        - sourceRefs
+        - redactions
+        - injectionFlags
+        - promptChars
+        - responseChars
+        - promptHash
+        - responseHash
+        - promptText
+        - responseText
+        - contentPurgedAt
+        - review
+        - reviewedAt
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        function:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        user:
+          type:
+            - 'null'
+            - string
+        recordType:
+          type:
+            - 'null'
+            - string
+        recordId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        providerName:
+          type:
+            - 'null'
+            - string
+        model:
+          type:
+            - 'null'
+            - string
+        outcome:
+          $ref: '#/components/schemas/GenerationOutcome'
+        fallbackReason:
+          type:
+            - 'null'
+            - string
+        createdAt:
+          type: string
+          format: date-time
+        durationMs:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        sourceCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        excludedSources:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        sourceRefs:
+          type: array
+          items:
+            type: string
+        redactions:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        injectionFlags:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        promptChars:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        responseChars:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        promptHash:
+          type:
+            - 'null'
+            - string
+        responseHash:
+          type:
+            - 'null'
+            - string
+        promptText:
+          type:
+            - 'null'
+            - string
+        responseText:
+          type:
+            - 'null'
+            - string
+        contentPurgedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        review:
+          $ref: '#/components/schemas/GenerationReview'
+        reviewedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+    GenerationMode:
+      type: integer
+    GenerationOutcome:
+      type: integer
+    GenerationProviderInput:
+      required:
+        - name
+        - kind
+        - endpoint
+        - model
+        - secretReference
+      type: object
+      properties:
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/GenerationProviderKind'
+        endpoint:
+          type:
+            - 'null'
+            - string
+        model:
+          type:
+            - 'null'
+            - string
+        secretReference:
+          type:
+            - 'null'
+            - string
+    GenerationProviderKind:
+      type: integer
+    GenerationProviderRow:
+      required:
+        - id
+        - name
+        - kind
+        - endpoint
+        - model
+        - secretReference
+        - secretStored
+        - enabled
+        - lastTestAt
+        - lastTestOk
+        - lastTestMessage
+        - testCurrent
+        - approvedAt
+        - needsApproval
+        - canEnable
+        - enableBlocker
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/GenerationProviderKind'
+        endpoint:
+          type:
+            - 'null'
+            - string
+        model:
+          type:
+            - 'null'
+            - string
+        secretReference:
+          type:
+            - 'null'
+            - string
+        secretStored:
+          type: boolean
+        enabled:
+          type: boolean
+        lastTestAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        lastTestOk:
+          type:
+            - 'null'
+            - boolean
+        lastTestMessage:
+          type:
+            - 'null'
+            - string
+        testCurrent:
+          type: boolean
+        approvedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        needsApproval:
+          type: boolean
+        canEnable:
+          type: boolean
+        enableBlocker:
+          type:
+            - 'null'
+            - string
     GenerationResult:
       required:
         - logId
@@ -47733,7 +47590,7 @@ components:
         sources:
           type: array
           items:
-            $ref: '#/components/schemas/AiSource'
+            $ref: '#/components/schemas/GenerationSource'
         notes:
           type: array
           items:
@@ -47741,7 +47598,150 @@ components:
         reviewRequired:
           type: boolean
         review:
-          $ref: '#/components/schemas/AiReview'
+          $ref: '#/components/schemas/GenerationReview'
+    GenerationReview:
+      type: integer
+    GenerationSettings:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/GenerationMode'
+        timeoutSeconds:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        storeContent:
+          type: boolean
+        contentRetentionDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        metadataRetentionDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        redactionPatterns:
+          type: array
+          items:
+            type: string
+        redactEmails:
+          type: boolean
+        redactPhoneNumbers:
+          type: boolean
+        maxSourceRecords:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    GenerationSettingsInput:
+      required:
+        - mode
+        - timeoutSeconds
+        - storeContent
+        - contentRetentionDays
+        - metadataRetentionDays
+        - redactionPatterns
+        - redactEmails
+        - redactPhoneNumbers
+        - maxSourceRecords
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/GenerationMode'
+        timeoutSeconds:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        storeContent:
+          type: boolean
+        contentRetentionDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        metadataRetentionDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        redactionPatterns:
+          type: array
+          items:
+            type: string
+        redactEmails:
+          type: boolean
+        redactPhoneNumbers:
+          type: boolean
+        maxSourceRecords:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    GenerationSource:
+      required:
+        - ref
+        - type
+        - id
+        - label
+        - url
+      type: object
+      properties:
+        ref:
+          type: string
+        type:
+          type: string
+        id:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        label:
+          type: string
+        url:
+          type:
+            - 'null'
+            - string
     GroupRow:
       required:
         - id
@@ -48206,7 +48206,7 @@ components:
       type: object
       properties:
         subject:
-          $ref: '#/components/schemas/CopilotRecord'
+          $ref: '#/components/schemas/AssistRecord'
         similar:
           type: array
           items:
@@ -61148,7 +61148,7 @@ components:
       type: object
       properties:
         ncr:
-          $ref: '#/components/schemas/CopilotRecord'
+          $ref: '#/components/schemas/AssistRecord'
         similarity:
           pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
           type:

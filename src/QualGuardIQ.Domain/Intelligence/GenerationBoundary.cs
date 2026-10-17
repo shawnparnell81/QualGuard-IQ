@@ -6,16 +6,16 @@ namespace QualGuardIQ.Domain.Intelligence;
 /// RuleBasedOnly: only the built-in deterministic features run (default). ExternalDisabled: providers may be configured and tested but nothing
 /// is sent. ApprovedFunctions: enabled functions may use an enabled provider; everything else stays rule-based.
 /// </summary>
-public enum AiMode { RuleBasedOnly = 0, ExternalDisabled = 1, ApprovedFunctions = 2 }
+public enum GenerationMode { RuleBasedOnly = 0, ExternalDisabled = 1, ApprovedFunctions = 2 }
 /// <summary>Fixture: deterministic in-process generator for tests and sandboxes (refused in a production host). ExternalHttp: a hosted service over HTTPS. LocalHttp: a model server inside the customer network (HTTP allowed on loopback/private addresses).</summary>
-public enum AiProviderKind { Fixture = 0, ExternalHttp = 1, LocalHttp = 2 }
-public enum AiOutcome { Generated = 0, RuleBased = 1, FellBack = 2, Blocked = 3 }
-public enum AiReview { Pending = 0, Accepted = 1, Discarded = 2, NotRequired = 3 }
+public enum GenerationProviderKind { Fixture = 0, ExternalHttp = 1, LocalHttp = 2 }
+public enum GenerationOutcome { Generated = 0, RuleBased = 1, FellBack = 2, Blocked = 3 }
+public enum GenerationReview { Pending = 0, Accepted = 1, Discarded = 2, NotRequired = 3 }
 
 /// <summary>Organization-wide switch for generated content (single row). Disabled by default.</summary>
-public class AiSettings : Entity, IAudited
+public class GenerationSettings : Entity, IAudited
 {
-    public AiMode Mode { get; set; } = AiMode.RuleBasedOnly;
+    public GenerationMode Mode { get; set; } = GenerationMode.RuleBasedOnly;
     public int TimeoutSeconds { get; set; } = 20;
     /// <summary>Keep the redacted prompt and the response text with the request log (otherwise only hashes and metadata are kept).</summary>
     public bool StoreContent { get; set; }
@@ -30,10 +30,10 @@ public class AiSettings : Entity, IAudited
     public string AuditLabel => "generated content settings";
 }
 
-public class AiProvider : Entity, IAudited
+public class GenerationProvider : Entity, IAudited
 {
     public string Name { get; set; } = "";
-    public AiProviderKind Kind { get; set; }
+    public GenerationProviderKind Kind { get; set; }
     public string? Endpoint { get; set; }
     public string? Model { get; set; }
     /// <summary>"config:Section:Key" or "stored" (EncryptedSecret). Never sent inside a prompt.</summary>
@@ -53,7 +53,7 @@ public class AiProvider : Entity, IAudited
 }
 
 /// <summary>Per-function enablement. Functions without a row, or disabled, stay rule-based.</summary>
-public class AiFunctionPolicy : Entity, IAudited
+public class GenerationFunctionPolicy : Entity, IAudited
 {
     public string Function { get; set; } = "";
     public bool Enabled { get; set; }
@@ -64,7 +64,7 @@ public class AiFunctionPolicy : Entity, IAudited
 }
 
 /// <summary>Append-only log of every generation request (including rule-based answers and fallbacks).</summary>
-public class AiRequestLog : Entity
+public class GenerationRequestLog : Entity
 {
     public string Function { get; set; } = "";
     public Guid UserId { get; set; }
@@ -73,7 +73,7 @@ public class AiRequestLog : Entity
     public Guid? ProviderId { get; set; }
     public string? ProviderName { get; set; }
     public string? Model { get; set; }
-    public AiOutcome Outcome { get; set; }
+    public GenerationOutcome Outcome { get; set; }
     public string? FallbackReason { get; set; }
     public int DurationMs { get; set; }
     public int SourceCount { get; set; }
@@ -88,7 +88,7 @@ public class AiRequestLog : Entity
     public string? PromptText { get; set; }
     public string? ResponseText { get; set; }
     public DateTimeOffset? ContentPurgedAt { get; set; }
-    public AiReview Review { get; set; }
+    public GenerationReview Review { get; set; }
     public Guid? ReviewedById { get; set; }
     public DateTimeOffset? ReviewedAt { get; set; }
 }

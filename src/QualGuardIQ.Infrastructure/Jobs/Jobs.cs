@@ -116,12 +116,12 @@ public sealed class MessagingDeliveryJob(QualGuardIQ.Infrastructure.Modules.Mess
 }
 
 /// <summary>Daily: purge stored generation prompts/responses and old request metadata per the retention settings.</summary>
-public sealed class AiRetentionJob(QualGuardIQ.Infrastructure.Modules.Intelligence.AiBoundaryService ai, ILogger<AiRetentionJob> log)
+public sealed class GenerationRetentionJob(QualGuardIQ.Infrastructure.Modules.Intelligence.DraftGenerationService drafts, ILogger<GenerationRetentionJob> log)
 {
     [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 600)]
     public async Task RunAsync(CancellationToken ct)
     {
-        var (purged, deleted) = await ai.PurgeAsync(ct);
+        var (purged, deleted) = await drafts.PurgeAsync(ct);
         if (purged + deleted > 0) log.LogInformation("Generation logs: {Purged} content purged, {Deleted} deleted", purged, deleted);
     }
 }
