@@ -416,11 +416,16 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessServ
     {
         [ErpEntity.Item] = ["number"], [ErpEntity.Customer] = ["code"], [ErpEntity.Supplier] = ["code"], [ErpEntity.PurchaseOrder] = ["number", "supplierCode"],
         [ErpEntity.ProductionOrder] = ["number"], [ErpEntity.WorkCenter] = ["code"], [ErpEntity.Employee] = ["number"], [ErpEntity.Bom] = ["parent"], [ErpEntity.Lot] = ["number", "item"],
+        [ErpEntity.ProductionOrderLine] = ["order"], [ErpEntity.MachineCenter] = ["code"], [ErpEntity.Serial] = ["number", "item"],
     };
+
+    /// <summary>Read and kept in the change queue for review and reconciliation; never written to QMS records (posted ERP history stays in the ERP).</summary>
+    public static readonly IReadOnlySet<ErpEntity> ReviewOnly = new HashSet<ErpEntity> { ErpEntity.Routing, ErpEntity.ItemLedgerEntry, ErpEntity.CapacityLedgerEntry, ErpEntity.OutputJournalLine, ErpEntity.ConsumptionJournalLine };
 
     public static List<string> Validate(ErpEntity entity, JsonObject f, IReadOnlyList<Rule> rules)
     {
         var errors = new List<string>();
+        if (ReviewOnly.Contains(entity)) { errors.Add($"{entity} rows are read for review only and are not applied to QMS records."); return errors; }
         if (!RequiredFields.ContainsKey(entity)) { errors.Add($"There is no QMS mapping for {entity} yet."); return errors; }
         string? S(string k) => f[k] is JsonValue v ? v.ToString() : f[k]?.ToJsonString();
         foreach (var k in RequiredFields[entity]) if (string.IsNullOrWhiteSpace(S(k))) errors.Add($"{k} is required.");
@@ -446,8 +451,10 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessServ
             errors.Add($"Supplier {s} is not in the QMS yet; sync suppliers first, then retry this change.");
         if (e == ErpEntity.Bom && Str(f, "parent") is { } p && !await db.Parts.AnyAsync(x => x.PartNumber == p, ct))
             errors.Add($"Parent part {p} is not in the QMS yet; sync items first.");
-        if (e == ErpEntity.Lot && Str(f, "item") is { } i && !await db.Parts.AnyAsync(x => x.PartNumber == i, ct))
+        if (e is ErpEntity.Lot or ErpEntity.Serial && Str(f, "item") is { } i && !await db.Parts.AnyAsync(x => x.PartNumber == i, ct))
             errors.Add($"Part {i} is not in the QMS yet; sync items first.");
+        if (e == ErpEntity.ProductionOrderLine && Str(f, "order") is { } o && !await db.WorkOrders.AnyAsync(x => x.Number == o, ct))
+            errors.Add($"Production order {o} is not in the QMS yet; sync production orders first.");
         return errors;
     }
 
@@ -551,6 +558,41 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessServ
                 wo.Status = st.Contains("clos") ? WorkOrderStatus.Closed : st.Contains("complet") || st.Contains("built") ? WorkOrderStatus.Completed : st.Contains("releas") ? WorkOrderStatus.Released
                     : st.Contains("progress") || st.Contains("start") ? WorkOrderStatus.InProcess : st.Contains("cancel") ? WorkOrderStatus.Cancelled : wo.Status;
                 result = ("WorkOrder", wo.Id, created);
+                break;
+            }
+            case ErpEntity.ProductionOrderLine:
+            {
+                // finished quantity is the sum over the order's lines (latest applied payload of each line, this one included)
+                var order = Str(f, "order")!;
+                var wo = await db.WorkOrders.FirstAsync(x => x.Number == order, ct);
+                var orderJson = new JsonObject { ["order"] = order }.ToJsonString();
+                var others = await db.ErpChanges.AsNoTracking().Where(x => x.ConnectionId == c.Id && x.Entity == ErpEntity.ProductionOrderLine && x.Status == ChangeQueueStatus.Applied && x.ExternalId != change.ExternalId && EF.Functions.JsonContains(x.After, orderJson))
+                    .OrderByDescending(x => x.AppliedAt).Select(x => new { x.ExternalId, x.After }).ToListAsync(ct);
+                var lines = others.GroupBy(x => x.ExternalId).Select(g => JsonNode.Parse(g.First().After) as JsonObject).OfType<JsonObject>().Where(x => Str(x, "order") == order).Append(f).ToList();
+                if (lines.Any(x => x.ContainsKey("finishedQuantity") && x["finishedQuantity"] is not null)) wo.QuantityCompleted = lines.Sum(x => Dec(x, "finishedQuantity"));
+                if (lines.Any(x => x["scrapQuantity"] is not null)) wo.QuantityScrapped = lines.Sum(x => Dec(x, "scrapQuantity"));
+                result = ("WorkOrder", wo.Id, false);
+                break;
+            }
+            case ErpEntity.MachineCenter:
+            {
+                var code = Str(f, "code")!;
+                var w = await db.WorkCenters.FirstOrDefaultAsync(x => x.SiteId == c.SiteId && x.Code == code, ct);
+                var created = w is null;
+                if (w is null) { w = new WorkCenter { Code = code, SiteId = c.SiteId, Source = RecordSource.Erp }; db.WorkCenters.Add(w); }
+                w.Name = Str(f, "name") ?? code;
+                result = ("WorkCenter", w.Id, created);
+                break;
+            }
+            case ErpEntity.Serial:
+            {
+                var num = Str(f, "number")!;
+                var part = await db.Parts.FirstAsync(x => x.PartNumber == Str(f, "item"), ct);
+                var unit = await db.SerialUnits.FirstOrDefaultAsync(x => x.SerialNumber == num && x.PartId == part.Id, ct);
+                var created = unit is null;
+                if (unit is null) { unit = new SerialUnit { SerialNumber = num, PartId = part.Id, SiteId = c.SiteId }; db.SerialUnits.Add(unit); }
+                if (Str(f, "lot") is { } lotNo) unit.LotId = await db.Lots.Where(x => x.Number == lotNo && x.PartId == part.Id).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(ct) ?? unit.LotId;
+                result = ("SerialUnit", unit.Id, created);
                 break;
             }
             case ErpEntity.WorkCenter:

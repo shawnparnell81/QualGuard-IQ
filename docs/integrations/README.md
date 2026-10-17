@@ -38,3 +38,4 @@ Per-vendor files were rechecked against official sources only. What's still open
 - SAP Business One has native webhooks (EventSubscription) as of its 2026 guide.
 - NetSuite JWT `alg` must be PS256/PS384/PS512/ES256/ES384/ES512 (no RS256), and `governanceLimits` needs an admin login.
 - The Business Central standard API has no manufacturing or lot entities (confirmed from the official resource list), and limits are 5 concurrent / about 6000 requests per 5 min per user.
+- [Business Central manufacturing](dynamics365-bc-manufacturing.md): production orders, lines, routings, work and machine centers, item and capacity ledger entries, output and consumption journals, lots and serials through published web services or an extension API (separate from the generic Dynamics connector; no live validation).

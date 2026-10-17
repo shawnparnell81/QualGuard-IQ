@@ -262,7 +262,7 @@ public static class DependencyInjection
         s.AddSingleton<Modules.Integration.Erp.ErpTokenCache>();
         foreach (var a in new Modules.Integration.Erp.IErpAdapter[] { new Modules.Integration.Erp.NetSuiteAdapter(), new Modules.Integration.Erp.SapAdapter(), new Modules.Integration.Erp.OracleAdapter(),
             new Modules.Integration.Erp.DynamicsAdapter(), new Modules.Integration.Erp.AcumaticaAdapter(), new Modules.Integration.Erp.InforAdapter(), new Modules.Integration.Erp.EpicorAdapter(),
-            new Modules.Integration.Erp.PlexAdapter(), new Modules.Integration.Erp.DelmiaWorksAdapter(), new Modules.Integration.Erp.CustomRestAdapter(), new Modules.Integration.Erp.CsvExchangeAdapter() })
+            new Modules.Integration.Erp.PlexAdapter(), new Modules.Integration.Erp.DelmiaWorksAdapter(), new Modules.Integration.Erp.BcManufacturingAdapter(), new Modules.Integration.Erp.CustomRestAdapter(), new Modules.Integration.Erp.CsvExchangeAdapter() })
             s.AddSingleton(a);
         s.AddSingleton<Modules.Integration.ErpAdapterRegistry>();
         s.AddScoped<Modules.Integration.ErpSyncService>();
