@@ -29117,6 +29117,118 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/files:
+    get:
+      tags:
+        - Files
+      description: Requires an authenticated user.
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: take
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LibraryItem'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LibraryItem'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LibraryItem'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/files/{id}/versions':
+    get:
+      tags:
+        - Files
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttachmentDto'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttachmentDto'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AttachmentDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/files/{id}/retention':
+    post:
+      tags:
+        - Files
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RetentionRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RetentionRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RetentionRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/files/{id}/archive':
     post:
       tags:
@@ -34006,6 +34118,14 @@ components:
         createdAt:
           type: string
           format: date-time
+        retainUntil:
+          type:
+            - 'null'
+            - string
+          format: date
+        kind:
+          type: string
+          default: Attachment
     AuditDto:
       required:
         - id
@@ -41178,6 +41298,93 @@ components:
         isActive:
           type: boolean
           default: true
+    LibraryItem:
+      required:
+        - id
+        - fileName
+        - contentType
+        - kind
+        - sizeBytes
+        - version
+        - lineageId
+        - versions
+        - classification
+        - retainUntil
+        - isLocked
+        - scanStatus
+        - createdAt
+        - ownerType
+        - ownerId
+        - ownerNumber
+        - ownerTitle
+        - ownerUrl
+        - category
+        - description
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        contentType:
+          type: string
+        kind:
+          type: string
+        sizeBytes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        version:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        lineageId:
+          type: string
+          format: uuid
+        versions:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        classification:
+          $ref: '#/components/schemas/Classification'
+        retainUntil:
+          type:
+            - 'null'
+            - string
+          format: date
+        isLocked:
+          type: boolean
+        scanStatus:
+          $ref: '#/components/schemas/ScanStatus'
+        createdAt:
+          type: string
+          format: date-time
+        ownerType:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        ownerNumber:
+          type: string
+        ownerTitle:
+          type: string
+        ownerUrl:
+          type: string
+        category:
+          type:
+            - 'null'
+            - string
+        description:
+          type:
+            - 'null'
+            - string
     LibraryStatus:
       type: integer
     LicenseActivation:
@@ -47182,6 +47389,17 @@ components:
         isActive:
           type: boolean
           default: true
+    RetentionRequest:
+      required:
+        - retainUntil
+        - reason
+      type: object
+      properties:
+        retainUntil:
+          type: string
+          format: date
+        reason:
+          type: string
     ReturnDisposition:
       type: integer
     ReturnDispositionInput:

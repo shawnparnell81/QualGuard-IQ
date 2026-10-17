@@ -17,11 +17,12 @@ import { mono } from '../theme';
 
 const base = (type: string, id: string) => `/api/records/${type}/${id}`;
 
-interface FileRow { id: string; fileName: string; sizeBytes: number; sha256: string; version: number; isLocked: boolean; isArchived: boolean; createdAt: string; contentType: string }
+interface FileRow { id: string; fileName: string; sizeBytes: number; sha256: string; version: number; isLocked: boolean; isArchived: boolean; createdAt: string; contentType: string; retainUntil?: string | null; classification?: number; kind?: string }
 
 export function FilesPanel({ type, id, canEdit, onChanged }: { type: string; id: string; canEdit: boolean; onChanged?: () => void }) {
   const qc = useQueryClient();
   const [history, setHistory] = useState(false);
+  const [classification, setClassification] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement>(null);
   const replaceId = useRef<string | null>(null);
@@ -30,7 +31,7 @@ export function FilesPanel({ type, id, canEdit, onChanged }: { type: string; id:
     setError(null);
     const form = new FormData();
     form.append('file', f);
-    form.append('classification', '0');
+    form.append('classification', String(classification));
     if (replaceId.current) form.append('replacesId', replaceId.current);
     try { await api('POST', `${base(type, id)}/files`, form); qc.invalidateQueries({ queryKey: ['files', type, id] }); onChanged?.(); }
     catch (e) { setError((e as Error).message); }
@@ -46,6 +47,7 @@ export function FilesPanel({ type, id, canEdit, onChanged }: { type: string; id:
     { header: 'Size', accessorKey: 'sizeBytes', cell: (c) => `${(c.getValue() / 1024).toFixed(1)} KB` },
     { header: 'SHA-256', accessorKey: 'sha256', cell: (c) => <Tooltip title={c.getValue()}><span style={{ fontFamily: mono, fontSize: 12 }}>{String(c.getValue()).slice(0, 12)}…</span></Tooltip> },
     { header: 'Uploaded', accessorKey: 'createdAt', cell: (c) => fmtDateTime(c.getValue()) },
+    { header: 'Retained until', accessorKey: 'retainUntil', cell: (c) => c.getValue() ?? '' },
     { header: '', id: 'act', cell: (c) => canEdit && !c.row.original.isLocked && !c.row.original.isArchived ? (
       <Stack direction="row">
         <Button size="small" onClick={() => { replaceId.current = c.row.original.id; input.current?.click(); }}>New version</Button>
@@ -56,6 +58,7 @@ export function FilesPanel({ type, id, canEdit, onChanged }: { type: string; id:
     <Stack gap={1.5}>
       <Stack direction="row" gap={1} alignItems="center">
         {canEdit && <Button variant="outlined" startIcon={<UploadFileOutlined />} onClick={() => { replaceId.current = null; input.current?.click(); }}>Upload file</Button>}
+        {canEdit && <TextField select size="small" label="Classification" value={classification} onChange={(e) => setClassification(Number(e.target.value))} sx={{ minWidth: 150 }}>{['Internal', 'Confidential', 'Restricted', 'Public'].map((l, i) => <MenuItem key={l} value={i}>{l}</MenuItem>)}</TextField>}
         <FormControlLabel control={<Checkbox size="small" checked={history} onChange={(e) => setHistory(e.target.checked)} />} label="Show earlier versions" />
         <input ref={input} type="file" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) upload(f); e.target.value = ''; }} />
       </Stack>

@@ -43,6 +43,18 @@ If you hold *master data edit*, open Platform › Data governance, pick the doma
 Site, Equipment) and choose **Request change** or **Propose fix** on a data quality violation. The change is applied only
 after the data steward approves it; the master record's history shows the old and new values.
 
+## Files, drawings and videos
+
+- Attach files on a record's attachments tab. Choose a classification first: *Restricted* files can be opened only by
+  people who may edit the record, and every opening of a *Confidential* or *Restricted* file is logged.
+- **New version** replaces a file while keeping every earlier version; the version history shows each one with its
+  checksum.
+- Videos (MP4, M4V, WebM, MOV; up to 1 GB by default) play directly in the browser. MP4 (H.264) and WebM play
+  everywhere; MOV plays only in some browsers.
+- Documents › **Content library** lists every drawing, document, image, video and attachment you can see across all
+  records, with search, version history, retention and classification.
+- Files under retention cannot be removed before their retention date.
+
 ## Notifications
 
 Notifications appear under the bell icon and, when email is configured, by email. They link straight to the record.
