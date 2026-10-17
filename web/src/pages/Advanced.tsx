@@ -10,7 +10,7 @@ import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDate, fmtDateTime, localDate } from '../components/Status';
-import { Facts, SchemaForm, Section, StepDialog, useRunner } from '../components/Kit';
+import { Facts, SchemaForm, Section, StepDialog, useRunner, useUsers } from '../components/Kit';
 import { mono } from '../theme';
 
 const mod = (k: string) => modules.find((m) => m.key === k)!;
@@ -72,20 +72,20 @@ export function ApqpNew() {
 }
 
 type Line = Record<string, any>;
-const lineCols: Record<Kind, [string, string, 'text' | 'number'][]> = {
+const lineCols: Record<Kind, [string, string, 'text' | 'number' | 'date' | 'user'][]> = {
   flows: [['sequence', 'Seq', 'number'], ['name', 'Step', 'text'], ['stepType', 'Type', 'text'], ['inputs', 'Inputs', 'text'], ['outputs', 'Outputs', 'text']],
   pfmea: [['stepSequence', 'Step', 'number'], ['processFunction', 'Function', 'text'], ['failureMode', 'Failure mode', 'text'], ['failureEffect', 'Effect', 'text'], ['failureCause', 'Cause', 'text'],
-    ['preventionControls', 'Prevention', 'text'], ['detectionControls', 'Detection controls', 'text'], ['severity', 'S', 'number'], ['occurrence', 'O', 'number'], ['detection', 'D', 'number'], ['recommendedAction', 'Recommended action', 'text']],
+    ['preventionControls', 'Prevention', 'text'], ['detectionControls', 'Detection controls', 'text'], ['severity', 'S', 'number'], ['occurrence', 'O', 'number'], ['detection', 'D', 'number'], ['recommendedAction', 'Recommended action', 'text'], ['responsibleId', 'Responsible', 'user'], ['dueOn', 'Due', 'date']],
   plans: [['stepSequence', 'Step', 'number'], ['processStep', 'Process step', 'text'], ['machineOrTool', 'Machine / tool', 'text'], ['characteristic', 'Characteristic', 'text'], ['characteristicType', 'Product / Process', 'text'],
     ['specialCharacteristic', 'Special', 'text'], ['specification', 'Specification', 'text'], ['method', 'Method', 'text'], ['sampleSize', 'Sample', 'text'], ['frequency', 'Frequency', 'text'], ['controlMethod', 'Control method', 'text'], ['reactionPlan', 'Reaction plan', 'text']],
 };
 const blank: Record<Kind, Line> = {
   flows: { sequence: 10, name: '', stepType: 'Operation', inputs: '', outputs: '' },
-  pfmea: { stepSequence: 10, processFunction: '', failureMode: '', failureEffect: '', failureCause: '', preventionControls: '', detectionControls: '', severity: 5, occurrence: 5, detection: 5, recommendedAction: '' },
+  pfmea: { stepSequence: 10, processFunction: '', failureMode: '', failureEffect: '', failureCause: '', preventionControls: '', detectionControls: '', severity: 5, occurrence: 5, detection: 5, recommendedAction: '', responsibleId: '', dueOn: '' },
   plans: { stepSequence: 10, processStep: '', machineOrTool: '', characteristic: '', characteristicType: 'Product', specialCharacteristic: '', specification: '', method: '', sampleSize: '', frequency: '', controlMethod: '', reactionPlan: '' },
 };
-const toInput = (kind: Kind, l: Line) => { const o: Line = {}; for (const [k] of lineCols[kind]) o[k] = l[k] === '' ? null : l[k];
-  if (kind === 'pfmea') Object.assign(o, { specialCharacteristic: l.specialCharacteristic ?? null, responsibleId: l.responsibleId ?? null, dueOn: l.dueOn ?? null, completedOn: l.completedOn ?? null, actionTaken: l.actionTaken ?? null, revisedSeverity: l.revisedSeverity ?? null, revisedOccurrence: l.revisedOccurrence ?? null, revisedDetection: l.revisedDetection ?? null });
+const toInput = (kind: Kind, l: Line) => { const o: Line = {}; for (const [k] of lineCols[kind]) o[k] = l[k] === '' || l[k] === undefined ? null : l[k];
+  if (kind === 'pfmea') Object.assign(o, { specialCharacteristic: l.specialCharacteristic ?? null, completedOn: l.completedOn ?? null, actionTaken: l.actionTaken ?? null, revisedSeverity: l.revisedSeverity ?? null, revisedOccurrence: l.revisedOccurrence ?? null, revisedDetection: l.revisedDetection ?? null });
   if (kind === 'flows') Object.assign(o, { ownerId: l.ownerId ?? null, workInstructionId: l.workInstructionId ?? null, inspectionPlanId: l.inspectionPlanId ?? null });
   if (kind === 'plans') Object.assign(o, { pfmeaLineId: l.pfmeaLineId ?? null, inspectionPlanId: l.inspectionPlanId ?? null, spcChartId: l.spcChartId ?? null });
   return o; };
@@ -102,6 +102,7 @@ export function ApqpDetail() {
   const doc = useQuery({ queryKey: ['apqp-doc', kind, id], queryFn: () => get<ApqpRow>(`/api/apqp/${kind}/${id}`) });
   const lines = useQuery({ queryKey: ['apqp-lines', kind, id], queryFn: () => get<Line[]>(`/api/apqp/${kind}/${id}/lines`) });
   const hist = useQuery({ queryKey: ['apqp-hist', kind, id], queryFn: () => get<ApqpRow[]>(`/api/apqp/${kind}/${id}/history`) });
+  const users = useUsers();
   const [draft, setDraft] = useState<Line[] | null>(null);
   const [dlg, setDlg] = useState<'revise' | 'obsolete' | null>(null);
   const refresh = () => { qc.invalidateQueries({ queryKey: ['apqp-doc', kind, id] }); qc.invalidateQueries({ queryKey: ['apqp-lines', kind, id] }); qc.invalidateQueries({ queryKey: ['apqp-hist', kind, id] }); setDraft(null); };
@@ -135,7 +136,9 @@ export function ApqpDetail() {
             <TableBody>
               {rows.map((r, i) => <TableRow key={r.id ?? `n${i}`}>
                 {cols.map(([k2, , t]) => <TableCell key={k2} sx={{ minWidth: t === 'number' ? 56 : 120 }}>
-                  {editable ? <TextField size="small" variant="standard" type={t} value={r[k2] ?? ''} onChange={(e) => setCell(i, k2, e.target.value, t)} inputProps={{ 'aria-label': k2 }} /> : (r[k2] ?? '—')}</TableCell>)}
+                  {t === 'user' ? (editable ? <TextField select size="small" variant="standard" value={r[k2] ?? ''} onChange={(e) => setCell(i, k2, e.target.value, t)} sx={{ minWidth: 120 }}><MenuItem value="">—</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+                    : (users.data?.find((u) => u.id === r[k2])?.displayName ?? '—'))
+                  : editable ? <TextField size="small" variant="standard" type={t} value={r[k2] ?? ''} onChange={(e) => setCell(i, k2, e.target.value, t)} inputProps={{ 'aria-label': k2 }} /> : (t === 'date' ? fmtDate(r[k2]) : (r[k2] ?? '—'))}</TableCell>)}
                 {kind === 'pfmea' && <>
                   <TableCell sx={{ fontFamily: mono }}>{r.rpn ?? r.severity * r.occurrence * r.detection}</TableCell>
                   <TableCell>{r.priority != null && <Box component="span" sx={{ px: 1, py: 0.25, borderRadius: 1, color: '#fff', fontSize: 12, bgcolor: prioTone[r.priority] }}>{priorities[r.priority]}</Box>}</TableCell>
@@ -495,7 +498,7 @@ function Tile({ m }: { m: Metric }) {
     sx={{ p: 2, cursor: m.drillUrl ? 'pointer' : 'default', borderLeft: 4, borderLeftColor: '#3E5C76', '&:hover': m.drillUrl ? { bgcolor: '#F7F5F0' } : undefined }}>
     <Typography variant="caption" color="text.secondary">{m.label}</Typography>
     <Typography variant="h5" sx={{ fontFamily: mono }}>{fmtMetric(m)}</Typography>
-    {m.denominator != null && <Typography variant="caption" color="text.secondary" sx={{ fontFamily: mono }}>{m.numerator} / {m.denominator}</Typography>}
+    {m.denominator != null && m.numerator != null && <Typography variant="caption" color="text.secondary" sx={{ fontFamily: mono }}>{m.numerator} / {m.denominator}</Typography>}
   </Paper>;
 }
 
