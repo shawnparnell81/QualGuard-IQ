@@ -11,12 +11,15 @@ using QualGuardIQ.Domain.Security;
 using QualGuardIQ.Infrastructure.Identity;
 using QualGuardIQ.Infrastructure.Modules.Quality;
 using QualGuardIQ.Infrastructure.Persistence;
+using QualGuardIQ.Infrastructure.Security;
 using QualGuardIQ.Infrastructure.Services;
 using QualGuardIQ.Infrastructure.Storage;
 
 namespace QualGuardIQ.Infrastructure.Modules.Enterprise;
 
-public sealed record RetentionPolicyInput(string Name, string RecordType, string? ProductFamily, string? RegulatoryCategory, int RetainYears, RetentionAction Action, bool IsActive = true);
+public sealed record RetentionPolicyInput(string Name, string? RecordType, string? ProductFamily, string? RegulatoryCategory, int RetainYears, RetentionAction Action, bool IsActive = true,
+    string? Module = null, Guid? SiteId = null, Guid? DepartmentId = null, Guid? CustomerId = null, Guid? SupplierId = null, QualGuardIQ.Domain.Platform.DataClassification? Confidentiality = null, int Priority = 100);
+public sealed record RecordClassificationInput(string RecordType, Guid RecordId, QualGuardIQ.Domain.Platform.DataClassification Classification, string Reason);
 public sealed record RetentionDue(string RecordType, Guid RecordId, string Number, DateTimeOffset CreatedAt, Guid SiteId);
 public sealed record RetentionDecisionInput(string RecordType, Guid RecordId, RetentionDecisionKind Decision, string Reason);
 public sealed record ContinuityInput(ContinuityKind Kind, string Title, Guid SiteId, DateOnly PlannedOn, int? TargetRecoveryMinutes);
@@ -28,40 +31,48 @@ public sealed record ApiClientCreated(Guid Id, string ClientId, string Secret, s
 
 /// <summary>Retention governance, business continuity exercises, scoped notification channels and broadcasts, public API clients and the Part 11 readiness check.</summary>
 public sealed class GovernanceService(AppDbContext db, ModuleSupport m, INumberingService numbers, IFileStorage storage, IHttpClientFactory http, INotifier notifier,
-    IOptions<IdentityOptions> identity, UserManager<ApplicationUser> users)
+    IOptions<IdentityOptions> identity, UserManager<ApplicationUser> users, RetentionEngine retention, ISecurityEventLogger security)
 {
     public const string ContinuityType = "ContinuityExercise";
 
     // ---------- retention ----------
     /// <summary>Record types retention can evaluate (age is taken from the record's creation time).</summary>
-    public static readonly string[] RetentionTypes = ["Ncr", "Capa", "Audit", "Complaint", "FormRecord", "Inspection", "Fai", "ChangeRequest", "CalibrationEvent", "Validation", "Ppap", "TrainingAssignment"];
+    public static readonly string[] RetentionTypes = [.. RetentionEngine.Types];
 
-    IQueryable<RetentionDue> Source(string type) => type switch
+    static string? Opt(string? v, string label, int max)
     {
-        "Ncr" => db.Ncrs.Select(x => new RetentionDue(type, x.Id, x.Number, x.CreatedAt, x.SiteId)),
-        "Capa" => db.Capas.Select(x => new RetentionDue(type, x.Id, x.Number, x.CreatedAt, x.SiteId)),
-        "Audit" => db.Audits.Select(x => new RetentionDue(type, x.Id, x.Number, x.CreatedAt, x.SiteId)),
-        "Complaint" => db.Complaints.Select(x => new RetentionDue(type, x.Id, x.Number, x.CreatedAt, x.SiteId)),
-        "FormRecord" => db.FormRecords.Select(x => new RetentionDue(type, x.Id, x.Number, x.CreatedAt, x.SiteId)),
-        "Inspection" => db.Inspections.Select(x => new RetentionDue(type, x.Id, x.Number, x.CreatedAt, x.SiteId)),
-        "Fai" => db.Fais.Select(x => new RetentionDue(type, x.Id, x.Number, x.CreatedAt, x.SiteId)),
-        "ChangeRequest" => db.ChangeRequests.Select(x => new RetentionDue(type, x.Id, x.Number, x.CreatedAt, x.SiteId)),
-        "CalibrationEvent" => db.CalibrationEvents.Select(x => new RetentionDue(type, x.Id, x.Number, x.CreatedAt, x.SiteId)),
-        "Validation" => db.ValidationProjects.Select(x => new RetentionDue(type, x.Id, x.Number, x.CreatedAt, x.SiteId)),
-        "Ppap" => db.PpapSubmissions.Select(x => new RetentionDue(type, x.Id, x.Number, x.CreatedAt, x.SiteId)),
-        "TrainingAssignment" => db.TrainingAssignments.Select(x => new RetentionDue(type, x.Id, "TA-" + x.Id.ToString().Substring(0, 8), x.CreatedAt, x.SiteId)),
-        _ => throw new AppException($"Retention can evaluate: {string.Join(", ", RetentionTypes)}.")
-    };
+        if (string.IsNullOrWhiteSpace(v)) return null;
+        if (v.Trim().Length > max) throw new AppException($"{label} is limited to {max} characters.");
+        return v.Trim();
+    }
 
     public async Task<RetentionPolicy> SavePolicyAsync(Guid? id, RetentionPolicyInput r, CancellationToken ct)
     {
         if (!await m.CanAnyAsync(Permissions.GovernanceEdit, ct)) throw new ForbiddenException();
         ModuleSupport.Required(r.Name, "Name", 200);
-        if (!RetentionTypes.Contains(r.RecordType)) throw new AppException($"Retention can evaluate: {string.Join(", ", RetentionTypes)}.");
+        var type = Opt(r.RecordType, "Record type", 50);
+        if (type is not null && !RetentionTypes.Contains(type)) throw new AppException($"Retention can evaluate: {string.Join(", ", RetentionTypes)}.");
+        var module = Opt(r.Module, "Module", 50)?.ToLowerInvariant();
+        if (module is not null && !RetentionEngine.ModuleOf.Values.Contains(module)) throw new AppException($"Retention modules: {string.Join(", ", RetentionEngine.ModuleOf.Values.Distinct())}.");
+        if (type is not null && module is not null && RetentionEngine.ModuleOf[type] != module) throw new AppException($"{type} records belong to the {RetentionEngine.ModuleOf[type]} module.");
         if (r.RetainYears is < 1 or > 100) throw new AppException("Retention must be 1–100 years.");
+        if (r.Priority is < 1 or > 1000) throw new AppException("Priority must be 1 (highest) to 1000.");
+        if (r.SiteId is { } sid) await m.RequireAsync(Permissions.GovernanceEdit, sid, r.DepartmentId, ct);
+        if (r.SiteId is { } s2) await m.ValidateLocationAsync(s2, r.DepartmentId, ct);
+        else if (r.DepartmentId is not null) throw new AppException("Select the site of the department.");
+        if (r.CustomerId is { } cid && !await db.Customers.AnyAsync(x => x.Id == cid, ct)) throw new NotFoundException("Customer");
+        if (r.SupplierId is { } spid && !await db.Suppliers.AnyAsync(x => x.Id == spid, ct)) throw new NotFoundException("Supplier");
         var p = id is { } pid ? await db.RetentionPolicies.FirstOrDefaultAsync(x => x.Id == pid, ct) ?? throw new NotFoundException("Retention policy") : new RetentionPolicy();
-        p.Name = r.Name.Trim(); p.RecordType = r.RecordType; p.ProductFamily = r.ProductFamily?.Trim(); p.RegulatoryCategory = r.RegulatoryCategory?.Trim(); p.RetainYears = r.RetainYears; p.Action = r.Action; p.IsActive = r.IsActive;
-        if (id is null) db.RetentionPolicies.Add(p);
+        if (id is not null && p.SiteId is { } old) await m.RequireAsync(Permissions.GovernanceEdit, old, p.DepartmentId, ct);
+        var before = id is null ? null : RetentionEngine.Serialize(RetentionCriteria.Of(p));
+        p.Name = r.Name.Trim(); p.RecordType = type; p.Module = module; p.ProductFamily = Opt(r.ProductFamily, "Product family", 100); p.RegulatoryCategory = Opt(r.RegulatoryCategory, "Regulatory category", 100);
+        p.SiteId = r.SiteId; p.DepartmentId = r.DepartmentId; p.CustomerId = r.CustomerId; p.SupplierId = r.SupplierId; p.Confidentiality = r.Confidentiality; p.Priority = r.Priority;
+        p.RetainYears = r.RetainYears; p.Action = r.Action; p.IsActive = r.IsActive;
+        var criteria = RetentionEngine.Serialize(RetentionCriteria.Of(p));
+        if (id is null) { p.Version = 1; db.RetentionPolicies.Add(p); }
+        else if (criteria != before) p.Version++;
+        if (id is null || criteria != before)
+            db.RetentionPolicyVersions.Add(new RetentionPolicyVersion { PolicyId = p.Id, Version = p.Version, Criteria = criteria, SavedById = m.UserId, SavedAt = m.Now });
         await db.SaveChangesAsync(ct);
         return p;
     }
@@ -69,30 +80,60 @@ public sealed class GovernanceService(AppDbContext db, ModuleSupport m, INumberi
     public async Task<List<RetentionPolicy>> PoliciesAsync(CancellationToken ct)
     {
         if (!await m.CanAnyAsync(Permissions.GovernanceView, ct)) throw new ForbiddenException();
-        return await db.RetentionPolicies.AsNoTracking().OrderBy(p => p.RecordType).ThenBy(p => p.Name).ToListAsync(ct);
+        return await db.RetentionPolicies.AsNoTracking().OrderBy(p => p.Priority).ThenBy(p => p.RecordType).ThenBy(p => p.Name).ToListAsync(ct);
     }
 
-    /// <summary>Records past the policy's retention period that have no decision yet (limited to sites the caller governs).</summary>
+    public async Task<List<RetentionPolicyVersion>> PolicyVersionsAsync(Guid policyId, CancellationToken ct)
+    {
+        if (!await m.CanAnyAsync(Permissions.GovernanceView, ct)) throw new ForbiddenException();
+        return await db.RetentionPolicyVersions.AsNoTracking().Where(x => x.PolicyId == policyId).OrderByDescending(x => x.Version).ToListAsync(ct);
+    }
+
+    /// <summary>Records this policy governs (after resolving overlaps with other policies) that are past retention and have no decision yet.</summary>
     public async Task<List<RetentionDue>> DueAsync(Guid policyId, CancellationToken ct)
     {
-        var p = await db.RetentionPolicies.AsNoTracking().FirstOrDefaultAsync(x => x.Id == policyId, ct) ?? throw new NotFoundException("Retention policy");
-        var cutoff = m.Now.AddYears(-p.RetainYears);
-        var due = await Source(p.RecordType).Where(x => x.CreatedAt < cutoff && !db.RetentionDecisions.Any(d => d.RecordType == p.RecordType && d.RecordId == x.RecordId && d.Decision != RetentionDecisionKind.Extended))
-            .OrderBy(x => x.CreatedAt).Take(500).ToListAsync(ct);
-        var result = new List<RetentionDue>();
-        foreach (var d in due) if (await m.CanAsync(Permissions.GovernanceView, d.SiteId, null, ct)) result.Add(d);
-        return result;
+        var e = await retention.EvaluateAsync(new RetentionEngine.Options(PolicyId: policyId, Status: RetentionStatus.Due, PageSize: 500), ct);
+        return e.Candidates.Select(c => new RetentionDue(c.RecordType, c.RecordId, c.Number, c.CreatedAt, c.SiteId)).ToList();
+    }
+
+    /// <summary>Dry run / candidate preview: explains for each record which policies match and which governs it. Never changes or disposes anything; the run is logged.</summary>
+    public async Task<RetentionEvaluation> EvaluateAsync(RetentionEngine.Options o, CancellationToken ct)
+    {
+        var e = await retention.EvaluateAsync(o with { DryRun = true }, ct);
+        await security.LogAsync("RetentionDryRun", true, m.UserId, null,
+            $"type={o.RecordType ?? "all"} site={o.SiteId?.ToString() ?? "all"} policy={o.PolicyId?.ToString() ?? "all"} version={o.Version?.ToString() ?? "current"}: {e.Evaluated} evaluated, {e.Due} due, {e.OnHold} on hold, {e.Conflicts} conflicts{(e.Truncated ? " (truncated)" : "")}", ct);
+        return e;
     }
 
     public async Task DecideAsync(Guid policyId, RetentionDecisionInput r, CancellationToken ct)
     {
         var p = await db.RetentionPolicies.AsNoTracking().FirstOrDefaultAsync(x => x.Id == policyId, ct) ?? throw new NotFoundException("Retention policy");
-        if (r.RecordType != p.RecordType) throw new AppException("The record type does not match the policy.");
+        if (p.RecordType is not null && r.RecordType != p.RecordType) throw new AppException("The record type does not match the policy.");
         ModuleSupport.Required(r.Reason, "Reason", 2000);
-        var rec = await Source(p.RecordType).FirstOrDefaultAsync(x => x.RecordId == r.RecordId, ct) ?? throw new NotFoundException("Record");
-        await m.RequireAsync(Permissions.GovernanceEdit, rec.SiteId, null, ct);
-        if (r.Decision == RetentionDecisionKind.DisposalApproved && rec.CreatedAt >= m.Now.AddYears(-p.RetainYears)) throw new AppException("The record has not reached the end of its retention period.");
-        db.RetentionDecisions.Add(new RetentionDecision { PolicyId = p.Id, RecordType = p.RecordType, RecordId = rec.RecordId, RecordNumber = rec.Number, Decision = r.Decision, Reason = r.Reason.Trim(), DecidedById = m.UserId, DecidedAt = m.Now });
+        var c = await retention.ForRecordAsync(r.RecordType, r.RecordId, ct) ?? throw new NotFoundException("Record");
+        await m.RequireAsync(Permissions.GovernanceEdit, c.SiteId, null, ct);
+        if (!c.Matches.Any(x => x.PolicyId == p.Id)) throw new AppException("This policy's filters do not match the record.");
+        if (r.Decision == RetentionDecisionKind.DisposalApproved)
+        {
+            if (c.Status == RetentionStatus.OnHold) throw new AppException("The record is on legal hold.");
+            if (c.PolicyId != p.Id) throw new AppException($"The record is governed by another policy ({c.PolicyName}).");
+            if (c.Conflict) throw new AppException("Policies conflict for this record; resolve the conflict before approving disposal.");
+            if (c.Status != RetentionStatus.Due) throw new AppException("The record has not reached the end of its retention period.");
+        }
+        db.RetentionDecisions.Add(new RetentionDecision { PolicyId = p.Id, PolicyVersion = p.Version, RecordType = c.RecordType, RecordId = c.RecordId, RecordNumber = c.Number, Decision = r.Decision, Reason = r.Reason.Trim(), DecidedById = m.UserId, DecidedAt = m.Now });
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Sets a record's confidentiality classification (governance.edit at the record's site). Audited.</summary>
+    public async Task ClassifyAsync(RecordClassificationInput r, CancellationToken ct)
+    {
+        ModuleSupport.Required(r.Reason, "Reason", 500);
+        if (!Enum.IsDefined(r.Classification)) throw new AppException("Unknown classification.");
+        var f = await retention.Source(r.RecordType).FirstOrDefaultAsync(x => x.RecordId == r.RecordId, ct) ?? throw new NotFoundException("Record");
+        await m.RequireAsync(Permissions.GovernanceEdit, f.SiteId, f.DepartmentId, ct);
+        var row = await db.RecordConfidentialities.FirstOrDefaultAsync(x => x.RecordType == r.RecordType && x.RecordId == r.RecordId, ct);
+        if (row is null) { row = new RecordConfidentiality { RecordType = r.RecordType, RecordId = r.RecordId }; db.RecordConfidentialities.Add(row); }
+        row.Classification = r.Classification; row.Reason = r.Reason.Trim();
         await db.SaveChangesAsync(ct);
     }
 

@@ -36,7 +36,7 @@ public static class FileKinds
 
 public sealed record UploadRequest(string FileName, string ContentType, Stream Content, string? Category, string? Description, Classification Classification, Guid? ReplacesId);
 
-public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMalwareScanner scanner, IRecordRegistry records, IConfiguration config, ISiteCalendar calendar, IAccessService access, ICurrentUser current, Security.ISecurityEventLogger security)
+public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMalwareScanner scanner, IRecordRegistry records, IConfiguration config, ISiteCalendar calendar, IAccessService access, ICurrentUser current, Security.ISecurityEventLogger security, Modules.Enterprise.RetentionEngine retention)
 {
     private static readonly HashSet<string> Blocked = [".exe", ".dll", ".bat", ".cmd", ".com", ".msi", ".ps1", ".sh", ".js", ".vbs", ".scr", ".jar", ".html", ".htm", ".svg"];
 
@@ -155,11 +155,11 @@ public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMa
         return a;
     }
 
-    /// <summary>Active retention policy for the record type (without product or regulatory filters) sets the initial retention date.</summary>
+    /// <summary>The retention policy that governs the record (all filters and priority resolution, see RetentionEngine) sets the initial retention date.</summary>
     async Task<DateOnly?> PolicyRetentionAsync(RecordInfo record, CancellationToken ct)
     {
-        var years = await db.RetentionPolicies.AsNoTracking().Where(p => p.IsActive && p.RecordType == record.Type && p.ProductFamily == null && p.RegulatoryCategory == null).MaxAsync(p => (int?)p.RetainYears, ct);
-        return years is > 0 ? (await calendar.TodayAsync(record.SiteId, ct)).AddYears(years.Value) : null;
+        var c = await retention.ForRecordAsync(record.Type, record.Id, ct);
+        return c?.RetainYears is int years && years > 0 ? (await calendar.TodayAsync(record.SiteId, ct)).AddYears(years) : null;
     }
 
     /// <summary>Enterprise content library: current versions of files across every record the user can view, filtered by kind and text.</summary>

@@ -30,6 +30,8 @@ public partial class AppDbContext
     public DbSet<CapabilityStudy> CapabilityStudies => Set<CapabilityStudy>();
     public DbSet<RetentionPolicy> RetentionPolicies => Set<RetentionPolicy>();
     public DbSet<RetentionDecision> RetentionDecisions => Set<RetentionDecision>();
+    public DbSet<RetentionPolicyVersion> RetentionPolicyVersions => Set<RetentionPolicyVersion>();
+    public DbSet<RecordConfidentiality> RecordConfidentialities => Set<RecordConfidentiality>();
     public DbSet<ContinuityExercise> ContinuityExercises => Set<ContinuityExercise>();
     public DbSet<NotificationChannel> NotificationChannels => Set<NotificationChannel>();
     public DbSet<ApiClient> ApiClients => Set<ApiClient>();
@@ -194,12 +196,29 @@ public partial class AppDbContext
         b.Entity<RetentionPolicy>(e =>
         {
             e.ToTable("retention_policies"); e.Property(x => x.Name).HasMaxLength(200); e.Property(x => x.RecordType).HasMaxLength(50);
-            e.Property(x => x.ProductFamily).HasMaxLength(100); e.Property(x => x.RegulatoryCategory).HasMaxLength(100);
+            e.Property(x => x.ProductFamily).HasMaxLength(100); e.Property(x => x.RegulatoryCategory).HasMaxLength(100); e.Property(x => x.Module).HasMaxLength(50);
+            e.Property(x => x.Priority).HasDefaultValue(100); e.Property(x => x.Version).HasDefaultValue(1);
+            e.ToTable(t => { t.HasCheckConstraint("ck_retention_priority", "\"Priority\" BETWEEN 1 AND 1000"); t.HasCheckConstraint("ck_retention_years", "\"RetainYears\" BETWEEN 1 AND 100"); });
+            e.HasOne<Site>().WithMany().HasForeignKey(x => x.SiteId).OnDelete(R);
+            e.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(R);
+            e.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(R);
+            e.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(R);
+        });
+        b.Entity<RetentionPolicyVersion>(e =>
+        {
+            e.ToTable("retention_policy_versions"); e.HasIndex(x => new { x.PolicyId, x.Version }).IsUnique();
+            e.HasOne<RetentionPolicy>().WithMany().HasForeignKey(x => x.PolicyId).OnDelete(R);
+            UserReq(e, x => x.SavedById);
+        });
+        b.Entity<RecordConfidentiality>(e =>
+        {
+            e.ToTable("record_confidentiality"); e.HasIndex(x => new { x.RecordType, x.RecordId }).IsUnique();
+            e.Property(x => x.RecordType).HasMaxLength(50); e.Property(x => x.Reason).HasMaxLength(500);
         });
         b.Entity<RetentionDecision>(e =>
         {
             e.ToTable("retention_decisions"); e.HasIndex(x => new { x.RecordType, x.RecordId });
-            e.Property(x => x.RecordType).HasMaxLength(50); e.Property(x => x.RecordNumber).HasMaxLength(60); e.Property(x => x.Reason).HasMaxLength(2000);
+            e.Property(x => x.RecordType).HasMaxLength(50); e.Property(x => x.RecordNumber).HasMaxLength(60); e.Property(x => x.Reason).HasMaxLength(2000); e.Property(x => x.PolicyVersion).HasDefaultValue(1);
             e.HasOne<RetentionPolicy>().WithMany().HasForeignKey(x => x.PolicyId).OnDelete(R);
             UserReq(e, x => x.DecidedById);
         });

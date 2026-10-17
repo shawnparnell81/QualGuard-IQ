@@ -100,4 +100,34 @@ test.describe('E2E 14: gap closure', () => {
     await row.getByRole('button', { name: 'Approve' }).click();
     await expect(page.getByRole('alert')).toContainText(/cannot approve it/);
   });
+
+  test('retention policies take filters and priority, and the dry run explains which policy governs each record', async ({ page }) => {
+    const admin = await Api.as(users.admin);
+    const t = Date.now().toString(36);
+    const ncr = await admin.post<{ id: string; number: string }>('/api/ncrs', { title: `Retention ${t}`, description: 'Retention dry run', source: 'In-process', siteId: state().siteId, detectedOn: new Date().toISOString().slice(0, 10), severity: 1 });
+    const number = (await admin.get<{ number: string }>(`/api/ncrs/${ncr.id}`)).number;
+    await signIn(page, users.admin);
+    await page.goto('/governance/retention');
+    await page.getByRole('button', { name: 'New policy' }).click();
+    const d = dialog(page);
+    await d.getByLabel('Name', { exact: true }).fill(`Plant NCRs ${t}`);
+    await d.getByLabel('Record type').click();
+    await page.getByRole('option', { name: 'Nonconformance Report' }).click();
+    await d.getByTestId('site-picker').click();
+    await page.getByRole('option', { name: /Test Plant/ }).click();
+    await d.getByLabel('Priority (1 = highest)').fill('2');
+    await d.getByLabel('Retain for (years)').fill('12');
+    await d.getByRole('button', { name: 'Create' }).click();
+    const row = page.getByRole('row', { name: new RegExp(`Plant NCRs ${t}`) });
+    await expect(row).toContainText('site Test Plant');
+    await expect(row).toContainText('12');
+    await page.getByRole('tab', { name: 'Dry run' }).click();
+    await page.getByLabel('Site').click();
+    await page.getByRole('option', { name: /Test Plant/ }).click();
+    await page.getByRole('button', { name: 'Run dry run' }).click();
+    await expect(page.getByTestId('retention-summary')).toContainText('evaluated');
+    const rec = page.getByRole('row', { name: new RegExp(number) });
+    await expect(rec).toContainText('Retained');
+    await expect(rec).toContainText(`Plant NCRs ${t} v1`);
+  });
 });

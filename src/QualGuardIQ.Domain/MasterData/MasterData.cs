@@ -12,6 +12,8 @@ public class ProductFamily : Entity, IAudited, IArchivable
 {
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
+    /// <summary>Regulatory category the family's products fall under (e.g. medical device class, automotive safety); used by retention policies.</summary>
+    public string? RegulatoryCategory { get; set; }
     public bool IsArchived { get; set; }
     public DateTimeOffset? ArchivedAt { get; set; }
     public string AuditLabel => $"Product family {Code}";

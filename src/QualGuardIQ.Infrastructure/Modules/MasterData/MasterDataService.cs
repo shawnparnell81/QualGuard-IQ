@@ -125,13 +125,20 @@ public sealed class MasterDataService(AppDbContext db, ModuleSupport m)
         return c;
     }
 
-    public async Task<ProductFamily> CreateFamilyAsync(string code, string name, CancellationToken ct)
+    public async Task<ProductFamily> CreateFamilyAsync(string code, string name, CancellationToken ct, string? regulatoryCategory = null)
     {
         var c = Code(code, "Code", 40);
         if (await db.ProductFamilies.AnyAsync(f => f.Code == c, ct)) throw new ConflictException("That family code already exists.");
-        var f = new ProductFamily { Code = c, Name = Code(name, "Name", 200) };
+        var f = new ProductFamily { Code = c, Name = Code(name, "Name", 200), RegulatoryCategory = Opt(regulatoryCategory, "Regulatory category", 100) };
         db.ProductFamilies.Add(f);
         await db.SaveChangesAsync(ct);
         return f;
+    }
+
+    public async Task UpdateFamilyAsync(Guid id, string name, string? regulatoryCategory, CancellationToken ct)
+    {
+        var f = await db.ProductFamilies.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("Product family");
+        f.Name = Code(name, "Name", 200); f.RegulatoryCategory = Opt(regulatoryCategory, "Regulatory category", 100);
+        await db.SaveChangesAsync(ct);
     }
 }

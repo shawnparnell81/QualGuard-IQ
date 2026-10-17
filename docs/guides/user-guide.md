@@ -64,3 +64,12 @@ Notifications appear under the bell icon and, when email is configured, by email
 - The result shows the inputs (n, mean, reference, standard deviation), the standard error, the t statistic, the exact critical t, the p-value and the confidence interval for the bias. Quantiles and p-values come from MathNet.Numerics; they are checked in the test suite against values computed independently with SciPy.
 - Fewer than 2 readings: no result. Fewer than 10: the result carries a note (AIAG recommends at least 10). All readings identical: t is undefined; any non-zero bias is treated as significant.
 - Results frozen before this version (calculation "msa/1", which used a five-step approximation of the critical t) are kept unchanged as the result of record. "Recalculate" adds a new result version beside the original; it never changes what was approved.
+
+## Record retention policies (filters, priority, dry run)
+Governance → Retention. A policy can be narrowed by record type, module, product family (code or name), regulatory category (set on the product family), site, department, customer, supplier and confidentiality; empty filters match everything, filled filters must all match.
+- **Which policy applies:** the lowest priority number wins; at equal priority the policy with more filters wins. If two equally ranked policies disagree, the record is flagged as a conflict, the longest retention is kept and the action becomes *Review*; disposal cannot be approved until the conflict is resolved (change a priority).
+- **Legal hold** always overrides: held records are never offered for disposal.
+- **Dry run** (tab) evaluates up to 5,000 records at a time and explains for each record which policies matched and why one governs it. Nothing is changed or deleted; each run is logged (security log event `RetentionDryRun`).
+- **Versions:** every saved change to a policy's criteria creates a new version. *Reproduce* on a version re-runs that version's criteria, and every decision records the policy version it was taken under.
+- **Confidentiality** of a record is set with `PUT /api/governance/retention/classification` (records without a classification are Internal).
+- The record's initial file retention date (content library) uses the same resolution.

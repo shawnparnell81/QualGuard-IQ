@@ -1,11 +1,11 @@
 import { useState } from 'react';
-import { Alert, Box, Button, Chip, Paper, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { get, post } from '../api';
+import { get, post, put } from '../api';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDate, fmtDateTime } from '../components/Status';
-import { Facts, Section, StepDialog, useRunner, useSites, useUsers } from '../components/Kit';
+import { Facts, Section, StepDialog, useRunner, useSites, useTypeLabel, useUsers } from '../components/Kit';
 import { mono } from '../theme';
 import { mod, num } from './Enterprise';
 
@@ -32,25 +32,79 @@ export function Part11Readiness() {
   );
 }
 
+const retentionStatus = ['No policy', 'Retained', 'Due', 'On hold', 'Conflict', 'Decided'];
+const classifications = ['Public', 'Internal', 'Confidential', 'Restricted'];
+const blankPolicy = { name: '', recordType: '', module: '', productFamily: '', regulatoryCategory: '', siteId: '', confidentiality: '', priority: '100', retainYears: '10', action: '0' };
+
 export function RetentionPage() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['retention'], queryFn: () => get<any[]>('/api/governance/retention/policies') });
   const types = useQuery({ queryKey: ['retention-types'], queryFn: () => get<string[]>('/api/governance/retention/record-types') });
+  const modulesQ = useQuery({ queryKey: ['retention-modules'], queryFn: () => get<{ recordType: string; module: string }[]>('/api/governance/retention/modules') });
   const decisions = useQuery({ queryKey: ['retention-decisions'], queryFn: () => get<any[]>('/api/governance/retention/decisions') });
-  const [open, setOpen] = useState(false); const [due, setDue] = useState<string | null>(null);
+  const sites = useSites();
+  const typeLabel = useTypeLabel();
+  const [edit, setEdit] = useState<null | { id?: string; v: typeof blankPolicy }>(null); const [due, setDue] = useState<string | null>(null);
   const dueQ = useQuery({ queryKey: ['retention-due', due], enabled: !!due, queryFn: () => get<any[]>(`/api/governance/retention/policies/${due}/due`) });
+  const versions = useQuery({ queryKey: ['retention-versions', due], enabled: !!due, queryFn: () => get<any[]>(`/api/governance/retention/policies/${due}/versions`) });
   const [tab, setTab] = useState('policies');
+  const [run, setRun] = useState<{ recordType: string; siteId: string; status: string } | null>(null);
+  const evalQ = useQuery({ queryKey: ['retention-eval', run], enabled: !!run, queryFn: () => get<any>(`/api/governance/retention/evaluate?${new URLSearchParams(Object.entries(run ?? {}).filter(([, x]) => x !== '') as [string, string][]).toString()}&pageSize=200`) });
+  const [form, setForm] = useState({ recordType: '', siteId: '', status: '' });
+  const siteName = (id?: string) => (id ? sites.data?.find((s) => s.id === id)?.name ?? '' : '');
+  const filters = (r: any) => [r.module && `module ${r.module}`, r.productFamily && `family ${r.productFamily}`, r.regulatoryCategory && `category ${r.regulatoryCategory}`, r.siteId && `site ${siteName(r.siteId)}`,
+    r.departmentId && 'department', r.customerId && 'customer', r.supplierId && 'supplier', r.confidentiality != null && classifications[r.confidentiality]].filter(Boolean).join(' · ') || 'All records';
+  const modules = [...new Set((modulesQ.data ?? []).map((m) => m.module))];
+  const save = async (v: typeof blankPolicy, id?: string) => {
+    const body = { name: v.name, recordType: v.recordType || null, module: v.module || null, productFamily: v.productFamily || null, regulatoryCategory: v.regulatoryCategory || null, siteId: v.siteId || null,
+      confidentiality: v.confidentiality === '' ? null : Number(v.confidentiality), priority: Number(v.priority || 100), retainYears: Number(v.retainYears), action: Number(v.action), isActive: true };
+    if (id) await put(`/api/governance/retention/policies/${id}`, body); else await post('/api/governance/retention/policies', body);
+    qc.invalidateQueries({ queryKey: ['retention'] }); qc.invalidateQueries({ queryKey: ['retention-versions'] }); setEdit(null);
+  };
   return (
     <ModuleWorkspace module={mod('governance')} crumbs={[{ label: 'Governance', to: '/governance' }, { label: 'Retention' }]} title="Record retention"
-      tabs={[{ label: 'Policies', value: 'policies' }, { label: 'Decisions log', value: 'log' }]} tab={tab} onTab={setTab} actions={<Button variant="contained" onClick={() => setOpen(true)}>New policy</Button>}>
-      <Alert severity="info" sx={{ mb: 2 }}>Retention never deletes records automatically. Records past their period are listed for a recorded decision.</Alert>
+      tabs={[{ label: 'Policies', value: 'policies' }, { label: 'Dry run', value: 'dryrun' }, { label: 'Decisions log', value: 'log' }]} tab={tab} onTab={setTab} actions={<Button variant="contained" onClick={() => setEdit({ v: blankPolicy })}>New policy</Button>}>
+      <Alert severity="info" sx={{ mb: 2 }}>Retention never deletes records automatically. When several policies match a record, the lowest priority number wins, then the most specific policy; ties that disagree are flagged as conflicts and kept for review. Legal holds always override.</Alert>
       {tab === 'policies' && <DataTable data={q.data ?? []} onRowClick={(r) => setDue(r.id)} empty="No retention policies."
-        columns={[{ header: 'Name', accessorKey: 'name' }, { header: 'Record type', accessorKey: 'recordType' }, { header: 'Retain (years)', accessorKey: 'retainYears' }, { header: 'Then', accessorKey: 'action', cell: (x) => retentionActions[x.getValue()] }, { header: 'Active', accessorKey: 'isActive', cell: (x) => (x.getValue() ? 'Yes' : 'No') }]} />}
-      {tab === 'policies' && due && <Box sx={{ mt: 2 }}><Section title={`Due for decision (${dueQ.data?.length ?? 0})`}><DataTable data={dueQ.data ?? []} empty="Nothing past its retention period." columns={[{ header: 'Record', accessorKey: 'number', cell: num }, { header: 'Type', accessorKey: 'recordType' }, { header: 'Created', accessorKey: 'createdAt', cell: (x) => fmtDate(x.getValue()) }]} /></Section></Box>}
-      {tab === 'log' && <DataTable data={decisions.data ?? []} empty="No decisions recorded." columns={[{ header: 'Record type', accessorKey: 'recordType' }, { header: 'Decision', accessorKey: 'decision', cell: (x) => ['Archived', 'Disposal approved', 'Extended', 'Legal hold'][x.getValue()] }, { header: 'Reason', accessorKey: 'reason' }, { header: 'When', accessorKey: 'createdAt', cell: (x) => fmtDateTime(x.getValue()) }]} />}
-      <StepDialog open={open} onClose={() => setOpen(false)} title="New retention policy" confirm="Create"
-        inputs={[{ name: 'name', label: 'Name' }, { name: 'type', label: 'Record type', type: 'select', options: (types.data ?? []).map((t) => [t, t]) }, { name: 'years', label: 'Retain for (years)', initial: '10' }, { name: 'action', label: 'Then', type: 'select', options: retentionActions.map((a, i) => [i, a]), initial: '0' }]}
-        onConfirm={async (v) => { await post('/api/governance/retention/policies', { name: v.name, recordType: v.type, retainYears: Number(v.years), action: Number(v.action), isActive: true }); qc.invalidateQueries({ queryKey: ['retention'] }); }} />
+        columns={[{ header: 'Name', accessorKey: 'name' }, { header: 'Record type', accessorKey: 'recordType', cell: (x) => (x.getValue() ? typeLabel(x.getValue()) : 'Any') }, { header: 'Filters', id: 'f', accessorFn: filters },
+          { header: 'Priority', accessorKey: 'priority', cell: num }, { header: 'Retain (years)', accessorKey: 'retainYears' }, { header: 'Then', accessorKey: 'action', cell: (x) => retentionActions[x.getValue()] },
+          { header: 'Version', accessorKey: 'version', cell: num }, { header: 'Active', accessorKey: 'isActive', cell: (x) => (x.getValue() ? 'Yes' : 'No') },
+          { header: '', id: 'e', cell: (x) => <Button size="small" onClick={(e) => { e.stopPropagation(); const r = x.row.original; setEdit({ id: r.id, v: { name: r.name, recordType: r.recordType ?? '', module: r.module ?? '', productFamily: r.productFamily ?? '', regulatoryCategory: r.regulatoryCategory ?? '', siteId: r.siteId ?? '', confidentiality: r.confidentiality == null ? '' : String(r.confidentiality), priority: String(r.priority), retainYears: String(r.retainYears), action: String(r.action) } }); }}>Edit</Button> }]} />}
+      {tab === 'policies' && due && <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 2 }}>
+        <Section title={`Due for decision (${dueQ.data?.length ?? 0})`}><DataTable data={dueQ.data ?? []} empty="Nothing this policy governs is past its retention period." columns={[{ header: 'Record', accessorKey: 'number', cell: num }, { header: 'Type', accessorKey: 'recordType', cell: (x) => typeLabel(x.getValue()) }, { header: 'Created', accessorKey: 'createdAt', cell: (x) => fmtDate(x.getValue()) }]} /></Section>
+        <Section title="Policy versions"><DataTable data={versions.data ?? []} empty="No versions." columns={[{ header: 'Version', accessorKey: 'version', cell: num }, { header: 'Saved', accessorKey: 'savedAt', cell: (x) => fmtDateTime(x.getValue()) },
+          { header: '', id: 'r', cell: (x) => <Button size="small" onClick={() => { setTab('dryrun'); setRun({ policyId: due, version: String(x.row.original.version) } as any); }}>Reproduce</Button> }]} /></Section>
+      </Box>}
+      {tab === 'dryrun' && <>
+        <Stack direction="row" spacing={1.5} sx={{ mb: 2 }} alignItems="center">
+          <TextField select size="small" label="Record type" value={form.recordType} onChange={(e) => setForm({ ...form, recordType: e.target.value })} sx={{ width: 220 }}><MenuItem value="">All types</MenuItem>{(types.data ?? []).map((t) => <MenuItem key={t} value={t}>{typeLabel(t)}</MenuItem>)}</TextField>
+          <TextField select size="small" label="Site" value={form.siteId} onChange={(e) => setForm({ ...form, siteId: e.target.value })} sx={{ width: 220 }}><MenuItem value="">All my sites</MenuItem>{(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}</TextField>
+          <TextField select size="small" label="Outcome" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} sx={{ width: 180 }}><MenuItem value="">Any</MenuItem>{retentionStatus.map((s, i) => <MenuItem key={s} value={String(i)}>{s}</MenuItem>)}</TextField>
+          <Button variant="contained" onClick={() => setRun({ ...form })}>Run dry run</Button>
+        </Stack>
+        {evalQ.error && <Alert severity="error">{(evalQ.error as Error).message}</Alert>}
+        {evalQ.data && <>
+          <Stack direction="row" spacing={1} sx={{ mb: 1.5 }} data-testid="retention-summary">
+            <Chip label={`${evalQ.data.evaluated} evaluated`} /><Chip color="warning" label={`${evalQ.data.due} due`} /><Chip label={`${evalQ.data.onHold} on hold`} /><Chip color={evalQ.data.conflicts ? 'error' : 'default'} label={`${evalQ.data.conflicts} conflicts`} /><Chip label={`${evalQ.data.noPolicy} without policy`} />
+            {evalQ.data.truncated && <Chip color="warning" variant="outlined" label="Limited to the oldest 5,000 records — narrow the filters" />}
+          </Stack>
+          <DataTable data={evalQ.data.candidates as any[]} empty="No records match." columns={[{ header: 'Record', accessorKey: 'number', cell: num }, { header: 'Type', accessorKey: 'recordType', cell: (x) => typeLabel(x.getValue()) },
+            { header: 'Created', accessorKey: 'createdAt', cell: (x) => fmtDate(x.getValue()) }, { header: 'Family', accessorKey: 'productFamily' }, { header: 'Category', accessorKey: 'regulatoryCategory' },
+            { header: 'Outcome', accessorKey: 'status', cell: (x) => <StatusChip status={retentionStatus[x.getValue()]} /> }, { header: 'Policy', accessorFn: (r) => (r.policyName ? `${r.policyName} v${r.policyVersion}` : '—') },
+            { header: 'Retain until', accessorKey: 'retainUntil', cell: (x) => fmtDate(x.getValue()) }, { header: 'Why', accessorKey: 'explanation' }]} />
+        </>}
+      </>}
+      {tab === 'log' && <DataTable data={decisions.data ?? []} empty="No decisions recorded." columns={[{ header: 'Record', accessorKey: 'recordNumber', cell: num }, { header: 'Record type', accessorKey: 'recordType', cell: (x) => typeLabel(x.getValue()) }, { header: 'Decision', accessorKey: 'decision', cell: (x) => ['Archived', 'Disposal approved', 'Extended', 'Legal hold'][x.getValue()] }, { header: 'Policy version', accessorKey: 'policyVersion', cell: num }, { header: 'Reason', accessorKey: 'reason' }, { header: 'When', accessorKey: 'createdAt', cell: (x) => fmtDateTime(x.getValue()) }]} />}
+      <StepDialog open={edit !== null} onClose={() => setEdit(null)} title={edit?.id ? 'Edit retention policy' : 'New retention policy'} confirm={edit?.id ? 'Save as new version' : 'Create'} key={edit?.id ?? 'new'}
+        intro="Leave a filter empty to match any record. Filled filters must all match."
+        inputs={[{ name: 'name', label: 'Name', initial: edit?.v.name }, { name: 'recordType', label: 'Record type', type: 'select', options: [['', 'Any type'], ...(types.data ?? []).map((t) => [t, typeLabel(t)] as [string, string])], initial: edit?.v.recordType },
+          { name: 'module', label: 'Module', type: 'select', options: [['', 'Any module'], ...modules.map((m) => [m, m] as [string, string])], initial: edit?.v.module },
+          { name: 'productFamily', label: 'Product family (code or name)', initial: edit?.v.productFamily }, { name: 'regulatoryCategory', label: 'Regulatory category', initial: edit?.v.regulatoryCategory },
+          { name: 'siteId', label: 'Site (empty = every site)', type: 'site', permission: 'governance.edit', initial: edit?.v.siteId },
+          { name: 'confidentiality', label: 'Confidentiality', type: 'select', options: [['', 'Any'], ...classifications.map((c, i) => [String(i), c] as [string, string])], initial: edit?.v.confidentiality },
+          { name: 'priority', label: 'Priority (1 = highest)', initial: edit?.v.priority }, { name: 'retainYears', label: 'Retain for (years)', initial: edit?.v.retainYears },
+          { name: 'action', label: 'Then', type: 'select', options: retentionActions.map((a, i) => [String(i), a]), initial: edit?.v.action }]}
+        onConfirm={async (v) => save(v as typeof blankPolicy, edit?.id)} />
     </ModuleWorkspace>
   );
 }
