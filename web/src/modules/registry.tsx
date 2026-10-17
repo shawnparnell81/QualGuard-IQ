@@ -60,6 +60,7 @@ export const modules: ModuleDef[] = [
         { label: 'Drafts', path: '/documents?status=0' },
         { label: 'Obsolete', path: '/documents?status=2' },
       ] },
+      { label: 'Content library', path: '/documents/content' },
       { label: 'Create document', path: '/documents/new', permission: 'documents.edit' },
       { label: 'Controlled forms', path: '/forms/records', permission: 'forms.view', children: [
         { label: 'Form records', path: '/forms/records', permission: 'forms.view' },

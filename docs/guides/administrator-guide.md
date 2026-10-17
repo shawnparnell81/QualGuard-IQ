@@ -59,9 +59,24 @@ Use **Test** to evaluate a rule against an existing record. The firing log shows
 
 ## Retention, continuity and recovery
 
+- An active retention policy for a record type (without product family or regulatory category) sets the retention
+  date of files uploaded to records of that type. People with *governance.edit* can extend a file's retention from the
+  content library (never shorten it); the change applies to all versions and is written to the security log.
+
 - Retention policies: Governance › Retention.
 - Continuity exercises, including disaster-recovery tests: Governance › Business continuity.
 - Backups, restore tests and recovery objectives: Platform › Recovery center. See the [recovery guide](recovery-guide.md).
+
+## Marketplace (Platform › Marketplace, needs *platform.admin*)
+
+- Packages are add-ons, quality extensions or industry packs. Each lists the platform modules and other packages it
+  needs; it cannot be installed until they are present, and a package others depend on cannot be disabled or removed.
+- Installing creates business rules, data quality rules and form library components through the normal engines.
+  Components arrive as drafts that a forms approver must publish. Disabling switches the package's rules off;
+  uninstalling removes what it created; upgrading replaces it with the new version's content.
+- Licensed packages need an activated license key. Keys are verified offline against the publisher key configured in
+  `Licensing:PublicKeyPem`; expired or revoked licenses block install, enable and upgrade.
+- **Import package** adds a package from a manifest file supplied by a publisher.
 
 ## Background jobs
 

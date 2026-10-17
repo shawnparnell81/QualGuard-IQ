@@ -530,3 +530,70 @@ export function Marketplace() {
     </ModuleWorkspace>
   );
 }
+
+const fileKinds = ['Drawing', 'Document', 'Image', 'Video', 'Attachment'];
+const classNames = ['Internal', 'Confidential', 'Restricted', 'Public'];
+const kindGlyph: Record<string, string> = { Drawing: '⌗', Document: '▤', Image: '▣', Video: '▶', Attachment: '◇' };
+
+/** Enterprise content library: every file the user can see across records, by kind, with versions, retention and classification; videos play in place. */
+export function ContentLibrary() {
+  const qc = useQueryClient(); const { can } = useAuth();
+  const [kind, setKind] = useState<string>(''); const [q, setQ] = useState(''); const [sel, setSel] = useState<any | null>(null);
+  const [ret, setRet] = useState<any | null>(null); const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const lib = useQuery({ queryKey: ['content-library', kind, q], queryFn: () => get<any[]>(`/api/files?take=200${kind ? `&kind=${kind}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}`) });
+  const versions = useQuery({ queryKey: ['file-versions', sel?.id], enabled: !!sel, queryFn: () => get<any[]>(`/api/files/${sel.id}/versions`) });
+  const counts = useMemo(() => Object.fromEntries(fileKinds.map((k) => [k, (lib.data ?? []).filter((f) => f.kind === k).length])), [lib.data]);
+  return (
+    <ModuleWorkspace module={mod('documents')} crumbs={[{ label: 'Documents', to: '/documents' }, { label: 'Content library' }]} title="Content library">
+      {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
+      <Stack direction={{ xs: 'column', md: 'row' }} gap={1.5} alignItems={{ md: 'center' }} sx={{ mb: 2 }}>
+        <Stack direction="row" gap={1} flexWrap="wrap" sx={{ flex: 1 }}>
+          <Chip label="Everything" color={kind === '' ? 'primary' : 'default'} onClick={() => setKind('')} />
+          {fileKinds.map((k) => <Chip key={k} label={`${kindGlyph[k]} ${k}s${kind === '' && counts[k] ? ` · ${counts[k]}` : ''}`} color={kind === k ? 'primary' : 'default'} onClick={() => setKind(k)} />)}
+        </Stack>
+        <TextField size="small" placeholder="Search file names and descriptions" value={q} onChange={(e) => setQ(e.target.value)} sx={{ minWidth: 280 }} />
+      </Stack>
+      <Box sx={{ display: 'grid', gridTemplateColumns: sel ? { xs: '1fr', lg: '1fr 1.2fr' } : '1fr', gap: 2 }}>
+        <Paper sx={{ p: 1 }}>
+          {(lib.data ?? []).map((f) => <Stack key={f.id} direction="row" gap={1.5} alignItems="center" onClick={() => setSel(f)} sx={{ p: 1, cursor: 'pointer', borderRadius: 1, bgcolor: sel?.id === f.id ? 'action.selected' : undefined, '&:hover': { bgcolor: 'action.hover' } }}>
+            <Box sx={{ width: 34, height: 34, borderRadius: 1, display: 'grid', placeItems: 'center', bgcolor: f.kind === 'Video' ? '#263238' : 'primary.light', color: '#fff', fontSize: 16 }}>{kindGlyph[f.kind]}</Box>
+            <Box sx={{ flex: 1, minWidth: 0 }}><Typography noWrap>{f.fileName}</Typography>
+              <Typography variant="caption" color="text.secondary" noWrap>{f.ownerNumber} · {f.ownerTitle}</Typography></Box>
+            <Typography variant="caption" sx={{ fontFamily: mono }}>v{f.version}{f.versions > 1 ? `/${f.versions}` : ''}</Typography>
+            {f.classification !== 0 && <Chip size="small" variant="outlined" color={f.classification === 2 ? 'error' : f.classification === 1 ? 'warning' : 'default'} label={classNames[f.classification]} />}
+            {f.retainUntil && <Chip size="small" variant="outlined" label={`kept to ${f.retainUntil.slice(0, 4)}`} />}
+          </Stack>)}
+          {lib.data?.length === 0 && <Typography color="text.secondary" sx={{ p: 2 }}>Nothing found. Files are added on the records they belong to.</Typography>}
+        </Paper>
+        {sel && <Paper sx={{ p: 2 }}>
+          <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}><Typography variant="h3" sx={{ flex: 1 }}>{sel.fileName}</Typography><Button size="small" onClick={() => setSel(null)}>Close</Button></Stack>
+          {sel.kind === 'Video' && <Box component="video" key={sel.id} controls preload="metadata" src={`/api/files/${sel.id}?inline=true`} sx={{ width: '100%', maxHeight: 360, bgcolor: '#000', borderRadius: 1, mb: 1 }} />}
+          {sel.kind === 'Image' && <Box component="img" src={`/api/files/${sel.id}?inline=true`} alt={sel.fileName} sx={{ maxWidth: '100%', maxHeight: 360, borderRadius: 1, mb: 1 }} />}
+          <Box sx={{ display: 'grid', gridTemplateColumns: '140px 1fr', rowGap: .5, mb: 2 }}>
+            <Typography variant="caption" color="text.secondary">Record</Typography><Typography variant="body2"><a href={sel.ownerUrl}>{sel.ownerNumber}</a> {sel.ownerTitle}</Typography>
+            <Typography variant="caption" color="text.secondary">Kind</Typography><Typography variant="body2">{sel.kind} · {sel.contentType} · {fmtSize(sel.sizeBytes)}</Typography>
+            <Typography variant="caption" color="text.secondary">Classification</Typography><Typography variant="body2">{classNames[sel.classification]}{sel.classification === 2 ? ' (opening needs edit rights on the record and is logged)' : sel.classification === 1 ? ' (opening is logged)' : ''}</Typography>
+            <Typography variant="caption" color="text.secondary">Retention</Typography><Typography variant="body2">{sel.retainUntil ? `Kept until ${sel.retainUntil}; cannot be removed before then` : 'No retention date'}</Typography>
+            <Typography variant="caption" color="text.secondary">Integrity</Typography><Typography variant="body2">SHA-256 checked on every open{sel.isLocked ? ' · locked (approved content)' : ''}</Typography>
+          </Box>
+          <Stack direction="row" gap={1} sx={{ mb: 2 }}>
+            <Button size="small" variant="outlined" href={`/api/files/${sel.id}`}>Download</Button>
+            {can('governance.edit') && <Button size="small" onClick={() => setRet({ retainUntil: sel.retainUntil ?? '', reason: '' })}>{sel.retainUntil ? 'Extend retention' : 'Set retention'}</Button>}
+          </Stack>
+          <Typography variant="subtitle2" sx={{ mb: .5 }}>Version history</Typography>
+          {(versions.data ?? []).map((v) => <Stack key={v.id} direction="row" gap={1.5} alignItems="center" sx={{ py: .5, borderBottom: 1, borderColor: 'divider' }}>
+            <Typography sx={{ fontFamily: mono, minWidth: 34 }}>v{v.version}</Typography><Typography variant="body2" sx={{ flex: 1 }}>{new Date(v.createdAt).toLocaleString()} · {fmtSize(v.sizeBytes)}</Typography>
+            <Typography variant="caption" sx={{ fontFamily: mono }} color="text.secondary">{v.sha256.slice(0, 10)}…</Typography>
+            {v.isArchived ? <Chip size="small" label="superseded" /> : <Chip size="small" color="success" label="current" />}
+            <Button size="small" href={`/api/files/${v.id}`}>Get</Button></Stack>)}
+        </Paper>}
+      </Box>
+      <Dialog open={!!ret} onClose={() => setRet(null)} fullWidth maxWidth="xs"><DialogTitle>Retention: {sel?.fileName}</DialogTitle>
+        {ret && <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          <Typography variant="body2" color="text.secondary">Applies to every version. Retention can be extended but never shortened.</Typography>
+          <TextField type="date" label="Keep until" InputLabelProps={{ shrink: true }} value={ret.retainUntil} onChange={(e) => setRet({ ...ret, retainUntil: e.target.value })} />
+          <TextField label="Reason" value={ret.reason} onChange={(e) => setRet({ ...ret, reason: e.target.value })} /></DialogContent>}
+        <DialogActions><Button onClick={() => setRet(null)}>Cancel</Button><Button variant="contained" onClick={async () => { setMsg(null); try { await post(`/api/files/${sel.id}/retention`, ret); setMsg({ ok: true, text: 'Retention updated.' }); setSel({ ...sel, retainUntil: ret.retainUntil }); setRet(null); qc.invalidateQueries({ queryKey: ['content-library'] }); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } }}>Save</Button></DialogActions></Dialog>
+    </ModuleWorkspace>
+  );
+}

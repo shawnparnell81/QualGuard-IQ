@@ -17,7 +17,7 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
     ActionService actions, CustomFieldService customFields) : ControllerBase
 {
     public sealed record AttachmentDto(Guid Id, string FileName, string ContentType, long SizeBytes, string Sha256, int Version, Guid LineageId,
-        string? Category, string? Description, Classification Classification, bool IsLocked, bool IsArchived, ScanStatus ScanStatus, DateTimeOffset CreatedAt);
+        string? Category, string? Description, Classification Classification, bool IsLocked, bool IsArchived, ScanStatus ScanStatus, DateTimeOffset CreatedAt, DateOnly? RetainUntil = null, string Kind = "Attachment");
     public sealed record CommentDto(Guid Id, string AuthorName, string Body, DateTimeOffset CreatedAt);
     public sealed record LinkDto(Guid Id, string Direction, string LinkType, string Type, Guid RecordId, string Number, string Title, string? Status, string Url);
     public sealed record AddLinkRequest(string ToType, Guid ToId, string? LinkType);
@@ -28,7 +28,7 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
     public sealed record DecisionDto(int StepOrder, string StepName, string SignerName, bool Approved, string Meaning, string? Comment, DateTimeOffset SignedAt);
 
     internal static AttachmentDto ToDto(Attachment a) => new(a.Id, a.FileName, a.ContentType, a.SizeBytes, a.Sha256, a.Version, a.LineageId,
-        a.Category, a.Description, a.Classification, a.IsLocked, a.IsArchived, a.ScanStatus, a.CreatedAt);
+        a.Category, a.Description, a.Classification, a.IsLocked, a.IsArchived, a.ScanStatus, a.CreatedAt, a.RetainUntil, FileKinds.Of(a.FileName, a.OwnerType, a.Category));
 
     /// <summary>Number, title, status and URL of any record the user may view (used to open linked records generically).</summary>
     [HttpGet]
@@ -43,7 +43,7 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
         (await files.ListAsync(type, id, history, ct)).Select(ToDto);
 
     [HttpPost("files")]
-    [RequestSizeLimit(200L * 1024 * 1024)]
+    [RequestSizeLimit(1100L * 1024 * 1024), RequestFormLimits(MultipartBodyLengthLimit = 1100L * 1024 * 1024)]
     public async Task<ActionResult<AttachmentDto>> Upload(string type, Guid id, IFormFile file, [FromForm] string? category, [FromForm] string? description,
         [FromForm] Classification classification, [FromForm] Guid? replacesId, CancellationToken ct)
     {
@@ -230,16 +230,27 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
 [Route("api/files")]
 public sealed class FilesController(AttachmentService files) : ControllerBase
 {
-    /// <summary>Streams a file after checking permission on its owning record. There are no public file URLs.</summary>
+    /// <summary>Streams a file after checking permission on its owning record. There are no public file URLs. Byte ranges are served so videos can be seeked.</summary>
     [HttpGet("{id:guid}")]
     public async Task<IActionResult> Download(Guid id, [FromQuery] bool inline, CancellationToken ct)
     {
         var (meta, content) = await files.OpenAsync(id, ct);
         Response.Headers.CacheControl = "private, no-store";
         Response.Headers["Content-Security-Policy"] = "default-src 'none'; sandbox";
-        var previewable = meta.ContentType is "application/pdf" or "image/png" or "image/jpeg" or "image/gif" or "image/webp" or "text/plain";
-        return inline && previewable ? File(content, meta.ContentType) : File(content, meta.ContentType, meta.FileName);
+        var previewable = meta.ContentType is "application/pdf" or "image/png" or "image/jpeg" or "image/gif" or "image/webp" or "text/plain" or "video/mp4" or "video/webm" or "video/quicktime";
+        return inline && previewable ? File(content, meta.ContentType, enableRangeProcessing: true) : File(content, meta.ContentType, meta.FileName, enableRangeProcessing: true);
     }
+
+    /// <summary>Enterprise content library across all records the caller can view: drawings, documents, images, videos and other attachments.</summary>
+    [HttpGet]
+    public Task<List<LibraryItem>> Library([FromQuery] string? kind, [FromQuery] string? q, [FromQuery] int take = 100, CancellationToken ct = default) => files.LibraryAsync(kind, q, take, ct);
+
+    [HttpGet("{id:guid}/versions")]
+    public async Task<IEnumerable<RecordsController.AttachmentDto>> Versions(Guid id, CancellationToken ct) => (await files.VersionsAsync(id, ct)).Select(RecordsController.ToDto);
+
+    /// <summary>Sets or extends retention for every version of the file (governance.edit). Retention cannot be shortened.</summary>
+    [HttpPost("{id:guid}/retention")]
+    public async Task<IActionResult> Retain(Guid id, RetentionRequest r, CancellationToken ct) { await files.RetainAsync(id, r, ct); return NoContent(); }
 
     [HttpPost("{id:guid}/archive")]
     public async Task<IActionResult> Archive(Guid id, CancellationToken ct)

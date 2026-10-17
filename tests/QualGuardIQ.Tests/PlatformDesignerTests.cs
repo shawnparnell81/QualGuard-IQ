@@ -1,3 +1,4 @@
+using System.Net.Http.Json;
 using System.Net;
 using System.Text.Json;
 using QualGuardIQ.Domain.Security;
@@ -295,5 +296,77 @@ public sealed class PlatformDesignerTests(TestApp app)
         Assert.DoesNotContain((await admin.GetElAsync("/api/platform/rules")).EnumerateArray(), r => r.GetProperty("name").GetString()!.EndsWith("[aerospace-as9100]"));
         Assert.DoesNotContain((await admin.GetElAsync("/api/forms/library")).EnumerateArray(), c => c.GetProperty("key").GetString() == "as9102_header");
         Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync("/api/platform/marketplace/part-master-hygiene")).StatusCode);
+    }
+
+    static async Task<HttpResponseMessage> UploadFileAsync(ApiClient c, string type, Guid id, string name, byte[] bytes, int classification = 0, Guid? replaces = null)
+    {
+        var form = new MultipartFormDataContent();
+        var file = new ByteArrayContent(bytes); file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/octet-stream");
+        form.Add(file, "file", name); form.Add(new StringContent(classification.ToString()), "classification"); form.Add(new StringContent("Video"), "category");
+        if (replaces is not null) form.Add(new StringContent(replaces.ToString()!), "replacesId");
+        return await c.SendWithCsrfAsync(new HttpRequestMessage(HttpMethod.Post, $"/api/records/{type}/{id}/files") { Content = form });
+    }
+
+    [Fact]
+    public async Task Content_library_handles_video_with_versions_ranges_retention_and_classification()
+    {
+        var admin = await app.AdminAsync();
+        var site = await app.CreateSiteAsync();
+        var (_, editor) = await app.CreateUserAsync([Permissions.NcrView, Permissions.NcrEdit], site);
+        var (_, viewer) = await app.CreateUserAsync([Permissions.NcrView], site);
+        var (_, outsider) = await app.CreateUserAsync([Permissions.NcrView], await app.CreateSiteAsync());
+        var ncr = (await (await editor.PostOkAsync("/api/ncrs", new { title = "Video NCR " + Guid.NewGuid().ToString("N")[..6], description = "Setup issue on line 3", source = "In-process", siteId = site, detectedOn = Today, severity = 1 })).JsonAsync()).Id();
+        var bytes = Enumerable.Range(0, 70_000).Select(i => (byte)(i % 251)).ToArray();
+
+        var v1 = await (await UploadFileAsync(editor, "Ncr", ncr, "line3-setup.mp4", bytes)).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("video/mp4", v1.GetProperty("contentType").GetString());
+        Assert.Equal("Video", v1.GetProperty("kind").GetString());
+        var v2r = await UploadFileAsync(editor, "Ncr", ncr, "line3-setup.mp4", bytes.Reverse().ToArray(), replaces: v1.Id());
+        Assert.Equal(HttpStatusCode.OK, v2r.StatusCode);
+        var v2 = await v2r.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(2, v2.GetProperty("version").GetInt32());
+        Assert.Equal(2, (await viewer.GetElAsync($"/api/files/{v2.Id()}/versions")).GetArrayLength());
+        Assert.Equal(HttpStatusCode.BadRequest, (await UploadFileAsync(editor, "Ncr", ncr, "clip.avi", bytes)).StatusCode);
+
+        // byte-range playback
+        var req = new HttpRequestMessage(HttpMethod.Get, $"/api/files/{v2.Id()}?inline=true"); req.Headers.Range = new System.Net.Http.Headers.RangeHeaderValue(100, 109);
+        var part = await viewer.Http.SendAsync(req);
+        Assert.Equal(HttpStatusCode.PartialContent, part.StatusCode);
+        Assert.Equal("video/mp4", part.Content.Headers.ContentType!.MediaType);
+        Assert.Equal(bytes.Reverse().Skip(100).Take(10).ToArray(), await part.Content.ReadAsByteArrayAsync());
+
+        // library: current versions only, only records the caller can view
+        var lib = await viewer.GetElAsync("/api/files?kind=Video");
+        Assert.Contains(lib.EnumerateArray(), f => f.Id() == v2.Id() && f.GetProperty("versions").GetInt32() == 2 && f.GetProperty("ownerType").GetString() == "Ncr");
+        Assert.DoesNotContain(lib.EnumerateArray(), f => f.Id() == v1.Id());
+        Assert.DoesNotContain((await outsider.GetElAsync("/api/files?kind=Video")).EnumerateArray(), f => f.Id() == v2.Id());
+
+        // restricted: edit permission needed to open, and the access is logged
+        var restricted = await (await UploadFileAsync(editor, "Ncr", ncr, "operator-face.mp4", bytes, classification: 2)).Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(HttpStatusCode.Forbidden, (await viewer.GetAsync($"/api/files/{restricted.Id()}")).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await editor.GetAsync($"/api/files/{restricted.Id()}")).StatusCode);
+        var events = await admin.GetElAsync("/api/security-events?pageSize=50");
+        Assert.Contains(events.GetProperty("items").EnumerateArray(), e => e.GetProperty("eventType").GetString() == "FileOpened" && e.GetProperty("detail").GetString()!.Contains(restricted.Id().ToString()));
+
+        // retention: policy applies on upload, blocks removal, can only be extended, by governance.edit
+        var policy = (await (await admin.PostOkAsync("/api/governance/retention/policies", new { name = "NCR evidence " + Guid.NewGuid().ToString("N")[..4], recordType = "Ncr", productFamily = (string?)null, regulatoryCategory = (string?)null, retainYears = 10, action = 0 })).JsonAsync()).Id();
+        try
+        {
+            var kept = await (await UploadFileAsync(editor, "Ncr", ncr, "teardown.webm", bytes)).Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal("video/webm", kept.GetProperty("contentType").GetString());
+            var until = DateOnly.Parse(kept.GetProperty("retainUntil").GetString()!);
+            Assert.True(until >= DateOnly.FromDateTime(DateTime.UtcNow).AddYears(10).AddDays(-2));
+            Assert.Equal(HttpStatusCode.BadRequest, (await editor.PostAsync($"/api/files/{kept.Id()}/archive")).StatusCode);
+            Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsync($"/api/files/{kept.Id()}/retention", new { retainUntil = until.AddYears(2), reason = "Customer contract" })).StatusCode);
+            Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync($"/api/files/{kept.Id()}/retention", new { retainUntil = until.AddYears(-5), reason = "Shorter" })).StatusCode);
+            Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/files/{kept.Id()}/retention", new { retainUntil = until.AddYears(2), reason = "Customer contract requires 12 years" })).StatusCode);
+            var next = await (await UploadFileAsync(editor, "Ncr", ncr, "teardown.webm", bytes.Reverse().ToArray(), replaces: kept.Id())).Content.ReadFromJsonAsync<JsonElement>();
+            Assert.Equal(until.AddYears(2), DateOnly.Parse(next.GetProperty("retainUntil").GetString()!)); // new version keeps the longer retention
+        }
+        finally
+        {
+            await admin.PutAsync($"/api/governance/retention/policies/{policy}", new { name = "NCR evidence (off)", recordType = "Ncr", productFamily = (string?)null, regulatoryCategory = (string?)null, retainYears = 10, action = 0, isActive = false });
+        }
+        Assert.Equal(HttpStatusCode.NoContent, (await editor.PostAsync($"/api/files/{v2.Id()}/archive")).StatusCode);
     }
 }
