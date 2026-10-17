@@ -74,6 +74,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         <Menu anchorEl={userEl} open={!!userEl} onClose={() => setUserEl(null)}>
           <MenuItem disabled><ListItemText primary={me?.displayName} secondary={me?.email} /></MenuItem>
           <Divider />
+          <MenuItem onClick={() => { setUserEl(null); nav('/account/security'); }}>Security</MenuItem>
           <MenuItem onClick={() => { setUserEl(null); nav('/account/sign-ins'); }}>Sign-in history</MenuItem>
           <MenuItem onClick={() => { setUserEl(null); nav('/account/messaging'); }}>Text and push notifications</MenuItem>
           <Divider />

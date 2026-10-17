@@ -7,6 +7,7 @@ import { useAuth } from '../auth';
 import { fmtDate, fmtDateTime } from '../components/Status';
 import { mono } from '../theme';
 import { BrandLogo } from '../components/Brand';
+import { AccountSecurity } from './AccountSecurity';
 
 /**
  * External portal for customer and supplier contacts. It has its own slim shell and talks only to /api/portal;
@@ -28,7 +29,8 @@ export function PortalApp() {
   const [, root, area, recordId] = loc.pathname.split('/');
   const requested = root === 'portal' ? area : undefined;
   const t = requested ?? tabs[0][0];
-  const known = tabs.some(([v]) => v === t);
+  const security = t === 'security';
+  const known = security || tabs.some(([v]) => v === t);
   const signOut = async () => { await logout(); nav('/', { replace: true }); };
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -37,12 +39,13 @@ export function PortalApp() {
         <Typography sx={{ fontWeight: 700, letterSpacing: 0.3 }}>{me.data?.kind ?? ''} portal</Typography>
         <Typography sx={{ color: 'text.secondary', flex: 1 }} data-testid="portal-party">{me.data?.partyName}</Typography>
         <Typography variant="body2" color="text.secondary">{me.data?.displayName}</Typography>
+        <Button size="small" onClick={() => nav('/portal/security')} aria-current={security ? 'page' : undefined}>Security</Button>
         <Button size="small" variant="outlined" onClick={signOut}>Sign out</Button>
       </Box>
       <Container maxWidth="lg" sx={{ py: 3 }}>
         {me.error && <Alert severity="error">{(me.error as Error).message}</Alert>}
         {me.data && <>
-          <Tabs value={known ? t : false} onChange={(_, v) => nav(`/portal/${v}`)} sx={{ mb: 2 }}>{tabs.map(([v, l]) => <Tab key={v} value={v} label={l} />)}</Tabs>
+          {security ? <AccountSecurity /> : <Tabs value={known ? t : false} onChange={(_, v) => nav(`/portal/${v}`)} sx={{ mb: 2 }}>{tabs.map(([v, l]) => <Tab key={v} value={v} label={l} />)}</Tabs>}
           {!known && <Alert severity="warning" data-testid="portal-unavailable">This page is not part of your {me.data.kind.toLowerCase()} portal.</Alert>}
           {known && pathOf[t] && (recordId ? <RecordView kind={t} id={recordId} onBack={() => nav(`/portal/${t}`)} /> : <RecordList kind={t} onOpen={(id) => nav(`/portal/${t}/${id}`)} />)}
           {known && t === 'scorecard' && <Scorecard />}

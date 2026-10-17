@@ -64,6 +64,7 @@ const AlertsAdmin = lazy(() => import('./pages/Intelligence').then((m) => ({ def
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const MyWork = lazy(() => import('./pages/MyWork').then((m) => ({ default: m.MyWork })));
 const SignInHistory = lazy(() => import('./pages/Account').then((m) => ({ default: m.SignInHistory })));
+const AccountSecurity = lazy(() => import('./pages/AccountSecurity').then((m) => ({ default: m.AccountSecurity })));
 const Search = lazy(() => import('./pages/Search').then((m) => ({ default: m.Search })));
 const DocumentDetail = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentDetail })));
 const DocumentList = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentList })));
@@ -200,6 +201,7 @@ const OrganizationPage = lazy(() => import('./pages/Admin').then((m) => ({ defau
 const RolesPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.RolesPage })));
 const RoutesPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.RoutesPage })));
 const SecurityPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.SecurityPage })));
+const SignInSecurityPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.SignInSecurityPage })));
 const SitesPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.SitesPage })));
 const UsersPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.UsersPage })));
 
@@ -233,6 +235,7 @@ export function App() {
               <Route path="/my-work" element={<MyWork />} />
               <Route path="/search" element={<Search />} />
               <Route path="/account/sign-ins" element={<SignInHistory />} />
+              <Route path="/account/security" element={<AccountSecurity />} />
               <Route path="/account/messaging" element={<MyMessaging />} />
               <Route path="/documents" element={<DocumentList kind={0} />} />
               <Route path="/documents/new" element={<DocumentNew kind={0} />} />
@@ -414,6 +417,7 @@ export function App() {
               <Route path="/admin/organization" element={<OrganizationPage />} />
               <Route path="/admin/audit" element={<AuditPage />} />
               <Route path="/admin/security" element={<SecurityPage />} />
+              <Route path="/admin/sign-in-security" element={<SignInSecurityPage />} />
               <Route path="/production" element={<LiveMonitor />} />
               <Route path="/production/entry" element={<ShopFloorEntry />} />
               <Route path="/production/entries" element={<EntryLog />} />

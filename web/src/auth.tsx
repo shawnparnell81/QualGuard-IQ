@@ -13,6 +13,8 @@ interface AuthState {
   loading: boolean;
   can: (permission: string) => boolean;
   login: (email: string, password: string) => Promise<void>;
+  /** Called after the last sign-in step (code, set-up or new password) set the session cookie. */
+  signedIn: () => Promise<void>;
   logout: () => Promise<void>;
 }
 
@@ -36,6 +38,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     login: async (email, password) => {
       await post('/api/auth/login', { email, password });
       resetCsrf();
+      await qc.invalidateQueries();
+    },
+    signedIn: async () => {
+      resetCsrf(); // the CSRF token is bound to the signed-in user
       await qc.invalidateQueries();
     },
     logout: async () => {
