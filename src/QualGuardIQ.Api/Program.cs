@@ -116,6 +116,12 @@ await app.Services.GetRequiredService<QualGuardIQ.Infrastructure.Storage.IFileSt
 
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
+app.Use(async (ctx, next) =>
+{
+    var sw = System.Diagnostics.Stopwatch.StartNew();
+    try { await next(); }
+    finally { ctx.RequestServices.GetRequiredService<QualGuardIQ.Infrastructure.Modules.Platform.ApiMetrics>().Record(ctx.Request.Path.Value ?? "/", ctx.Response.StatusCode, sw.Elapsed.TotalMilliseconds); }
+});
 app.UseSerilogRequestLogging();
 app.Use(async (ctx, next) =>
 {

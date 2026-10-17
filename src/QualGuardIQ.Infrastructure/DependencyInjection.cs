@@ -72,6 +72,11 @@ public static class DependencyInjection
         AddIntegration(services, config);
         AddEnterprise(services);
         AddEngineering(services);
+        services.AddScoped<Modules.Platform.PlatformService>();
+        services.AddScoped<Modules.Platform.DesignerService>();
+        services.AddSingleton<Modules.Platform.ApiMetrics>();
+        services.AddScoped<Jobs.PlatformEventJob>();
+        services.AddScoped<Jobs.ReportScheduleJob>();
         return services;
     }
 

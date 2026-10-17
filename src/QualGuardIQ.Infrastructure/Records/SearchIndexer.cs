@@ -35,6 +35,15 @@ public sealed record SearchHit(string RecordType, Guid RecordId, string Number, 
 /// <summary>Full-text search filtered in SQL by the caller's permission grants, so results never include records the user cannot open.</summary>
 public sealed class SearchService(AppDbContext db, IAccessService access)
 {
+    /// <summary>Search entries the holder of these grants may open (shared by search, the activity stream and dashboards).</summary>
+    public static IQueryable<Domain.Shared.SearchEntry> Visible(AppDbContext db, IReadOnlyList<QualGuardIQ.Application.Security.PermissionGrant> grants)
+    {
+        var allPerms = grants.Where(g => g.SiteId == null).Select(g => g.Permission).Distinct().ToList();
+        var siteKeys = grants.Where(g => g.SiteId != null && g.DepartmentId == null).Select(g => $"{g.Permission}|{g.SiteId}").Distinct().ToList();
+        var deptKeys = grants.Where(g => g.DepartmentId != null).Select(g => $"{g.Permission}|{g.SiteId}|{g.DepartmentId}").Distinct().ToList();
+        return db.SearchEntries.AsNoTracking().Where(e => allPerms.Contains(e.ViewPermission) || siteKeys.Contains(e.PermissionSiteKey) || (e.PermissionDepartmentKey != null && deptKeys.Contains(e.PermissionDepartmentKey)));
+    }
+
     public async Task<IReadOnlyList<SearchHit>> SearchAsync(Guid userId, string text, string? recordType, int limit, CancellationToken ct)
     {
         text = text.Trim();
