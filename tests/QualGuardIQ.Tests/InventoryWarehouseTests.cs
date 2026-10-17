@@ -18,7 +18,7 @@ public sealed class InventoryWarehouseTests(TestApp app)
         Permissions.InventoryView, Permissions.InventoryEdit, Permissions.ShippingView, Permissions.ShippingEdit, Permissions.ProductionView, Permissions.ProductionEdit,
         Permissions.TraceView, Permissions.TraceEdit, Permissions.NcrView, Permissions.NcrEdit, Permissions.MasterDataView, Permissions.MasterDataEdit,
         Permissions.SuppliersView, Permissions.SuppliersEdit, Permissions.InspectionView, Permissions.InspectionEdit, Permissions.ComplaintsView, Permissions.ComplaintsEdit,
-        Permissions.ReturnsView, Permissions.ReturnsEdit, Permissions.IntegrationsView,
+        Permissions.ReturnsView, Permissions.ReturnsEdit, Permissions.IntegrationsView, Permissions.InventoryReceiveBlind,
     ];
 
     private sealed record World(Guid Site, ApiClient Eng, ApiClient Approver, string Tag, Guid PartId, string PartNumber, Dictionary<string, Guid> Loc);
@@ -332,8 +332,10 @@ public sealed class InventoryWarehouseTests(TestApp app)
         var w = await SetupAsync();
         var sid = await SupplierAsync(w, "S4" + w.Tag);
         var comp = await PartAsync(w, "SEAL-", "A");
+        // receipts validate the revision against the part's revisions: stock rev A, release rev B, then stock the released revision
+        var (_, oldRevLot) = await StockAsync(w, comp, 10m, "SLB-" + w.Tag, rev: "A", supplierId: sid);
+        await NoContent(await w.Eng.PostAsync($"/api/master/parts/{comp}/revise", new { revision = "B", reason = "Seal material change", effectiveOn = (DateOnly?)null }));
         var (_, compLot) = await StockAsync(w, comp, 40m, "SL-" + w.Tag, supplierId: sid);
-        var (_, oldRevLot) = await StockAsync(w, comp, 10m, "SLB-" + w.Tag, rev: "B", supplierId: sid);
         var woId = (await (await w.Eng.PostOkAsync("/api/production/work-orders", new { kind = 0, partId = w.PartId, quantity = 2m, dueOn = Today.AddDays(5), siteId = w.Site,
             operations = new[] { new { sequence = 10, name = "Assemble", workCenter = "ASM-1" } } })).JsonAsync()).Id();
         object Issue(Guid lot, decimal q) => new { workOrderId = woId, operationSequence = (int?)10, partId = comp, lotId = (Guid?)lot, serialId = (Guid?)null, fromLocationId = w.Loc["A1"], wipLocationId = (Guid?)w.Loc["WIP"], quantity = q, clientRequestId = (string?)null };

@@ -27,12 +27,12 @@ async function receive(api: Api, w: W, quantity: number, to: string) {
 }
 
 test.describe('E2E 9: warehouse, scan station and shipping', () => {
-  test('a receiver receives at the scan station and the stock shows on the warehouse pages', async ({ page }) => {
+  test('a receiver with blind receiving rights receives at the scan station and the stock shows on the warehouse pages', async ({ page }) => {
     const api = await Api.as(users.author);
     const w = await warehouse(api);
     await signIn(page, users.author);
     await page.setViewportSize({ width: 412, height: 915 }); // phone
-    await page.goto('/warehouse/scan?flow=receive');
+    await page.goto('/warehouse/scan?flow=blind');
     await page.getByLabel('Scan dock location').fill(`QG:LOC:${w.dock.code}`);
     await page.keyboard.press('Enter');
     await page.getByLabel(/Scan part label/).fill(`QG:PART:${w.part}`);

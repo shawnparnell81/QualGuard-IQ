@@ -138,3 +138,37 @@ bookmarked. A link to another party's record shows "This record was not found, o
 API answers 404 for it, so its existence is not revealed. Portal accounts cannot call any staff API (403). Evidence uploaded by one
 contact is visible to the other contacts of the same customer or supplier; files uploaded by staff are not shown in the portal.
 **Sign out** ends the session and returns to the sign-in page; a deactivated account loses access immediately.
+
+## Receiving against a purchase order at the scan station
+
+**Warehouse → Scan station → Receive PO** walks a receiver through one PO line at a time on a phone or handheld:
+
+1. Scan the receiving dock location.
+2. Scan the PO label (`QG:PO:<number>`) or type the PO number. The open lines show the open quantity, the maximum with the
+   over-receipt tolerance, and what receiving must do for the part (inspection, AQL, receiving hold, serial per unit).
+3. Select the line, then scan the item. A part that is not the part of the line is refused at once.
+4. Check the revision (prefilled from the PO line), enter the supplier lot or heat, scan serial numbers (a serial scanned twice is
+   refused; with serials the quantity is the number of serials), and the quantity.
+5. **Check** runs the same server checks the receipt applies: part, revision (must be a revision of the part and match the PO),
+   open quantity and tolerance, partial receipt, duplicate serials (in the scan, on the receipt and already in stock) and the part's
+   receiving requirement. Errors block the receipt; warnings (partial receipt, over the ordered quantity within tolerance) are shown and
+   the button reads **Receive with warnings**.
+6. After posting, the result shows the lot, whether the line is accepted to stock or awaiting inspection, the inspection and AQL
+   records and the receiving hold, and a **Labels** button that opens the printable lot and serial labels.
+
+If the supplier is restricted (for example suspended), the scan station stops and the receipt is made on the desktop receiving page,
+where an authorized override with a reason is recorded. Without a connection the receipt is queued on the device and checked by the
+server when it is sent.
+
+**Blind receipts** (no PO, delivery or ASN) are a separate flow with its own permission, `inventory.receive_blind`. Receivers without it
+do not see the flow, cannot choose the Blind type on the desktop, and the API refuses the receipt (403). On upgrade the permission was
+granted to every role that already had `inventory.edit`, so nobody lost access; remove it from roles that should receive against POs only.
+
+**Receiving rules** (Warehouse → Receiving → Receiving rules, edited with `inventory.approve`):
+
+- *Tolerances* per site (or the organization default): over-receipt up to the larger of a percentage and a number of units above the
+  ordered quantity, on the receipt that completes the line; and whether partial receipts are allowed (otherwise a line is received in full).
+- *Part requirements* (optionally for one supplier; a supplier-specific requirement wins): receiving inspection required (it cannot be
+  skipped on any channel), the inspection plan (otherwise the part's effective receiving plan), AQL sampling plan, inspection level and AQL,
+  a receiving hold with its reason (blocks issue and shipment until released through the hold approval), serial number per unit, and lot
+  labels per line. Retired requirements stay linked to the receipt lines that applied them.

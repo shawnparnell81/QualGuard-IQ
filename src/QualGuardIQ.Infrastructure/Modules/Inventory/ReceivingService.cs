@@ -15,9 +15,10 @@ using QualGuardIQ.Infrastructure.Services;
 namespace QualGuardIQ.Infrastructure.Modules.Inventory;
 
 public sealed record ReceiptLineInput(Guid PartId, string? Revision, Guid? PurchaseOrderLineId, decimal? QuantityExpected, decimal QuantityReceived, string? SupplierLotNumber, string? LotNumber,
-    List<string>? SerialNumbers, bool? InspectionRequired, Guid? InspectionPlanId, Guid? AqlPlanId, string? AqlInspectionLevel, decimal? AqlLevel, Guid? PutAwayLocationId, string? ClientRequestId);
+    List<string>? SerialNumbers, bool? InspectionRequired, Guid? InspectionPlanId, Guid? AqlPlanId, string? AqlInspectionLevel, decimal? AqlLevel, Guid? PutAwayLocationId, string? ClientRequestId,
+    bool? PlaceHold = null, string? HoldReason = null);
 public sealed record ReceiptInput(ReceiptKind Kind, Guid? SupplierId, Guid? PurchaseOrderId, string? AsnNumber, string? PackingSlip, Guid? CarrierId, string? TrackingNumber, DateOnly ReceivedOn,
-    Guid ReceivingLocationId, string? Notes, string? SupplierOverrideReason, Guid SiteId, Guid? DepartmentId, List<ReceiptLineInput> Lines);
+    Guid ReceivingLocationId, string? Notes, string? SupplierOverrideReason, Guid SiteId, Guid? DepartmentId, List<ReceiptLineInput> Lines, string? Channel = null);
 public enum LineDecision { Accept = 0, Reject = 1, Quarantine = 2 }
 public sealed record LineDecisionInput(LineDecision Decision, decimal? QuantityAccepted, string? Notes, Guid? PutAwayLocationId, Guid? QuarantineLocationId, HoldKind? HoldKind);
 public sealed record LinkInspectionInput(Guid? InspectionId, Guid? AqlInspectionId);
@@ -34,7 +35,7 @@ public sealed record ReturnStockInput(Guid ReturnId, Guid LocationId, Guid PartI
 /// Receiving (PO receipts, supplier deliveries, ASNs, blind receipts) connected to the shared inspection engine, AQL sampling, NCR
 /// and supplier quality; quarantine and holds; Material Review Board; returns to vendor.
 /// </summary>
-public sealed class ReceivingService(AppDbContext db, ModuleSupport m, INumberingService numbers, WorkflowService workflow, InventoryService inv, TraceabilityService trace,
+public sealed partial class ReceivingService(AppDbContext db, ModuleSupport m, INumberingService numbers, WorkflowService workflow, InventoryService inv, TraceabilityService trace,
     InspectionService inspections, AqlService aql, NcrService ncrs, SupplierService suppliers, INotifier notifier)
 {
     public const string ReceiptType = "Receipt", MrbType = "MrbCase", RtvType = "SupplierReturn";
@@ -44,6 +45,13 @@ public sealed class ReceivingService(AppDbContext db, ModuleSupport m, INumberin
         await m.ValidateLocationAsync(r.SiteId, r.DepartmentId, ct);
         await m.RequireAsync(Permissions.InventoryEdit, r.SiteId, r.DepartmentId, ct);
         if (r.Lines is null || r.Lines.Count == 0) throw new AppException("Add at least one received line.");
+        // blind receipts (no PO, delivery or ASN) are a separately granted workflow
+        if (r.Kind == ReceiptKind.Blind)
+        {
+            await m.RequireAsync(Permissions.InventoryReceiveBlind, r.SiteId, r.DepartmentId, ct);
+            if (r.PurchaseOrderId is not null) throw new AppException("A blind receipt has no purchase order; receive against the PO instead.");
+        }
+        var channel = r.Channel?.Trim() is { Length: > 0 } ch ? ch switch { "ScanStation" or "Desktop" or "Integration" => ch, _ => throw new AppException("Channel is Desktop, ScanStation or Integration.") } : "Desktop";
         // offline replay: a line request id already posted means this receipt was booked; return it instead of receiving twice
         var replayIds = r.Lines.Select(l => l.ClientRequestId).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
         if (replayIds.Count > 0 && await db.InventoryTransactions.AsNoTracking().Where(x => replayIds.Contains(x.ClientRequestId) && x.RefType == ReceiptType).Select(x => x.RefId).FirstOrDefaultAsync(ct) is { } prior
@@ -70,39 +78,38 @@ public sealed class ReceivingService(AppDbContext db, ModuleSupport m, INumberin
         {
             Number = await numbers.NextAsync(ReceiptType, r.SiteId, ct), Kind = r.Kind, Status = ReceiptStatus.Received, SupplierId = supplierId, PurchaseOrderId = po?.Id, PurchaseOrderNumber = po?.Number,
             AsnNumber = r.AsnNumber?.Trim(), PackingSlip = r.PackingSlip?.Trim(), CarrierId = r.CarrierId, TrackingNumber = r.TrackingNumber?.Trim(), ReceiverId = m.UserId, ReceivedOn = r.ReceivedOn,
-            ReceivingLocationId = recvLoc.Id, Notes = r.Notes, SiteId = r.SiteId, DepartmentId = r.DepartmentId
+            ReceivingLocationId = recvLoc.Id, Notes = r.Notes, Channel = channel, SiteId = r.SiteId, DepartmentId = r.DepartmentId
         };
         db.Receipts.Add(rc);
         await db.SaveChangesAsync(ct);
         if (supplierId is { } sid) await suppliers.EnforceAsync(sid, ReceiptType, rc.Id, r.SupplierOverrideReason, ct);
+        var policy = await EffectivePolicyAsync(r.SiteId, ct);
+        var receiptSerials = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var n = 0;
         foreach (var li in r.Lines)
         {
             n++;
-            if (li.QuantityReceived <= 0) throw new AppException($"Line {n}: quantity received must be positive.");
-            var part = await db.Parts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == li.PartId, ct) ?? throw new AppException($"Line {n}: select a part.");
-            PurchaseOrderLine? pol = null;
-            if (po is not null)
-            {
-                pol = li.PurchaseOrderLineId is { } pl ? poLines.FirstOrDefault(x => x.Id == pl) ?? throw new AppException($"Line {n}: the PO line is not on PO {po.Number}.")
-                    : poLines.FirstOrDefault(x => x.PartId == part.Id && x.QuantityReceived < x.Quantity) ?? throw new AppException($"Line {n}: {part.PartNumber} is not open on PO {po.Number}.");
-                if (pol.PartId is { } pp && pp != part.Id) throw new AppException($"Line {n}: PO line {pol.LineNumber} is for a different part.");
-                if (pol.QuantityReceived + li.QuantityReceived > pol.Quantity) throw new ConflictException($"Line {n}: receiving {li.QuantityReceived:0.####} would exceed PO line {pol.LineNumber} ({pol.Quantity - pol.QuantityReceived:0.####} open).");
-                pol.QuantityReceived += li.QuantityReceived;
-            }
-            var revision = li.Revision ?? pol?.Revision ?? part.Revision;
-            if (pol?.Revision is { } pr && li.Revision is { } lr && pr != lr) throw new AppException($"Line {n}: PO line {pol.LineNumber} orders revision {pr}, revision {lr} was delivered.");
-            var serials = li.SerialNumbers?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).Distinct().ToList() ?? [];
-            if (serials.Count > 0 && serials.Count != li.QuantityReceived) throw new AppException($"Line {n}: {li.QuantityReceived:0} units need {li.QuantityReceived:0} serial numbers ({serials.Count} entered).");
-            var plan = li.InspectionPlanId ?? await db.InspectionPlans.Where(p => p.PartId == part.Id && p.InspectionType == "Receiving" && !p.IsObsolete && p.EffectiveRevisionId != null && p.SiteId == r.SiteId).Select(p => (Guid?)p.Id).FirstOrDefaultAsync(ct);
-            var inspect = li.InspectionRequired ?? (plan is not null || li.AqlPlanId is not null);
+            // the same checks the scan station runs before posting (PoReceiving.CheckLineAsync)
+            var chk = await CheckLineAsync(n, li, po, poLines, policy, supplierId, r.SiteId, receiptSerials, null, ct);
+            if (chk.Errors.FirstOrDefault() is { } bad) throw bad.Conflict ? new ConflictException(bad.Message) : new AppException(bad.Message);
+            var part = await db.Parts.AsNoTracking().FirstAsync(x => x.Id == li.PartId, ct);
+            var pol = chk.PurchaseOrderLineId is { } plid ? poLines.First(x => x.Id == plid) : null;
+            if (pol is not null) pol.QuantityReceived += li.QuantityReceived;
+            var revision = chk.Revision ?? part.Revision;
+            var serials = li.SerialNumbers?.Where(s => !string.IsNullOrWhiteSpace(s)).Select(s => s.Trim()).ToList() ?? [];
+            var req = chk.Requirement;
+            var plan = li.InspectionPlanId ?? req.InspectionPlanId;
+            var aqlPlan = li.AqlPlanId ?? req.AqlPlanId;
+            var reqRow = req.Id is { } rqid ? await db.ReceivingRequirements.AsNoTracking().FirstAsync(x => x.Id == rqid, ct) : null;
+            var inspect = li.InspectionRequired ?? (req.InspectionRequired || plan is not null || aqlPlan is not null);
             var lot = await trace.CreateLotAsync(new LotInput(li.LotNumber, supplierId is null ? LotKind.RawMaterial : LotKind.Supplier, part.Id, revision, supplierId, li.SupplierLotNumber, null, null, li.QuantityReceived,
                 null, null, null, null, po?.Number, r.SiteId, r.DepartmentId), ct);
             var line = new ReceiptLine
             {
                 ReceiptId = rc.Id, LineNumber = n, PartId = part.Id, Revision = revision, PurchaseOrderLineId = pol?.Id, QuantityExpected = li.QuantityExpected ?? (pol is null ? li.QuantityReceived : pol.Quantity),
                 QuantityReceived = li.QuantityReceived, SupplierLotNumber = li.SupplierLotNumber?.Trim(), LotId = lot.Id, SerialNumbers = serials.Count == 0 ? null : string.Join("\n", serials),
-                InspectionRequired = inspect, PutAwayLocationId = li.PutAwayLocationId, Status = inspect ? ReceiptLineStatus.AwaitingInspection : ReceiptLineStatus.Accepted
+                InspectionRequired = inspect, PutAwayLocationId = li.PutAwayLocationId, Status = inspect ? ReceiptLineStatus.AwaitingInspection : ReceiptLineStatus.Accepted,
+                OverReceivedQuantity = chk.OverReceived, ReceivingRequirementId = req.Id
             };
             db.ReceiptLines.Add(line);
             await db.SaveChangesAsync(ct);
@@ -127,12 +134,21 @@ public sealed class ReceivingService(AppDbContext db, ModuleSupport m, INumberin
                 line.InspectionId = ins.Id;
                 db.RecordLinks.Add(new RecordLink { FromType = ReceiptType, FromId = rc.Id, ToType = InspectionService.RecordType, ToId = ins.Id, LinkType = "Receiving inspection" });
             }
-            if (inspect && li.AqlPlanId is { } ap)
+            if (inspect && aqlPlan is { } ap)
             {
                 var a = await aql.CreateAsync(new AqlLotInput(ap, line.InspectionId, line.InspectionId is null ? part.Id : null, revision, line.InspectionId is null ? supplierId : null, null, null,
-                    line.InspectionId is null ? po?.Number : null, null, line.InspectionId is null ? lot.Number : null, (int)Math.Ceiling(li.QuantityReceived), li.AqlInspectionLevel ?? "II", li.AqlLevel ?? 1.0m, null, null, null,
+                    line.InspectionId is null ? po?.Number : null, null, line.InspectionId is null ? lot.Number : null, (int)Math.Ceiling(li.QuantityReceived),
+                    li.AqlInspectionLevel ?? reqRow?.AqlInspectionLevel ?? "II", li.AqlLevel ?? reqRow?.AqlLevel ?? 1.0m, null, null, null,
                     $"Receipt {rc.Number} line {n}"), ct);
                 line.AqlInspectionId = a.Id;
+            }
+            // receiving hold: required for the part (receiving requirement) or placed by the receiver; blocks issue and shipment until released
+            if (req.HoldOnReceipt || li.PlaceHold == true)
+            {
+                var reason = li.PlaceHold == true ? li.HoldReason!.Trim() : $"Receiving hold: {req.HoldReason}";
+                var hold = await inv.CreateHoldAsync(new HoldInput(HoldKind.Quality, $"{reason} (receipt {rc.Number} line {n})", part.Id, lot.Id, null, null, null, null, supplierId, r.SiteId, r.DepartmentId), ct,
+                    checkAccess: false, receiptLineId: line.Id);
+                line.HoldId = hold.Id;
             }
             await db.SaveChangesAsync(ct);
         }

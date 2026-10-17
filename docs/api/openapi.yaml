@@ -32761,6 +32761,270 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/warehouse/receipts/{id}/labels':
+    get:
+      tags:
+        - Receiving
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReceiptLabel'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReceiptLabel'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReceiptLabel'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/receiving/po:
+    get:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      parameters:
+        - name: number
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PoLookup'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PoLookup'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PoLookup'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/receiving/check:
+    post:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceivingCheckInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReceivingCheckInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReceivingCheckInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LineCheckResult'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LineCheckResult'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LineCheckResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/receiving/policy:
+    get:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ReceivingPolicyView'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceivingPolicyView'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ReceivingPolicyView'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.approve` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceivingPolicyInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReceivingPolicyInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReceivingPolicyInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/receiving/requirements:
+    get:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: partId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: includeInactive
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReceivingRequirementRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReceivingRequirementRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReceivingRequirementRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.approve` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceivingRequirementInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReceivingRequirementInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReceivingRequirementInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/receiving/requirements/{id}':
+    put:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.approve` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceivingRequirementInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReceivingRequirementInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReceivingRequirementInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/receiving/requirements/{id}/retire':
+    post:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.approve` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/warehouse/receipts/{id}/lines/{lineId}/inspection':
     post:
       tags:
@@ -43469,6 +43733,104 @@ components:
             - integer
             - string
           format: uint32
+    LineCheckResult:
+      required:
+        - line
+        - purchaseOrderLineId
+        - poLineNumber
+        - partId
+        - partNumber
+        - revision
+        - ordered
+        - alreadyReceived
+        - remaining
+        - maxReceivable
+        - overReceived
+        - underReceipt
+        - requirement
+        - errors
+        - warnings
+      type: object
+      properties:
+        line:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        purchaseOrderLineId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        poLineNumber:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partNumber:
+          type:
+            - 'null'
+            - string
+        revision:
+          type:
+            - 'null'
+            - string
+        ordered:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        alreadyReceived:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        remaining:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        maxReceivable:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        overReceived:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        underReceipt:
+          type: boolean
+        requirement:
+          $ref: '#/components/schemas/LineRequirement'
+        errors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceivingIssue'
+        warnings:
+          type: array
+          items:
+            type: string
+        ok:
+          type: boolean
     LineDecision:
       type: integer
     LineDecisionInput:
@@ -43508,6 +43870,59 @@ components:
           oneOf:
             - type: 'null'
             - $ref: '#/components/schemas/HoldKind'
+    LineRequirement:
+      required:
+        - id
+        - inspectionRequired
+        - inspectionPlanId
+        - inspectionPlanNumber
+        - aqlPlanId
+        - aqlPlanName
+        - holdOnReceipt
+        - holdReason
+        - serialsRequired
+        - labelCopies
+      type: object
+      properties:
+        id:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        inspectionRequired:
+          type: boolean
+        inspectionPlanId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        inspectionPlanNumber:
+          type:
+            - 'null'
+            - string
+        aqlPlanId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        aqlPlanName:
+          type:
+            - 'null'
+            - string
+        holdOnReceipt:
+          type: boolean
+        holdReason:
+          type:
+            - 'null'
+            - string
+        serialsRequired:
+          type: boolean
+        labelCopies:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     LinkDto:
       required:
         - id
@@ -46841,6 +47256,124 @@ components:
             - 'null'
             - string
           format: date
+    PoLookup:
+      required:
+        - id
+        - number
+        - supplierId
+        - supplierName
+        - supplierStatus
+        - supplierBlocked
+        - supplierConditions
+        - status
+        - siteId
+        - policy
+        - lines
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        supplierId:
+          type: string
+          format: uuid
+        supplierName:
+          type: string
+        supplierStatus:
+          type: string
+        supplierBlocked:
+          type: boolean
+        supplierConditions:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        policy:
+          $ref: '#/components/schemas/ReceivingPolicyView'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PoOpenLine'
+    PoOpenLine:
+      required:
+        - id
+        - lineNumber
+        - partId
+        - itemNumber
+        - partName
+        - revision
+        - ordered
+        - received
+        - remaining
+        - maxReceivable
+        - unitOfMeasure
+        - dueOn
+        - requirement
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        lineNumber:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        itemNumber:
+          type: string
+        partName:
+          type:
+            - 'null'
+            - string
+        revision:
+          type:
+            - 'null'
+            - string
+        ordered:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        received:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        remaining:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        maxReceivable:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        unitOfMeasure:
+          type: string
+        dueOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        requirement:
+          $ref: '#/components/schemas/LineRequirement'
     PortalAccountDto:
       required:
         - id
@@ -48449,6 +48982,10 @@ components:
             - string
         source:
           $ref: '#/components/schemas/RecordSource'
+        channel:
+          type:
+            - 'null'
+            - string
         siteId:
           type: string
           format: uuid
@@ -48571,8 +49108,54 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReceiptLineInput'
+        channel:
+          type:
+            - 'null'
+            - string
     ReceiptKind:
       type: integer
+    ReceiptLabel:
+      required:
+        - lineNumber
+        - kind
+        - number
+        - content
+        - partNumber
+        - revision
+        - quantity
+        - copies
+      type: object
+      properties:
+        lineNumber:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        kind:
+          type: string
+        number:
+          type: string
+        content:
+          type: string
+        partNumber:
+          type: string
+        revision:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        copies:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     ReceiptLine:
       type: object
       properties:
@@ -48669,6 +49252,17 @@ components:
             - string
         category:
           $ref: '#/components/schemas/InventoryCategory'
+        overReceivedQuantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        receivingRequirementId:
+          type:
+            - 'null'
+            - string
+          format: uuid
         auditLabel:
           type:
             - 'null'
@@ -48790,6 +49384,14 @@ components:
           type:
             - 'null'
             - string
+        placeHold:
+          type:
+            - 'null'
+            - boolean
+        holdReason:
+          type:
+            - 'null'
+            - string
     ReceiptLineRow:
       required:
         - line
@@ -48849,6 +49451,280 @@ components:
       type: integer
     ReceiptStatus:
       type: integer
+    ReceivingCheckInput:
+      required:
+        - purchaseOrderId
+        - siteId
+        - supplierId
+        - lines
+      type: object
+      properties:
+        purchaseOrderId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceiptLineInput'
+        scannedItem:
+          type:
+            - 'null'
+            - string
+    ReceivingIssue:
+      required:
+        - code
+        - message
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        conflict:
+          type: boolean
+          default: false
+    ReceivingPolicyInput:
+      required:
+        - siteId
+        - overReceiptPercent
+        - overReceiptQuantity
+        - allowPartialReceipt
+      type: object
+      properties:
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        overReceiptPercent:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        overReceiptQuantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        allowPartialReceipt:
+          type: boolean
+    ReceivingPolicyView:
+      required:
+        - siteId
+        - overReceiptPercent
+        - overReceiptQuantity
+        - allowPartialReceipt
+        - inherited
+      type: object
+      properties:
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        overReceiptPercent:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        overReceiptQuantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        allowPartialReceipt:
+          type: boolean
+        inherited:
+          type: boolean
+    ReceivingRequirementInput:
+      required:
+        - partId
+        - supplierId
+        - inspectionRequired
+        - inspectionPlanId
+        - aqlPlanId
+        - aqlInspectionLevel
+        - aqlLevel
+        - holdOnReceipt
+        - holdReason
+        - serialsRequired
+        - labelCopies
+        - notes
+        - siteId
+        - departmentId
+      type: object
+      properties:
+        partId:
+          type: string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        inspectionRequired:
+          type: boolean
+        inspectionPlanId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        aqlPlanId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        aqlInspectionLevel:
+          type:
+            - 'null'
+            - string
+        aqlLevel:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        holdOnReceipt:
+          type: boolean
+        holdReason:
+          type:
+            - 'null'
+            - string
+        serialsRequired:
+          type: boolean
+        labelCopies:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        notes:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    ReceivingRequirementRow:
+      required:
+        - id
+        - partId
+        - partNumber
+        - supplierId
+        - supplierName
+        - inspectionRequired
+        - inspectionPlanId
+        - inspectionPlanNumber
+        - aqlPlanId
+        - aqlPlanName
+        - aqlInspectionLevel
+        - aqlLevel
+        - holdOnReceipt
+        - holdReason
+        - serialsRequired
+        - labelCopies
+        - active
+        - notes
+        - siteId
+        - departmentId
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        partNumber:
+          type: string
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierName:
+          type:
+            - 'null'
+            - string
+        inspectionRequired:
+          type: boolean
+        inspectionPlanId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        inspectionPlanNumber:
+          type:
+            - 'null'
+            - string
+        aqlPlanId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        aqlPlanName:
+          type:
+            - 'null'
+            - string
+        aqlInspectionLevel:
+          type:
+            - 'null'
+            - string
+        aqlLevel:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        holdOnReceipt:
+          type: boolean
+        holdReason:
+          type:
+            - 'null'
+            - string
+        serialsRequired:
+          type: boolean
+        labelCopies:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        active:
+          type: boolean
+        notes:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
     RecordCalibrationRequest:
       required:
         - performedOn

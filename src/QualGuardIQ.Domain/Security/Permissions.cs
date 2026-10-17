@@ -134,6 +134,8 @@ public static class Permissions
     public const string InventoryEdit = "inventory.edit";
     /// <summary>Release holds and approve count variances.</summary>
     public const string InventoryApprove = "inventory.approve";
+    /// <summary>Receive material without a purchase order, supplier delivery or ASN (blind receipt). Kept separate from inventory.edit.</summary>
+    public const string InventoryReceiveBlind = "inventory.receive_blind";
     /// <summary>Sign Material Review Board dispositions.</summary>
     public const string MrbApprove = "mrb.approve";
     /// <summary>Shipments, pick lists, packing, verification, carriers and bills of lading.</summary>

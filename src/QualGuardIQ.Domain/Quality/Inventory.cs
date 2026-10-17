@@ -139,6 +139,8 @@ public class Receipt : Entity, IAudited, ISiteScoped
     public Guid ReceivingLocationId { get; set; }
     public string? Notes { get; set; }
     public RecordSource Source { get; set; }
+    /// <summary>Where the receipt was entered: Desktop, ScanStation or Integration.</summary>
+    public string? Channel { get; set; }
     public Guid SiteId { get; set; }
     public Guid? DepartmentId { get; set; }
     public string AuditLabel => $"receipt {Number}";
@@ -168,7 +170,50 @@ public class ReceiptLine : Entity, IAudited
     public ReceiptLineStatus Status { get; set; }
     public string? DecisionNotes { get; set; }
     public InventoryCategory Category { get; set; }
+    /// <summary>Quantity received above the PO line quantity, accepted within the configured over-receipt tolerance.</summary>
+    public decimal OverReceivedQuantity { get; set; }
+    /// <summary>The receiving requirement (inspection, AQL, hold, serials) applied when the line was received.</summary>
+    public Guid? ReceivingRequirementId { get; set; }
     public string AuditLabel => $"receipt line {LineNumber}";
+}
+
+/// <summary>
+/// Receiving tolerances for a site (organization-wide when SiteId is null). Over-receipt is allowed up to the larger of the percentage
+/// and the absolute quantity above the open PO line quantity; with both at zero no over-receipt is accepted.
+/// </summary>
+public class ReceivingPolicy : Entity, IAudited
+{
+    public Guid? SiteId { get; set; }
+    public decimal OverReceiptPercent { get; set; }
+    public decimal OverReceiptQuantity { get; set; }
+    /// <summary>When false a PO line must be received in full (the remaining open quantity) in one receipt.</summary>
+    public bool AllowPartialReceipt { get; set; } = true;
+    public string AuditLabel => SiteId is null ? "organization receiving policy" : "site receiving policy";
+}
+
+/// <summary>
+/// What receiving must do for a part (optionally only from one supplier): receiving inspection with a plan, AQL sampling, a receiving
+/// hold, serial numbers. Applied to every receipt channel (desktop, scan station, integrations) and recorded on the receipt line.
+/// </summary>
+public class ReceivingRequirement : Entity, IAudited, ISiteScoped
+{
+    public Guid PartId { get; set; }
+    public Guid? SupplierId { get; set; }
+    public bool InspectionRequired { get; set; }
+    public Guid? InspectionPlanId { get; set; }
+    public Guid? AqlPlanId { get; set; }
+    public string? AqlInspectionLevel { get; set; }
+    public decimal? AqlLevel { get; set; }
+    public bool HoldOnReceipt { get; set; }
+    public string? HoldReason { get; set; }
+    public bool SerialsRequired { get; set; }
+    /// <summary>Lot labels to produce per received line.</summary>
+    public int LabelCopies { get; set; } = 1;
+    public bool Active { get; set; } = true;
+    public string? Notes { get; set; }
+    public Guid SiteId { get; set; }
+    public Guid? DepartmentId { get; set; }
+    public string AuditLabel => "receiving requirement";
 }
 
 public enum MrbDisposition { None = 0, Accept = 1, Rework = 2, Repair = 3, Scrap = 4, ReturnToSupplier = 5, UseAsIs = 6 }
