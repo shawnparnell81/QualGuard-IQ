@@ -10,7 +10,7 @@ using QualGuardIQ.Infrastructure.Services;
 
 namespace QualGuardIQ.Infrastructure.Modules.MasterData;
 
-public sealed record IssueScarRequest(Guid SupplierId, Guid? NcrId, string Title, string Problem, DateOnly ResponseDueOn, Guid? OwnerId);
+public sealed record IssueScarRequest(Guid SupplierId, Guid? NcrId, string Title, string Problem, DateOnly ResponseDueOn, Guid? OwnerId, string? SourceType = null, Guid? SourceId = null);
 public sealed record ScarResponseRequest(string Containment, string RootCause, string CorrectiveActionPlan, string Respondent, DateOnly ReceivedOn);
 public sealed record ScarReviewRequest(bool Accept, string Notes);
 public sealed record ScarVerifyRequest(bool Effective, string Notes);
@@ -41,6 +41,7 @@ public static class SupplierScoring
 public sealed class SupplierQualityService(AppDbContext db, ModuleSupport m, INumberingService numbers, INotifier notifier, SupplierService suppliers)
 {
     public const string ScarType = "SupplierCorrectiveAction";
+    public static readonly string[] ScarSources = ["AqlInspection", "Audit", "Complaint"];
 
     public async Task<SupplierCorrectiveAction> IssueScarAsync(IssueScarRequest r, CancellationToken ct)
     {
@@ -56,16 +57,24 @@ public sealed class SupplierQualityService(AppDbContext db, ModuleSupport m, INu
             await m.ViewAsync(NcrService.RecordType, ncrId, ct);
             if (!await db.Ncrs.AnyAsync(n => n.Id == ncrId && n.SupplierId == r.SupplierId, ct)) throw new AppException("The NCR is not recorded against this supplier.");
         }
+        if ((r.SourceType is null) != (r.SourceId is null)) throw new AppException("Give both the source type and the source record.");
+        if (r.SourceType is { } st)
+        {
+            if (!ScarSources.Contains(st)) throw new AppException($"A SCAR can be raised from: {string.Join(", ", ScarSources)}.");
+            await m.ViewAsync(st, r.SourceId!.Value, ct);
+            if (st == "AqlInspection" && !await db.AqlInspections.AnyAsync(a => a.Id == r.SourceId && a.SupplierId == r.SupplierId, ct)) throw new AppException("The AQL lot is not from this supplier.");
+        }
         var owner = r.OwnerId ?? m.UserId;
         await m.RequireActiveUserAsync(owner, "owner", ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var c = new SupplierCorrectiveAction
         {
-            Number = await numbers.NextAsync(ScarType, s.SiteId, ct), SupplierId = s.Id, NcrId = r.NcrId, Title = r.Title.Trim(), Problem = r.Problem.Trim(),
+            Number = await numbers.NextAsync(ScarType, s.SiteId, ct), SupplierId = s.Id, NcrId = r.NcrId, SourceType = r.SourceType, SourceId = r.SourceId, Title = r.Title.Trim(), Problem = r.Problem.Trim(),
             IssuedOn = today, ResponseDueOn = r.ResponseDueOn, Status = ScarStatus.Issued, SiteId = s.SiteId, DepartmentId = s.DepartmentId, OwnerId = owner
         };
         db.SupplierCorrectiveActions.Add(c);
         if (r.NcrId is { } nid) db.RecordLinks.Add(new RecordLink { FromType = NcrService.RecordType, FromId = nid, ToType = ScarType, ToId = c.Id, LinkType = "Supplier corrective action" });
+        if (r.SourceType is { } srcType) db.RecordLinks.Add(new RecordLink { FromType = srcType, FromId = r.SourceId!.Value, ToType = ScarType, ToId = c.Id, LinkType = "Supplier corrective action" });
         await db.SaveChangesAsync(ct);
         await IndexAsync(c, ct);
         if (owner != m.UserId) await notifier.NotifyAsync([owner], $"SCAR {c.Number} assigned to you", c.Title, await m.RecordAsync(ScarType, c.Id, ct), ct: ct);

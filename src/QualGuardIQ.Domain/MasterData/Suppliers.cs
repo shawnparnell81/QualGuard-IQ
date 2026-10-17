@@ -73,6 +73,9 @@ public class SupplierCorrectiveAction : Entity, IAudited, ISiteScoped
     public string Number { get; set; } = "";
     public Guid SupplierId { get; set; }
     public Guid? NcrId { get; set; }
+    /// <summary>What raised the SCAR besides an NCR: AqlInspection, Audit or Complaint.</summary>
+    public string? SourceType { get; set; }
+    public Guid? SourceId { get; set; }
     public string Title { get; set; } = "";
     public string Problem { get; set; } = "";
     public DateOnly IssuedOn { get; set; }
