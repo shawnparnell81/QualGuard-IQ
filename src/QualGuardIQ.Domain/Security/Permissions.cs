@@ -81,6 +81,28 @@ public static class Permissions
     /// <summary>Sign FAI approval steps (Quality, Engineering, Manufacturing steps are configured on the FAI route).</summary>
     public const string FaiApprove = "fai.approve";
 
+    /// <summary>Process flows, PFMEAs and control plans.</summary>
+    public const string ApqpView = "apqp.view";
+    public const string ApqpEdit = "apqp.edit";
+    /// <summary>Release process flow, PFMEA and control plan revisions.</summary>
+    public const string ApqpApprove = "apqp.approve";
+    /// <summary>SPC charts and samples, MSA and gage R&amp;R studies.</summary>
+    public const string SpcView = "spc.view";
+    public const string SpcEdit = "spc.edit";
+    /// <summary>Approve MSA studies.</summary>
+    public const string MsaApprove = "msa.approve";
+    public const string LpaView = "lpa.view";
+    public const string LpaEdit = "lpa.edit";
+    /// <summary>Cost of quality, scrap and rework.</summary>
+    public const string CoqView = "coq.view";
+    public const string CoqEdit = "coq.edit";
+    /// <summary>Approve rework orders.</summary>
+    public const string ReworkApprove = "rework.approve";
+    /// <summary>Production and executive dashboards, data warehouse snapshots.</summary>
+    public const string AnalyticsView = "analytics.view";
+    /// <summary>Create and manage customer and supplier portal accounts.</summary>
+    public const string PortalAdmin = "portal.admin";
+
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
         .Where(f => f.IsLiteral && f.FieldType == typeof(string))

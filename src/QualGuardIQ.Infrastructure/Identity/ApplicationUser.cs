@@ -10,4 +10,7 @@ public class ApplicationUser : IdentityUser<Guid>
     public Guid? DepartmentId { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? LastSignInAt { get; set; }
+    /// <summary>Null for staff. "Customer" or "Supplier" for external portal accounts, which only reach /api/portal and see only their own party's records.</summary>
+    public string? PortalKind { get; set; }
+    public Guid? PortalPartyId { get; set; }
 }

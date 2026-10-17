@@ -60,5 +60,6 @@ public partial class AppDbContext
         ConfigureRisks(b);
         ConfigureFai(b);
         ConfigureObjectives(b);
+        ConfigureApqp(b);
     }
 }

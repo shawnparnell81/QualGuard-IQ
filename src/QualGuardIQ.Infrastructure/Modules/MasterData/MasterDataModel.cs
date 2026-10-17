@@ -125,6 +125,8 @@ public partial class AppDbContext
         b.Entity<SupplierCorrectiveAction>(e =>
         {
             e.ToTable("supplier_corrective_actions");
+            e.Property(x => x.SourceType).HasMaxLength(50);
+            e.HasIndex(x => new { x.SourceType, x.SourceId });
             e.Property(x => x.Number).HasMaxLength(40).IsRequired();
             e.Property(x => x.Title).HasMaxLength(300).IsRequired();
             e.Property(x => x.Problem).HasMaxLength(10000).IsRequired();
