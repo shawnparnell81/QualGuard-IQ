@@ -92,6 +92,13 @@ public sealed class AuditInterceptor(ICurrentUser user, IClock clock) : SaveChan
         foreach (var p in entry.Properties)
         {
             if (Ignored.Contains(p.Metadata.Name)) continue;
+            // Encrypted secrets: record that they changed, never the ciphertext.
+            if (p.Metadata.Name.StartsWith("Encrypted", StringComparison.Ordinal))
+            {
+                if (entry.State == EntityState.Added ? p.CurrentValue is not null : entry.State == EntityState.Deleted || (p.IsModified && !Equals(p.OriginalValue, p.CurrentValue)))
+                    d[p.Metadata.Name] = p.CurrentValue is null ? "cleared" : "set (value not recorded)";
+                continue;
+            }
             switch (entry.State)
             {
                 case EntityState.Added:

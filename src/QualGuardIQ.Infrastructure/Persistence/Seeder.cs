@@ -92,6 +92,8 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
         ("ControlPlan", "Control plan release", Permissions.ApqpApprove),
         ("MsaStudy", "MSA study approval", Permissions.MsaApprove),
         ("ReworkOrder", "Rework approval", Permissions.ReworkApprove),
+        ("ErpChange", "ERP change approval", Permissions.IntegrationsApprove),
+        ("Recall", "Recall closure", Permissions.RecallsApprove),
     ];
 
     /// <summary>Multi-step default routes (administrators can change steps and permissions).</summary>
@@ -101,6 +103,6 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
     [
         ("Document", "DOC-"), ("Drawing", "DWG-"), ("FormTemplate", "FT-"), ("FormRecord", "FR-"),
         ("Ncr", "NCR-"), ("Capa", "CAPA-"), ("Audit", "AUD-"), ("AuditFinding", "AF-"),
-        ("Equipment", "EQ-"), ("CalibrationEvent", "CAL-"), ("Action", "ACT-"), ("TrainingCourse", "TRN-"), ("ImpactAssessment", "IA-"), ("SupplierCorrectiveAction", "SCAR-"), ("Complaint", "CC-"), ("InspectionPlan", "IP-"), ("Inspection", "INS-"), ("ChangeRequest", "CHG-"), ("Risk", "RSK-"), ("MaintenanceEvent", "MNT-"), ("QualityObjective", "OBJ-"), ("ManagementReview", "MR-"), ("Fai", "FAI-"), ("AqlInspection", "AQL-"), ("ProcessFlow", "PF-"), ("Pfmea", "PFMEA-"), ("ControlPlan", "CP-"), ("SpcChart", "SPC-"), ("MsaStudy", "MSA-"), ("LpaAudit", "LPA-"), ("SupplierProgram", "SDP-"), ("ScrapEvent", "SCR-"), ("ReworkOrder", "RWK-")
+        ("Equipment", "EQ-"), ("CalibrationEvent", "CAL-"), ("Action", "ACT-"), ("TrainingCourse", "TRN-"), ("ImpactAssessment", "IA-"), ("SupplierCorrectiveAction", "SCAR-"), ("Complaint", "CC-"), ("InspectionPlan", "IP-"), ("Inspection", "INS-"), ("ChangeRequest", "CHG-"), ("Risk", "RSK-"), ("MaintenanceEvent", "MNT-"), ("QualityObjective", "OBJ-"), ("ManagementReview", "MR-"), ("Fai", "FAI-"), ("AqlInspection", "AQL-"), ("ProcessFlow", "PF-"), ("Pfmea", "PFMEA-"), ("ControlPlan", "CP-"), ("SpcChart", "SPC-"), ("MsaStudy", "MSA-"), ("LpaAudit", "LPA-"), ("SupplierProgram", "SDP-"), ("ScrapEvent", "SCR-"), ("ReworkOrder", "RWK-"), ("ErpChange", "ERPC-"), ("Recall", "RCL-"), ("CustomerReturn", "RMA-"), ("WarrantyClaim", "WC-"), ("WorkOrder", "WO-"), ("Lot", "LOT-")
     ];
 }

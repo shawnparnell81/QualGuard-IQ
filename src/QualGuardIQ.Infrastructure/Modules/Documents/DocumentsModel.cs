@@ -61,5 +61,6 @@ public partial class AppDbContext
         ConfigureFai(b);
         ConfigureObjectives(b);
         ConfigureApqp(b);
+        ConfigureIntegration(b);
     }
 }

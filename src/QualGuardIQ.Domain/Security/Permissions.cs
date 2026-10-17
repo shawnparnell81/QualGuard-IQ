@@ -103,6 +103,32 @@ public static class Permissions
     /// <summary>Create and manage customer and supplier portal accounts.</summary>
     public const string PortalAdmin = "portal.admin";
 
+    /// <summary>ERP/MES connections, mappings, sync runs and the inbound change queue.</summary>
+    public const string IntegrationsView = "integrations.view";
+    /// <summary>Configure connections (secrets are write-only), run syncs and submit queued changes.</summary>
+    public const string IntegrationsEdit = "integrations.edit";
+    /// <summary>Approve queued ERP/MES changes before they are applied.</summary>
+    public const string IntegrationsApprove = "integrations.approve";
+    /// <summary>Work orders, purchase orders, shop-floor data collection and live monitoring.</summary>
+    public const string ProductionView = "production.view";
+    public const string ProductionEdit = "production.edit";
+    /// <summary>Lots, serial numbers, genealogy and traceability search.</summary>
+    public const string TraceView = "trace.view";
+    public const string TraceEdit = "trace.edit";
+    public const string RecallsView = "recalls.view";
+    public const string RecallsEdit = "recalls.edit";
+    /// <summary>Close recalls (e-signed).</summary>
+    public const string RecallsApprove = "recalls.approve";
+    /// <summary>Customer returns (RMA) and warranty claims.</summary>
+    public const string ReturnsView = "returns.view";
+    public const string ReturnsEdit = "returns.edit";
+    /// <summary>Decide warranty claims.</summary>
+    public const string ReturnsApprove = "returns.approve";
+    /// <summary>Use the quality assistant (answers only include records the user can already view).</summary>
+    public const string CopilotUse = "copilot.use";
+    /// <summary>Configure alert rules, outbound integration points and data exports.</summary>
+    public const string AlertsAdmin = "alerts.admin";
+
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
         .Where(f => f.IsLiteral && f.FieldType == typeof(string))
