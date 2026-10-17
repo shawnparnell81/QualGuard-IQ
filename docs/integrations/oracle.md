@@ -7,25 +7,27 @@
 - The integration user needs Fusion job/duty roles for each resource (e.g. Item read, Work Order view, Procurement). Exact role codes are **UNVERIFIED**, so use the "Required roles" section on each endpoint page.
 
 ### Base URL and entities
-- `https://<pod>.fa.<dc>.oraclecloud.com/fscmRestApi/resources/11.13.18.05/<resource>` (version string from endpoint pages, e.g. https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing/26c/fasrp/op-workorders-get.html). The host pattern is **UNVERIFIED**.
-| QMS | Resource | Source |
-|---|---|---|
-| Items, revisions | `itemsV2`, child `ItemRevision` | https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing/26c/fasrp/api-product-lifecycle-management-items-version-2.html (child name **UNVERIFIED**) |
-| BOMs | `itemStructures` | **UNVERIFIED** |
-| Work orders, operations | `workOrders` (+ `WorkOrderOperation`) | https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing/26c/fasrp/op-workorders-get.html (child **UNVERIFIED**) |
-| Work centers / routings | `workCenters`, `workDefinitions` | **UNVERIFIED** |
-| Purchase orders | `purchaseOrders`; for receiving, `purchaseOrdersForReceiving` (finder `findByOrganization`) | https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing/26c/fasrp/op-purchaseordersforreceiving-get.html |
-| Receipts | `receivingReceiptRequests` (create), `receivingReceiptTransactionRequests` | https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing/26b/fasrp/api-inventory-management-receiving-receipt-requests.html |
-| Suppliers | `suppliers` | **UNVERIFIED** |
-| Customers | `hubOrganizations` / `accounts` (CX/TCA) | **UNVERIFIED** |
-| Employees | HCM `workers` (hcmRestApi) | **UNVERIFIED** |
-| Lots/serials | `inventoryItemLots`, `inventoryItemSerialNumbers` | **UNVERIFIED** |
-| Quality (useful) | Fusion Quality `qualityIssues`, `inspectionPlans` | **UNVERIFIED** |
+- `https://<host>/fscmRestApi/resources/11.13.18.05/<resource>`. https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing/26c/fasrp/op-workorders-get.html. The exact pod host pattern is **UNVERIFIED** (customer-specific, shown in the customer's Fusion URL).
+- The resources below are confirmed in the official SCM REST endpoint index (743 resources, 26C): https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing/26c/fasrp/rest-endpoints.html
+| QMS | Resource |
+|---|---|
+| Items, revisions | `itemsV2` (revisions are a child; child name **UNVERIFIED** until the item page is read) https://docs.oracle.com/en/cloud/saas/supply-chain-and-manufacturing/26c/fasrp/api-product-lifecycle-management-items-version-2.html |
+| BOMs | `itemStructures` |
+| Work centers / routings | `workCenters`, `workDefinitions`, `productionResources` |
+| Work orders | `workOrders` |
+| Receiving | `purchaseOrdersForReceiving` (finder `findByOrganization`), `receivingReceiptRequests`, `receivingReceiptTransactionRequests`, `receipts`, `receiptLots`, `purchaseOrderReceiptSerials` |
+| Lots / serials | `inventoryItemLots`, `inventoryItemSerialNumbers` |
+| Quality (useful) | `qualityIssues`, `qualityActions`, `qualityCorrectiveAndPreventiveActions`, `inspectionPlans`, `inspectionResults`, `inspectionCharacteristics` |
+- Suppliers and POs: `suppliers`, `purchaseOrders` (Procurement REST index). https://docs.oracle.com/en/cloud/saas/procurement/26c/fapra/rest-endpoints.html
+- Employees: HCM `/hcmRestApi/resources/11.13.18.05/publicWorkers` (or `workers`). https://docs.oracle.com/en/cloud/saas/human-resources/farws/op-publicworkers-get.html
+- Customers: Fusion CX/TCA resource (e.g. `accounts`, `hubOrganizations`). **UNVERIFIED** (not in the SCM or Procurement indexes; check the Sales/Service REST index for the customer's licensed pillar).
+- Integration user roles: per endpoint "required roles". Exact role codes are **UNVERIFIED** (they depend on the customer's role design; check per resource page during setup).
 
 ### Paging, delta, limits, errors, events
-- Query params `limit`, `offset`, `hasMore` in the response, `q=` filter (e.g. `q=LastUpdateDate > '2026-01-01T00:00:00'`), `onlyData=true`, `fields`, `finder`, `totalResults`. These are the Fusion REST framework conventions in the Quick Start: **UNVERIFIED** in detail. Default limit 25, max 500: **UNVERIFIED**.
-- Rate limits: not published (**UNVERIFIED**). Errors: HTTP status with text/JSON body. Format **UNVERIFIED**.
-- Events: Fusion business events go out through Oracle Integration Cloud adapters, not direct webhooks (**UNVERIFIED**).
+- Collections return `items`, `count`, `hasMore`, `limit`, `offset`, `totalResults`. The default page is 25 (`limit` sets page size). Rows include `LastUpdateDate`. https://docs.oracle.com/en/cloud/saas/human-resources/farws/Navigate_a_Collection.html. Max limit 500: **UNVERIFIED** (not found on an official page).
+- Delta: `q=LastUpdateDate > '...'` where the resource lists LastUpdateDate as queryable. Per resource, **UNVERIFIED**.
+- Rate limits: none published (**UNVERIFIED**, no official page found). Errors: HTTP status plus body; exact format **UNVERIFIED**.
+- Events: Fusion business events go out through Oracle Integration adapters (**UNVERIFIED**, no page fetched).
 - Sandbox: customers get test/stage pods. No public sandbox (**UNVERIFIED**).
 - Writes: read-only default. Receipt creation is possible but approval-gated.
 

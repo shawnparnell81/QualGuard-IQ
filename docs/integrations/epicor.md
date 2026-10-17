@@ -27,3 +27,6 @@ Note: Epicor's detailed REST technical reference is on EpicWeb (login required).
 - Events: no native webhooks. Outbound needs BPM/Epicor Functions or Epicor Automation Studio (**UNVERIFIED**).
 - Sandbox: cloud customers get Pilot/Third environments (**UNVERIFIED**).
 - Writes: read-only default.
+
+## Verification status (pass 2, 2026-10-16)
+Epicor's REST technical reference and API Key Maintenance docs are on EpicWeb (customer login). The public Epicor site confirms only OData v4, API keys and access scopes. https://www.epicor.com/en-us/products/enterprise-resource-planning-erp/kinetic/tools-and-technology/open-rest-api/. Every item marked unconfirmed above stays that way until it's checked in the customer's `/api/help` (REST help) and `$metadata`, or on EpicWeb.
