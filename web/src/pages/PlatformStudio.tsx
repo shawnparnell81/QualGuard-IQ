@@ -5,6 +5,8 @@ import { del, get, post, put } from '../api';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { mono } from '../theme';
 import { mod } from './Enterprise';
+import { useAuth } from '../auth';
+import { useUsers } from '../components/Kit';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const P = () => mod('platform');
@@ -298,6 +300,84 @@ export function RulesStudio() {
           {testRes?.conditions && <><Stack gap={.5}>{testRes.conditions.map((c: any, i: number) => <Typography key={i} variant="body2">{c.holds ? '✓' : '✗'} {c.field} {opLabel[c.operator]} {c.value} <Typography component="span" variant="caption">(actual: {c.actual ?? 'empty'})</Typography></Typography>)}</Stack>
             <Alert severity={testRes.matches ? 'warning' : 'info'}>{testRes.outcome}</Alert></>}
         </DialogContent></Dialog>
+    </ModuleWorkspace>
+  );
+}
+
+/* ---------------- Data governance & MDM ---------------- */
+const classes = ['Public', 'Internal', 'Confidential', 'Restricted'];
+const classColor = ['success', 'info', 'warning', 'error'] as const;
+const ruleTypes = ['Required', 'Unique', 'Pattern', 'Allowed values'];
+const changeStatus = ['Draft', 'Pending approval', 'Applied', 'Rejected'];
+
+/** Data governance: domain tiles with compliance gauges, stewardship and classification; quality rules, violations and governed change requests per domain. */
+export function DataGovernance() {
+  const qc = useQueryClient(); const { can } = useAuth(); const users = useUsers();
+  const domains = useQuery({ queryKey: ['data-domains'], queryFn: () => get<any[]>('/api/governance/data/domains') });
+  const rules = useQuery({ queryKey: ['data-rules'], queryFn: () => get<any[]>('/api/governance/data/rules') });
+  const [key, setKey] = useState('Part'); const [tab, setTab] = useState('rules');
+  const d = (domains.data ?? []).find((x) => x.key === key);
+  const quality = useQuery({ queryKey: ['data-quality', key], enabled: tab === 'violations' && can('platform.admin'), queryFn: () => get<any>(`/api/governance/data/quality/${key}`) });
+  const changes = useQuery({ queryKey: ['data-changes', key], enabled: tab === 'changes', queryFn: () => get<any[]>(`/api/governance/data/changes?domain=${key}`) });
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [rule, setRule] = useState<any | null>(null); const [stew, setStew] = useState<any | null>(null); const [chg, setChg] = useState<any | null>(null);
+  const run = async (fn: () => Promise<unknown>, ok: string) => { setMsg(null); try { await fn(); setMsg({ ok: true, text: ok }); qc.invalidateQueries(); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } };
+  return (
+    <ModuleWorkspace module={P()} crumbs={crumbs('Data governance')} title="Data governance & master data"
+      actions={can('platform.admin') ? <Button variant="contained" onClick={() => run(() => post('/api/governance/data/quality/run'), 'Data quality measured for every domain.')}>Measure data quality</Button> : undefined}>
+      {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(6, 1fr)' }, gap: 1.5, mb: 2 }}>
+        {(domains.data ?? []).map((x) => { const c = x.latest?.compliance; const pct = c == null ? null : Number(c);
+          return <Paper key={x.key} onClick={() => setKey(x.key)} sx={{ p: 1.5, cursor: 'pointer', textAlign: 'center', outline: key === x.key ? '2px solid' : 'none', outlineColor: 'primary.main' }}>
+            <Box sx={{ mx: 'auto', width: 74, height: 74, borderRadius: '50%', display: 'grid', placeItems: 'center', background: pct == null ? '#e0e0e0' : `conic-gradient(${pct >= 95 ? '#2e7d32' : pct >= 80 ? '#ed6c02' : '#d32f2f'} ${pct * 3.6}deg, #e0e0e0 0)` }}>
+              <Box sx={{ width: 58, height: 58, borderRadius: '50%', bgcolor: 'background.paper', display: 'grid', placeItems: 'center', fontWeight: 700, fontSize: 14 }}>{pct == null ? '—' : `${pct.toFixed(0)}%`}</Box></Box>
+            <Typography variant="body2" sx={{ fontWeight: 600, mt: 1 }}>{x.name}</Typography>
+            <Chip size="small" color={classColor[x.classification]} label={classes[x.classification]} sx={{ mt: .5 }} />
+            <Typography variant="caption" sx={{ display: 'block', mt: .5 }}>Steward: {x.steward ?? 'unassigned'}</Typography>
+            <Typography variant="caption" color="text.secondary">{x.rules} rules · {x.pendingChanges} pending</Typography></Paper>; })}
+      </Box>
+      {d && <Paper sx={{ p: 2 }}>
+        <Stack direction="row" alignItems="center" gap={2} sx={{ mb: 1 }}><Typography variant="h3" sx={{ flex: 1 }}>{d.name}</Typography>
+          {d.trend?.length > 1 && <Stack direction="row" alignItems="flex-end" gap={.25} sx={{ height: 28 }}>{d.trend.map((t: any, i: number) => <Box key={i} title={`${Number(t.compliance)}%`} sx={{ width: 6, height: `${Math.max(8, Number(t.compliance))}%`, bgcolor: 'primary.main', opacity: .7 }} />)}</Stack>}
+          {can('platform.admin') && <Button size="small" onClick={() => setStew({ stewardId: d.stewardId ?? '', ownerId: d.ownerId ?? '', classification: d.classification, description: d.description ?? '' })}>Stewardship</Button>}
+          {can('masterdata.edit') && <Button size="small" variant="outlined" onClick={() => setChg({ recordId: '', field: d.fields[0]?.name ?? '', value: '', reason: '' })}>Request change</Button>}</Stack>
+        <Stack direction="row" gap={1} sx={{ mb: 2 }}>{[['rules', 'Quality rules'], ['violations', 'Violations'], ['changes', 'Change requests']].map(([v, l]) => <Chip key={v} label={l} color={tab === v ? 'primary' : 'default'} onClick={() => setTab(v)} />)}</Stack>
+        {tab === 'rules' && <Stack gap={.75}>{(rules.data ?? []).filter((r) => r.domainKey === key).map((r) => <Stack key={r.id} direction="row" gap={1.5} alignItems="center" sx={{ p: 1, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography sx={{ fontFamily: mono, minWidth: 160 }}>{r.field}</Typography><Chip size="small" label={ruleTypes[r.ruleType]} />{r.parameter && <Typography variant="caption" sx={{ fontFamily: mono }}>{r.parameter}</Typography>}
+          {r.blocking && <Chip size="small" color="error" variant="outlined" label="blocks changes" />}<Box sx={{ flex: 1 }} />
+          {can('platform.admin') && <Button size="small" color="error" onClick={() => run(() => del(`/api/governance/data/rules/${r.id}`), 'Rule removed.')}>Remove</Button>}</Stack>)}
+          {can('platform.admin') && <Button size="small" sx={{ alignSelf: 'start' }} onClick={() => setRule({ field: d.fields[0]?.name ?? '', ruleType: 0, parameter: '', blocking: false })}>+ Add rule</Button>}</Stack>}
+        {tab === 'violations' && (!can('platform.admin') ? <Typography color="text.secondary">Violation detail is available to platform administrators.</Typography> : quality.data && <>
+          <Typography variant="body2" sx={{ mb: 1 }}>{quality.data.records} records · {quality.data.failingRecords} failing · compliance {Number(quality.data.compliance).toFixed(1)}%</Typography>
+          <Stack gap={.5}>{quality.data.sample.map((v: any, i: number) => <Stack key={i} direction="row" gap={2} alignItems="center"><Typography sx={{ fontFamily: mono, minWidth: 160 }}>{v.record}</Typography><Typography variant="body2" sx={{ flex: 1 }}>{v.rule}</Typography><Typography variant="caption">{v.value ?? 'empty'}</Typography>
+            {can('masterdata.edit') && <Button size="small" onClick={() => setChg({ recordId: v.recordId, field: v.field, value: '', reason: `Fix: ${v.rule}` })}>Propose fix</Button>}</Stack>)}</Stack></>)}
+        {tab === 'changes' && <Stack gap={.75}>{(changes.data ?? []).map((c) => <Paper key={c.id} variant="outlined" sx={{ p: 1.25, display: 'flex', gap: 2, alignItems: 'center' }}>
+          <Typography sx={{ fontFamily: mono }}>{c.number}</Typography><Typography variant="body2" sx={{ flex: 1 }}>{c.recordLabel}: {Object.entries(c.changes).map(([k, v]) => `${k} ${c.previous?.[k] ?? '∅'} → ${v ?? '∅'}`).join('; ')}</Typography>
+          <Chip size="small" color={c.status === 2 ? 'success' : c.status === 3 ? 'error' : 'warning'} label={changeStatus[c.status]} /></Paper>)}
+          {changes.data?.length === 0 && <Typography color="text.secondary">No change requests for this domain.</Typography>}</Stack>}
+      </Paper>}
+      <Dialog open={!!rule} onClose={() => setRule(null)} fullWidth maxWidth="xs"><DialogTitle>Add data quality rule</DialogTitle>
+        {rule && <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          <TextField select label="Field" value={rule.field} onChange={(e) => setRule({ ...rule, field: e.target.value })}>{(d?.fields ?? []).map((f: any) => <MenuItem key={f.name} value={f.name}>{f.name}</MenuItem>)}</TextField>
+          <TextField select label="Rule" value={rule.ruleType} onChange={(e) => setRule({ ...rule, ruleType: Number(e.target.value) })}>{ruleTypes.map((t, i) => <MenuItem key={t} value={i}>{t}</MenuItem>)}</TextField>
+          {rule.ruleType >= 2 && <TextField label={rule.ruleType === 2 ? 'Regular expression' : 'Allowed values (comma separated)'} value={rule.parameter} onChange={(e) => setRule({ ...rule, parameter: e.target.value })} />}
+          <FormControlLabel control={<Switch checked={rule.blocking} onChange={(e) => setRule({ ...rule, blocking: e.target.checked })} />} label="Block change requests that break it" /></DialogContent>}
+        <DialogActions><Button onClick={() => setRule(null)}>Cancel</Button><Button variant="contained" onClick={() => run(async () => { await post('/api/governance/data/rules', { domainKey: key, ...rule, parameter: rule.parameter || null }); setRule(null); }, 'Rule added.')}>Add</Button></DialogActions></Dialog>
+      <Dialog open={!!stew} onClose={() => setStew(null)} fullWidth maxWidth="xs"><DialogTitle>Stewardship: {d?.name}</DialogTitle>
+        {stew && <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          <TextField select label="Data steward" value={stew.stewardId} onChange={(e) => setStew({ ...stew, stewardId: e.target.value })}><MenuItem value="">Unassigned</MenuItem>{(users.data ?? []).map((u: any) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+          <TextField select label="Data owner" value={stew.ownerId} onChange={(e) => setStew({ ...stew, ownerId: e.target.value })}><MenuItem value="">Unassigned</MenuItem>{(users.data ?? []).map((u: any) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+          <TextField select label="Classification" value={stew.classification} onChange={(e) => setStew({ ...stew, classification: Number(e.target.value) })}>{classes.map((c, i) => <MenuItem key={c} value={i}>{c}</MenuItem>)}</TextField>
+          <TextField label="Description" multiline minRows={2} value={stew.description} onChange={(e) => setStew({ ...stew, description: e.target.value })} /></DialogContent>}
+        <DialogActions><Button onClick={() => setStew(null)}>Cancel</Button><Button variant="contained" onClick={() => run(async () => { await put(`/api/governance/data/domains/${key}`, { ...stew, stewardId: stew.stewardId || null, ownerId: stew.ownerId || null }); setStew(null); }, 'Stewardship saved.')}>Save</Button></DialogActions></Dialog>
+      <Dialog open={!!chg} onClose={() => setChg(null)} fullWidth maxWidth="sm"><DialogTitle>Request a governed change</DialogTitle>
+        {chg && <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          <Typography variant="body2" color="text.secondary">The change is applied only after the approval route for master data changes is signed. Blocking data rules are checked first.</Typography>
+          <TextField label={`${key} record id`} value={chg.recordId} onChange={(e) => setChg({ ...chg, recordId: e.target.value })} />
+          <Stack direction="row" gap={1}><TextField select label="Field" value={chg.field} onChange={(e) => setChg({ ...chg, field: e.target.value })} sx={{ flex: 1 }}>{(d?.fields ?? []).map((f: any) => <MenuItem key={f.name} value={f.name}>{f.name}</MenuItem>)}</TextField>
+            <TextField label="New value" value={chg.value} onChange={(e) => setChg({ ...chg, value: e.target.value })} sx={{ flex: 1 }} /></Stack>
+          <TextField label="Reason" value={chg.reason} onChange={(e) => setChg({ ...chg, reason: e.target.value })} /></DialogContent>}
+        <DialogActions><Button onClick={() => setChg(null)}>Cancel</Button><Button variant="contained" onClick={() => run(async () => { const r = await post<any>('/api/governance/data/changes', { domainKey: key, recordId: chg.recordId.trim(), changes: { [chg.field]: chg.value }, reason: chg.reason }); setChg(null); setTab('changes'); return r; }, 'Change submitted for approval.')}>Submit for approval</Button></DialogActions></Dialog>
     </ModuleWorkspace>
   );
 }

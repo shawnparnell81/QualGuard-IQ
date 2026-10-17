@@ -65,3 +65,63 @@ public class RuleFiring
     public DateTimeOffset FiredAt { get; set; }
     public string Outcome { get; set; } = "";
 }
+
+public enum DataClassification { Public = 0, Internal = 1, Confidential = 2, Restricted = 3 }
+
+/// <summary>Governed master-data domain (Product, Part, Supplier, Customer, Site, Equipment) with its steward, owner and classification.</summary>
+public class DataDomain : Entity, IAudited
+{
+    public string Key { get; set; } = "";
+    public string Name { get; set; } = "";
+    public Guid? StewardId { get; set; }
+    public Guid? OwnerId { get; set; }
+    public DataClassification Classification { get; set; } = DataClassification.Internal;
+    public string? Description { get; set; }
+    public string AuditLabel => $"data domain {Key}";
+}
+
+public enum DataRuleType { Required = 0, Unique = 1, Pattern = 2, AllowedValues = 3 }
+
+/// <summary>Data quality rule on one field of a governed domain.</summary>
+public class DataQualityRule : Entity, IAudited
+{
+    public string DomainKey { get; set; } = "";
+    public string Field { get; set; } = "";
+    public DataRuleType RuleType { get; set; }
+    public string? Parameter { get; set; }
+    public bool Blocking { get; set; }
+    public bool Enabled { get; set; } = true;
+    public string AuditLabel => $"data rule {DomainKey}.{Field} {RuleType}";
+}
+
+/// <summary>Compliance measurement of a domain at a point in time (trend tracking).</summary>
+public class DataQualitySnapshot
+{
+    public long Id { get; set; }
+    public string DomainKey { get; set; } = "";
+    public DateTimeOffset RunAt { get; set; }
+    public int Records { get; set; }
+    public int FailingRecords { get; set; }
+    public int Violations { get; set; }
+    public decimal Compliance { get; set; }
+}
+
+public enum MasterChangeStatus { Draft = 0, PendingApproval = 1, Applied = 2, Rejected = 3 }
+
+/// <summary>Governed change to a master record. Approved through the shared approval engine; the change is applied only on approval.</summary>
+public class MasterDataChange : Entity, IAudited, ISiteScoped
+{
+    public string Number { get; set; } = "";
+    public string DomainKey { get; set; } = "";
+    public Guid RecordId { get; set; }
+    public string RecordLabel { get; set; } = "";
+    public Dictionary<string, string?> Changes { get; set; } = [];
+    public Dictionary<string, string?> Previous { get; set; } = [];
+    public string Reason { get; set; } = "";
+    public MasterChangeStatus Status { get; set; }
+    public Guid SiteId { get; set; }
+    public Guid? DepartmentId { get; set; }
+    public Guid RequestedById { get; set; }
+    public DateTimeOffset? AppliedAt { get; set; }
+    public string AuditLabel => $"master data change {Number}";
+}

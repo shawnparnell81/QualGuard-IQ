@@ -158,4 +158,40 @@ public sealed class PlatformDesignerTests(TestApp app)
     }
 
     const string PlatformEventsCreated = "record.created";
+
+    [Fact]
+    public async Task Data_governance_tracks_quality_and_applies_master_changes_only_after_approval()
+    {
+        var site = await app.CreateSiteAsync();
+        var admin = await app.AdminAsync();
+        var (ed1, editor) = await app.CreateUserAsync([Permissions.MasterDataView, Permissions.MasterDataEdit], site);
+        var (_, steward) = await app.CreateUserAsync([Permissions.MasterDataView, Permissions.MasterDataEdit], site);
+        Assert.Equal(HttpStatusCode.Forbidden, (await editor.PutAsync("/api/governance/data/domains/Part", new { stewardId = ed1, ownerId = (Guid?)null, classification = 2, description = "Parts" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsync("/api/governance/data/domains/Part", new { stewardId = ed1, ownerId = (Guid?)null, classification = 2, description = "Part master" })).StatusCode);
+        var r1 = (await (await admin.PostOkAsync("/api/governance/data/rules", new { domainKey = "Part", field = "Material", ruleType = 0, parameter = (string?)null, blocking = false })).JsonAsync()).Id();
+        var r2 = (await (await admin.PostOkAsync("/api/governance/data/rules", new { domainKey = "Part", field = "UnitOfMeasure", ruleType = 3, parameter = "EA,KG,M,L", blocking = true })).JsonAsync()).Id();
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync("/api/governance/data/rules", new { domainKey = "Part", field = "Nope", ruleType = 0, parameter = (string?)null, blocking = false })).StatusCode);
+
+        var pn = "GOV-" + Guid.NewGuid().ToString("N")[..6];
+        var part = (await (await editor.PostOkAsync("/api/master/parts", new { partNumber = pn, name = "Bracket", partType = 0, revision = "A", unitOfMeasure = "EA", siteId = site, status = 0 })).JsonAsync()).Id();
+        var q = await admin.GetElAsync("/api/governance/data/quality/Part");
+        Assert.Contains(q.GetProperty("sample").EnumerateArray(), v => v.Id("recordId") == part && v.Str("field") == "Material");
+        Assert.True(q.GetProperty("compliance").GetDecimal() < 100m);
+        await admin.PostOkAsync("/api/governance/data/quality/run");
+        var overview = await editor.GetElAsync("/api/governance/data/domains");
+        var partDomain = overview.EnumerateArray().First(d => d.Str("key") == "Part");
+        Assert.Equal(2, partDomain.Int("classification"));
+        Assert.NotEqual(JsonValueKind.Null, partDomain.GetProperty("latest").ValueKind);
+
+        Assert.Equal(HttpStatusCode.BadRequest, (await editor.PostAsync("/api/governance/data/changes", new { domainKey = "Part", recordId = part, changes = new Dictionary<string, string?> { ["UnitOfMeasure"] = "BOX" }, reason = "Pack change" })).StatusCode); // blocking rule
+        Assert.Equal(HttpStatusCode.BadRequest, (await editor.PostAsync("/api/governance/data/changes", new { domainKey = "Part", recordId = part, changes = new Dictionary<string, string?> { ["SiteId"] = Guid.NewGuid().ToString() }, reason = "Move" })).StatusCode); // not governed
+        var change = await (await editor.PostOkAsync("/api/governance/data/changes", new { domainKey = "Part", recordId = part, changes = new Dictionary<string, string?> { ["Material"] = "6061-T6 aluminium" }, reason = "Material missing" })).JsonAsync();
+        Assert.Null((await editor.GetElAsync($"/api/master/parts/{part}")).GetProperty("material").GetString()); // not applied before approval
+        Assert.DoesNotContain((await editor.GetJsonAsync<MyWork>("/api/my/work")).Approvals, a => a.RecordNumber == change.Str("number")); // no self-approval
+        Assert.Equal(HttpStatusCode.OK, (await steward.SignAsync(await steward.PendingApprovalIdAsync(change.Str("number")))).StatusCode);
+        Assert.Equal("6061-T6 aluminium", (await editor.GetElAsync($"/api/master/parts/{part}")).Str("material"));
+        var changes = await editor.GetElAsync("/api/governance/data/changes?domain=Part");
+        Assert.Contains(changes.EnumerateArray(), c => c.Id() == change.Id() && c.Int("status") == 2);
+        await admin.DeleteAsync($"/api/governance/data/rules/{r1}"); await admin.DeleteAsync($"/api/governance/data/rules/{r2}");
+    }
 }

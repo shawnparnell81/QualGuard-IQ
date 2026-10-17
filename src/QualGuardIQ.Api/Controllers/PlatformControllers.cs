@@ -83,3 +83,18 @@ public sealed class RulesController(RuleEngine svc) : ControllerBase
     [HttpGet("firings")] public Task<List<RuleFiring>> Firings([FromQuery] Guid? ruleId, CancellationToken ct) => svc.FiringsAsync(ruleId, ct);
     [HttpPost("escalate")] public async Task<object> Escalate(CancellationToken ct) => new { Escalated = await svc.EscalateAsync(ct) };
 }
+
+/// <summary>Enterprise data governance and master data management.</summary>
+[ApiController, Authorize, Route("api/governance/data")]
+public sealed class DataGovernanceController(DataGovernanceService svc) : ControllerBase
+{
+    [HttpGet("domains")] public Task<object> Overview(CancellationToken ct) => svc.OverviewAsync(ct);
+    [HttpPut("domains/{key}"), RequirePermission(Permissions.PlatformAdmin)] public async Task<IActionResult> UpdateDomain(string key, DataDomainInput r, CancellationToken ct) { await svc.UpdateDomainAsync(key, r, ct); return NoContent(); }
+    [HttpGet("rules"), RequirePermission(Permissions.MasterDataView)] public Task<List<DataQualityRule>> Rules(CancellationToken ct) => svc.RulesAsync(ct);
+    [HttpPost("rules"), RequirePermission(Permissions.PlatformAdmin)] public async Task<object> AddRule(DataRuleInput r, CancellationToken ct) => new { (await svc.AddRuleAsync(r, ct)).Id };
+    [HttpDelete("rules/{id:guid}"), RequirePermission(Permissions.PlatformAdmin)] public async Task<IActionResult> DeleteRule(Guid id, CancellationToken ct) { await svc.DeleteRuleAsync(id, ct); return NoContent(); }
+    [HttpGet("quality/{key}"), RequirePermission(Permissions.PlatformAdmin)] public Task<DomainQuality> Evaluate(string key, CancellationToken ct) => svc.EvaluateAsync(key, ct);
+    [HttpPost("quality/run"), RequirePermission(Permissions.PlatformAdmin)] public Task<List<DomainQuality>> Run(CancellationToken ct) => svc.RunAsync(ct);
+    [HttpGet("changes")] public Task<List<MasterDataChange>> Changes([FromQuery] string? domain, CancellationToken ct) => svc.ChangesAsync(domain, ct);
+    [HttpPost("changes")] public async Task<object> RequestChange(MasterChangeInput r, CancellationToken ct) { var c = await svc.RequestAsync(r, ct); return new { c.Id, c.Number }; }
+}

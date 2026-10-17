@@ -77,6 +77,11 @@ public static class DependencyInjection
         services.AddScoped<Modules.Platform.DesignerService>();
         services.AddScoped<Modules.Platform.FormLibraryService>();
         services.AddScoped<Modules.Platform.RuleEngine>();
+        services.AddScoped<Modules.Platform.DataGovernanceService>();
+        services.AddScoped<IRecordTypeProvider>(sp => new Modules.Quality.QualityRecordProvider<Domain.Platform.MasterDataChange>(sp.GetRequiredService<AppDbContext>(), Modules.Platform.DataGovernanceService.ChangeType, Permissions.MasterDataView, Permissions.MasterDataEdit,
+            x => (x.Number, $"{x.DomainKey} {x.RecordLabel}: {string.Join(", ", x.Changes.Keys)}", x.Status.ToString(), $"/platform/governance?change={x.Id}", x.Status != Domain.Platform.MasterChangeStatus.Draft)));
+        services.AddScoped<IApprovalHandler>(sp => new Modules.Quality.DelegateApprovalHandler(Modules.Platform.DataGovernanceService.ChangeType,
+            (id, ct) => sp.GetRequiredService<Modules.Platform.DataGovernanceService>().OnApprovedAsync(id, ct), (id, _, ct) => sp.GetRequiredService<Modules.Platform.DataGovernanceService>().OnRejectedAsync(id, ct)));
         services.AddSingleton<Modules.Platform.ApiMetrics>();
         services.AddScoped<Jobs.PlatformEventJob>();
         services.AddScoped<Jobs.ReportScheduleJob>();
