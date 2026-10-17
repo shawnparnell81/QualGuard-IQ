@@ -66,7 +66,7 @@ export async function signIn(page: Page, u: User) {
   await page.goto('/');
   await page.getByLabel('Email').fill(u.email);
   await page.getByLabel('Password', { exact: true }).fill(u.password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
 }
 
