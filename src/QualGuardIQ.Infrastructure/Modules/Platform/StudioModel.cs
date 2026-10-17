@@ -14,6 +14,9 @@ public partial class AppDbContext
     public DbSet<MasterDataChange> MasterDataChanges => Set<MasterDataChange>();
     public DbSet<BackupRecord> BackupRecords => Set<BackupRecord>();
     public DbSet<RecoveryObjective> RecoveryObjectives => Set<RecoveryObjective>();
+    public DbSet<ExtensionPackage> ExtensionPackages => Set<ExtensionPackage>();
+    public DbSet<ExtensionInstallation> ExtensionInstallations => Set<ExtensionInstallation>();
+    public DbSet<ExtensionLicense> ExtensionLicenses => Set<ExtensionLicense>();
 
     private static void ConfigureStudio(ModelBuilder b)
     {
@@ -52,5 +55,13 @@ public partial class AppDbContext
             e.HasIndex(x => new { x.Kind, x.CompletedAt });
         });
         b.Entity<RecoveryObjective>(e => { e.ToTable("recovery_objectives"); e.Property(x => x.Scenario).HasMaxLength(200); e.HasIndex(x => x.Scenario).IsUnique(); });
+        b.Entity<ExtensionPackage>(e =>
+        {
+            e.ToTable("extension_packages"); e.Property(x => x.Key).HasMaxLength(60); e.Property(x => x.Name).HasMaxLength(200); e.Property(x => x.Publisher).HasMaxLength(200);
+            e.Property(x => x.Version).HasMaxLength(20); e.Property(x => x.Description).HasMaxLength(4000); e.Property(x => x.ContentJson).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.Key, x.Version }).IsUnique();
+        });
+        b.Entity<ExtensionInstallation>(e => { e.ToTable("extension_installations"); e.Property(x => x.Key).HasMaxLength(60); e.Property(x => x.Version).HasMaxLength(20); Json(e, x => x.Created); e.HasIndex(x => x.Key).IsUnique(); });
+        b.Entity<ExtensionLicense>(e => { e.ToTable("extension_licenses"); e.Property(x => x.LicenseId).HasMaxLength(100); e.Property(x => x.Licensee).HasMaxLength(200); e.Property(x => x.KeyHash).HasMaxLength(64); e.HasIndex(x => x.LicenseId).IsUnique(); });
     }
 }

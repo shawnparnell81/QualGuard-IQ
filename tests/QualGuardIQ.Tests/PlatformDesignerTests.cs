@@ -218,4 +218,82 @@ public sealed class PlatformDesignerTests(TestApp app)
         Assert.Contains(st.GetProperty("objectives").EnumerateArray(), o => !o.GetProperty("met").GetBoolean() && o.GetProperty("issues").EnumerateArray().Any(i => i.GetString()!.Contains("procedure")));
         Assert.Equal(JsonValueKind.Object, st.GetProperty("lastVerifiedBackup").ValueKind);
     }
+
+    static string License(string id, string[] extensions, DateTimeOffset expires, System.Security.Cryptography.ECDsa? signer = null)
+    {
+        static string B(byte[] b) => Convert.ToBase64String(b).TrimEnd('=').Replace('+', '-').Replace('/', '_');
+        var payload = System.Text.Json.JsonSerializer.SerializeToUtf8Bytes(new { licenseId = id, licensee = "Test Manufacturing", extensions, issuedAt = DateTimeOffset.UtcNow.AddDays(-1), expiresAt = expires });
+        return $"QGL1.{B(payload)}.{B((signer ?? TestApp.LicenseSigner).SignData(payload, System.Security.Cryptography.HashAlgorithmName.SHA256))}";
+    }
+
+    [Fact]
+    public async Task Marketplace_manages_dependencies_licenses_versions_and_installs_through_existing_engines()
+    {
+        var admin = await app.AdminAsync();
+        var site = await app.CreateSiteAsync();
+        var (_, user) = await app.CreateUserAsync([Permissions.MasterDataView], site);
+        Assert.Equal(HttpStatusCode.Forbidden, (await user.GetAsync("/api/platform/marketplace")).StatusCode);
+        foreach (var k in new[] { "aerospace-as9100", "medical-iso13485", "supplier-escalation", "part-master-hygiene" }) await admin.DeleteAsync($"/api/platform/marketplace/{k}");
+
+        var catalog = await admin.GetElAsync("/api/platform/marketplace");
+        var aero = catalog.EnumerateArray().First(p => p.GetProperty("key").GetString() == "aerospace-as9100");
+        Assert.Equal("1.1.0", aero.GetProperty("latestVersion").GetString());
+        Assert.True(aero.GetProperty("requiresLicense").GetBoolean());
+        Assert.Contains(aero.GetProperty("dependencies").EnumerateArray(), d => d.GetProperty("key").GetString() == "module:Fai" && d.GetProperty("satisfied").GetBoolean());
+
+        // dependency on another package, then license
+        var noDep = await admin.PostAsync("/api/platform/marketplace/aerospace-as9100/install?version=1.0.0", new { });
+        Assert.Equal(HttpStatusCode.BadRequest, noDep.StatusCode);
+        Assert.Contains("part-master-hygiene", await noDep.Content.ReadAsStringAsync());
+        var hygiene = await (await admin.PostOkAsync("/api/platform/marketplace/part-master-hygiene/install", new { })).JsonAsync();
+        var ruleIds = hygiene.GetProperty("items").EnumerateArray().Select(i => i.GetProperty("id").GetGuid()).ToList();
+        Assert.Equal(2, ruleIds.Count);
+        Assert.Equal(2, (await admin.GetElAsync("/api/governance/data/rules")).EnumerateArray().Count(r => ruleIds.Contains(r.GetProperty("id").GetGuid())));
+        var noLicense = await admin.PostAsync("/api/platform/marketplace/aerospace-as9100/install?version=1.0.0", new { });
+        Assert.Equal(HttpStatusCode.BadRequest, noLicense.StatusCode);
+        Assert.Contains("license", await noLicense.Content.ReadAsStringAsync());
+
+        // licenses: forged, expired, valid
+        using var forger = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync("/api/platform/marketplace/licenses", new { licenseKey = License("L-FORGED", ["*"], DateTimeOffset.UtcNow.AddYears(1), forger) })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync("/api/platform/marketplace/licenses", new { licenseKey = License("L-OLD", ["aerospace-as9100"], DateTimeOffset.UtcNow.AddDays(-1)) })).StatusCode);
+        var lic = await (await admin.PostOkAsync("/api/platform/marketplace/licenses", new { licenseKey = License("L-" + Guid.NewGuid().ToString("N")[..8], ["aerospace-as9100"], DateTimeOffset.UtcNow.AddYears(1)) })).JsonAsync();
+
+        // install 1.0.0: the rule engine and form library hold the content
+        var inst = await (await admin.PostOkAsync("/api/platform/marketplace/aerospace-as9100/install?version=1.0.0", new { })).JsonAsync();
+        Assert.Equal("1.0.0", inst.GetProperty("version").GetString());
+        var rules = await admin.GetElAsync("/api/platform/rules");
+        Assert.Contains(rules.EnumerateArray(), r => r.GetProperty("name").GetString() == "Critical NCR needs corrective action [aerospace-as9100]" && r.GetProperty("enabled").GetBoolean());
+        Assert.Contains((await admin.GetElAsync("/api/forms/library")).EnumerateArray(), c => c.GetProperty("key").GetString() == "as9102_header" && c.GetProperty("status").GetInt32() == 0);
+        aero = (await admin.GetElAsync("/api/platform/marketplace")).EnumerateArray().First(p => p.GetProperty("key").GetString() == "aerospace-as9100");
+        Assert.True(aero.GetProperty("upgradeAvailable").GetBoolean());
+        Assert.Equal("Licensed", aero.GetProperty("license").GetString());
+
+        // dependents block removal; upgrade replaces content
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.DeleteAsync("/api/platform/marketplace/part-master-hygiene")).StatusCode);
+        var up = await (await admin.PostOkAsync("/api/platform/marketplace/aerospace-as9100/upgrade", new { })).JsonAsync();
+        Assert.Equal("1.1.0", up.GetProperty("version").GetString());
+        rules = await admin.GetElAsync("/api/platform/rules");
+        Assert.Single(rules.EnumerateArray(), r => r.GetProperty("name").GetString()!.EndsWith("[aerospace-as9100]") && r.GetProperty("kind").GetInt32() == 0);
+        Assert.Contains(rules.EnumerateArray(), r => r.GetProperty("name").GetString() == "Escalate critical NCR approvals [aerospace-as9100]");
+
+        // disable switches the created rules off; revoked license blocks re-enabling
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync("/api/platform/marketplace/aerospace-as9100/enabled", new { enabled = false })).StatusCode);
+        Assert.DoesNotContain((await admin.GetElAsync("/api/platform/rules")).EnumerateArray(), r => r.GetProperty("name").GetString()!.EndsWith("[aerospace-as9100]") && r.GetProperty("enabled").GetBoolean());
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/platform/marketplace/licenses/{lic.Id()}/revoke", new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync("/api/platform/marketplace/aerospace-as9100/enabled", new { enabled = true })).StatusCode);
+
+        // imported manifest = future packages without redesign; content is validated by the owning engine on install
+        var key = "custom-" + Guid.NewGuid().ToString("N")[..6];
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync("/api/platform/marketplace/packages", new { key, name = "Bad custom", kind = 0, publisher = "Acme", version = "1.0.0", description = "x", dependsOn = new[] { "module:Quality" }, requiresLicense = false, content = new { dataRules = new[] { new { domainKey = "Part", field = "Nope", ruleType = 0, parameter = (string?)null, blocking = false } } } })).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsync("/api/platform/marketplace/packages", new { key, name = "Again", kind = 0, publisher = "Acme", version = "1.0.0", description = "x", requiresLicense = false })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync($"/api/platform/marketplace/{key}/install", new { })).StatusCode);
+        Assert.DoesNotContain((await admin.GetElAsync("/api/platform/marketplace")).EnumerateArray(), p => p.GetProperty("key").GetString() == key && p.GetProperty("installed").ValueKind == JsonValueKind.Object);
+
+        // uninstall removes the created configuration; draft component is deleted
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync("/api/platform/marketplace/aerospace-as9100")).StatusCode);
+        Assert.DoesNotContain((await admin.GetElAsync("/api/platform/rules")).EnumerateArray(), r => r.GetProperty("name").GetString()!.EndsWith("[aerospace-as9100]"));
+        Assert.DoesNotContain((await admin.GetElAsync("/api/forms/library")).EnumerateArray(), c => c.GetProperty("key").GetString() == "as9102_header");
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.DeleteAsync("/api/platform/marketplace/part-master-hygiene")).StatusCode);
+    }
 }

@@ -26611,6 +26611,204 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/platform/marketplace:
+    get:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/marketplace/packages:
+    post:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtensionManifest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ExtensionManifest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ExtensionManifest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/marketplace/{key}/install':
+    post:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/marketplace/{key}/upgrade':
+    post:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/marketplace/{key}/enabled':
+    post:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookEnabledRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/WebhookEnabledRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/WebhookEnabledRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/marketplace/{key}':
+    delete:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/marketplace/licenses:
+    get:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtensionLicense'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtensionLicense'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExtensionLicense'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LicenseActivation'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/LicenseActivation'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/LicenseActivation'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/marketplace/licenses/{id}/revoke':
+    post:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/forms/templates/effective:
     get:
       tags:
@@ -38989,6 +39187,110 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/KpiSeries'
+    ExtensionContent:
+      type: object
+      properties:
+        businessRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/BusinessRuleInput'
+        dataRules:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataRuleInput'
+        formComponents:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormComponentInput'
+    ExtensionKind:
+      type: integer
+    ExtensionLicense:
+      type: object
+      properties:
+        licenseId:
+          type: string
+        licensee:
+          type: string
+        extensions:
+          type: array
+          items:
+            type: string
+        issuedAt:
+          type: string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        keyHash:
+          type: string
+        revoked:
+          type: boolean
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ExtensionManifest:
+      required:
+        - key
+        - name
+        - kind
+        - publisher
+        - version
+        - description
+        - dependsOn
+        - requiresLicense
+        - content
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/ExtensionKind'
+        publisher:
+          type: string
+        version:
+          type: string
+        description:
+          type: string
+        dependsOn:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        requiresLicense:
+          type: boolean
+        content:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/ExtensionContent'
     ExternalEventInput:
       required:
         - type
@@ -40878,6 +41180,13 @@ components:
           default: true
     LibraryStatus:
       type: integer
+    LicenseActivation:
+      required:
+        - licenseKey
+      type: object
+      properties:
+        licenseKey:
+          type: string
     LineDecision:
       type: integer
     LineDecisionInput:
@@ -53774,6 +54083,7 @@ tags:
   - name: Rules
   - name: DataGovernance
   - name: Recovery
+  - name: Marketplace
   - name: Forms
   - name: Ncrs
   - name: Capas

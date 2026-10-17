@@ -112,3 +112,18 @@ public sealed class RecoveryController(RecoveryService svc) : ControllerBase
     [HttpPost("objectives")] public async Task<object> AddObjective(ObjectiveInput r, CancellationToken ct) => new { (await svc.SaveObjectiveAsync(null, r, ct)).Id };
     [HttpPut("objectives/{id:guid}")] public async Task<IActionResult> UpdateObjective(Guid id, ObjectiveInput r, CancellationToken ct) { await svc.SaveObjectiveAsync(id, r, ct); return NoContent(); }
 }
+
+/// <summary>Marketplace: add-ons, quality extensions and industry packs with dependencies, versions and signed licenses.</summary>
+[ApiController, Authorize, Route("api/platform/marketplace"), RequirePermission(Permissions.PlatformAdmin)]
+public sealed class MarketplaceController(MarketplaceService svc) : ControllerBase
+{
+    [HttpGet] public Task<object> Catalog(CancellationToken ct) => svc.CatalogAsync(ct);
+    [HttpPost("packages")] public async Task<object> Import(ExtensionManifest r, CancellationToken ct) { var p = await svc.ImportAsync(r, ct); return new { p.Id, p.Key, p.Version }; }
+    [HttpPost("{key}/install")] public async Task<object> Install(string key, [FromQuery] string? version, CancellationToken ct) { var i = await svc.InstallAsync(key, version, ct); return new { i.Key, i.Version, Items = i.Created.Items }; }
+    [HttpPost("{key}/upgrade")] public async Task<object> Upgrade(string key, [FromQuery] string? version, CancellationToken ct) { var i = await svc.UpgradeAsync(key, version, ct); return new { i.Key, i.Version, Items = i.Created.Items }; }
+    [HttpPost("{key}/enabled")] public async Task<IActionResult> Enabled(string key, WebhookEnabledRequest r, CancellationToken ct) { await svc.SetEnabledAsync(key, r.Enabled, ct); return NoContent(); }
+    [HttpDelete("{key}")] public async Task<IActionResult> Uninstall(string key, CancellationToken ct) { await svc.UninstallAsync(key, ct); return NoContent(); }
+    [HttpGet("licenses")] public Task<List<ExtensionLicense>> Licenses(CancellationToken ct) => svc.LicensesAsync(ct);
+    [HttpPost("licenses")] public async Task<object> Activate(LicenseActivation r, CancellationToken ct) { var l = await svc.ActivateAsync(r, ct); return new { l.Id, l.LicenseId, l.ExpiresAt, l.Extensions }; }
+    [HttpPost("licenses/{id:guid}/revoke")] public async Task<IActionResult> Revoke(Guid id, CancellationToken ct) { await svc.RevokeAsync(id, ct); return NoContent(); }
+}

@@ -586,7 +586,7 @@ export const modules: ModuleDef[] = [
     ],
   },
   {
-    key: 'engineering',
+    key: 'product-design',
     label: 'Engineering',
     description: 'Product requirements and traceability, design reviews, BOM quality and variants',
     icon: <DesignServicesOutlined fontSize="small" />,
@@ -682,6 +682,7 @@ export const modules: ModuleDef[] = [
       { label: 'System health', path: '/platform/health', permission: 'platform.admin' },
       { label: 'Security operations', path: '/platform/security', permission: 'security.review' },
       { label: 'Modules', path: '/platform/modules', permission: 'platform.admin' },
+      { label: 'Marketplace', path: '/platform/marketplace', permission: 'platform.admin' },
     ],
   },
   {

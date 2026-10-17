@@ -468,3 +468,65 @@ export function RecoveryCenter() {
     </ModuleWorkspace>
   );
 }
+
+const extKinds = ['Add-on', 'Quality extension', 'Industry pack']; const extColors = ['#5c6bc0', '#00897b', '#ef6c00'];
+const licColor: Record<string, 'default' | 'success' | 'warning' | 'error'> = { Free: 'default', Licensed: 'success', Expired: 'error', Unlicensed: 'warning' };
+
+/** Marketplace: add-ons, quality extensions and industry packs; dependencies on platform modules and other packages; signed licenses; versions. */
+export function Marketplace() {
+  const qc = useQueryClient();
+  const catalog = useQuery({ queryKey: ['marketplace'], queryFn: () => get<any[]>('/api/platform/marketplace') });
+  const licenses = useQuery({ queryKey: ['marketplace-licenses'], queryFn: () => get<any[]>('/api/platform/marketplace/licenses') });
+  const [kind, setKind] = useState<number | 'installed' | null>(null); const [open, setOpen] = useState<string | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [licKey, setLicKey] = useState<string | null>(null); const [manifest, setManifest] = useState<string | null>(null);
+  const run = async (fn: () => Promise<unknown>, ok: string) => { setMsg(null); try { await fn(); setMsg({ ok: true, text: ok }); qc.invalidateQueries({ queryKey: ['marketplace'] }); qc.invalidateQueries({ queryKey: ['marketplace-licenses'] }); return true; } catch (e) { setMsg({ ok: false, text: (e as Error).message }); return false; } };
+  const items = (catalog.data ?? []).filter((p) => kind === null || (kind === 'installed' ? !!p.installed : p.kind === kind));
+  const sel = (catalog.data ?? []).find((p) => p.key === open);
+  return (
+    <ModuleWorkspace module={P()} crumbs={crumbs('Marketplace')} title="Extensions marketplace"
+      actions={<Stack direction="row" gap={1}><Button onClick={() => setManifest('')}>Import package</Button><Button variant="contained" onClick={() => setLicKey('')}>Activate license</Button></Stack>}>
+      {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
+      <Stack direction="row" gap={1} sx={{ mb: 2 }}>
+        {[[null, 'All'], ['installed', 'Installed'], [0, 'Add-ons'], [1, 'Quality extensions'], [2, 'Industry packs']].map(([v, l]) => <Chip key={String(l)} label={l as string} color={kind === v ? 'primary' : 'default'} onClick={() => setKind(v as any)} />)}
+      </Stack>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 2, mb: 3 }}>
+        {items.map((p) => <Paper key={p.key} sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, borderTop: 4, borderColor: extColors[p.kind] }}>
+          <Stack direction="row" alignItems="center" gap={1}><Typography variant="overline" sx={{ color: extColors[p.kind], flex: 1 }}>{extKinds[p.kind]}</Typography><Chip size="small" color={licColor[p.license]} label={p.license === 'Licensed' ? `Licensed to ${new Date(p.licensedUntil).toLocaleDateString()}` : p.license} /></Stack>
+          <Typography variant="h3">{p.name}</Typography>
+          <Typography variant="caption" color="text.secondary">{p.publisher} · v{p.latestVersion}{p.installed ? ` · installed v${p.installed.version}${p.installed.enabled ? '' : ' (disabled)'}` : ''}</Typography>
+          <Typography variant="body2" sx={{ flex: 1 }}>{p.description}</Typography>
+          <Stack direction="row" gap={.5} flexWrap="wrap">{p.dependencies.map((d: any) => <Chip key={d.key} size="small" variant="outlined" color={d.satisfied ? 'success' : 'warning'} label={`${d.satisfied ? '✓' : '•'} ${d.key.replace('module:', '')}${d.key.startsWith('module:') ? ' module' : ''}`} />)}</Stack>
+          <Stack direction="row" gap={1}>
+            {!p.installed && <Button size="small" variant="contained" disabled={p.license === 'Unlicensed' || p.license === 'Expired' || p.dependencies.some((d: any) => !d.satisfied)} onClick={() => run(() => post(`/api/platform/marketplace/${p.key}/install`, {}), `${p.name} installed.`)}>Install</Button>}
+            {p.upgradeAvailable && <Button size="small" variant="contained" color="secondary" onClick={() => run(() => post(`/api/platform/marketplace/${p.key}/upgrade`, {}), `${p.name} upgraded to v${p.latestVersion}.`)}>Upgrade to v{p.latestVersion}</Button>}
+            {p.installed && <Button size="small" onClick={() => run(() => post(`/api/platform/marketplace/${p.key}/enabled`, { enabled: !p.installed.enabled }), p.installed.enabled ? 'Disabled.' : 'Enabled.')}>{p.installed.enabled ? 'Disable' : 'Enable'}</Button>}
+            <Box sx={{ flex: 1 }} /><Button size="small" onClick={() => setOpen(p.key)}>Details</Button></Stack>
+        </Paper>)}
+      </Box>
+      <Paper sx={{ p: 2 }}><Typography variant="h3" sx={{ mb: 1 }}>Licenses</Typography>
+        {(licenses.data ?? []).map((l) => { const expired = new Date(l.expiresAt) < new Date(); return <Stack key={l.id} direction="row" gap={2} alignItems="center" sx={{ py: 1, borderBottom: 1, borderColor: 'divider' }}>
+          <Typography sx={{ fontFamily: mono, minWidth: 140 }}>{l.licenseId}</Typography><Typography variant="body2" sx={{ flex: 1 }}>{l.licensee} · {l.extensions.includes('*') ? 'all extensions' : l.extensions.join(', ')}</Typography>
+          <Typography variant="caption">until {new Date(l.expiresAt).toLocaleDateString()}</Typography>
+          <Chip size="small" color={l.revoked || expired ? 'error' : 'success'} label={l.revoked ? 'Revoked' : expired ? 'Expired' : 'Active'} />
+          {!l.revoked && <Button size="small" color="error" onClick={() => run(() => post(`/api/platform/marketplace/licenses/${l.id}/revoke`, {}), 'License revoked.')}>Revoke</Button>}</Stack>; })}
+        {licenses.data?.length === 0 && <Typography color="text.secondary">No licenses activated. Free extensions can be installed without one.</Typography>}
+      </Paper>
+      <Dialog open={!!sel} onClose={() => setOpen(null)} fullWidth maxWidth="sm"><DialogTitle>{sel?.name}</DialogTitle>
+        {sel && <DialogContent sx={{ display: 'grid', gap: 1.5 }}>
+          <Typography variant="body2">{sel.description}</Typography>
+          <Typography variant="caption" color="text.secondary">Versions: {sel.versions.join(', ')}{sel.dependents.length ? ` · required by ${sel.dependents.join(', ')}` : ''}</Typography>
+          <Typography variant="subtitle2">Installs</Typography>
+          {[['Business rules', sel.contents.businessRules], ['Data quality rules', sel.contents.dataRules], ['Form library components (as drafts for approval)', sel.contents.formComponents]].filter(([, v]) => (v as string[]).length).map(([l, v]) => <Box key={l as string}><Typography variant="caption" color="text.secondary">{l as string}</Typography>{(v as string[]).map((x) => <Typography key={x} variant="body2">• {x}</Typography>)}</Box>)}
+          {sel.installed && <><Typography variant="subtitle2">Created on this installation</Typography>{sel.installed.items.map((i: any) => <Typography key={i.id} variant="body2" sx={{ fontFamily: mono, fontSize: 12 }}>{i.type}: {i.label}</Typography>)}</>}
+        </DialogContent>}
+        <DialogActions>{sel?.installed && <Button color="error" onClick={async () => { if (await run(() => del(`/api/platform/marketplace/${sel.key}`), `${sel.name} uninstalled; its configuration was removed.`)) setOpen(null); }}>Uninstall</Button>}<Box sx={{ flex: 1 }} /><Button onClick={() => setOpen(null)}>Close</Button></DialogActions></Dialog>
+      <Dialog open={licKey !== null} onClose={() => setLicKey(null)} fullWidth maxWidth="sm"><DialogTitle>Activate a license</DialogTitle>
+        <DialogContent sx={{ pt: '8px !important' }}><TextField fullWidth multiline minRows={3} label="License key (QGL1…)" value={licKey ?? ''} onChange={(e) => setLicKey(e.target.value)} InputProps={{ sx: { fontFamily: mono, fontSize: 12 } }} helperText="The key is verified offline against the publisher signature; only its fingerprint is stored." /></DialogContent>
+        <DialogActions><Button onClick={() => setLicKey(null)}>Cancel</Button><Button variant="contained" onClick={async () => { if (await run(() => post('/api/platform/marketplace/licenses', { licenseKey: licKey }), 'License activated.')) setLicKey(null); }}>Activate</Button></DialogActions></Dialog>
+      <Dialog open={manifest !== null} onClose={() => setManifest(null)} fullWidth maxWidth="md"><DialogTitle>Import a package manifest</DialogTitle>
+        <DialogContent sx={{ pt: '8px !important' }}><TextField fullWidth multiline minRows={10} label="manifest.json" value={manifest ?? ''} onChange={(e) => setManifest(e.target.value)} InputProps={{ sx: { fontFamily: mono, fontSize: 12 } }} helperText='{"key","name","kind","publisher","version","description","dependsOn":["module:Quality"],"requiresLicense","content":{"businessRules":[],"dataRules":[],"formComponents":[]}}' /></DialogContent>
+        <DialogActions><Button onClick={() => setManifest(null)}>Cancel</Button><Button variant="contained" onClick={async () => { let body: unknown; try { body = JSON.parse(manifest ?? ''); } catch { setMsg({ ok: false, text: 'The manifest is not valid JSON.' }); return; } if (await run(() => post('/api/platform/marketplace/packages', body), 'Package added to the catalog.')) setManifest(null); }}>Import</Button></DialogActions></Dialog>
+    </ModuleWorkspace>
+  );
+}
