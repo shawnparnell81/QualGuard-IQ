@@ -15177,6 +15177,478 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/messaging/providers:
+    get:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProviderRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProviderRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProviderRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ProviderInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ProviderInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/messaging/providers/{id}':
+    get:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ProviderRow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProviderRow'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ProviderRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ProviderInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ProviderInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/messaging/providers/{id}/secrets':
+    put:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProviderSecretInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ProviderSecretInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ProviderSecretInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/messaging/providers/{id}/test':
+    post:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/messaging/providers/{id}/test-message':
+    post:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TestSendInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TestSendInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TestSendInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/DeliveryRow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryRow'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/DeliveryRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/messaging/providers/{id}/enabled':
+    post:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnabledInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/EnabledInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/EnabledInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/messaging/providers/{id}/production-approval':
+    post:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/messaging/templates:
+    get:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageTemplate'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageTemplate'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MessageTemplate'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TemplateInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TemplateInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/messaging/templates/{id}':
+    put:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TemplateInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TemplateInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/messaging/deliveries:
+    get:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      parameters:
+        - name: providerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: state
+          in: query
+          schema:
+            $ref: '#/components/schemas/DeliveryState'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeliveryRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeliveryRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeliveryRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/messaging/me:
+    get:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubscriptionRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubscriptionRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SubscriptionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SubscriptionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/messaging/me/{id}/opt-out':
+    post:
+      tags:
+        - Messaging
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/messaging/callbacks/{providerId}':
+    post:
+      tags:
+        - Messaging
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: X-Callback-Token
+          in: header
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusCallback'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/StatusCallback'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/StatusCallback'
+        required: true
+      responses:
+        '200':
+          description: OK
+      security: [ ]
   /api/v1/fai:
     get:
       tags:
@@ -43236,6 +43708,85 @@ components:
         deliveredOn:
           type: string
           format: date
+    DeliveryRow:
+      required:
+        - id
+        - providerId
+        - notificationId
+        - userId
+        - maskedAddress
+        - text
+        - state
+        - attempts
+        - nextAttemptAt
+        - failureReason
+        - providerMessageId
+        - isTest
+        - createdAt
+        - sentAt
+        - deliveredAt
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        providerId:
+          type: string
+          format: uuid
+        notificationId:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int64
+        userId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        maskedAddress:
+          type: string
+        text:
+          type: string
+        state:
+          $ref: '#/components/schemas/DeliveryState'
+        attempts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        nextAttemptAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        failureReason:
+          type:
+            - 'null'
+            - string
+        providerMessageId:
+          type:
+            - 'null'
+            - string
+        isTest:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        sentAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        deliveredAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+    DeliveryState:
+      type: integer
     DeliveryStatus:
       type: integer
     DenominatorInput:
@@ -44444,6 +44995,13 @@ components:
             - integer
             - string
           format: uint32
+    EnabledInput:
+      required:
+        - enabled
+      type: object
+      properties:
+        enabled:
+          type: boolean
     EnableRequest:
       required:
         - enabled
@@ -49095,6 +49653,60 @@ components:
           format: uuid
         payload:
           $ref: '#/components/schemas/JsonElement'
+    MessageTemplate:
+      type: object
+      properties:
+        name:
+          type: string
+        channel:
+          $ref: '#/components/schemas/MessagingChannel'
+        text:
+          type: string
+        pushTitle:
+          type:
+            - 'null'
+            - string
+        maxLength:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    MessagingAdapterKind:
+      type: integer
+    MessagingChannel:
+      type: integer
+    MessagingEnvironment:
+      type: integer
     Metric:
       required:
         - key
@@ -52921,6 +53533,190 @@ components:
             - 'null'
             - string
           format: date
+    ProviderInput:
+      required:
+        - name
+        - channel
+        - adapter
+        - environment
+        - endpoint
+        - sender
+        - secretReference
+      type: object
+      properties:
+        name:
+          type: string
+        channel:
+          $ref: '#/components/schemas/MessagingChannel'
+        adapter:
+          $ref: '#/components/schemas/MessagingAdapterKind'
+        environment:
+          $ref: '#/components/schemas/MessagingEnvironment'
+        endpoint:
+          type:
+            - 'null'
+            - string
+        sender:
+          type:
+            - 'null'
+            - string
+        secretReference:
+          type:
+            - 'null'
+            - string
+        rateLimitPerMinute:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+          default: 30
+        maxAttempts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+          default: 3
+        requireOptIn:
+          type: boolean
+          default: true
+        keywords:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        templateId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    ProviderRow:
+      required:
+        - id
+        - name
+        - channel
+        - adapter
+        - adapterDescription
+        - canSend
+        - environment
+        - endpoint
+        - sender
+        - secretReference
+        - secretStored
+        - callbackTokenSet
+        - enabled
+        - rateLimitPerMinute
+        - maxAttempts
+        - requireOptIn
+        - keywords
+        - templateId
+        - lastTestAt
+        - lastTestOk
+        - lastTestMessage
+        - testCurrent
+        - productionApprovedAt
+        - canEnable
+        - enableBlocker
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        channel:
+          $ref: '#/components/schemas/MessagingChannel'
+        adapter:
+          $ref: '#/components/schemas/MessagingAdapterKind'
+        adapterDescription:
+          type: string
+        canSend:
+          type: boolean
+        environment:
+          $ref: '#/components/schemas/MessagingEnvironment'
+        endpoint:
+          type:
+            - 'null'
+            - string
+        sender:
+          type:
+            - 'null'
+            - string
+        secretReference:
+          type:
+            - 'null'
+            - string
+        secretStored:
+          type: boolean
+        callbackTokenSet:
+          type: boolean
+        enabled:
+          type: boolean
+        rateLimitPerMinute:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        maxAttempts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        requireOptIn:
+          type: boolean
+        keywords:
+          type: array
+          items:
+            type: string
+        templateId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lastTestAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        lastTestOk:
+          type:
+            - 'null'
+            - boolean
+        lastTestMessage:
+          type:
+            - 'null'
+            - string
+        testCurrent:
+          type: boolean
+        productionApprovedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        canEnable:
+          type: boolean
+        enableBlocker:
+          type:
+            - 'null'
+            - string
+    ProviderSecretInput:
+      required:
+        - secret
+        - callbackToken
+      type: object
+      properties:
+        secret:
+          type:
+            - 'null'
+            - string
+        callbackToken:
+          type:
+            - 'null'
+            - string
     PublishRequest:
       required:
         - published
@@ -60241,6 +61037,21 @@ components:
             - string
         disclaimer:
           type: string
+    StatusCallback:
+      required:
+        - messageId
+        - status
+        - error
+      type: object
+      properties:
+        messageId:
+          type: string
+        status:
+          type: string
+        error:
+          type:
+            - 'null'
+            - string
     StepDto:
       required:
         - order
@@ -60549,6 +61360,50 @@ components:
             - string
         hasValue:
           type: boolean
+    SubscriptionInput:
+      required:
+        - channel
+        - address
+        - label
+      type: object
+      properties:
+        channel:
+          $ref: '#/components/schemas/MessagingChannel'
+        address:
+          type: string
+        label:
+          type:
+            - 'null'
+            - string
+    SubscriptionRow:
+      required:
+        - id
+        - channel
+        - address
+        - label
+        - optedInAt
+        - optedOutAt
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        channel:
+          $ref: '#/components/schemas/MessagingChannel'
+        address:
+          type: string
+        label:
+          type:
+            - 'null'
+            - string
+        optedInAt:
+          type: string
+          format: date-time
+        optedOutAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
     Suggestion:
       required:
         - text
@@ -61280,28 +62135,29 @@ components:
             $ref: '#/components/schemas/RevisionRow'
     TemplateInput:
       required:
-        - code
         - name
-        - kind
-        - description
-        - siteId
+        - channel
+        - text
+        - pushTitle
       type: object
       properties:
-        code:
-          type: string
         name:
           type: string
-        kind:
-          $ref: '#/components/schemas/ShippingDocumentKind'
-        description:
+        channel:
+          $ref: '#/components/schemas/MessagingChannel'
+        text:
+          type: string
+        pushTitle:
           type:
             - 'null'
             - string
-        siteId:
+        maxLength:
+          pattern: '^-?(?:0|[1-9]\d*)$'
           type:
-            - 'null'
+            - integer
             - string
-          format: uuid
+          format: int32
+          default: 320
     TemplateRevisionStatus:
       type: integer
     TemplateRow:
@@ -61410,6 +62266,13 @@ components:
       properties:
         enableOnSuccess:
           type: boolean
+    TestSendInput:
+      required:
+        - address
+      type: object
+      properties:
+        address:
+          type: string
     TextRequest:
       required:
         - text
@@ -63661,6 +64524,7 @@ tags:
   - name: Governance
   - name: ApiAdmin
   - name: Impact
+  - name: Messaging
   - name: FAI
   - name: FAI Workflow
   - name: FAI Characteristics

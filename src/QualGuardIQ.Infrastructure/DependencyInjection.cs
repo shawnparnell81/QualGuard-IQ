@@ -300,6 +300,13 @@ public static class DependencyInjection
         s.AddScoped<Modules.Logistics.CarrierIntegrationService>();
         s.AddScoped<Modules.Logistics.ShippingDocumentService>();
         s.AddScoped<Modules.Platform.ReportDistributionService>();
+        s.AddSingleton<Modules.Messaging.MessagingHttpProvider>();
+        s.AddSingleton<Modules.Messaging.IMessagingAdapter, Modules.Messaging.FixtureMessagingAdapter>();
+        s.AddSingleton<Modules.Messaging.IMessagingAdapter, Modules.Messaging.GenericHttpMessagingAdapter>();
+        foreach (var k in new[] { Domain.Messaging.MessagingAdapterKind.TwilioSlot, Domain.Messaging.MessagingAdapterKind.FcmSlot, Domain.Messaging.MessagingAdapterKind.ApnsSlot })
+            s.AddSingleton<Modules.Messaging.IMessagingAdapter>(new Modules.Messaging.VendorSlotMessagingAdapter(k));
+        s.AddScoped<Modules.Messaging.MessagingService>();
+        s.AddScoped<Jobs.MessagingDeliveryJob>();
         s.AddScoped<Services.RunAsContext>();
         s.AddScoped<Jobs.CarrierTrackingJob>();
         s.AddScoped<Modules.Production.ProductionService>();

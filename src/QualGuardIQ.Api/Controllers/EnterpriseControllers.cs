@@ -217,3 +217,31 @@ public sealed class ImpactController(ImpactService svc) : ControllerBase
     /// <summary>Adds the evaluated items to the change's affected items; each then needs completion or a formal waiver.</summary>
     [HttpPost("api/changes/{id:guid}/impact/apply")] public async Task<object> Apply(Guid id, CancellationToken ct) => new { Added = await svc.ApplyChangeImpactAsync(id, ct) };
 }
+
+/// <summary>SMS and push providers, templates and the delivery log (api.admin), plus each user's own opt-in.</summary>
+[ApiController, Authorize, Route("api/messaging")]
+public sealed class MessagingController(QualGuardIQ.Infrastructure.Modules.Messaging.MessagingService svc) : ControllerBase
+{
+    public sealed record EnabledInput(bool Enabled);
+    public sealed record TestSendInput(string Address);
+    [HttpGet("providers")] public Task<List<QualGuardIQ.Infrastructure.Modules.Messaging.ProviderRow>> Providers(CancellationToken ct) => svc.ProvidersAsync(ct);
+    [HttpGet("providers/{id:guid}")] public Task<QualGuardIQ.Infrastructure.Modules.Messaging.ProviderRow> Provider(Guid id, CancellationToken ct) => svc.ProviderAsync(id, ct);
+    [HttpPost("providers")] public async Task<object> Create(QualGuardIQ.Infrastructure.Modules.Messaging.ProviderInput r, CancellationToken ct) => new { Id = await svc.SaveProviderAsync(null, r, ct) };
+    [HttpPut("providers/{id:guid}")] public async Task<IActionResult> Update(Guid id, QualGuardIQ.Infrastructure.Modules.Messaging.ProviderInput r, CancellationToken ct) { await svc.SaveProviderAsync(id, r, ct); return NoContent(); }
+    [HttpPut("providers/{id:guid}/secrets")] public async Task<IActionResult> Secrets(Guid id, QualGuardIQ.Infrastructure.Modules.Messaging.ProviderSecretInput r, CancellationToken ct) { await svc.SetSecretsAsync(id, r, ct); return NoContent(); }
+    [HttpPost("providers/{id:guid}/test")] public async Task<object> Test(Guid id, CancellationToken ct) { var (ok, msg) = await svc.TestAsync(id, ct); return new { Ok = ok, Message = msg }; }
+    [HttpPost("providers/{id:guid}/test-message")] public Task<QualGuardIQ.Infrastructure.Modules.Messaging.DeliveryRow> TestMessage(Guid id, TestSendInput r, CancellationToken ct) => svc.SendTestAsync(id, r.Address, ct);
+    [HttpPost("providers/{id:guid}/enabled")] public async Task<IActionResult> Enabled(Guid id, EnabledInput r, CancellationToken ct) { await svc.SetEnabledAsync(id, r.Enabled, ct); return NoContent(); }
+    [HttpPost("providers/{id:guid}/production-approval")] public async Task<IActionResult> Approve(Guid id, CancellationToken ct) { await svc.ApproveProductionAsync(id, ct); return NoContent(); }
+    [HttpGet("templates")] public Task<List<QualGuardIQ.Domain.Messaging.MessageTemplate>> Templates(CancellationToken ct) => svc.TemplatesAsync(ct);
+    [HttpPost("templates")] public async Task<object> CreateTemplate(QualGuardIQ.Infrastructure.Modules.Messaging.TemplateInput r, CancellationToken ct) => new { Id = await svc.SaveTemplateAsync(null, r, ct) };
+    [HttpPut("templates/{id:guid}")] public async Task<IActionResult> UpdateTemplate(Guid id, QualGuardIQ.Infrastructure.Modules.Messaging.TemplateInput r, CancellationToken ct) { await svc.SaveTemplateAsync(id, r, ct); return NoContent(); }
+    [HttpGet("deliveries")] public Task<List<QualGuardIQ.Infrastructure.Modules.Messaging.DeliveryRow>> Deliveries([FromQuery] Guid? providerId, [FromQuery] QualGuardIQ.Domain.Messaging.DeliveryState? state, CancellationToken ct) => svc.DeliveriesAsync(providerId, state, ct);
+    [HttpGet("me")] public Task<List<QualGuardIQ.Infrastructure.Modules.Messaging.SubscriptionRow>> Mine(CancellationToken ct) => svc.MySubscriptionsAsync(ct);
+    [HttpPost("me")] public async Task<object> OptIn(QualGuardIQ.Infrastructure.Modules.Messaging.SubscriptionInput r, CancellationToken ct) => new { Id = await svc.OptInAsync(r, ct) };
+    [HttpPost("me/{id:guid}/opt-out")] public async Task<IActionResult> OptOut(Guid id, CancellationToken ct) { await svc.OptOutAsync(id, ct); return NoContent(); }
+
+    /// <summary>Delivery receipts from the gateway; authenticated by the provider's callback token in X-Callback-Token.</summary>
+    [AllowAnonymous, HttpPost("callbacks/{providerId:guid}")]
+    public async Task<IActionResult> Callback(Guid providerId, QualGuardIQ.Infrastructure.Modules.Messaging.StatusCallback r, [FromHeader(Name = "X-Callback-Token")] string? token, CancellationToken ct) { await svc.CallbackAsync(providerId, token, r, ct); return NoContent(); }
+}

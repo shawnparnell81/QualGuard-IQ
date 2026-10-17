@@ -109,6 +109,13 @@ public sealed class PlatformEventJob(QualGuardIQ.Infrastructure.Modules.Platform
     }
 }
 
+/// <summary>Every minute: queue SMS/push messages for new notifications and send due messages within each provider's rate limit.</summary>
+public sealed class MessagingDeliveryJob(QualGuardIQ.Infrastructure.Modules.Messaging.MessagingService messaging)
+{
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 300)]
+    public Task RunAsync(CancellationToken ct) => messaging.RunAsync(ct);
+}
+
 /// <summary>Every 5 minutes: send due scheduled reports.</summary>
 public sealed class ReportScheduleJob(QualGuardIQ.Infrastructure.Modules.Platform.ReportDistributionService distribution)
 {
