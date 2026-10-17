@@ -1,6 +1,5 @@
-# MASTER BUILD PROMPT 9 (Shawn, 2026-10-16 10:23 PM ET). Content verbatim; bullet lists joined with semicolons. INCOMPLETE: message cut off in Phase 16; remainder requested.
+# MASTER BUILD PROMPT 9 (full text, Shawn, 2026-10-17 7:25 AM ET). Content verbatim; bullet lists joined with semicolons.
 FINAL SYSTEM HARDENING, GAP ELIMINATION, ARCHITECTURE VALIDATION, DEFECT ERADICATION, DEPLOYMENT CERTIFICATION, AND PRODUCTION ACCEPTANCE
-Run order: Prompt 2 + FAI/AQL, 4, 5, 6, 7, 8, then Prompt 3 hardening, then Prompt 9 final certification (combined with 3 where they overlap).
 
 IMPORTANT
 Do not build new modules. Do not redesign architecture. Do not replace completed functionality. Do not create duplicate services. Do not create demonstration functionality. This phase is dedicated exclusively to validating, completing, hardening, optimizing, securing, documenting, stress-testing, certifying, and productionizing the entire Quality Operating System. Treat the platform as feature complete. Assume all prior prompts have been implemented.
@@ -40,6 +39,7 @@ Review: AI Quality Assistant; AI Investigation Engine; AI Trend Analysis; AI Aud
 
 PHASE 12 PERFORMANCE TESTING
 Execute load testing. Simulate: 100 Users; 500 Users; 1,000 Users; 5,000 Users. Validate: Search; Reporting; Dashboards; APIs; Workflows. Identify bottlenecks. Implement optimizations.
+(Agreed with Shawn 2026-10-16: 5,000 users may be partly simulated/projected and must be clearly labelled.)
 
 PHASE 13 SCALABILITY TESTING
 Verify: Multi-Site Deployments; Multi-Region Deployments; Enterprise Scaling. Validate: Large Datasets; Large Attachments; Large Supplier Networks.
@@ -51,5 +51,21 @@ PHASE 15 DOCUMENTATION VALIDATION
 Generate and verify: User Guide; Administrator Guide; API Guide; Deployment Guide; Architecture Guide; Recovery Guide. Validate all screenshots and references.
 
 PHASE 16 INDUSTRY PACK VALIDATION
-Validate: Automotive Pack; Aerospace Pack; Medical Device Pack; Laboratory
-[TEXT CUT OFF HERE - awaiting remainder from Shawn]
+Validate: Automotive Pack; Aerospace Pack; Medical Device Pack; Laboratory Pack; Electronics Pack; Industrial Manufacturing Pack; Defense Pack; Chemical Pack; Food Pack; Pharmaceutical Pack. Verify: Configuration; Reports; Workflows; Compliance Mapping.
+
+PHASE 17 END TO END CERTIFICATION TESTING
+Scenario 1: Customer Requirement -> APQP -> DFMEA -> PFMEA -> Control Plan -> PPAP -> Launch
+Scenario 2: Supplier Defect -> AQL -> NCR -> SCAR -> CAPA -> Verification
+Scenario 3: Production Defect -> SPC Detection -> NCR -> CAPA -> Control Plan Update
+Scenario 4: Complaint -> Investigation -> Recall -> CAPA -> Closure
+Scenario 5: Audit Finding -> Action -> Verification -> Closure
+Scenario 6: Training Change -> Qualification Update -> Operator Validation
+
+PHASE 18 PRODUCTION CERTIFICATION
+Do not declare the system complete until: All Modules Function; All Tests Pass; No Critical Defects Exist; No High Severity Defects Exist; No Broken Workflows Exist; No Broken APIs Exist; No Broken Reports Exist; No Broken Dashboards Exist; No Security Findings Remain; No Placeholder Functionality Exists; No Mock Data Exists.
+
+FINAL DELIVERABLES
+Generate: Gap Analysis Report; Defect Elimination Report; Security Assessment Report; Performance Assessment Report; Architecture Validation Report; Database Validation Report; API Certification Report; Traceability Certification Report; Production Readiness Report; Final Acceptance Report.
+
+FINAL INSTRUCTION
+Continue reviewing, correcting, validating, optimizing, and certifying the platform until it satisfies all production acceptance criteria. The Quality Operating System shall not be considered complete until every module, workflow, report, API, dashboard, integration, AI capability, and industry pack has been validated, secured, optimized, documented, and certified for enterprise production deployment.
