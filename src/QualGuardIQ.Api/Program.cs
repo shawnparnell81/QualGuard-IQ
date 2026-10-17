@@ -162,7 +162,9 @@ app.Use(async (ctx, next) =>
     // Bearer requests carry no ambient credentials, so CSRF does not apply to them (or to obtaining a token).
     var bearer = ctx.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
         || ctx.Request.Headers.ContainsKey(ApiKeyHandler.Header)
-        || ctx.Request.Path.StartsWithSegments("/api/auth/token") || ctx.Request.Path.StartsWithSegments("/api/oauth/token");
+        || ctx.Request.Path.StartsWithSegments("/api/auth/token") || ctx.Request.Path.StartsWithSegments("/api/oauth/token")
+        // gateway delivery receipts: anonymous, authenticated by the provider's callback token, never act as a signed-in user
+        || ctx.Request.Path.StartsWithSegments("/api/messaging/callbacks");
     if (!bearer && ctx.Request.Path.StartsWithSegments("/api") && !HttpMethods.IsGet(ctx.Request.Method) && !HttpMethods.IsHead(ctx.Request.Method) && !HttpMethods.IsOptions(ctx.Request.Method))
     {
         var af = ctx.RequestServices.GetRequiredService<IAntiforgery>();
