@@ -81,7 +81,7 @@ export function NcrNew() {
           { name: 'quantityAffected', label: 'Quantity affected', type: 'number' }, { name: 'detectedOn', label: 'Detected on', type: 'date' },
           { name: 'ownerId', label: 'Owner', type: 'user' },
           { name: 'productId', label: 'Traceability', type: 'heading' },
-          { name: 'productId', label: 'Product', type: 'lookup', lookup: 'product' }, { name: 'partId', label: 'Part (fills part number and revision)', type: 'lookup', lookup: 'part' },
+          { name: 'productId', label: 'Product', type: 'lookup', lookup: 'product' }, { name: 'partId', label: 'Catalog part (sets revision)', type: 'lookup', lookup: 'part' },
           { name: 'supplierId', label: 'Supplier', type: 'lookup', lookup: 'supplier' }, { name: 'customerId', label: 'Customer', type: 'lookup', lookup: 'customer' },
           { name: 'purchaseOrder', label: 'Purchase order' }, { name: 'workOrder', label: 'Work order' },
           { name: 'batchNumber', label: 'Batch' }, { name: 'serialNumber', label: 'Serial number' },
