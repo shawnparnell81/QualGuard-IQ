@@ -19,6 +19,7 @@ jobs:
         options: --health-cmd clamdcheck.sh --health-interval 15s --health-retries 30 --health-start-period 120s
     env:
       QGIQ_CLAMAV: "1"
+      QMS_TEST_AZURE: UseDevelopmentStorage=true
       QMS_TEST_S3: http://localhost:9000
       QMS_TEST_S3_KEY: ci_minio
       QMS_TEST_S3_SECRET: ci_minio_secret
@@ -27,6 +28,8 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
         with: { dotnet-version: "10.0.x" }
+      - name: Start Azurite (local Azure Blob emulator)
+        run: docker run -d -p 10000:10000 mcr.microsoft.com/azure-storage/azurite azurite-blob --blobHost 0.0.0.0 --skipApiVersionCheck
       - run: dotnet restore
       - run: dotnet build --no-restore -warnaserror
       - run: dotnet test --no-build

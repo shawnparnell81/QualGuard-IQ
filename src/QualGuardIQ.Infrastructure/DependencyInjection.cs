@@ -38,7 +38,10 @@ public static class DependencyInjection
         services.AddScoped<ISearchIndexer, SearchIndexer>();
         services.AddScoped<SearchService>();
         services.AddScoped<INotifier, Notifier>();
-        services.AddSingleton<IFileStorage, S3FileStorage>();
+        if (string.Equals(config["Storage:Provider"], "AzureBlob", StringComparison.OrdinalIgnoreCase))
+            services.AddSingleton<IFileStorage, AzureBlobFileStorage>();
+        else
+            services.AddSingleton<IFileStorage, S3FileStorage>();
         if (string.Equals(config["MalwareScanning:Provider"], "ClamAV", StringComparison.OrdinalIgnoreCase))
             services.AddSingleton<IMalwareScanner, ClamAvScanner>();
         else
