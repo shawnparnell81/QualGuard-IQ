@@ -516,6 +516,10 @@ public sealed class FaiAqlTests(TestApp app)
         Assert.Equal(3, (await w.Insp.GetElAsync($"/api/v1/fai/{copyId}/characteristics")).GetProperty("metadata").Int("totalItems"));
         Assert.Equal(HttpStatusCode.NoContent, (await w.Insp.DeleteAsync($"/api/v1/fai/{copyId}")).StatusCode);
         Assert.Equal("Canceled", (await w.Insp.GetElAsync($"/api/v1/fai/{copyId}")).Str("status"));
+        var bare = await w.Insp.SendWithCsrfAsync(new HttpRequestMessage(HttpMethod.Post, $"/api/v1/fai/{id}/copy")); // no body: copy keeps the type
+        Assert.Equal(HttpStatusCode.Created, bare.StatusCode);
+        var bareId = (await bare.JsonAsync()).Id();
+        Assert.Equal(HttpStatusCode.NoContent, (await w.Insp.DeleteAsync($"/api/v1/fai/{bareId}")).StatusCode);
 
         // bulk approve/close apply the single-action gates
         var bc = await (await w.Approvers[0].PostOkAsync("/api/v1/fai/bulk-close", new { ids = new[] { id } })).JsonAsync();
