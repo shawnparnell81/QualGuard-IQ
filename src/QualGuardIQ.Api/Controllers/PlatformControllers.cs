@@ -126,4 +126,11 @@ public sealed class MarketplaceController(MarketplaceService svc) : ControllerBa
     [HttpGet("licenses")] public Task<List<ExtensionLicense>> Licenses(CancellationToken ct) => svc.LicensesAsync(ct);
     [HttpPost("licenses")] public async Task<object> Activate(LicenseActivation r, CancellationToken ct) { var l = await svc.ActivateAsync(r, ct); return new { l.Id, l.LicenseId, l.ExpiresAt, l.Extensions }; }
     [HttpPost("licenses/{id:guid}/revoke")] public async Task<IActionResult> Revoke(Guid id, CancellationToken ct) { await svc.RevokeAsync(id, ct); return NoContent(); }
+    [HttpGet("licensing")] public Task<object> Licensing(CancellationToken ct) => svc.LicensingStatusAsync(ct);
+    [HttpGet("licensing/revocations")] public Task<List<LicenseRevocation>> Revocations(CancellationToken ct) => svc.RevocationsAsync(ct);
+    [HttpPost("licensing/revocations")] public async Task<IActionResult> RevokeId(LicenseRevocationInput r, CancellationToken ct) { await svc.RevokeIdAsync(r, ct); return NoContent(); }
+    [HttpGet("licensing/keys")] public Task<List<LicenseSigningKey>> Keys(CancellationToken ct) => svc.SigningKeysAsync(ct);
+    [HttpPost("licensing/keys")] public async Task<object> RegisterKey(SigningKeyInput r, CancellationToken ct) { var k = await svc.RegisterKeyAsync(r, ct); return new { k.Id, k.KeyId, k.Fingerprint }; }
+    [HttpPost("licensing/keys/{id:guid}/retire")] public async Task<IActionResult> RetireKey(Guid id, CancellationToken ct) { await svc.SetKeyStatusAsync(id, LicenseKeyStatus.Retired, ct); return NoContent(); }
+    [HttpPost("licensing/keys/{id:guid}/revoke")] public async Task<IActionResult> RevokeKey(Guid id, CancellationToken ct) { await svc.SetKeyStatusAsync(id, LicenseKeyStatus.Revoked, ct); return NoContent(); }
 }

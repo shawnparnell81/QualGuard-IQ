@@ -198,4 +198,32 @@ test.describe('E2E 14: gap closure', () => {
     await page.getByLabel('Enabled', { exact: true }).click();
     await expect(page.getByText('Enabled', { exact: true })).toBeVisible();
   });
+
+  test('the marketplace registers publisher public keys only and shows that signing is refused without a production key', async ({ page }) => {
+    const { generateKeyPairSync } = await import('node:crypto');
+    const pair = generateKeyPairSync('ec', { namedCurve: 'P-256' });
+    const pub = pair.publicKey.export({ type: 'spki', format: 'pem' }).toString();
+    const priv = pair.privateKey.export({ type: 'pkcs8', format: 'pem' }).toString();
+    const kid = `pub-e2e-${Date.now().toString(36)}`;
+    await signIn(page, users.admin);
+    await page.goto('/platform/marketplace');
+    const panel = page.getByTestId('licensing-keys');
+    await expect(panel).toContainText('no production signing key is configured');
+    await expect(panel).toContainText('held offline by the publisher');
+    await panel.getByRole('button', { name: 'Register public key' }).click();
+    const d = dialog(page);
+    await d.getByLabel('Key id').fill(kid);
+    await d.getByLabel('Public key (PEM)').fill(priv);
+    await d.getByRole('button', { name: 'Register' }).click();
+    await expect(d.getByRole('alert')).toContainText('That is a private key');
+    await d.getByLabel('Public key (PEM)').fill(pub);
+    await d.getByRole('button', { name: 'Register' }).click();
+    await expect(d).toHaveCount(0);
+    const row = panel.getByTestId('licensing-key').filter({ hasText: kid });
+    await expect(row).toContainText('Production');
+    await expect(row).toContainText('Active');
+    await row.getByRole('button', { name: 'Retire' }).click();
+    await expect(row).toContainText('Retired');
+    await expect(page.getByText(priv.split('\n')[1])).toHaveCount(0);
+  });
 });

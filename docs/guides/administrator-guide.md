@@ -96,6 +96,10 @@ dates, a pack version (content fingerprint) and a mapping version. Every state c
   uninstalling removes what it created; upgrading replaces it with the new version's content.
 - Licensed packages need an activated license key. Keys are verified offline against the publisher key configured in
   `Licensing:PublicKeyPem`; expired or revoked licenses block install, enable and upgrade.
+- **License verification keys** (Marketplace › License verification keys): register the publisher's public keys by key
+  id; retire a key at rotation (licences it already signed stay valid) or revoke a compromised key (every licence it signed
+  stops counting); revoke a licence id from a publisher notice. Signing status shows "refused" until the publisher sets
+  up an offline signing machine. See [license-key-custody.md](license-key-custody.md).
 - **Licence signing key custody.** The publisher, Shawn Parnell, holds the extension-licence signing private key
   offline and issues every licence key. The private key is never stored in the repository, in configuration, on a
   server or in a deployment. Each deployment sets only `Licensing:PublicKeyPem` (the matching public key, as an

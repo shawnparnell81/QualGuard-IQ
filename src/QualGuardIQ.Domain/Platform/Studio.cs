@@ -212,5 +212,45 @@ public class ExtensionLicense : Entity, IAudited
     public DateTimeOffset ExpiresAt { get; set; }
     public string KeyHash { get; set; } = "";
     public bool Revoked { get; set; }
+    /// <summary>Key id of the publisher key that signed it ("config-legacy" for QGL1 keys verified with Licensing:PublicKeyPem).</summary>
+    public string? SigningKeyId { get; set; }
+    public string? CustomerId { get; set; }
+    public List<string> Deployments { get; set; } = [];
+    public LicenseKeyEnvironment Environment { get; set; } = LicenseKeyEnvironment.Production;
     public string AuditLabel => $"license {LicenseId}";
+}
+
+public enum LicenseKeyEnvironment { Development = 0, Production = 1 }
+public enum LicenseKeyStatus { Active = 0, Retired = 1, Revoked = 2 }
+
+/// <summary>
+/// A publisher public key that this installation accepts for license verification. Only public keys are stored; the signing private key is
+/// held offline by the publisher. Active keys verify new activations; a retired key keeps licenses it already signed valid (rotation);
+/// a revoked key (compromised) invalidates every license it signed.
+/// </summary>
+public class LicenseSigningKey : Entity, IAudited
+{
+    public string KeyId { get; set; } = "";
+    public string Algorithm { get; set; } = "ES256";
+    public string PublicKeyPem { get; set; } = "";
+    /// <summary>SHA-256 of the SubjectPublicKeyInfo, hex.</summary>
+    public string Fingerprint { get; set; } = "";
+    public LicenseKeyEnvironment Environment { get; set; }
+    public LicenseKeyStatus Status { get; set; }
+    public DateTimeOffset RegisteredAt { get; set; }
+    public Guid? RegisteredById { get; set; }
+    public DateTimeOffset? RetiredAt { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public string? Notes { get; set; }
+    public string AuditLabel => $"license signing key {KeyId}";
+}
+
+/// <summary>A license id revoked on this installation, whether or not it was ever activated here. Never changed.</summary>
+public class LicenseRevocation : Entity, IAudited, IAppendOnly
+{
+    public string LicenseId { get; set; } = "";
+    public string Reason { get; set; } = "";
+    public Guid? RevokedById { get; set; }
+    public DateTimeOffset At { get; set; }
+    public string AuditLabel => $"license revocation {LicenseId}";
 }
