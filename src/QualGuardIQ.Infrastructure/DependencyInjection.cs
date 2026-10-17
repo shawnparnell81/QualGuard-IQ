@@ -69,6 +69,8 @@ public static class DependencyInjection
 
         // Document control and drawings
         services.AddScoped<DocumentService>();
+        services.AddScoped<FormDefinitionProjector>();
+        services.AddScoped<QualGuardIQ.Infrastructure.Modules.Quality.FormValueIndexer>();
         services.AddScoped<DocumentTypeService>();
         foreach (var (kind, docType, revType) in new[]
         {

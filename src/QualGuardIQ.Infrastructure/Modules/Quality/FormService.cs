@@ -13,7 +13,7 @@ namespace QualGuardIQ.Infrastructure.Modules.Quality;
 public sealed record StartFormRequest(Guid TemplateId, Guid SiteId, Guid? DepartmentId, string? Title);
 public sealed record SignFormRequest(string Password, string? MfaCode, string? Comment);
 
-public sealed class FormService(AppDbContext db, ModuleSupport m, INumberingService numbers, WorkflowService workflow, SignerVerification signer)
+public sealed class FormService(AppDbContext db, ModuleSupport m, INumberingService numbers, WorkflowService workflow, SignerVerification signer, FormValueIndexer indexer)
 {
     public const string RecordType = "FormRecord";
 
@@ -63,6 +63,8 @@ public sealed class FormService(AppDbContext db, ModuleSupport m, INumberingServ
             { sig.IsInvalidated = true; sig.InvalidatedAt = m.Now; sig.InvalidatedReason = "The record was changed after it was signed."; }
         }
         rec.ValuesJson = json;
+        await db.SaveChangesAsync(ct);
+        await indexer.IndexAsync(rec, normalized, ct);
         await db.SaveChangesAsync(ct);
         return normalized;
     }

@@ -127,7 +127,7 @@ export function FormRecordDetail() {
         </Box>
       </Box>
       {block && <FormSignDialog block={block} recordNumber={d.number} onClose={() => setSignBlock(null)} onSign={async (password, mfaCode, comment) => {
-        if (dirty && d.canEdit) { const r = await put<{ values: Record<string, string | null> }>(`/api/forms/records/${d.id}`, { values, rowVersion: d.rowVersion }); setValues(r.values); }
+        if (dirty && d.canEdit) { await put(`/api/forms/records/${d.id}`, { values, rowVersion: d.rowVersion }); await qc.refetchQueries({ queryKey: ['formrecord', id] }); }
         await post(`/api/forms/records/${d.id}/signatures/${block.key}`, { password, mfaCode, comment });
         refresh();
       }} />}

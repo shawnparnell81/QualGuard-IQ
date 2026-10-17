@@ -44,6 +44,9 @@ public partial class AppDbContext
             e.HasIndex(x => x.TemplateId);
             e.HasOne<ControlledDocument>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<DocumentRevision>().WithMany().HasForeignKey(x => x.TemplateRevisionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<QualGuardIQ.Domain.Enterprise.RetentionPolicy>().WithMany().HasForeignKey(x => x.RetentionPolicyId).OnDelete(DeleteBehavior.Restrict);
+            e.HasIndex(x => new { x.TemplateRevisionId, x.Status });
         });
         Scoped<FormRecord>(b);
         b.Entity<FormSignature>(e =>
