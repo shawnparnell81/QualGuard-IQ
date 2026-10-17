@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using QualGuardIQ.Api.Auth;
+using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Domain.Quality;
 using QualGuardIQ.Domain.Security;
 using QualGuardIQ.Infrastructure.Modules.Inventory;
@@ -129,7 +130,7 @@ public sealed class ReceivingController(ReceivingService svc, InventoryService i
 
 /// <summary>Shipments: pick, pack, verify, ship; carriers; packing list and bill of lading.</summary>
 [ApiController, Authorize, Route("api/shipping")]
-public sealed class ShippingController(ShippingService svc, InventoryService inv, LabelPrintService labels, CarrierIntegrationService carriers) : ControllerBase
+public sealed class ShippingController(ShippingService svc, InventoryService inv, LabelPrintService labels, CarrierIntegrationService carriers, ShippingDocumentService docs) : ControllerBase
 {
     [HttpGet("carriers")] [RequirePermission(Permissions.ShippingView)] public Task<List<Carrier>> Carriers(CancellationToken ct) => svc.CarriersAsync(ct);
     [HttpPost("carriers")] [RequirePermission(Permissions.ShippingEdit)] public Task<Carrier> CreateCarrier(CarrierInput r, CancellationToken ct) => svc.SaveCarrierAsync(null, r, ct);
@@ -165,8 +166,22 @@ public sealed class ShippingController(ShippingService svc, InventoryService inv
     /// <summary>Confirms online that inventory, holds, revision, customer requirements and status allow release (required after offline scans).</summary>
     [HttpPost("shipments/{id:guid}/verification/validate")] public Task<VerificationStatus> ValidateVerification(Guid id, CancellationToken ct) => svc.ValidateVerificationAsync(id, ct);
     [HttpPost("shipments/{id:guid}/verification/restart")] public Task<VerificationStatus> RestartVerification(Guid id, CancellationToken ct) => svc.RestartVerificationAsync(id, ct);
-    [HttpGet("shipments/{id:guid}/packing-list")] public async Task<FileContentResult> PackingList(Guid id, CancellationToken ct) => File(await svc.PackingListAsync(id, ct), "application/pdf", "packing-list.pdf");
-    [HttpGet("shipments/{id:guid}/bill-of-lading")] public async Task<FileContentResult> Bol(Guid id, CancellationToken ct) => File(await svc.BillOfLadingAsync(id, ct), "application/pdf", "bill-of-lading.pdf");
+    /// <summary>Issues the packing list from the template that applies (or the built-in layout) and records it; X-Document-Id names the issued document.</summary>
+    [HttpGet("shipments/{id:guid}/packing-list")] public Task<FileContentResult> PackingList(Guid id, CancellationToken ct) => Issue(id, ShippingDocumentKind.PackingList, "packing-list.pdf", ct);
+    /// <summary>Issues the bill of lading (after shipping) from the template that applies and records it.</summary>
+    [HttpGet("shipments/{id:guid}/bill-of-lading")] public Task<FileContentResult> Bol(Guid id, CancellationToken ct) => Issue(id, ShippingDocumentKind.BillOfLading, "bill-of-lading.pdf", ct);
+    async Task<FileContentResult> Issue(Guid id, ShippingDocumentKind kind, string name, CancellationToken ct)
+    {
+        var (docId, pdf) = await docs.GenerateAsync(id, kind, ct);
+        Response.Headers["X-Document-Id"] = docId.ToString();
+        return File(pdf, "application/pdf", name);
+    }
+    /// <summary>Freight terms and special instructions printed on the shipping documents (until the shipment ships).</summary>
+    [HttpPut("shipments/{id:guid}/shipping-terms")] public async Task<IActionResult> Terms(Guid id, ShippingTermsInput r, CancellationToken ct) { await docs.SaveTermsAsync(id, r, ct); return NoContent(); }
+    /// <summary>Which template each document of this shipment would use now.</summary>
+    [HttpGet("shipments/{id:guid}/document-templates")] public Task<List<TemplateChoice>> DocumentChoices(Guid id, CancellationToken ct) => docs.ChoicesAsync(id, ct);
+    /// <summary>Documents issued for this shipment, newest first, with the template revision used.</summary>
+    [HttpGet("shipments/{id:guid}/documents")] public Task<List<GeneratedRow>> Documents(Guid id, CancellationToken ct) => docs.IssuedListAsync(id, null, null, ct);
     [HttpGet("shipments/{id:guid}/custody")] public Task<List<CustodyRow>> Custody(Guid id, CancellationToken ct) => inv.CustodyAsync(ShippingService.ShipmentType, id, ct);
 }
 
@@ -199,3 +214,48 @@ public sealed class CarrierIntegrationController(CarrierIntegrationService svc) 
     [HttpPost("shipments/{id:guid}/carrier/track")] public Task<TrackResult> Track(Guid id, CancellationToken ct) => svc.TrackAsync(id, ct);
     [HttpGet("carrier-labels/{labelId:guid}")] public async Task<FileContentResult> Label(Guid labelId, CancellationToken ct) { var (d, type, name) = await svc.LabelFileAsync(labelId, ct); return File(d, type, name); }
 }
+
+/// <summary>Shipping document templates (bill of lading, packing list, manifest) with approval-controlled revisions, and issued documents.</summary>
+[ApiController, Authorize, Route("api/shipping")]
+public sealed class ShippingDocumentController(ShippingDocumentService svc) : ControllerBase
+{
+    /// <summary>Section types, placeholders and the built-in layouts.</summary>
+    [HttpGet("document-sections")] [RequirePermission(Permissions.ShippingView)] public SectionCatalog Sections() => svc.Catalog();
+    [HttpGet("document-templates")] public Task<List<TemplateRow>> Templates([FromQuery] ShippingDocumentKind? kind, CancellationToken ct) => svc.TemplatesAsync(kind, ct);
+    [HttpGet("document-templates/{id:guid}")] public Task<TemplateDetail> Template(Guid id, CancellationToken ct) => svc.TemplateAsync(id, ct);
+    [HttpPost("document-templates")] public async Task<TemplateDetail> Create(TemplateInput r, CancellationToken ct) => await svc.TemplateAsync(await svc.CreateAsync(r, ct), ct);
+    [HttpPut("document-templates/{id:guid}")] public async Task<IActionResult> Update(Guid id, TemplateUpdate r, CancellationToken ct) { await svc.UpdateAsync(id, r, ct); return NoContent(); }
+    /// <summary>Starts a draft revision copied from the latest approved one (one open revision at a time).</summary>
+    [HttpPost("document-templates/{id:guid}/revisions")] public async Task<object> NewRevision(Guid id, CancellationToken ct) => new { id = await svc.NewRevisionAsync(id, ct) };
+    [HttpPut("document-template-revisions/{id:guid}")] public async Task<IActionResult> SaveRevision(Guid id, RevisionInput r, CancellationToken ct) { await svc.SaveRevisionAsync(id, r, ct); return NoContent(); }
+    /// <summary>Header logo (JPEG, up to 512 KB) on a draft revision.</summary>
+    [HttpPost("document-template-revisions/{id:guid}/logo")] [RequestSizeLimit(1_048_576)]
+    public async Task<IActionResult> Logo(Guid id, IFormFile file, CancellationToken ct)
+    {
+        if (file.Length > ShippingDocumentService.MaxLogoBytes) throw new AppException("The logo must be at most 512 KB.");
+        using var ms = new MemoryStream(); await file.CopyToAsync(ms, ct);
+        await svc.SetLogoAsync(id, ms.ToArray(), ct); return NoContent();
+    }
+    [HttpDelete("document-template-revisions/{id:guid}/logo")] public async Task<IActionResult> RemoveLogo(Guid id, CancellationToken ct) { await svc.SetLogoAsync(id, null, ct); return NoContent(); }
+    [HttpGet("document-template-revisions/{id:guid}/logo")] public async Task<FileContentResult> GetLogo(Guid id, CancellationToken ct) => File(await svc.LogoAsync(id, ct), "image/jpeg");
+    [HttpPost("document-template-revisions/{id:guid}/submit")] public async Task<IActionResult> Submit(Guid id, CancellationToken ct) { await svc.SubmitAsync(id, ct); return NoContent(); }
+    /// <summary>Approve (shipping.approve, not the preparer or submitter); effective at the later of now and the requested date.</summary>
+    [HttpPost("document-template-revisions/{id:guid}/approve")] public async Task<IActionResult> Approve(Guid id, ApproveRevisionInput r, CancellationToken ct) { await svc.ApproveAsync(id, r, ct); return NoContent(); }
+    [HttpPost("document-template-revisions/{id:guid}/reject")] public async Task<IActionResult> Reject(Guid id, RejectRevisionInput r, CancellationToken ct) { await svc.RejectAsync(id, r, ct); return NoContent(); }
+    /// <summary>Preview with sample data, or with a shipment the caller can see. Every page is marked as a preview.</summary>
+    [HttpGet("document-template-revisions/{id:guid}/preview")] public async Task<FileContentResult> Preview(Guid id, [FromQuery] Guid? shipmentId, CancellationToken ct) => File(await svc.PreviewAsync(id, shipmentId, ct), "application/pdf", "preview.pdf");
+    /// <summary>Manifest of everything shipped with one carrier from one site on one site-local day; recorded like other documents.</summary>
+    [HttpGet("manifest")]
+    public async Task<FileContentResult> Manifest([FromQuery] Guid siteId, [FromQuery] Guid carrierId, [FromQuery] DateOnly date, CancellationToken ct)
+    {
+        var (docId, pdf) = await svc.ManifestAsync(siteId, carrierId, date, ct);
+        Response.Headers["X-Document-Id"] = docId.ToString();
+        return File(pdf, "application/pdf", "manifest.pdf");
+    }
+    [HttpGet("generated-documents")] public Task<List<GeneratedRow>> Issued([FromQuery] Guid siteId, [FromQuery] ShippingDocumentKind? kind, CancellationToken ct) => svc.IssuedListAsync(null, siteId, kind, ct);
+    /// <summary>The issued PDF exactly as it was issued.</summary>
+    [HttpGet("generated-documents/{id:guid}")] public async Task<FileContentResult> IssuedPdf(Guid id, CancellationToken ct) { var (pdf, name) = await svc.IssuedPdfAsync(id, ct); return File(pdf, "application/pdf", name); }
+    /// <summary>Re-renders the stored snapshot with the template revision used and compares it with the issued PDF.</summary>
+    [HttpPost("generated-documents/{id:guid}/reproduce")] public Task<ReproduceResult> Reproduce(Guid id, CancellationToken ct) => svc.ReproduceAsync(id, ct);
+}
+

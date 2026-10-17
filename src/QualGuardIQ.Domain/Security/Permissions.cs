@@ -141,6 +141,8 @@ public static class Permissions
     /// <summary>Shipments, pick lists, packing, verification, carriers and bills of lading.</summary>
     public const string ShippingView = "shipping.view";
     public const string ShippingEdit = "shipping.edit";
+    /// <summary>Approve shipping document templates (bill of lading, packing list, manifest).</summary>
+    public const string ShippingApprove = "shipping.approve";
 
     /// <summary>Organization tree, corporate standards and plant rollout, war room and governance dashboards.</summary>
     public const string EnterpriseView = "enterprise.view";
