@@ -73,3 +73,6 @@ Governance → Retention. A policy can be narrowed by record type, module, produ
 - **Versions:** every saved change to a policy's criteria creates a new version. *Reproduce* on a version re-runs that version's criteria, and every decision records the policy version it was taken under.
 - **Confidentiality** of a record is set with `PUT /api/governance/retention/classification` (records without a classification are Internal).
 - The record's initial file retention date (content library) uses the same resolution.
+
+## Content library search and paging
+Documents → Content library now searches on the server with no 1,000-file limit: 50 files per page with Previous/Next, a total count, sort (newest, oldest, name, largest; ties broken by id so pages never overlap) and filters for kind, classification, retention state and date added. The API (`GET /api/files/search`) also filters by content type, uploader, site, department and owning record type. Visibility follows the owning record's view permission, site and department, applied in the database from values copied onto each file at upload; files uploaded before this change are back-filled at startup. Every file shown is still re-checked against its record; if a record's access changed since upload, the page says some files are hidden and the total may be slightly high.

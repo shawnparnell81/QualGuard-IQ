@@ -111,6 +111,7 @@ if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
     using var scope = app.Services.CreateScope();
     await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
     await scope.ServiceProvider.GetRequiredService<Seeder>().SeedAsync();
+    await scope.ServiceProvider.GetRequiredService<QualGuardIQ.Infrastructure.Services.AttachmentService>().BackfillScopeAsync(CancellationToken.None);
 }
 await app.Services.GetRequiredService<QualGuardIQ.Infrastructure.Storage.IFileStorage>().EnsureReadyAsync(CancellationToken.None);
 

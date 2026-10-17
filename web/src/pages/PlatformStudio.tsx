@@ -540,18 +540,35 @@ export function ContentLibrary() {
   const qc = useQueryClient(); const { can } = useAuth();
   const [kind, setKind] = useState<string>(''); const [q, setQ] = useState(''); const [sel, setSel] = useState<any | null>(null);
   const [ret, setRet] = useState<any | null>(null); const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const lib = useQuery({ queryKey: ['content-library', kind, q], queryFn: () => get<any[]>(`/api/files?take=200${kind ? `&kind=${kind}` : ''}${q ? `&q=${encodeURIComponent(q)}` : ''}`) });
+  const [page, setPage] = useState(1); const [sort, setSort] = useState('0'); const [cls, setCls] = useState(''); const [retention, setRetention] = useState('0'); const [from, setFrom] = useState(''); const [to, setTo] = useState('');
+  const pageSize = 50;
+  const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize), sort, retention, ...(kind ? { kind } : {}), ...(q ? { q } : {}), ...(cls ? { classification: cls } : {}), ...(from ? { from } : {}), ...(to ? { to } : {}) });
+  const libPage = useQuery({ queryKey: ['content-library', params.toString()], queryFn: () => get<{ items: any[]; total: number; page: number; pageSize: number; totalIsExact: boolean }>(`/api/files/search?${params}`), placeholderData: (prev) => prev });
+  const lib = { data: libPage.data?.items };
+  const pages = Math.max(1, Math.ceil((libPage.data?.total ?? 0) / pageSize));
+  const reset = <T,>(set: (v: T) => void) => (v: T) => { set(v); setPage(1); };
   const versions = useQuery({ queryKey: ['file-versions', sel?.id], enabled: !!sel, queryFn: () => get<any[]>(`/api/files/${sel.id}/versions`) });
-  const counts = useMemo(() => Object.fromEntries(fileKinds.map((k) => [k, (lib.data ?? []).filter((f) => f.kind === k).length])), [lib.data]);
   return (
     <ModuleWorkspace module={mod('documents')} crumbs={[{ label: 'Documents', to: '/documents' }, { label: 'Content library' }]} title="Content library">
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
       <Stack direction={{ xs: 'column', md: 'row' }} gap={1.5} alignItems={{ md: 'center' }} sx={{ mb: 2 }}>
         <Stack direction="row" gap={1} flexWrap="wrap" sx={{ flex: 1 }}>
-          <Chip label="Everything" color={kind === '' ? 'primary' : 'default'} onClick={() => setKind('')} />
-          {fileKinds.map((k) => <Chip key={k} label={`${kindGlyph[k]} ${k}s${kind === '' && counts[k] ? ` · ${counts[k]}` : ''}`} color={kind === k ? 'primary' : 'default'} onClick={() => setKind(k)} />)}
+          <Chip label="Everything" color={kind === '' ? 'primary' : 'default'} onClick={() => reset(setKind)('')} />
+          {fileKinds.map((k) => <Chip key={k} label={`${kindGlyph[k]} ${k}s`} color={kind === k ? 'primary' : 'default'} onClick={() => reset(setKind)(k)} />)}
         </Stack>
-        <TextField size="small" placeholder="Search file names and descriptions" value={q} onChange={(e) => setQ(e.target.value)} sx={{ minWidth: 280 }} />
+        <TextField size="small" placeholder="Search file names and descriptions" value={q} onChange={(e) => reset(setQ)(e.target.value)} sx={{ minWidth: 280 }} />
+      </Stack>
+      <Stack direction="row" gap={1.5} flexWrap="wrap" alignItems="center" sx={{ mb: 2 }}>
+        <TextField select size="small" label="Sort" value={sort} onChange={(e) => reset(setSort)(e.target.value)} sx={{ width: 150 }}>{[['0', 'Newest'], ['1', 'Oldest'], ['2', 'Name'], ['3', 'Largest']].map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}</TextField>
+        <TextField select size="small" label="Classification" value={cls} onChange={(e) => reset(setCls)(e.target.value)} sx={{ width: 170 }}><MenuItem value="">Any</MenuItem>{classNames.map((c, i) => <MenuItem key={c} value={String(i)}>{c}</MenuItem>)}</TextField>
+        <TextField select size="small" label="Retention" value={retention} onChange={(e) => reset(setRetention)(e.target.value)} sx={{ width: 170 }}>{[['0', 'Any'], ['1', 'No retention'], ['2', 'Under retention'], ['3', 'Retention ended']].map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}</TextField>
+        <TextField size="small" type="date" label="Added from" value={from} onChange={(e) => reset(setFrom)(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        <TextField size="small" type="date" label="to" value={to} onChange={(e) => reset(setTo)(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
+        <Box sx={{ flex: 1 }} />
+        <Typography variant="body2" color="text.secondary" data-testid="library-total">{libPage.data ? `${libPage.data.total.toLocaleString()} file${libPage.data.total === 1 ? '' : 's'}${libPage.data.totalIsExact ? '' : ' (some hidden on this page)'}` : ''}</Typography>
+        <Button size="small" disabled={page <= 1} onClick={() => setPage(page - 1)}>Previous</Button>
+        <Typography variant="body2" data-testid="library-page" sx={{ fontFamily: mono }}>Page {page} of {pages}</Typography>
+        <Button size="small" disabled={page >= pages} onClick={() => setPage(page + 1)}>Next</Button>
       </Stack>
       <Box sx={{ display: 'grid', gridTemplateColumns: sel ? { xs: '1fr', lg: '1fr 1.2fr' } : '1fr', gap: 2 }}>
         <Paper sx={{ p: 1 }}>

@@ -29661,6 +29661,102 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/files/search:
+    get:
+      tags:
+        - Files
+      description: Requires an authenticated user.
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: contentType
+          in: query
+          schema:
+            type: string
+        - name: uploadedById
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: departmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: classification
+          in: query
+          schema:
+            $ref: '#/components/schemas/Classification'
+        - name: retention
+          in: query
+          schema:
+            default: 0
+            $ref: '#/components/schemas/LibraryRetention'
+        - name: ownerType
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            default: 0
+            $ref: '#/components/schemas/LibrarySort'
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/LibraryPage'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LibraryPage'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/LibraryPage'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/files/{id}/versions':
     get:
       tags:
@@ -42029,6 +42125,43 @@ components:
           type:
             - 'null'
             - string
+    LibraryPage:
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+        - totalIsExact
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/LibraryItem'
+        total:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        page:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        pageSize:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        totalIsExact:
+          type: boolean
+    LibraryRetention:
+      type: integer
+    LibrarySort:
+      type: integer
     LibraryStatus:
       type: integer
     LicenseActivation:

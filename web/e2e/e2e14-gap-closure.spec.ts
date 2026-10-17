@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { test, expect } from '@playwright/test';
 import { Api, dialog, signIn, state, unique, users, type User } from './support';
 
@@ -129,5 +130,33 @@ test.describe('E2E 14: gap closure', () => {
     const rec = page.getByRole('row', { name: new RegExp(number) });
     await expect(rec).toContainText('Retained');
     await expect(rec).toContainText(`Plant NCRs ${t} v1`);
+  });
+
+  test('the content library pages through more than 1,000 files on the server', async ({ page }) => {
+    test.setTimeout(150_000);
+    const admin = await Api.as(users.admin);
+    const tag = `cl${Date.now().toString(36)}`;
+    const ncr = await admin.post<{ id: string }>('/api/ncrs', { title: `Library ${tag}`, description: 'Many files', source: 'In-process', siteId: state().siteId, detectedOn: new Date().toISOString().slice(0, 10), severity: 1 });
+    // Bulk fixture straight into the test database (the API's upload path is covered elsewhere); same database serve-api.sh created.
+    const env = { ...process.env, PGHOST: process.env.E2E_PGHOST ?? 'localhost', PGPORT: process.env.E2E_PGPORT ?? '5433', PGUSER: process.env.E2E_PGUSER ?? 'qgiq', PGPASSWORD: process.env.E2E_PGPASSWORD ?? 'qgiq_local_dev' };
+    execFileSync('psql', ['-d', process.env.E2E_DB ?? 'qgiq_e2e', '-v', 'ON_ERROR_STOP=1', '-q', '-c', `
+      INSERT INTO qms.attachments ("Id","OwnerType","OwnerId","SiteId","ViewPermission","FileName","ContentType","SizeBytes","Sha256","StorageKey","Classification","LineageId","Version","IsLocked","ScanStatus","IsArchived","CreatedAt","UpdatedAt")
+      SELECT u.id, 'Ncr', '${ncr.id}', '${state().siteId}', 'ncr.view', '${tag}-' || lpad(u.g::text, 4, '0') || '.pdf', 'application/pdf', 100 + u.g, repeat('c', 64), 'e2e/${tag}/' || u.g, 0, u.id, 1, false, 1, false,
+             TIMESTAMPTZ '2025-03-01 00:00:00+00' + u.g * INTERVAL '1 minute', now()
+      FROM (SELECT g, gen_random_uuid() AS id FROM generate_series(1, 1100) g) u`], { env });
+
+    await signIn(page, users.viewer);
+    await page.goto('/documents/content');
+    await page.getByPlaceholder('Search file names and descriptions').fill(tag);
+    await expect(page.getByTestId('library-total')).toHaveText('1,100 files');
+    await expect(page.getByTestId('library-page')).toHaveText('Page 1 of 22');
+    await expect(page.getByText(`${tag}-1100.pdf`)).toBeVisible();
+    for (let i = 1; i < 22; i++) await page.getByRole('button', { name: 'Next' }).click();
+    await expect(page.getByTestId('library-page')).toHaveText('Page 22 of 22');
+    await expect(page.getByText(`${tag}-0001.pdf`)).toBeVisible(); // file #1,100 counting from the newest
+    await page.getByLabel('Sort').click();
+    await page.getByRole('option', { name: 'Oldest' }).click();
+    await expect(page.getByTestId('library-page')).toHaveText('Page 1 of 22');
+    await expect(page.getByText(`${tag}-0001.pdf`)).toBeVisible();
   });
 });

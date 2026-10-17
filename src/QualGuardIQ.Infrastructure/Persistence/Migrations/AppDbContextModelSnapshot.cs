@@ -22,6 +22,7 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
+            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "pg_trgm");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole<System.Guid>", b =>
@@ -15733,9 +15734,17 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Description")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Extension")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("lower(substring(\"FileName\" from '(\\.[^.]+)$'))", true);
 
                     b.Property<string>("FileName")
                         .IsRequired()
@@ -15797,7 +15806,23 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<int>("Version")
                         .HasColumnType("integer");
 
+                    b.Property<string>("ViewPermission")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("Description")
+                        .HasDatabaseName("ix_att_description_trgm");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("Description"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("Description"), new[] { "gin_trgm_ops" });
+
+                    b.HasIndex("FileName")
+                        .HasDatabaseName("ix_att_filename_trgm");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("FileName"), "gin");
+                    NpgsqlIndexBuilderExtensions.HasOperators(b.HasIndex("FileName"), new[] { "gin_trgm_ops" });
 
                     b.HasIndex("StorageKey")
                         .IsUnique();
@@ -15806,6 +15831,12 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("OwnerType", "OwnerId");
+
+                    b.HasIndex("IsArchived", "CreatedAt", "Id")
+                        .HasDatabaseName("ix_att_library_recent");
+
+                    b.HasIndex("ViewPermission", "SiteId", "DepartmentId")
+                        .HasDatabaseName("ix_att_scope");
 
                     b.ToTable("attachments", "qms", t =>
                         {

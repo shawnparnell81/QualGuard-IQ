@@ -153,6 +153,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
 
     private static void ConfigureShared(ModelBuilder b)
     {
+        b.HasPostgresExtension("pg_trgm");
         b.Entity<Attachment>(e =>
         {
             e.ToTable("attachments");
@@ -166,6 +167,13 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.HasIndex(x => new { x.OwnerType, x.OwnerId });
             e.HasIndex(x => x.StorageKey).IsUnique();
             e.HasIndex(x => new { x.LineageId, x.Version }).IsUnique();
+            e.Property(x => x.ViewPermission).HasMaxLength(60);
+            e.Property(x => x.Extension).HasComputedColumnSql("lower(substring(\"FileName\" from '(\\.[^.]+)$'))", stored: true);
+            // content library: scope + newest-first paging, and substring search on names/descriptions
+            e.HasIndex(x => new { x.IsArchived, x.CreatedAt, x.Id }).HasDatabaseName("ix_att_library_recent");
+            e.HasIndex(x => new { x.ViewPermission, x.SiteId, x.DepartmentId }).HasDatabaseName("ix_att_scope");
+            e.HasIndex(x => x.FileName).HasMethod("gin").HasOperators("gin_trgm_ops").HasDatabaseName("ix_att_filename_trgm");
+            e.HasIndex(x => x.Description).HasMethod("gin").HasOperators("gin_trgm_ops").HasDatabaseName("ix_att_description_trgm");
             e.ToTable(t => { t.HasCheckConstraint("ck_att_size", "\"SizeBytes\" > 0"); t.HasCheckConstraint("ck_att_version", "\"Version\" >= 1"); });
         });
         b.Entity<Comment>(e =>

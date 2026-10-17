@@ -11,6 +11,12 @@ using QualGuardIQ.Infrastructure.Storage;
 namespace QualGuardIQ.Infrastructure.Services;
 
 public sealed record RetentionRequest(DateOnly RetainUntil, string Reason);
+public enum LibrarySort { Newest = 0, Oldest = 1, Name = 2, Largest = 3 }
+public enum LibraryRetention { Any = 0, None = 1, Retained = 2, Expired = 3 }
+public sealed record LibraryQuery(string? Kind = null, string? Q = null, DateOnly? From = null, DateOnly? To = null, string? ContentType = null, Guid? UploadedById = null, Guid? SiteId = null,
+    Guid? DepartmentId = null, Classification? Classification = null, LibraryRetention Retention = LibraryRetention.Any, string? OwnerType = null, LibrarySort Sort = LibrarySort.Newest, int Page = 1, int PageSize = 50);
+/// <summary>One page of the content library. Total counts every current file in the caller's scope that matches; items on the page are re-verified against the owning record.</summary>
+public sealed record LibraryPage(IReadOnlyList<LibraryItem> Items, int Total, int Page, int PageSize, bool TotalIsExact);
 public sealed record LibraryItem(Guid Id, string FileName, string ContentType, string Kind, long SizeBytes, int Version, Guid LineageId, int Versions, Classification Classification,
     DateOnly? RetainUntil, bool IsLocked, ScanStatus ScanStatus, DateTimeOffset CreatedAt, string OwnerType, Guid OwnerId, string OwnerNumber, string OwnerTitle, string OwnerUrl, string? Category, string? Description);
 
@@ -81,7 +87,7 @@ public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMa
 
         var a = new Attachment
         {
-            OwnerType = record.Type, OwnerId = record.Id, SiteId = record.SiteId, FileName = name,
+            OwnerType = record.Type, OwnerId = record.Id, SiteId = record.SiteId, DepartmentId = record.DepartmentId, ViewPermission = record.ViewPermission, FileName = name,
             ContentType = isVideo ? FileKinds.VideoContentType(ext) : string.IsNullOrWhiteSpace(req.ContentType) ? "application/octet-stream" : req.ContentType,
             SizeBytes = total, Sha256 = Convert.ToHexStringLower(sha.GetHashAndReset()),
             Category = req.Category, Description = req.Description, Classification = req.Classification, ScanStatus = scan
@@ -162,32 +168,135 @@ public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMa
         return c?.RetainYears is int years && years > 0 ? (await calendar.TodayAsync(record.SiteId, ct)).AddYears(years) : null;
     }
 
-    /// <summary>Enterprise content library: current versions of files across every record the user can view, filtered by kind and text.</summary>
-    public async Task<List<LibraryItem>> LibraryAsync(string? kind, string? q, int take, CancellationToken ct)
+    /// <summary>Enterprise content library (compatibility form): first page of the paged search.</summary>
+    public async Task<List<LibraryItem>> LibraryAsync(string? kind, string? q, int take, CancellationToken ct) =>
+        [.. (await SearchLibraryAsync(new LibraryQuery(Kind: kind, Q: q, PageSize: Math.Clamp(take, 1, 200)), ct)).Items];
+
+    static readonly string[] CadExt = [".dwg", ".dxf", ".step", ".stp", ".igs", ".iges"];
+    static readonly string[] DocExt = [".pdf", ".docx", ".doc", ".xlsx", ".xls", ".pptx", ".txt", ".csv"];
+    static readonly string[] ImgExt = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".tif", ".tiff"];
+    static readonly string[] VidExt = [".mp4", ".m4v", ".webm", ".mov"];
+
+    /// <summary>The same classification as FileKinds.Of, expressed so the database can filter on it.</summary>
+    static IQueryable<Attachment> WhereKind(IQueryable<Attachment> q, string kind)
     {
-        take = Math.Clamp(take, 1, 200);
-        var query = db.Attachments.AsNoTracking().Where(x => !x.IsArchived && x.ScanStatus != ScanStatus.Infected);
-        if (!string.IsNullOrWhiteSpace(q)) { var t = q.Trim().ToLower(); query = query.Where(x => x.FileName.ToLower().Contains(t) || (x.Description != null && x.Description.ToLower().Contains(t))); }
-        if (kind == "Video") query = query.Where(x => x.ContentType.StartsWith("video/"));
-        var candidates = await query.OrderByDescending(x => x.CreatedAt).Take(1000).ToListAsync(ct);
-        var versions = await db.Attachments.AsNoTracking().Where(x => candidates.Select(c => c.LineageId).Contains(x.LineageId)).GroupBy(x => x.LineageId).Select(g => new { g.Key, N = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.N, ct);
-        var owners = new Dictionary<(string, Guid), RecordInfo?>();
-        var result = new List<LibraryItem>();
-        foreach (var a in candidates)
+        System.Linq.Expressions.Expression<Func<Attachment, bool>> video = x => x.Extension != null && VidExt.Contains(x.Extension);
+        System.Linq.Expressions.Expression<Func<Attachment, bool>> drawing = x => (x.Extension != null && CadExt.Contains(x.Extension)) || x.OwnerType.ToLower().Contains("drawing") || (x.Category != null && x.Category.ToLower() == "drawing");
+        return kind switch
         {
-            var k = FileKinds.Of(a.FileName, a.OwnerType, a.Category);
-            if (kind is { Length: > 0 } && k != kind) continue;
+            "Video" => q.Where(video),
+            "Drawing" => q.Where(x => !(x.Extension != null && VidExt.Contains(x.Extension))).Where(drawing),
+            "Image" => q.Where(x => x.Extension != null && ImgExt.Contains(x.Extension) && !VidExt.Contains(x.Extension) && !CadExt.Contains(x.Extension) && !x.OwnerType.ToLower().Contains("drawing") && (x.Category == null || x.Category.ToLower() != "drawing")),
+            "Document" => q.Where(x => x.Extension != null && DocExt.Contains(x.Extension) && !x.OwnerType.ToLower().Contains("drawing") && (x.Category == null || x.Category.ToLower() != "drawing")),
+            "Attachment" => q.Where(x => (x.Extension == null || (!VidExt.Contains(x.Extension) && !CadExt.Contains(x.Extension) && !ImgExt.Contains(x.Extension) && !DocExt.Contains(x.Extension)))
+                && !x.OwnerType.ToLower().Contains("drawing") && (x.Category == null || x.Category.ToLower() != "drawing")),
+            _ => throw new AppException($"Kind must be one of: {string.Join(", ", FileKinds.All)}."),
+        };
+    }
+
+    /// <summary>
+    /// Server-side, permission-aware content library search. Scope is applied in the database from the view permission, site and
+    /// department copied onto each file at upload (so nothing is loaded into memory beyond one page); every item on the page is then
+    /// re-checked against its owning record. Sorting is stable (ties broken by id).
+    /// </summary>
+    public async Task<LibraryPage> SearchLibraryAsync(LibraryQuery r, CancellationToken ct)
+    {
+        var uid = current.UserId ?? throw new ForbiddenException();
+        var size = Math.Clamp(r.PageSize, 1, 200);
+        var page = Math.Clamp(r.Page, 1, 100_000);
+        var query = db.Attachments.AsNoTracking().Where(x => !x.IsArchived && x.ScanStatus != ScanStatus.Infected);
+
+        // scope: (view permission, site[, department]) pairs the caller holds
+        var perms = await db.Attachments.AsNoTracking().Where(x => x.ViewPermission != null).Select(x => x.ViewPermission!).Distinct().ToListAsync(ct);
+        var allSitePerms = new List<string>(); var siteKeys = new List<string>(); var deptKeys = new List<string>();
+        foreach (var p in perms)
+        {
+            var scope = await access.GetScopeAsync(uid, p, ct);
+            if (scope.AllSites) allSitePerms.Add(p);
+            else
+            {
+                siteKeys.AddRange(scope.SiteIds.Select(sid => $"{p}|{sid}"));
+                deptKeys.AddRange(scope.DepartmentPairs.Select(d => $"{p}|{d.Site}|{d.Dept}"));
+            }
+        }
+        query = query.Where(x => x.ViewPermission == null // not yet backfilled: verified per item below
+            || allSitePerms.Contains(x.ViewPermission)
+            || (x.SiteId != null && siteKeys.Contains(x.ViewPermission + "|" + x.SiteId.ToString()))
+            || (x.SiteId != null && x.DepartmentId != null && deptKeys.Contains(x.ViewPermission + "|" + x.SiteId.ToString() + "|" + x.DepartmentId.ToString())));
+
+        if (!string.IsNullOrWhiteSpace(r.Q))
+        {
+            var t = "%" + r.Q.Trim().Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";
+            query = query.Where(x => EF.Functions.ILike(x.FileName, t) || (x.Description != null && EF.Functions.ILike(x.Description, t)));
+        }
+        if (r.Kind is { Length: > 0 } k) query = WhereKind(query, k);
+        if (r.From is { } from) { var f = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero); query = query.Where(x => x.CreatedAt >= f); }
+        if (r.To is { } to) { var tt = new DateTimeOffset(to.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero); query = query.Where(x => x.CreatedAt < tt); }
+        if (r.ContentType is { Length: > 0 } ctp) { var c = ctp.Trim().ToLower(); query = query.Where(x => x.ContentType.ToLower().StartsWith(c)); }
+        if (r.UploadedById is { } by) query = query.Where(x => x.CreatedById == by);
+        if (r.SiteId is { } site) query = query.Where(x => x.SiteId == site);
+        if (r.DepartmentId is { } dept) query = query.Where(x => x.DepartmentId == dept);
+        if (r.Classification is { } cl) query = query.Where(x => x.Classification == cl);
+        if (r.OwnerType is { Length: > 0 } ot) query = query.Where(x => x.OwnerType == ot);
+        if (r.Retention != LibraryRetention.Any)
+        {
+            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            query = r.Retention switch
+            {
+                LibraryRetention.None => query.Where(x => x.RetainUntil == null),
+                LibraryRetention.Retained => query.Where(x => x.RetainUntil != null && x.RetainUntil > today),
+                _ => query.Where(x => x.RetainUntil != null && x.RetainUntil <= today),
+            };
+        }
+
+        var total = await query.CountAsync(ct);
+        IOrderedQueryable<Attachment> ordered = r.Sort switch
+        {
+            LibrarySort.Oldest => query.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id),
+            LibrarySort.Name => query.OrderBy(x => x.FileName).ThenBy(x => x.Id),
+            LibrarySort.Largest => query.OrderByDescending(x => x.SizeBytes).ThenBy(x => x.Id),
+            _ => query.OrderByDescending(x => x.CreatedAt).ThenByDescending(x => x.Id),
+        };
+        var rows = await ordered.Skip((page - 1) * size).Take(size).ToListAsync(ct);
+        var lineages = rows.Select(c => c.LineageId).ToList();
+        var versions = await db.Attachments.AsNoTracking().Where(x => lineages.Contains(x.LineageId)).GroupBy(x => x.LineageId).Select(g => new { g.Key, N = g.Count() }).ToDictionaryAsync(x => x.Key, x => x.N, ct);
+        var owners = new Dictionary<(string, Guid), RecordInfo?>();
+        var items = new List<LibraryItem>();
+        var dropped = 0;
+        foreach (var a in rows)
+        {
             if (!owners.TryGetValue((a.OwnerType, a.OwnerId), out var owner))
             {
                 try { owner = await records.RequireViewAsync(a.OwnerType, a.OwnerId, ct); } catch (AppException) { owner = null; }
                 owners[(a.OwnerType, a.OwnerId)] = owner;
             }
-            if (owner is null) continue;
-            result.Add(new LibraryItem(a.Id, a.FileName, a.ContentType, k, a.SizeBytes, a.Version, a.LineageId, versions.GetValueOrDefault(a.LineageId, 1), a.Classification, a.RetainUntil, a.IsLocked, a.ScanStatus, a.CreatedAt,
+            if (owner is null) { dropped++; continue; }
+            items.Add(new LibraryItem(a.Id, a.FileName, a.ContentType, FileKinds.Of(a.FileName, a.OwnerType, a.Category), a.SizeBytes, a.Version, a.LineageId, versions.GetValueOrDefault(a.LineageId, 1), a.Classification, a.RetainUntil, a.IsLocked, a.ScanStatus, a.CreatedAt,
                 owner.Type, owner.Id, owner.Number, owner.Title, owner.Url, a.Category, a.Description));
-            if (result.Count >= take) break;
         }
-        return result;
+        return new LibraryPage(items, total, page, size, dropped == 0);
+    }
+
+    /// <summary>Copies the owning record's site, department and view permission onto files uploaded before those columns existed. Idempotent; runs at startup in batches.</summary>
+    public async Task<int> BackfillScopeAsync(CancellationToken ct, int batch = 500)
+    {
+        var done = 0;
+        while (true)
+        {
+            var rows = await db.Attachments.Where(x => x.ViewPermission == null).OrderBy(x => x.Id).Take(batch).ToListAsync(ct);
+            if (rows.Count == 0) break;
+            foreach (var a in rows)
+            {
+                RecordInfo? rec;
+                try { rec = await records.GetAsync(a.OwnerType, a.OwnerId, ct); } catch (AppException) { rec = null; }
+                // a file whose record no longer resolves stays out of the library ("" matches no grant)
+                a.ViewPermission = rec?.ViewPermission ?? ""; a.SiteId = rec?.SiteId ?? a.SiteId; a.DepartmentId = rec?.DepartmentId;
+            }
+            await db.SaveChangesAsync(ct);
+            done += rows.Count;
+            if (rows.Count < batch) break;
+        }
+        return done;
     }
 
     /// <summary>All versions of a file, newest first.</summary>
