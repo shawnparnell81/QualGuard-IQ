@@ -15649,6 +15649,421 @@ paths:
         '200':
           description: OK
       security: [ ]
+  /api/generation/settings:
+    get:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/AiSettings'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AiSettings'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/AiSettings'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiSettingsInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AiSettingsInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AiSettingsInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/generation/providers:
+    get:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiProviderRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiProviderRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiProviderRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiProviderInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AiProviderInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AiProviderInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/generation/providers/{id}':
+    put:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiProviderInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AiProviderInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AiProviderInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/generation/providers/{id}/secret':
+    put:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecretInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SecretInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SecretInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/generation/providers/{id}/test':
+    post:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/generation/providers/{id}/enabled':
+    post:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnabledInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/EnabledInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/EnabledInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/generation/providers/{id}/approval':
+    post:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/generation/functions:
+    get:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiFunctionRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiFunctionRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiFunctionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/generation/functions/{function}':
+    put:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      parameters:
+        - name: function
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiFunctionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AiFunctionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AiFunctionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/generation/availability:
+    get:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: object
+                additionalProperties:
+                  type: boolean
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: boolean
+            text/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: boolean
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/generation/generate:
+    post:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/GenerateRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/GenerateRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/GenerationResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GenerationResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/GenerationResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/generation/requests/{id}/review':
+    post:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReviewInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReviewInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/generation/requests:
+    get:
+      tags:
+        - Generation
+      description: Requires an authenticated user.
+      parameters:
+        - name: function
+          in: query
+          schema:
+            type: string
+        - name: outcome
+          in: query
+          schema:
+            $ref: '#/components/schemas/AiOutcome'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiLogRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiLogRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AiLogRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/v1/fai:
     get:
       tags:
@@ -37376,6 +37791,434 @@ components:
             $ref: '#/components/schemas/CopilotRecord'
         method:
           type: string
+    AiFunctionInput:
+      required:
+        - enabled
+        - providerId
+        - allowConfidential
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        providerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        allowConfidential:
+          type: boolean
+    AiFunctionRow:
+      required:
+        - function
+        - label
+        - description
+        - enabled
+        - providerId
+        - allowConfidential
+      type: object
+      properties:
+        function:
+          type: string
+        label:
+          type: string
+        description:
+          type: string
+        enabled:
+          type: boolean
+        providerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        allowConfidential:
+          type: boolean
+    AiLogRow:
+      required:
+        - id
+        - function
+        - userId
+        - user
+        - recordType
+        - recordId
+        - providerName
+        - model
+        - outcome
+        - fallbackReason
+        - createdAt
+        - durationMs
+        - sourceCount
+        - excludedSources
+        - sourceRefs
+        - redactions
+        - injectionFlags
+        - promptChars
+        - responseChars
+        - promptHash
+        - responseHash
+        - promptText
+        - responseText
+        - contentPurgedAt
+        - review
+        - reviewedAt
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        function:
+          type: string
+        userId:
+          type: string
+          format: uuid
+        user:
+          type:
+            - 'null'
+            - string
+        recordType:
+          type:
+            - 'null'
+            - string
+        recordId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        providerName:
+          type:
+            - 'null'
+            - string
+        model:
+          type:
+            - 'null'
+            - string
+        outcome:
+          $ref: '#/components/schemas/AiOutcome'
+        fallbackReason:
+          type:
+            - 'null'
+            - string
+        createdAt:
+          type: string
+          format: date-time
+        durationMs:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        sourceCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        excludedSources:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        sourceRefs:
+          type: array
+          items:
+            type: string
+        redactions:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        injectionFlags:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        promptChars:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        responseChars:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        promptHash:
+          type:
+            - 'null'
+            - string
+        responseHash:
+          type:
+            - 'null'
+            - string
+        promptText:
+          type:
+            - 'null'
+            - string
+        responseText:
+          type:
+            - 'null'
+            - string
+        contentPurgedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        review:
+          $ref: '#/components/schemas/AiReview'
+        reviewedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+    AiMode:
+      type: integer
+    AiOutcome:
+      type: integer
+    AiProviderInput:
+      required:
+        - name
+        - kind
+        - endpoint
+        - model
+        - secretReference
+      type: object
+      properties:
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/AiProviderKind'
+        endpoint:
+          type:
+            - 'null'
+            - string
+        model:
+          type:
+            - 'null'
+            - string
+        secretReference:
+          type:
+            - 'null'
+            - string
+    AiProviderKind:
+      type: integer
+    AiProviderRow:
+      required:
+        - id
+        - name
+        - kind
+        - endpoint
+        - model
+        - secretReference
+        - secretStored
+        - enabled
+        - lastTestAt
+        - lastTestOk
+        - lastTestMessage
+        - testCurrent
+        - approvedAt
+        - needsApproval
+        - canEnable
+        - enableBlocker
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/AiProviderKind'
+        endpoint:
+          type:
+            - 'null'
+            - string
+        model:
+          type:
+            - 'null'
+            - string
+        secretReference:
+          type:
+            - 'null'
+            - string
+        secretStored:
+          type: boolean
+        enabled:
+          type: boolean
+        lastTestAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        lastTestOk:
+          type:
+            - 'null'
+            - boolean
+        lastTestMessage:
+          type:
+            - 'null'
+            - string
+        testCurrent:
+          type: boolean
+        approvedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        needsApproval:
+          type: boolean
+        canEnable:
+          type: boolean
+        enableBlocker:
+          type:
+            - 'null'
+            - string
+    AiReview:
+      type: integer
+    AiSettings:
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/AiMode'
+        timeoutSeconds:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        storeContent:
+          type: boolean
+        contentRetentionDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        metadataRetentionDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        redactionPatterns:
+          type: array
+          items:
+            type: string
+        redactEmails:
+          type: boolean
+        redactPhoneNumbers:
+          type: boolean
+        maxSourceRecords:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    AiSettingsInput:
+      required:
+        - mode
+        - timeoutSeconds
+        - storeContent
+        - contentRetentionDays
+        - metadataRetentionDays
+        - redactionPatterns
+        - redactEmails
+        - redactPhoneNumbers
+        - maxSourceRecords
+      type: object
+      properties:
+        mode:
+          $ref: '#/components/schemas/AiMode'
+        timeoutSeconds:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        storeContent:
+          type: boolean
+        contentRetentionDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        metadataRetentionDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        redactionPatterns:
+          type: array
+          items:
+            type: string
+        redactEmails:
+          type: boolean
+        redactPhoneNumbers:
+          type: boolean
+        maxSourceRecords:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    AiSource:
+      required:
+        - ref
+        - type
+        - id
+        - label
+        - url
+      type: object
+      properties:
+        ref:
+          type: string
+        type:
+          type: string
+        id:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        label:
+          type: string
+        url:
+          type:
+            - 'null'
+            - string
     AlertEvent:
       type: object
       properties:
@@ -46755,6 +47598,68 @@ components:
           type:
             - 'null'
             - string
+    GenerateRequest:
+      required:
+        - function
+        - recordType
+        - recordId
+        - month
+      type: object
+      properties:
+        function:
+          type: string
+        recordType:
+          type:
+            - 'null'
+            - string
+        recordId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        month:
+          type:
+            - 'null'
+            - string
+    GenerationResult:
+      required:
+        - logId
+        - function
+        - text
+        - generated
+        - label
+        - method
+        - sources
+        - notes
+        - reviewRequired
+        - review
+      type: object
+      properties:
+        logId:
+          type: string
+          format: uuid
+        function:
+          type: string
+        text:
+          type: string
+        generated:
+          type: boolean
+        label:
+          type: string
+        method:
+          type: string
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/AiSource'
+        notes:
+          type: array
+          items:
+            type: string
+        reviewRequired:
+          type: boolean
+        review:
+          $ref: '#/components/schemas/AiReview'
     GroupRow:
       required:
         - id
@@ -58939,14 +59844,9 @@ components:
     SecretInput:
       required:
         - secret
-        - secondarySecret
       type: object
       properties:
         secret:
-          type:
-            - 'null'
-            - string
-        secondarySecret:
           type:
             - 'null'
             - string
@@ -64525,6 +65425,7 @@ tags:
   - name: ApiAdmin
   - name: Impact
   - name: Messaging
+  - name: Generation
   - name: FAI
   - name: FAI Workflow
   - name: FAI Characteristics

@@ -116,6 +116,17 @@ public sealed class MessagingDeliveryJob(QualGuardIQ.Infrastructure.Modules.Mess
     public Task RunAsync(CancellationToken ct) => messaging.RunAsync(ct);
 }
 
+/// <summary>Daily: purge stored generation prompts/responses and old request metadata per the retention settings.</summary>
+public sealed class AiRetentionJob(QualGuardIQ.Infrastructure.Modules.Intelligence.AiBoundaryService ai, ILogger<AiRetentionJob> log)
+{
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 600)]
+    public async Task RunAsync(CancellationToken ct)
+    {
+        var (purged, deleted) = await ai.PurgeAsync(ct);
+        if (purged + deleted > 0) log.LogInformation("Generation logs: {Purged} content purged, {Deleted} deleted", purged, deleted);
+    }
+}
+
 /// <summary>Every 5 minutes: send due scheduled reports.</summary>
 public sealed class ReportScheduleJob(QualGuardIQ.Infrastructure.Modules.Platform.ReportDistributionService distribution)
 {
