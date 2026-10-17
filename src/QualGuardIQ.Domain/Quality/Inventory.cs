@@ -33,7 +33,7 @@ public enum StockStatus { Available = 0, AwaitingInspection = 1, Quarantined = 2
 public enum InventoryTxKind
 {
     Receipt = 0, Issue = 1, Consumption = 2, Adjustment = 3, Transfer = 4, Return = 5, Scrap = 6, ReworkReturn = 7, Shipment = 8, CycleCountAdjustment = 9,
-    StatusChange = 10, ProductionReceipt = 11, SupplierReturn = 12, Pick = 13, Mirror = 14
+    StatusChange = 10, ProductionReceipt = 11, SupplierReturn = 12, Pick = 13, Mirror = 14, LotSplit = 15, LotMerge = 16
 }
 
 /// <summary>

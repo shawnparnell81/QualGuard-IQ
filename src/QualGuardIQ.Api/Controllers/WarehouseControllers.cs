@@ -49,6 +49,13 @@ public sealed class WarehouseController(InventoryService inv, CountService count
     [HttpPost("consumptions")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> Consume(ConsumeInput r, CancellationToken ct) => Tx(await inv.ConsumeAsync(r, ct));
     [HttpPost("completions")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> Complete(CompleteInput r, CancellationToken ct) { var l = await inv.CompleteAsync(r, ct); return new { l.Id, l.Number }; }
 
+    /// <summary>Splits part of a lot into a new child lot (ledger + genealogy; holds follow the material).</summary>
+    [HttpPost("lots/split")] [RequirePermission(Permissions.InventoryEdit)] public Task<LotResult> Split(SplitInput r, CancellationToken ct) => inv.SplitLotAsync(r, ct);
+    /// <summary>Merges whole lots of one part and revision into a target lot.</summary>
+    [HttpPost("lots/merge")] [RequirePermission(Permissions.InventoryEdit)] public Task<LotResult> Merge(MergeInput r, CancellationToken ct) => inv.MergeLotsAsync(r, ct);
+    /// <summary>Work in process by work order, operation, location and status.</summary>
+    [HttpGet("wip")] [RequirePermission(Permissions.InventoryView)] public Task<List<WipRow>> Wip([FromQuery] Guid? siteId, [FromQuery] Guid? workOrderId, CancellationToken ct) => inv.WipAsync(siteId, workOrderId, ct);
+
     [HttpGet("transfers")] [RequirePermission(Permissions.InventoryView)] public Task<List<StockTransfer>> Transfers([FromQuery] TransferStatus? status, CancellationToken ct) => inv.TransfersAsync(status, ct);
     [HttpPost("transfers")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> CreateTransfer(TransferInput r, CancellationToken ct) { var t = await inv.CreateTransferAsync(r, ct); return new { t.Id, t.Number }; }
     [HttpGet("transfers/{id:guid}")] public Task<StockTransfer> Transfer(Guid id, CancellationToken ct) => inv.GetTransferAsync(id, ct);
