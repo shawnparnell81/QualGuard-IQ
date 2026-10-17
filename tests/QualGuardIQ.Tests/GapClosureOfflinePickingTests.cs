@@ -131,6 +131,59 @@ public sealed class GapClosureOfflinePickingTests(TestApp app)
         Assert.Empty((await w.A.GetElAsync("/api/shipping/my-picks")).GetProperty("lists").EnumerateArray());
     }
 
+    /// <summary>Two devices (or two tabs) replaying the same queue at once: one posting only, never a server error.</summary>
+    [Fact]
+    public async Task Concurrent_replays_and_competing_confirmations_post_exactly_once()
+    {
+        var w = await SetupAsync();
+        var part = await PartAsync(w, "VC-");
+        var lot = "LC-" + w.Tag;
+        var lotId = await StockAsync(w, part, 40m, lot);
+
+        // the same request id sent eight times in parallel
+        var (id, task) = await PickListAsync(w, part, 10m);
+        var rid = Guid.NewGuid().ToString();
+        var same = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => w.A.PostAsync($"/api/shipping/shipments/{id}/picks/{task.Id()}/confirm", Confirm(Code(w, "A1"), "QG:LOT:" + lot, 10m, rid))));
+        foreach (var r in same) Assert.True(r.StatusCode == HttpStatusCode.OK, $"replay returned {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
+        var outcomes = new List<int>();
+        foreach (var r in same) outcomes.Add(JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement.GetProperty("outcome").GetInt32());
+        Assert.Equal(1, outcomes.Count(o => o == 0));
+        Assert.Equal(7, outcomes.Count(o => o == 1));
+
+        // different request ids competing for one task: one accepted, the rest told the task is done
+        var (id2, task2) = await PickListAsync(w, part, 10m);
+        var rivals = await Task.WhenAll(Enumerable.Range(0, 6).Select(_ => w.A.PostAsync($"/api/shipping/shipments/{id2}/picks/{task2.Id()}/confirm", Confirm(Code(w, "A1"), "QG:LOT:" + lot, 10m))));
+        var codes = rivals.Select(r => r.StatusCode).ToList();
+        Assert.Equal(1, codes.Count(c => c == HttpStatusCode.OK));
+        Assert.Equal(5, codes.Count(c => c == HttpStatusCode.Conflict));
+
+        // stock moved once per task: 20 of 40 picked, nothing posted twice
+        Assert.Equal(2, (await w.Lead.GetElAsync($"/api/warehouse/ledger?lotId={lotId}")).EnumerateArray().Count(x => x.Int("kind") == (int)QualGuardIQ.Domain.Quality.InventoryTxKind.Pick));
+        Assert.Equal(20m, (await w.Lead.GetElAsync($"/api/warehouse/stock?locationId={w.Loc["SHIP"]}")).EnumerateArray().Sum(r => r.GetProperty("onHand").GetDecimal()));
+        Assert.Equal(1, (await Log(w, id)).Count(x => x.Int("outcome") == 0));
+        Assert.Equal(1, (await Log(w, id2)).Count(x => x.Int("outcome") == 0));
+    }
+
+    /// <summary>An offline scan move replayed by two tabs at once moves the stock once and both get the same answer.</summary>
+    [Fact]
+    public async Task Concurrent_replays_of_an_offline_move_post_once()
+    {
+        var w = await SetupAsync();
+        var part = await PartAsync(w, "VM-");
+        var lot = "LM-" + w.Tag;
+        var lotId = await StockAsync(w, part, 12m, lot);
+        var rid = Guid.NewGuid().ToString();
+        var body = new { item = "QG:LOT:" + lot, from = "QG:LOC:" + Code(w, "A1"), to = "QG:LOC:" + Code(w, "B1"), quantity = 5m, clientRequestId = rid };
+        var replies = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => w.A.PostAsync("/api/warehouse/moves/scan", body)));
+        foreach (var r in replies) Assert.True(r.StatusCode == HttpStatusCode.OK, $"replay returned {(int)r.StatusCode}: {await r.Content.ReadAsStringAsync()}");
+        var numbers = new HashSet<string>();
+        foreach (var r in replies) numbers.Add(JsonDocument.Parse(await r.Content.ReadAsStringAsync()).RootElement.GetProperty("number").GetString()!);
+        Assert.Single(numbers);
+        Assert.Equal(1, (await w.Lead.GetElAsync($"/api/warehouse/ledger?lotId={lotId}")).EnumerateArray().Count(x => x.Int("kind") == (int)QualGuardIQ.Domain.Quality.InventoryTxKind.Transfer));
+        Assert.Equal(5m, (await w.Lead.GetElAsync($"/api/warehouse/stock?locationId={w.Loc["B1"]}")).EnumerateArray().Sum(r => r.GetProperty("onHand").GetDecimal()));
+        Assert.Equal(7m, (await w.Lead.GetElAsync($"/api/warehouse/stock?locationId={w.Loc["A1"]}")).EnumerateArray().Sum(r => r.GetProperty("onHand").GetDecimal()));
+    }
+
     [Fact]
     public async Task Work_changed_while_offline_is_refused_with_a_conflict()
     {
