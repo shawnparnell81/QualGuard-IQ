@@ -120,3 +120,21 @@ released plans revised in the same step, history and audit).
 - A row is a Duplicate when the plan (or an earlier row) already has the same step and characteristic.
 
 The new columns (operation, process characteristic, tolerance, inspection equipment, owner) can also be edited in the plan's line editor.
+
+## Customer and supplier portals
+
+Portal accounts are created by a portal administrator (**Admin → Portal accounts**) for one customer or one supplier. A portal account
+signs in on the normal sign-in page and sees only the portal of its kind:
+
+- **Customer portal**: the customer's own complaints (number, your reference, dates, status), our response and root cause once the
+  response has been sent, the linked corrective actions (number, title and status only, also only after the response), messages and
+  evidence files; and a twelve-month quality report.
+- **Supplier portal**: the supplier's own corrective action requests (SCARs) and nonconformances, the SCAR response form while the SCAR
+  is waiting for the supplier (issued, or returned after a rejected answer), messages and evidence files, the supplier's scorecard and
+  recent inspected lots, and audits linked to the supplier once they are in reporting or closed, with their findings.
+
+Every portal page has its own address (`/portal/complaints/<id>`, `/portal/scars/<id>`, `/portal/scorecard`, …) so links can be
+bookmarked. A link to another party's record shows "This record was not found, or it is not shared with your organization", and the
+API answers 404 for it, so its existence is not revealed. Portal accounts cannot call any staff API (403). Evidence uploaded by one
+contact is visible to the other contacts of the same customer or supplier; files uploaded by staff are not shown in the portal.
+**Sign out** ends the session and returns to the sign-in page; a deactivated account loses access immediately.

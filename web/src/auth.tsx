@@ -37,8 +37,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout: async () => {
       await post('/api/auth/logout');
       resetCsrf();
-      qc.clear();
-      await qc.invalidateQueries({ queryKey: ['me'] });
+      // Signed out: show the sign-in page at once (me = null), then drop every cached query so no record data outlives the session.
+      // Clearing the cache alone left the mounted shell on screen with its queries failing with 401.
+      await qc.cancelQueries();
+      qc.setQueryData(['me'], null);
+      qc.removeQueries({ predicate: (x) => x.queryKey[0] !== 'me' });
     },
   };
   return <Ctx.Provider value={state}>{children}</Ctx.Provider>;
