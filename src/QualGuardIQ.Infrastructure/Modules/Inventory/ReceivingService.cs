@@ -54,6 +54,10 @@ public sealed partial class ReceivingService(AppDbContext db, ModuleSupport m, I
         var channel = r.Channel?.Trim() is { Length: > 0 } ch ? ch switch { "ScanStation" or "Desktop" or "Integration" => ch, _ => throw new AppException("Channel is Desktop, ScanStation or Integration.") } : "Desktop";
         // offline replay: a line request id already posted means this receipt was booked; return it instead of receiving twice
         var replayIds = r.Lines.Select(l => l.ClientRequestId).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+        // two replays of the same offline receipt (two tabs, a retry racing the first post) wait for each other, so only one books it
+        await using var replayTx = replayIds.Count > 0 ? await db.Database.BeginTransactionAsync(ct) : null;
+        foreach (var rid in replayIds.Distinct().Order(StringComparer.Ordinal))
+            await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"inventory-request:" + rid}, 0))", ct);
         if (replayIds.Count > 0 && await db.InventoryTransactions.AsNoTracking().Where(x => replayIds.Contains(x.ClientRequestId) && x.RefType == ReceiptType).Select(x => x.RefId).FirstOrDefaultAsync(ct) is { } prior
             && await db.Receipts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == prior, ct) is { } booked)
             return booked;
@@ -73,7 +77,8 @@ public sealed partial class ReceivingService(AppDbContext db, ModuleSupport m, I
         var supplierId = r.SupplierId ?? po?.SupplierId;
         if (r.Kind is ReceiptKind.PurchaseOrder or ReceiptKind.SupplierDelivery or ReceiptKind.Asn && supplierId is null) throw new AppException("Select the supplier.");
         if (po is not null && supplierId != po.SupplierId) throw new AppException($"PO {po.Number} is with a different supplier.");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var ownTx = replayTx is null ? await db.Database.BeginTransactionAsync(ct) : null;
+        var tx = replayTx ?? ownTx!;
         var rc = new Receipt
         {
             Number = await numbers.NextAsync(ReceiptType, r.SiteId, ct), Kind = r.Kind, Status = ReceiptStatus.Received, SupplierId = supplierId, PurchaseOrderId = po?.Id, PurchaseOrderNumber = po?.Number,
