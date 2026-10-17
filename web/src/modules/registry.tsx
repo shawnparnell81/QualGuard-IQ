@@ -8,6 +8,7 @@ import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
 import SpeedOutlined from '@mui/icons-material/SpeedOutlined';
 import LocalShippingOutlined from '@mui/icons-material/LocalShippingOutlined';
 import SupportAgentOutlined from '@mui/icons-material/SupportAgentOutlined';
+import RuleOutlined from '@mui/icons-material/RuleOutlined';
 
 export interface NavItem { label: string; path: string; permission?: string; children?: NavItem[] }
 export interface ModuleDef {
@@ -163,6 +164,25 @@ export const modules: ModuleDef[] = [
         { label: 'All SCARs', path: '/suppliers/scar?all=1' },
       ] },
       { label: 'Periodic reviews due', path: '/suppliers/reviews-due' },
+    ],
+  },
+  {
+    key: 'inspection',
+    label: 'Inspection',
+    description: 'Revision-controlled inspection and test plans, receiving / in-process / final inspection, release and rejection',
+    icon: <RuleOutlined fontSize="small" />,
+    basePath: '/inspection',
+    permissions: ['inspection.view'],
+    sidebar: [
+      { label: 'Inspections', path: '/inspection', children: [
+        { label: 'Awaiting decision', path: '/inspection' },
+        { label: 'Failed', path: '/inspection?view=2' },
+        { label: 'All inspections', path: '/inspection?view=all' },
+      ] },
+      { label: 'Plans', path: '/inspection/plans', children: [
+        { label: 'All plans', path: '/inspection/plans' },
+        { label: 'New plan', path: '/inspection/plans/new', permission: 'inspection.edit' },
+      ] },
     ],
   },
   {

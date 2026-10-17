@@ -50,6 +50,11 @@ const CustomerDetail = lazy(() => import('./pages/Products').then((m) => ({ defa
 const SupplierList = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierList })));
 const SupplierNew = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierNew })));
 const SupplierDetail = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierDetail })));
+const InspectionList = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.InspectionList })));
+const InspectionDetail = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.InspectionDetail })));
+const PlanList = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.PlanList })));
+const PlanNew = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.PlanNew })));
+const PlanDetail = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.PlanDetail })));
 const ComplaintList = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintList })));
 const ComplaintNew = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintNew })));
 const ComplaintDetail = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintDetail })));
@@ -136,6 +141,11 @@ export function App() {
               <Route path="/suppliers" element={<SupplierList />} />
               <Route path="/suppliers/new" element={<SupplierNew />} />
               <Route path="/suppliers/scar" element={<ScarList />} />
+              <Route path="/inspection" element={<InspectionList />} />
+              <Route path="/inspection/plans" element={<PlanList />} />
+              <Route path="/inspection/plans/new" element={<PlanNew />} />
+              <Route path="/inspection/plans/:id" element={<PlanDetail />} />
+              <Route path="/inspection/:id" element={<InspectionDetail />} />
               <Route path="/complaints" element={<ComplaintList />} />
               <Route path="/complaints/new" element={<ComplaintNew />} />
               <Route path="/complaints/trends" element={<ComplaintTrends />} />
