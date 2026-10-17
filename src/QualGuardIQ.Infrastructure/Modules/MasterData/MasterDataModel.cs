@@ -15,6 +15,9 @@ public partial class AppDbContext
     public DbSet<SupplierContact> SupplierContacts => Set<SupplierContact>();
     public DbSet<SupplierCertification> SupplierCertifications => Set<SupplierCertification>();
     public DbSet<SupplierOverride> SupplierOverrides => Set<SupplierOverride>();
+    public DbSet<SupplierCorrectiveAction> SupplierCorrectiveActions => Set<SupplierCorrectiveAction>();
+    public DbSet<SupplierPerformance> SupplierPerformance => Set<SupplierPerformance>();
+    public DbSet<SupplierReview> SupplierReviews => Set<SupplierReview>();
 
     private static void ConfigureMasterData(ModelBuilder b)
     {
@@ -117,6 +120,48 @@ public partial class AppDbContext
             e.HasIndex(x => x.SupplierId);
             e.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+    
+        b.Entity<SupplierCorrectiveAction>(e =>
+        {
+            e.ToTable("supplier_corrective_actions");
+            e.Property(x => x.Number).HasMaxLength(40).IsRequired();
+            e.Property(x => x.Title).HasMaxLength(300).IsRequired();
+            e.Property(x => x.Problem).HasMaxLength(10000).IsRequired();
+            foreach (var n in new[] { nameof(SupplierCorrectiveAction.SupplierContainment), nameof(SupplierCorrectiveAction.SupplierRootCause), nameof(SupplierCorrectiveAction.CorrectiveActionPlan),
+                nameof(SupplierCorrectiveAction.ReviewNotes), nameof(SupplierCorrectiveAction.EffectivenessNotes) })
+                e.Property(n).HasMaxLength(4000);
+            e.Property(x => x.SupplierRespondent).HasMaxLength(200);
+            e.HasIndex(x => x.Number).IsUnique();
+            e.HasIndex(x => new { x.SupplierId, x.Status });
+            e.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<QualGuardIQ.Domain.Quality.Ncr>().WithMany().HasForeignKey(x => x.NcrId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+            e.ToTable(t => t.HasCheckConstraint("ck_scar_due", "\"ResponseDueOn\" >= \"IssuedOn\""));
+        });
+        Scoped<SupplierCorrectiveAction>(b);
+        b.Entity<SupplierPerformance>(e =>
+        {
+            e.ToTable("supplier_performance");
+            e.Property(x => x.Comments).HasMaxLength(2000);
+            foreach (var n in new[] { nameof(QualGuardIQ.Domain.MasterData.SupplierPerformance.QualityScore), nameof(QualGuardIQ.Domain.MasterData.SupplierPerformance.DeliveryScore), nameof(QualGuardIQ.Domain.MasterData.SupplierPerformance.ResponsivenessScore), nameof(QualGuardIQ.Domain.MasterData.SupplierPerformance.OverallScore) })
+                e.Property(n).HasPrecision(5, 1);
+            e.HasIndex(x => new { x.SupplierId, x.PeriodStart, x.PeriodEnd }).IsUnique();
+            e.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_perf_period", "\"PeriodEnd\" >= \"PeriodStart\"");
+                t.HasCheckConstraint("ck_perf_counts", "\"LotsRejected\" BETWEEN 0 AND \"LotsReceived\" AND \"OnTimeDeliveries\" BETWEEN 0 AND \"Deliveries\"");
+            });
+        });
+        b.Entity<SupplierReview>(e =>
+        {
+            e.ToTable("supplier_reviews");
+            e.Property(x => x.Summary).HasMaxLength(4000).IsRequired();
+            e.Property(x => x.OverallScore).HasPrecision(5, 1);
+            e.HasIndex(x => new { x.SupplierId, x.ReviewedOn });
+            e.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.ReviewerId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

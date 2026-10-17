@@ -137,3 +137,59 @@ public sealed class NcrTraceabilityTests(TestApp app)
         Assert.Equal(1, c.GetProperty("team").GetArrayLength());
     }
 }
+
+[Collection("api")]
+public sealed class SupplierQualityScenarioTests(TestApp app)
+{
+    /// <summary>Prompt 2 scenario 1: qualify, approve scope, certification, supplier NCR, SCAR, response, effectiveness, performance, periodic review.</summary>
+    [Fact]
+    public async Task Scenario1_supplier_quality_end_to_end()
+    {
+        var today = TestDates.Today;
+        var site = await app.CreateSiteAsync();
+        var (sqeId, sqe) = await app.CreateUserAsync([Permissions.SuppliersView, Permissions.SuppliersEdit, Permissions.NcrView, Permissions.NcrEdit], site);
+        var (_, mgr) = await app.CreateUserAsync([Permissions.SuppliersView, Permissions.SuppliersApprove, Permissions.NcrView], site);
+        var (_, other) = await app.CreateUserAsync([Permissions.SuppliersView, Permissions.SuppliersEdit], await app.CreateSiteAsync());
+        var code = "S" + Guid.NewGuid().ToString("N")[..8];
+        var sid = (await (await sqe.PostOkAsync("/api/suppliers", new { code, legalName = "Coil Springs Ltd", category = "Springs", criticality = 2, risk = 1, siteId = site })).JsonAsync()).Id();
+        Assert.Equal(HttpStatusCode.NoContent, (await sqe.PostAsync($"/api/suppliers/{sid}/request-approval", new { proposedStatus = 2, scope = "Compression springs, music wire" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await mgr.SignAsync(await mgr.PendingApprovalIdAsync(code))).StatusCode);
+        await sqe.PostOkAsync($"/api/suppliers/{sid}/certifications", new { standard = "ISO 9001:2015", expiresOn = today.AddYears(2) });
+
+        var ncrId = (await (await sqe.PostOkAsync("/api/ncrs", new { title = "Free length short", description = "Free length 41.2 vs 42.0 ±0.5", source = "Supplier", siteId = site, detectedOn = today, severity = 1, details = new { supplierId = sid } })).JsonAsync()).Id();
+        Assert.Equal(HttpStatusCode.BadRequest, (await sqe.PostAsync("/api/suppliers/scars", new { supplierId = sid, ncrId, title = "x", problem = "y", responseDueOn = today.AddDays(-1) })).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsync("/api/suppliers/scars", new { supplierId = sid, title = "x", problem = "y", responseDueOn = today.AddDays(5) })).StatusCode);
+        var scar = await (await sqe.PostOkAsync("/api/suppliers/scars", new { supplierId = sid, ncrId, title = "Free length out of tolerance", problem = "Lot 778 free length short on 30%", responseDueOn = today.AddDays(14) })).JsonAsync();
+        var scarId = scar.Id();
+        Assert.StartsWith("SCAR-", scar.Str("number"));
+        var links = await sqe.GetElAsync($"/api/records/Ncr/{ncrId}/links");
+        Assert.Contains(scar.Str("number"), links.ToString());
+
+        Assert.Equal(HttpStatusCode.Conflict, (await sqe.PostAsync($"/api/suppliers/scars/{scarId}/review", new { accept = true, notes = "x" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await sqe.PostAsync($"/api/suppliers/scars/{scarId}/response", new { containment = "Sorted stock", rootCause = "Coiler setting drift", correctiveActionPlan = "SPC on coiler", respondent = "R. Hale", receivedOn = today })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await sqe.PostAsync($"/api/suppliers/scars/{scarId}/review", new { accept = false, notes = "Root cause not verified" })).StatusCode);
+        Assert.Equal(1, (await sqe.GetElAsync($"/api/suppliers/scars/{scarId}")).Int("responseRejections"));
+        Assert.Equal(HttpStatusCode.NoContent, (await sqe.PostAsync($"/api/suppliers/scars/{scarId}/response", new { containment = "Sorted stock", rootCause = "Worn feed roll caused drift; verified by trial", correctiveActionPlan = "Replace rolls; SPC on free length", respondent = "R. Hale", receivedOn = today })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await sqe.PostAsync($"/api/suppliers/scars/{scarId}/review", new { accept = true, notes = "Accepted" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await sqe.PostAsync($"/api/suppliers/scars/{scarId}/verify", new { effective = true, notes = "x" })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await mgr.PostAsync($"/api/suppliers/scars/{scarId}/verify", new { effective = true, notes = "Next 3 lots conforming" })).StatusCode);
+        Assert.Equal(3, (await sqe.GetElAsync($"/api/suppliers/scars/{scarId}")).Int("status"));
+
+        var perf = await (await sqe.PostOkAsync($"/api/suppliers/{sid}/performance", new { periodStart = today.AddDays(-30), periodEnd = today.AddDays(30), lotsReceived = 20, lotsRejected = 1, deliveries = 20, onTimeDeliveries = 18, comments = "Q4" })).JsonAsync();
+        Assert.Equal(95.0m, perf.GetProperty("qualityScore").GetDecimal());
+        Assert.Equal(90.0m, perf.GetProperty("deliveryScore").GetDecimal());
+        Assert.Equal(100.0m, perf.GetProperty("responsivenessScore").GetDecimal());
+        Assert.Equal(94.5m, perf.GetProperty("overallScore").GetDecimal()); // 0.5*95 + 0.3*90 + 0.2*100
+        Assert.Equal(1, perf.Int("ncrCount"));
+        Assert.Equal(HttpStatusCode.Conflict, (await sqe.PostAsync($"/api/suppliers/{sid}/performance", new { periodStart = today.AddDays(-30), periodEnd = today.AddDays(30), lotsReceived = 1, lotsRejected = 0, deliveries = 1, onTimeDeliveries = 1 })).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await sqe.PostAsync($"/api/suppliers/{sid}/performance", new { periodStart = today, periodEnd = today, lotsReceived = 1, lotsRejected = 2, deliveries = 0, onTimeDeliveries = 0 })).StatusCode);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await sqe.PostAsync($"/api/suppliers/{sid}/reviews", new { outcome = 0, summary = "OK", nextReviewOn = today.AddYears(1) })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await mgr.PostAsync($"/api/suppliers/{sid}/reviews", new { outcome = 0, summary = "Performance acceptable; SCAR closed effective", nextReviewOn = today.AddYears(1) })).StatusCode);
+        var s = await sqe.GetElAsync($"/api/suppliers/{sid}");
+        var review = s.GetProperty("reviews")[0];
+        Assert.Equal(94.5m, review.GetProperty("overallScore").GetDecimal());
+        Assert.Equal(1, review.Int("ncrsLast12Months"));
+        Assert.Equal(today.AddYears(1).ToString("yyyy-MM-dd"), s.Str("nextReviewOn"));
+    }
+}

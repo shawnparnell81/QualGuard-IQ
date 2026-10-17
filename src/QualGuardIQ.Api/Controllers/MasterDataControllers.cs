@@ -138,8 +138,73 @@ public sealed class MasterDataController(AppDbContext db, MasterDataService svc,
 }
 
 [ApiController, Authorize, Route("api/suppliers")]
-public sealed class SuppliersController(AppDbContext db, SupplierService svc, ModuleSupport m) : ControllerBase
+public sealed class SuppliersController(AppDbContext db, SupplierService svc, SupplierQualityService quality, ModuleSupport m) : ControllerBase
 {
+    [HttpGet("scars")]
+    [RequirePermission(Permissions.SuppliersView)]
+    public async Task<object> Scars([FromQuery] ScarStatus? status, [FromQuery] bool openOnly = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    {
+        var query = await m.ScopeAsync(db.SupplierCorrectiveActions.AsNoTracking(), Permissions.SuppliersView, ct);
+        if (status is not null) query = query.Where(x => x.Status == status);
+        if (openOnly) query = query.Where(x => x.Status != ScarStatus.Closed && x.Status != ScarStatus.Cancelled);
+        return await Paging.PageAsync(query.OrderByDescending(x => x.CreatedAt).Select(x => new
+        {
+            x.Id, x.Number, x.Title, x.Status, x.IssuedOn, x.ResponseDueOn, x.ResponseReceivedOn, x.ResponseRejections,
+            Supplier = db.Suppliers.Where(s => s.Id == x.SupplierId).Select(s => s.Code + " " + s.LegalName).First(),
+            OwnerName = db.Users.Where(u => u.Id == x.OwnerId).Select(u => u.DisplayName).First()
+        }), page, pageSize, ct);
+    }
+
+    [HttpPost("scars")]
+    [RequirePermission(Permissions.SuppliersEdit)]
+    public async Task<object> IssueScar(IssueScarRequest r, CancellationToken ct) { var c = await quality.IssueScarAsync(r, ct); return new { c.Id, c.Number }; }
+
+    [HttpGet("scars/{id:guid}")]
+    public async Task<object> Scar(Guid id, CancellationToken ct)
+    {
+        await m.ViewAsync(SupplierQualityService.ScarType, id, ct);
+        var c = await db.SupplierCorrectiveActions.AsNoTracking().FirstAsync(x => x.Id == id, ct);
+        var canEdit = await m.CanAsync(Permissions.SuppliersEdit, c.SiteId, c.DepartmentId, ct);
+        var canVerify = c.OwnerId != m.UserId && await m.CanAsync(Permissions.SuppliersApprove, c.SiteId, c.DepartmentId, ct);
+        var allowed = Allowed.Of(("respond", canEdit && c.Status == ScarStatus.Issued), ("review", canEdit && c.Status == ScarStatus.ResponseReceived), ("verify", canVerify && c.Status == ScarStatus.Verification));
+        return new
+        {
+            c.Id, c.Number, c.SupplierId, c.NcrId, c.Title, c.Problem, c.IssuedOn, c.ResponseDueOn, c.Status, c.SupplierContainment, c.SupplierRootCause, c.CorrectiveActionPlan, c.SupplierRespondent,
+            c.ResponseReceivedOn, c.ResponseRejections, c.ReviewNotes, c.EffectivenessNotes, c.WasEffective, c.ClosedAt, c.CreatedAt,
+            Supplier = await db.Suppliers.Where(s => s.Id == c.SupplierId).Select(s => new { s.Id, s.Code, s.LegalName }).FirstAsync(ct),
+            Ncr = c.NcrId == null ? null : await db.Ncrs.Where(n => n.Id == c.NcrId).Select(n => new { n.Id, n.Number, n.Title }).FirstAsync(ct),
+            OwnerName = await db.Users.Where(u => u.Id == c.OwnerId).Select(u => u.DisplayName).FirstAsync(ct),
+            VerifiedByName = c.VerifiedById == null ? null : await db.Users.Where(u => u.Id == c.VerifiedById).Select(u => u.DisplayName).FirstAsync(ct),
+            CanEdit = canEdit, Allowed = allowed
+        };
+    }
+
+    [HttpPost("scars/{id:guid}/response")]
+    public async Task<IActionResult> ScarResponse(Guid id, ScarResponseRequest r, CancellationToken ct) { await quality.RecordResponseAsync(id, r, ct); return NoContent(); }
+
+    [HttpPost("scars/{id:guid}/review")]
+    public async Task<IActionResult> ScarReview(Guid id, ScarReviewRequest r, CancellationToken ct) { await quality.ReviewResponseAsync(id, r, ct); return NoContent(); }
+
+    [HttpPost("scars/{id:guid}/verify")]
+    public async Task<IActionResult> ScarVerify(Guid id, ScarVerifyRequest r, CancellationToken ct) { await quality.VerifyAsync(id, r, ct); return NoContent(); }
+
+    [HttpPost("{id:guid}/performance")]
+    public async Task<object> RecordPerformance(Guid id, PerformanceRequest r, CancellationToken ct) => await quality.RecordPerformanceAsync(id, r, ct);
+
+    [HttpPost("{id:guid}/reviews")]
+    public async Task<object> RecordReview(Guid id, SupplierReviewRequest r, CancellationToken ct) { var x = await quality.RecordReviewAsync(id, r, ct); return new { x.Id }; }
+
+    /// <summary>Suppliers whose periodic review is due within the given number of days (or overdue).</summary>
+    [HttpGet("reviews-due")]
+    [RequirePermission(Permissions.SuppliersView)]
+    public async Task<object> ReviewsDue([FromQuery] int days = 30, CancellationToken ct = default)
+    {
+        var query = await m.ScopeAsync(db.Suppliers.AsNoTracking(), Permissions.SuppliersView, ct);
+        var limit = (await m.TodayAsync(null, ct)).AddDays(Math.Clamp(days, 0, 365));
+        return await query.Where(s => s.NextReviewOn != null && s.NextReviewOn <= limit && s.Status != SupplierStatus.Disqualified && s.Status != SupplierStatus.Prospective)
+            .OrderBy(s => s.NextReviewOn).Select(s => new { s.Id, s.Code, s.LegalName, s.Status, s.NextReviewOn, s.Criticality }).ToListAsync(ct);
+    }
+
     [HttpGet]
     [RequirePermission(Permissions.SuppliersView)]
     public async Task<object> List([FromQuery] string? q, [FromQuery] SupplierStatus? status, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
@@ -172,7 +237,9 @@ public sealed class SuppliersController(AppDbContext db, SupplierService svc, Mo
         var st = s.Status;
         var allowed = Allowed.Of(("edit", canEdit), ("requestApproval", canEdit && st != SupplierStatus.PendingApproval),
             ("suspend", canApprove && st is SupplierStatus.Approved or SupplierStatus.Conditional),
-            ("disqualify", canApprove && st != SupplierStatus.Disqualified && st != SupplierStatus.PendingApproval));
+            ("disqualify", canApprove && st != SupplierStatus.Disqualified && st != SupplierStatus.PendingApproval),
+            ("scar", canEdit), ("performance", canEdit),
+            ("review", canApprove && st is SupplierStatus.Approved or SupplierStatus.Conditional or SupplierStatus.Suspended or SupplierStatus.Disqualified));
         var ncrQ = await m.TryScopeAsync(db.Ncrs.AsNoTracking(), Permissions.NcrView, ct);
         var ncrScope = ncrQ is null ? null
             : await ncrQ.Where(n => n.SupplierId == id).OrderByDescending(n => n.CreatedAt).Take(50).Select(n => new { n.Id, n.Number, n.Title, n.Status, n.DetectedOn }).ToListAsync(ct);
@@ -186,6 +253,10 @@ public sealed class SuppliersController(AppDbContext db, SupplierService svc, Mo
             Overrides = await db.SupplierOverrides.Where(o => o.SupplierId == id).OrderByDescending(o => o.CreatedAt).Take(50)
                 .Select(o => new { o.Id, o.RecordType, o.RecordId, o.Condition, o.Reason, o.CreatedAt, UserName = db.Users.Where(u => u.Id == o.UserId).Select(u => u.DisplayName).First() }).ToListAsync(ct),
             Check = await svc.CheckAsync(id, ct),
+            Scars = await db.SupplierCorrectiveActions.Where(c => c.SupplierId == id).OrderByDescending(c => c.CreatedAt).Select(c => new { c.Id, c.Number, c.Title, c.Status, c.ResponseDueOn, c.ResponseReceivedOn }).ToListAsync(ct),
+            Performance = await db.SupplierPerformance.Where(p => p.SupplierId == id).OrderByDescending(p => p.PeriodEnd).ToListAsync(ct),
+            Reviews = await db.SupplierReviews.Where(r => r.SupplierId == id).OrderByDescending(r => r.ReviewedOn).ThenByDescending(r => r.CreatedAt)
+                .Select(r => new { r.Id, r.ReviewedOn, r.Outcome, r.Summary, r.OverallScore, r.OpenScars, r.NcrsLast12Months, r.NextReviewOn, ReviewerName = db.Users.Where(u => u.Id == r.ReviewerId).Select(u => u.DisplayName).First() }).ToListAsync(ct),
             Ncrs = ncrScope,
             CanEdit = canEdit, CanApprove = canApprove, Allowed = allowed
         };
