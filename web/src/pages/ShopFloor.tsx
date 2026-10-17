@@ -346,7 +346,7 @@ export function ShopFloorEntry() {
           {entryKind.map((k, i) => <ToggleButton key={k} value={i}>{k}</ToggleButton>)}
         </ToggleButtonGroup>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
-          <TextField select label="Work order" value={woId} onChange={(e) => setWoId(e.target.value)} sx={big}><MenuItem value="">None</MenuItem>{(wos.data ?? []).filter((w) => w.status < 3 || w.status === 6).map((w) => <MenuItem key={w.id} value={w.id}>{w.number} · {w.itemNumber}</MenuItem>)}</TextField>
+          <TextField select label="Work order" value={woId} onChange={(e) => setWoId(e.target.value)} sx={big}><MenuItem value="">None</MenuItem>{woId && !(wos.data ?? []).some((w) => w.id === woId && (w.status < 3 || w.status === 6)) && <MenuItem value={woId}>{wo.data?.workOrder.number ?? (wos.isLoading ? 'Loading…' : 'Work order not open for entries')}</MenuItem>}{(wos.data ?? []).filter((w) => w.status < 3 || w.status === 6).map((w) => <MenuItem key={w.id} value={w.id}>{w.number} · {w.itemNumber}</MenuItem>)}</TextField>
           <TextField select label="Operation" value={v.op} onChange={set('op')} sx={big} disabled={!wo.data}><MenuItem value="">—</MenuItem>{(wo.data?.operations ?? []).map((o) => <MenuItem key={o.id} value={String(o.sequence)}>{o.sequence} · {o.name}</MenuItem>)}</TextField>
           {kind === 0 && <>
             <TextField label="Good" type="number" value={v.good} onChange={set('good')} sx={big} />
