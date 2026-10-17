@@ -1,0 +1,805 @@
+{
+ "note": "Clause numbers and short titles only. No standard text is included; obtain the standards from their publishers.",
+ "packs": [
+  {
+   "code": "ISO9001",
+   "name": "ISO 9001:2015",
+   "source": "Industry",
+   "clauses": [
+    {
+     "ref": "4.1",
+     "title": "Understanding the organization and its context"
+    },
+    {
+     "ref": "4.2",
+     "title": "Needs and expectations of interested parties"
+    },
+    {
+     "ref": "4.3",
+     "title": "Scope of the QMS"
+    },
+    {
+     "ref": "4.4",
+     "title": "QMS and its processes"
+    },
+    {
+     "ref": "5.1",
+     "title": "Leadership and commitment"
+    },
+    {
+     "ref": "5.2",
+     "title": "Policy"
+    },
+    {
+     "ref": "5.3",
+     "title": "Roles, responsibilities and authorities"
+    },
+    {
+     "ref": "6.1",
+     "title": "Actions to address risks and opportunities"
+    },
+    {
+     "ref": "6.2",
+     "title": "Quality objectives and planning"
+    },
+    {
+     "ref": "6.3",
+     "title": "Planning of changes"
+    },
+    {
+     "ref": "7.1",
+     "title": "Resources"
+    },
+    {
+     "ref": "7.2",
+     "title": "Competence"
+    },
+    {
+     "ref": "7.3",
+     "title": "Awareness"
+    },
+    {
+     "ref": "7.4",
+     "title": "Communication"
+    },
+    {
+     "ref": "7.5",
+     "title": "Documented information"
+    },
+    {
+     "ref": "8.1",
+     "title": "Operational planning and control"
+    },
+    {
+     "ref": "8.2",
+     "title": "Requirements for products and services"
+    },
+    {
+     "ref": "8.3",
+     "title": "Design and development"
+    },
+    {
+     "ref": "8.4",
+     "title": "Control of externally provided processes, products and services"
+    },
+    {
+     "ref": "8.5",
+     "title": "Production and service provision"
+    },
+    {
+     "ref": "8.6",
+     "title": "Release of products and services"
+    },
+    {
+     "ref": "8.7",
+     "title": "Control of nonconforming outputs"
+    },
+    {
+     "ref": "9.1",
+     "title": "Monitoring, measurement, analysis and evaluation"
+    },
+    {
+     "ref": "9.2",
+     "title": "Internal audit"
+    },
+    {
+     "ref": "9.3",
+     "title": "Management review"
+    },
+    {
+     "ref": "10.1",
+     "title": "Improvement - general"
+    },
+    {
+     "ref": "10.2",
+     "title": "Nonconformity and corrective action"
+    },
+    {
+     "ref": "10.3",
+     "title": "Continual improvement"
+    }
+   ]
+  },
+  {
+   "code": "IATF16949",
+   "name": "IATF 16949:2016 (ISO 9001 base + selected automotive clauses)",
+   "source": "Industry",
+   "clauses": [
+    {
+     "ref": "4.1",
+     "title": "Understanding the organization and its context"
+    },
+    {
+     "ref": "4.2",
+     "title": "Needs and expectations of interested parties"
+    },
+    {
+     "ref": "4.3",
+     "title": "Scope of the QMS"
+    },
+    {
+     "ref": "4.4",
+     "title": "QMS and its processes"
+    },
+    {
+     "ref": "5.1",
+     "title": "Leadership and commitment"
+    },
+    {
+     "ref": "5.2",
+     "title": "Policy"
+    },
+    {
+     "ref": "5.3",
+     "title": "Roles, responsibilities and authorities"
+    },
+    {
+     "ref": "6.1",
+     "title": "Actions to address risks and opportunities"
+    },
+    {
+     "ref": "6.2",
+     "title": "Quality objectives and planning"
+    },
+    {
+     "ref": "6.3",
+     "title": "Planning of changes"
+    },
+    {
+     "ref": "7.1",
+     "title": "Resources"
+    },
+    {
+     "ref": "7.2",
+     "title": "Competence"
+    },
+    {
+     "ref": "7.3",
+     "title": "Awareness"
+    },
+    {
+     "ref": "7.4",
+     "title": "Communication"
+    },
+    {
+     "ref": "7.5",
+     "title": "Documented information"
+    },
+    {
+     "ref": "8.1",
+     "title": "Operational planning and control"
+    },
+    {
+     "ref": "8.2",
+     "title": "Requirements for products and services"
+    },
+    {
+     "ref": "8.3",
+     "title": "Design and development"
+    },
+    {
+     "ref": "8.4",
+     "title": "Control of externally provided processes, products and services"
+    },
+    {
+     "ref": "8.5",
+     "title": "Production and service provision"
+    },
+    {
+     "ref": "8.6",
+     "title": "Release of products and services"
+    },
+    {
+     "ref": "8.7",
+     "title": "Control of nonconforming outputs"
+    },
+    {
+     "ref": "9.1",
+     "title": "Monitoring, measurement, analysis and evaluation"
+    },
+    {
+     "ref": "9.2",
+     "title": "Internal audit"
+    },
+    {
+     "ref": "9.3",
+     "title": "Management review"
+    },
+    {
+     "ref": "10.1",
+     "title": "Improvement - general"
+    },
+    {
+     "ref": "10.2",
+     "title": "Nonconformity and corrective action"
+    },
+    {
+     "ref": "10.3",
+     "title": "Continual improvement"
+    },
+    {
+     "ref": "4.4.1.2",
+     "title": "Product safety"
+    },
+    {
+     "ref": "7.1.5.1.1",
+     "title": "Measurement systems analysis"
+    },
+    {
+     "ref": "7.1.5.3",
+     "title": "Laboratory requirements"
+    },
+    {
+     "ref": "7.2.3",
+     "title": "Internal auditor competency"
+    },
+    {
+     "ref": "8.3.3.3",
+     "title": "Special characteristics"
+    },
+    {
+     "ref": "8.4.2.4",
+     "title": "Supplier monitoring"
+    },
+    {
+     "ref": "8.5.1.1",
+     "title": "Control plan"
+    },
+    {
+     "ref": "8.5.6.1",
+     "title": "Control of changes"
+    },
+    {
+     "ref": "8.7.1.4",
+     "title": "Control of reworked product"
+    },
+    {
+     "ref": "9.1.1.1",
+     "title": "Monitoring and measurement of manufacturing processes"
+    },
+    {
+     "ref": "9.2.2.3",
+     "title": "Manufacturing process audit"
+    },
+    {
+     "ref": "9.2.2.4",
+     "title": "Product audit"
+    },
+    {
+     "ref": "10.2.3",
+     "title": "Problem solving"
+    },
+    {
+     "ref": "10.2.4",
+     "title": "Error-proofing"
+    }
+   ]
+  },
+  {
+   "code": "AS9100",
+   "name": "AS9100D (ISO 9001 base + aerospace clauses)",
+   "source": "Industry",
+   "clauses": [
+    {
+     "ref": "4.1",
+     "title": "Understanding the organization and its context"
+    },
+    {
+     "ref": "4.2",
+     "title": "Needs and expectations of interested parties"
+    },
+    {
+     "ref": "4.3",
+     "title": "Scope of the QMS"
+    },
+    {
+     "ref": "4.4",
+     "title": "QMS and its processes"
+    },
+    {
+     "ref": "5.1",
+     "title": "Leadership and commitment"
+    },
+    {
+     "ref": "5.2",
+     "title": "Policy"
+    },
+    {
+     "ref": "5.3",
+     "title": "Roles, responsibilities and authorities"
+    },
+    {
+     "ref": "6.1",
+     "title": "Actions to address risks and opportunities"
+    },
+    {
+     "ref": "6.2",
+     "title": "Quality objectives and planning"
+    },
+    {
+     "ref": "6.3",
+     "title": "Planning of changes"
+    },
+    {
+     "ref": "7.1",
+     "title": "Resources"
+    },
+    {
+     "ref": "7.2",
+     "title": "Competence"
+    },
+    {
+     "ref": "7.3",
+     "title": "Awareness"
+    },
+    {
+     "ref": "7.4",
+     "title": "Communication"
+    },
+    {
+     "ref": "7.5",
+     "title": "Documented information"
+    },
+    {
+     "ref": "8.1",
+     "title": "Operational planning and control"
+    },
+    {
+     "ref": "8.2",
+     "title": "Requirements for products and services"
+    },
+    {
+     "ref": "8.3",
+     "title": "Design and development"
+    },
+    {
+     "ref": "8.4",
+     "title": "Control of externally provided processes, products and services"
+    },
+    {
+     "ref": "8.5",
+     "title": "Production and service provision"
+    },
+    {
+     "ref": "8.6",
+     "title": "Release of products and services"
+    },
+    {
+     "ref": "8.7",
+     "title": "Control of nonconforming outputs"
+    },
+    {
+     "ref": "9.1",
+     "title": "Monitoring, measurement, analysis and evaluation"
+    },
+    {
+     "ref": "9.2",
+     "title": "Internal audit"
+    },
+    {
+     "ref": "9.3",
+     "title": "Management review"
+    },
+    {
+     "ref": "10.1",
+     "title": "Improvement - general"
+    },
+    {
+     "ref": "10.2",
+     "title": "Nonconformity and corrective action"
+    },
+    {
+     "ref": "10.3",
+     "title": "Continual improvement"
+    },
+    {
+     "ref": "8.1.1",
+     "title": "Operational risk management"
+    },
+    {
+     "ref": "8.1.2",
+     "title": "Configuration management"
+    },
+    {
+     "ref": "8.1.3",
+     "title": "Product safety"
+    },
+    {
+     "ref": "8.1.4",
+     "title": "Prevention of counterfeit parts"
+    },
+    {
+     "ref": "8.5.1.3",
+     "title": "Production process verification"
+    }
+   ]
+  },
+  {
+   "code": "ISO13485",
+   "name": "ISO 13485:2016",
+   "source": "Industry",
+   "clauses": [
+    {
+     "ref": "4.1",
+     "title": "Quality management system - general requirements"
+    },
+    {
+     "ref": "4.2",
+     "title": "Documentation requirements"
+    },
+    {
+     "ref": "5.1",
+     "title": "Management commitment"
+    },
+    {
+     "ref": "5.2",
+     "title": "Customer focus"
+    },
+    {
+     "ref": "5.3",
+     "title": "Quality policy"
+    },
+    {
+     "ref": "5.4",
+     "title": "Planning"
+    },
+    {
+     "ref": "5.5",
+     "title": "Responsibility, authority and communication"
+    },
+    {
+     "ref": "5.6",
+     "title": "Management review"
+    },
+    {
+     "ref": "6.1",
+     "title": "Provision of resources"
+    },
+    {
+     "ref": "6.2",
+     "title": "Human resources"
+    },
+    {
+     "ref": "6.3",
+     "title": "Infrastructure"
+    },
+    {
+     "ref": "6.4",
+     "title": "Work environment and contamination control"
+    },
+    {
+     "ref": "7.1",
+     "title": "Planning of product realization"
+    },
+    {
+     "ref": "7.2",
+     "title": "Customer-related processes"
+    },
+    {
+     "ref": "7.3",
+     "title": "Design and development"
+    },
+    {
+     "ref": "7.4",
+     "title": "Purchasing"
+    },
+    {
+     "ref": "7.5",
+     "title": "Production and service provision"
+    },
+    {
+     "ref": "7.6",
+     "title": "Control of monitoring and measuring equipment"
+    },
+    {
+     "ref": "8.1",
+     "title": "Measurement, analysis and improvement - general"
+    },
+    {
+     "ref": "8.2",
+     "title": "Monitoring and measurement"
+    },
+    {
+     "ref": "8.3",
+     "title": "Control of nonconforming product"
+    },
+    {
+     "ref": "8.4",
+     "title": "Analysis of data"
+    },
+    {
+     "ref": "8.5",
+     "title": "Improvement"
+    }
+   ]
+  },
+  {
+   "code": "ISO17025",
+   "name": "ISO/IEC 17025:2017",
+   "source": "Industry",
+   "clauses": [
+    {
+     "ref": "4.1",
+     "title": "Impartiality"
+    },
+    {
+     "ref": "4.2",
+     "title": "Confidentiality"
+    },
+    {
+     "ref": "5",
+     "title": "Structural requirements"
+    },
+    {
+     "ref": "6.2",
+     "title": "Personnel"
+    },
+    {
+     "ref": "6.3",
+     "title": "Facilities and environmental conditions"
+    },
+    {
+     "ref": "6.4",
+     "title": "Equipment"
+    },
+    {
+     "ref": "6.5",
+     "title": "Metrological traceability"
+    },
+    {
+     "ref": "6.6",
+     "title": "Externally provided products and services"
+    },
+    {
+     "ref": "7.1",
+     "title": "Review of requests, tenders and contracts"
+    },
+    {
+     "ref": "7.2",
+     "title": "Selection, verification and validation of methods"
+    },
+    {
+     "ref": "7.3",
+     "title": "Sampling"
+    },
+    {
+     "ref": "7.4",
+     "title": "Handling of test or calibration items"
+    },
+    {
+     "ref": "7.5",
+     "title": "Technical records"
+    },
+    {
+     "ref": "7.6",
+     "title": "Evaluation of measurement uncertainty"
+    },
+    {
+     "ref": "7.7",
+     "title": "Ensuring the validity of results"
+    },
+    {
+     "ref": "7.8",
+     "title": "Reporting of results"
+    },
+    {
+     "ref": "7.9",
+     "title": "Complaints"
+    },
+    {
+     "ref": "7.10",
+     "title": "Nonconforming work"
+    },
+    {
+     "ref": "7.11",
+     "title": "Control of data and information management"
+    },
+    {
+     "ref": "8.2",
+     "title": "Management system documentation"
+    },
+    {
+     "ref": "8.3",
+     "title": "Control of management system documents"
+    },
+    {
+     "ref": "8.4",
+     "title": "Control of records"
+    },
+    {
+     "ref": "8.5",
+     "title": "Actions to address risks and opportunities"
+    },
+    {
+     "ref": "8.6",
+     "title": "Improvement"
+    },
+    {
+     "ref": "8.7",
+     "title": "Corrective actions"
+    },
+    {
+     "ref": "8.8",
+     "title": "Internal audits"
+    },
+    {
+     "ref": "8.9",
+     "title": "Management reviews"
+    }
+   ]
+  },
+  {
+   "code": "FDA820",
+   "name": "FDA 21 CFR Part 820 (QMSR)",
+   "source": "Regulatory",
+   "clauses": [
+    {
+     "ref": "820.1",
+     "title": "Scope"
+    },
+    {
+     "ref": "820.3",
+     "title": "Definitions"
+    },
+    {
+     "ref": "820.7",
+     "title": "Incorporation by reference"
+    },
+    {
+     "ref": "820.10",
+     "title": "Requirements for a quality management system"
+    },
+    {
+     "ref": "820.35",
+     "title": "Control of records"
+    },
+    {
+     "ref": "820.45",
+     "title": "Device labeling and packaging controls"
+    }
+   ]
+  },
+  {
+   "code": "FDAPART11",
+   "name": "FDA 21 CFR Part 11",
+   "source": "Regulatory",
+   "clauses": [
+    {
+     "ref": "11.10(a)",
+     "title": "Validation of systems"
+    },
+    {
+     "ref": "11.10(b)",
+     "title": "Accurate and complete copies of records"
+    },
+    {
+     "ref": "11.10(c)",
+     "title": "Protection of records"
+    },
+    {
+     "ref": "11.10(d)",
+     "title": "Limiting system access"
+    },
+    {
+     "ref": "11.10(e)",
+     "title": "Audit trails"
+    },
+    {
+     "ref": "11.10(f)",
+     "title": "Operational system checks"
+    },
+    {
+     "ref": "11.10(g)",
+     "title": "Authority checks"
+    },
+    {
+     "ref": "11.10(h)",
+     "title": "Device checks"
+    },
+    {
+     "ref": "11.10(i)",
+     "title": "Training of personnel"
+    },
+    {
+     "ref": "11.10(j)",
+     "title": "Accountability policies for signatures"
+    },
+    {
+     "ref": "11.10(k)",
+     "title": "Control of system documentation"
+    },
+    {
+     "ref": "11.30",
+     "title": "Controls for open systems"
+    },
+    {
+     "ref": "11.50",
+     "title": "Signature manifestations"
+    },
+    {
+     "ref": "11.70",
+     "title": "Signature/record linking"
+    },
+    {
+     "ref": "11.100",
+     "title": "Electronic signatures - general requirements"
+    },
+    {
+     "ref": "11.200",
+     "title": "Electronic signature components and controls"
+    },
+    {
+     "ref": "11.300",
+     "title": "Controls for identification codes/passwords"
+    }
+   ]
+  },
+  {
+   "code": "GMP",
+   "name": "Current Good Manufacturing Practice (21 CFR 211, subpart level)",
+   "source": "Regulatory",
+   "clauses": [
+    {
+     "ref": "211 Subpart B",
+     "title": "Organization and personnel"
+    },
+    {
+     "ref": "211 Subpart C",
+     "title": "Buildings and facilities"
+    },
+    {
+     "ref": "211 Subpart D",
+     "title": "Equipment"
+    },
+    {
+     "ref": "211 Subpart E",
+     "title": "Control of components and drug product containers and closures"
+    },
+    {
+     "ref": "211 Subpart F",
+     "title": "Production and process controls"
+    },
+    {
+     "ref": "211 Subpart G",
+     "title": "Packaging and labeling control"
+    },
+    {
+     "ref": "211 Subpart H",
+     "title": "Holding and distribution"
+    },
+    {
+     "ref": "211 Subpart I",
+     "title": "Laboratory controls"
+    },
+    {
+     "ref": "211 Subpart J",
+     "title": "Records and reports"
+    },
+    {
+     "ref": "211 Subpart K",
+     "title": "Returned and salvaged drug products"
+    }
+   ]
+  }
+ ]
+}

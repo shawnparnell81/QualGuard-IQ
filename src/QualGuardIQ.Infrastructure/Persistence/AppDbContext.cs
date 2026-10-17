@@ -260,8 +260,9 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.ToTable("approval_routes");
             e.Property(x => x.RecordType).HasMaxLength(50).IsRequired();
             e.Property(x => x.Name).HasMaxLength(100).IsRequired();
-            e.HasIndex(x => x.RecordType, "ux_route_active").IsUnique().HasFilter("\"IsActive\"");
-            e.HasIndex(x => new { x.RecordType, x.Version }).IsUnique();
+            e.HasIndex(x => new { x.RecordType, x.SiteId }, "ux_route_active").IsUnique().HasFilter("\"IsActive\"").AreNullsDistinct(false);
+            e.HasIndex(x => new { x.RecordType, x.SiteId, x.Version }).IsUnique().AreNullsDistinct(false);
+            e.HasOne<Domain.Organization.Site>().WithMany().HasForeignKey(x => x.SiteId).OnDelete(DeleteBehavior.Restrict);
             e.HasMany(x => x.Steps).WithOne().HasForeignKey(s => s.RouteId).OnDelete(DeleteBehavior.Cascade);
         });
         b.Entity<ApprovalRouteStep>(e =>
@@ -289,6 +290,8 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.Property(x => x.StepName).HasMaxLength(100).IsRequired();
             e.Property(x => x.SignerName).HasMaxLength(200).IsRequired();
             e.Property(x => x.Meaning).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Verification).HasMaxLength(30);
+            e.Property(x => x.SignatureHash).HasMaxLength(64);
             e.HasIndex(x => new { x.RequestId, x.SignerId }).IsUnique();
         });
     }

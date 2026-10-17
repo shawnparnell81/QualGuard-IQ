@@ -63,5 +63,6 @@ public partial class AppDbContext
         ConfigureApqp(b);
         ConfigureIntegration(b);
         ConfigureInventory(b);
+        ConfigureEnterprise(b);
     }
 }

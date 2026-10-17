@@ -14,7 +14,7 @@ public sealed record CreateAuditRequest(string Title, string AuditType, string S
 public sealed record ChecklistResponse(Guid ItemId, ChecklistResult Result, string? Evidence);
 public sealed record CreateFindingRequest(Guid? ChecklistItemId, FindingType FindingType, string? Clause, string Statement, string? Evidence, Guid ResponsibleId, DateOnly ResponseDueOn);
 
-public sealed class AuditService(AppDbContext db, ModuleSupport m, INumberingService numbers, ActionService actions, INotifier notifier)
+public sealed class AuditService(AppDbContext db, ModuleSupport m, INumberingService numbers, ActionService actions, INotifier notifier, QualGuardIQ.Infrastructure.Modules.Enterprise.QualificationService qualifications)
 {
     public const string RecordType = "Audit";
     public const string FindingType = "AuditFinding";
@@ -28,6 +28,7 @@ public sealed class AuditService(AppDbContext db, ModuleSupport m, INumberingSer
         ModuleSupport.Required(r.AuditType, "Audit type", 40);
         if (r.PlannedEnd < r.PlannedStart) throw new AppException("The end date must be on or after the start date.");
         await m.RequireActiveUserAsync(r.LeadAuditorId, "lead auditor", ct);
+        await qualifications.RequireAuditorAsync(r.LeadAuditorId, r.AuditType.Trim(), r.SiteId, "lead auditor", ct);
         var questions = (r.Checklist ?? []).Where(q => !string.IsNullOrWhiteSpace(q.Question)).ToList();
         if (questions.Count == 0) throw new AppException("Add at least one checklist question.");
         await using var tx = await db.Database.BeginTransactionAsync(ct);

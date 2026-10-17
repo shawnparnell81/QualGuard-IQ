@@ -101,6 +101,7 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
         ("InventoryHold", "Hold release", Permissions.InventoryApprove),
         ("MrbCase", "MRB disposition", Permissions.MrbApprove),
         ("CycleCount", "Count variance approval", Permissions.InventoryApprove),
+        ("Validation", "Validation protocol and results approval", Permissions.ValidationApprove),
     ];
 
     /// <summary>Multi-step default routes (administrators can change steps and permissions).</summary>
@@ -110,6 +111,6 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
     [
         ("Document", "DOC-"), ("Drawing", "DWG-"), ("FormTemplate", "FT-"), ("FormRecord", "FR-"),
         ("Ncr", "NCR-"), ("Capa", "CAPA-"), ("Audit", "AUD-"), ("AuditFinding", "AF-"),
-        ("Equipment", "EQ-"), ("CalibrationEvent", "CAL-"), ("Action", "ACT-"), ("TrainingCourse", "TRN-"), ("ImpactAssessment", "IA-"), ("SupplierCorrectiveAction", "SCAR-"), ("Complaint", "CC-"), ("InspectionPlan", "IP-"), ("Inspection", "INS-"), ("ChangeRequest", "CHG-"), ("Risk", "RSK-"), ("MaintenanceEvent", "MNT-"), ("QualityObjective", "OBJ-"), ("ManagementReview", "MR-"), ("Fai", "FAI-"), ("AqlInspection", "AQL-"), ("ProcessFlow", "PF-"), ("Pfmea", "PFMEA-"), ("ControlPlan", "CP-"), ("SpcChart", "SPC-"), ("MsaStudy", "MSA-"), ("LpaAudit", "LPA-"), ("SupplierProgram", "SDP-"), ("ScrapEvent", "SCR-"), ("ReworkOrder", "RWK-"), ("ErpChange", "ERPC-"), ("Recall", "RCL-"), ("CustomerReturn", "RMA-"), ("WarrantyClaim", "WC-"), ("WorkOrder", "WO-"), ("Lot", "LOT-"), ("InventoryTransaction", "IT-"), ("Receipt", "RCV-"), ("InventoryHold", "HOLD-"), ("MrbCase", "MRB-"), ("SupplierReturn", "RTV-"), ("CycleCount", "CNT-"), ("StockTransfer", "TRF-"), ("Shipment", "SHP-"), ("ShipmentContainer", "PKG-")
+        ("Equipment", "EQ-"), ("CalibrationEvent", "CAL-"), ("Action", "ACT-"), ("TrainingCourse", "TRN-"), ("ImpactAssessment", "IA-"), ("SupplierCorrectiveAction", "SCAR-"), ("Complaint", "CC-"), ("InspectionPlan", "IP-"), ("Inspection", "INS-"), ("ChangeRequest", "CHG-"), ("Risk", "RSK-"), ("MaintenanceEvent", "MNT-"), ("QualityObjective", "OBJ-"), ("ManagementReview", "MR-"), ("Fai", "FAI-"), ("AqlInspection", "AQL-"), ("ProcessFlow", "PF-"), ("Pfmea", "PFMEA-"), ("ControlPlan", "CP-"), ("SpcChart", "SPC-"), ("MsaStudy", "MSA-"), ("LpaAudit", "LPA-"), ("SupplierProgram", "SDP-"), ("ScrapEvent", "SCR-"), ("ReworkOrder", "RWK-"), ("ErpChange", "ERPC-"), ("Recall", "RCL-"), ("CustomerReturn", "RMA-"), ("WarrantyClaim", "WC-"), ("WorkOrder", "WO-"), ("Lot", "LOT-"), ("InventoryTransaction", "IT-"), ("Receipt", "RCV-"), ("InventoryHold", "HOLD-"), ("MrbCase", "MRB-"), ("SupplierReturn", "RTV-"), ("CycleCount", "CNT-"), ("StockTransfer", "TRF-"), ("Shipment", "SHP-"), ("ShipmentContainer", "PKG-"), ("CorporateStandard", "STD-"), ("TrainingCurriculum", "CUR-"), ("AuditProgram", "AP-"), ("ComplianceObligation", "OBL-"), ("Validation", "VAL-"), ("QualityProject", "PRJ-"), ("Ppap", "PPAP-"), ("CapabilityStudy", "CAP-"), ("ContinuityExercise", "BCP-")
     ];
 }

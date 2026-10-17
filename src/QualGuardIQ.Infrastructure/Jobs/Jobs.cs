@@ -78,3 +78,13 @@ public sealed class DataExportJob(QualGuardIQ.Infrastructure.Modules.Analytics.D
     [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 1800)]
     public Task RunAsync(CancellationToken ct) => data.RunExportsAsync(ct);
 }
+
+/// <summary>Nightly: auto-assign curricula and assign refresher training before qualifications lapse.</summary>
+public sealed class WorkforceJob(QualGuardIQ.Infrastructure.Modules.Enterprise.WorkforceService workforce, ILogger<WorkforceJob> log)
+{
+    public async Task RunAsync(CancellationToken ct)
+    {
+        var (a, r) = await workforce.AutoAssignAsync(ct);
+        if (a + r > 0) log.LogInformation("Assigned {Assigned} curriculum courses and {Refreshers} refresher trainings", a, r);
+    }
+}

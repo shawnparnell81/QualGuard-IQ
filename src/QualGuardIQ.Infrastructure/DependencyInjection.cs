@@ -70,6 +70,7 @@ public static class DependencyInjection
         }
         AddQuality(services);
         AddIntegration(services, config);
+        AddEnterprise(services);
         return services;
     }
 
@@ -176,6 +177,37 @@ public static class DependencyInjection
         P<SupplierProgram>(Modules.Apqp.SupplierDevelopmentService.RecordType, Permissions.SuppliersView, Permissions.SuppliersEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/suppliers/programs/{x.Id}", x.Status is SupplierProgramStatus.Completed or SupplierProgramStatus.Cancelled));
         P<ScrapEvent>(Modules.Apqp.CoqService.ScrapType, Permissions.CoqView, Permissions.CoqEdit, x => (x.Number, "Scrap: " + x.Reason, "Recorded", $"/coq/scrap?id={x.Id}", true));
         P<ReworkOrder>(Modules.Apqp.CoqService.ReworkType, Permissions.CoqView, Permissions.CoqEdit, x => (x.Number, "Rework: " + (x.Instructions.Length > 80 ? x.Instructions[..80] : x.Instructions), x.Status.ToString(), $"/coq/rework/{x.Id}", x.Status is ReworkStatus.Validated or ReworkStatus.PendingApproval));
+    }
+
+    /// <summary>Prompt 6: multi-site governance, workforce qualification, compliance, validation, APQP projects/PPAP/capability, retention, continuity and public API.</summary>
+    private static void AddEnterprise(IServiceCollection s)
+    {
+        s.AddHttpClient("notify", c => c.Timeout = TimeSpan.FromSeconds(10));
+        s.AddScoped<Modules.Enterprise.QualificationService>();
+        s.AddScoped<Modules.Enterprise.WorkforceService>();
+        s.AddScoped<Modules.Quality.ITrainingCompletedHandler>(sp => sp.GetRequiredService<Modules.Enterprise.WorkforceService>());
+        s.AddScoped<Modules.Enterprise.EnterpriseService>();
+        s.AddScoped<Modules.Enterprise.ComplianceService>();
+        s.AddScoped<Modules.Enterprise.AuditProgramService>();
+        s.AddScoped<Modules.Enterprise.ValidationService>();
+        s.AddScoped<Modules.Enterprise.ProjectService>();
+        s.AddScoped<Modules.Enterprise.GovernanceService>();
+        s.AddScoped<Modules.Enterprise.ImpactService>();
+        s.AddScoped<Jobs.WorkforceJob>();
+        void P<T>(string type, string view, string edit, Func<T, (string, string, string, string, bool)> d) where T : QualGuardIQ.Domain.Common.Entity, QualGuardIQ.Domain.Common.ISiteScoped =>
+            s.AddScoped<IRecordTypeProvider>(sp => new QualityRecordProvider<T>(sp.GetRequiredService<AppDbContext>(), type, view, edit, d));
+        P<Domain.Enterprise.CorporateStandard>(Modules.Enterprise.EnterpriseService.StandardType, Permissions.EnterpriseView, Permissions.EnterpriseEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/enterprise/standards/{x.Id}", x.Status == Domain.Enterprise.StandardStatus.Retired));
+        P<Domain.Enterprise.Skill>(Modules.Enterprise.WorkforceService.SkillType, Permissions.TrainingView, Permissions.TrainingEdit, x => (x.Code, x.Name, x.Kind.ToString(), $"/training/skills/{x.Id}", x.IsArchived));
+        P<Domain.Enterprise.TrainingCurriculum>(Modules.Enterprise.WorkforceService.CurriculumType, Permissions.TrainingView, Permissions.TrainingEdit, x => (x.Number, x.Title, x.Kind.ToString(), $"/training/curricula/{x.Id}", x.IsArchived));
+        P<Domain.Enterprise.AuditProgram>(Modules.Enterprise.AuditProgramService.RecordType, Permissions.AuditsView, Permissions.AuditsEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/audits/programs/{x.Id}", x.Status == Domain.Enterprise.AuditProgramStatus.Closed));
+        P<Domain.Enterprise.ComplianceObligation>(Modules.Enterprise.ComplianceService.ObligationType, Permissions.ComplianceView, Permissions.ComplianceEdit, x => (x.Number, $"{x.Reference} {x.Title}", x.Applicable ? "Applicable" : "Not applicable", $"/compliance/obligations/{x.Id}", false));
+        P<Domain.Enterprise.ValidationProject>(Modules.Enterprise.ValidationService.RecordType, Permissions.ValidationView, Permissions.ValidationEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/validation/{x.Id}", x.Status is Domain.Enterprise.ValidationStatus.Released or Domain.Enterprise.ValidationStatus.Cancelled));
+        P<Domain.Enterprise.QualityProject>(Modules.Enterprise.ProjectService.ProjectType, Permissions.ApqpView, Permissions.ApqpEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/launch/projects/{x.Id}", x.Status is Domain.Enterprise.QualityProjectStatus.Completed or Domain.Enterprise.QualityProjectStatus.Cancelled));
+        P<Domain.Enterprise.PpapSubmission>(Modules.Enterprise.ProjectService.PpapType, Permissions.ApqpView, Permissions.ApqpEdit, x => (x.Number, "PPAP level " + x.Level + " " + x.Reason, x.Status.ToString(), $"/launch/ppap/{x.Id}", x.Status is Domain.Enterprise.PpapStatus.Approved));
+        P<Domain.Enterprise.CapabilityStudy>(Modules.Enterprise.ProjectService.CapabilityType, Permissions.ApqpView, Permissions.ApqpEdit, x => (x.Number, x.Title, x.Cpk is { } k && k >= x.RequiredCpk ? "Capable" : "Not capable", $"/launch/capability/{x.Id}", true));
+        P<Domain.Enterprise.ContinuityExercise>(Modules.Enterprise.GovernanceService.ContinuityType, Permissions.GovernanceView, Permissions.GovernanceEdit, x => (x.Number, x.Title, x.Result.ToString(), $"/governance/continuity/{x.Id}", x.Result != Domain.Enterprise.ContinuityResult.Planned));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Enterprise.ValidationService.RecordType,
+            (id, ct) => sp.GetRequiredService<Modules.Enterprise.ValidationService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Enterprise.ValidationService>().OnRejectedAsync(id, c, ct)));
     }
 
     private static void AddIntegration(IServiceCollection s, IConfiguration config)

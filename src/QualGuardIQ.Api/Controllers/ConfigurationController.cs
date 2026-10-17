@@ -15,20 +15,23 @@ namespace QualGuardIQ.Api.Controllers;
 [RequirePermission(Permissions.AdminOrganization)]
 public sealed class ConfigurationController(AppDbContext db, IRecordRegistry records) : ControllerBase
 {
-    public sealed record StepDto(int Order, string Name, string RequiredPermission, string SignatureMeaning);
-    public sealed record RouteDto(Guid Id, string RecordType, string Name, int Version, bool PreventSelfApproval, IReadOnlyList<StepDto> Steps);
+    public sealed record StepDto(int Order, string Name, string RequiredPermission, string SignatureMeaning, Guid? RequiredSkillId = null, bool RequireMfa = false);
+    public sealed record RouteDto(Guid Id, string RecordType, string Name, int Version, bool PreventSelfApproval, IReadOnlyList<StepDto> Steps, Guid? SiteId = null);
     public sealed record SaveRouteRequest(string Name, bool PreventSelfApproval, IReadOnlyList<StepDto> Steps);
     public sealed record SaveFieldRequest(string RecordType, string Key, string Label, CustomFieldType FieldType, bool IsRequired, List<string>? Options, int SortOrder);
 
     [HttpGet("approval-routes")]
     public async Task<IEnumerable<RouteDto>> Routes(CancellationToken ct) =>
-        (await db.ApprovalRoutes.AsNoTracking().Include(r => r.Steps).Where(r => r.IsActive).OrderBy(r => r.RecordType).ToListAsync(ct))
-        .Select(r => new RouteDto(r.Id, r.RecordType, r.Name, r.Version, r.PreventSelfApproval, r.Steps.OrderBy(s => s.Order).Select(s => new StepDto(s.Order, s.Name, s.RequiredPermission, s.SignatureMeaning)).ToList()));
+        (await db.ApprovalRoutes.AsNoTracking().Include(r => r.Steps).Where(r => r.IsActive).OrderBy(r => r.RecordType).ThenBy(r => r.SiteId).ToListAsync(ct))
+        .Select(r => new RouteDto(r.Id, r.RecordType, r.Name, r.Version, r.PreventSelfApproval, r.Steps.OrderBy(s => s.Order).Select(s => new StepDto(s.Order, s.Name, s.RequiredPermission, s.SignatureMeaning, s.RequiredSkillId, s.RequireMfa)).ToList(), r.SiteId));
 
     /// <summary>Replaces a route's steps. Requests already in progress keep the step numbers they started with.</summary>
     [HttpPut("approval-routes/{recordType}")]
-    public async Task<IActionResult> SaveRoute(string recordType, SaveRouteRequest req, CancellationToken ct)
+    public async Task<IActionResult> SaveRoute(string recordType, SaveRouteRequest req, [FromQuery] Guid? siteId, CancellationToken ct)
     {
+        if (siteId is { } sid && !await db.Sites.AnyAsync(x => x.Id == sid, ct)) throw new NotFoundException("Site");
+        foreach (var s in req.Steps.Where(s => s.RequiredSkillId != null))
+            if (!await db.Skills.AnyAsync(k => k.Id == s.RequiredSkillId, ct)) throw new AppException($"Step '{s.Name}' needs an existing skill or qualification.");
         if (!records.IsKnownType(recordType)) throw new NotFoundException($"Record type '{recordType}'");
         if (req.Steps.Count is 0 or > 10) throw new AppException("A route needs 1 to 10 steps.");
         if (req.Steps.Select(s => s.Order).Distinct().Count() != req.Steps.Count) throw new AppException("Step order numbers must be unique.");
@@ -38,19 +41,29 @@ public sealed class ConfigurationController(AppDbContext db, IRecordRegistry rec
             if (string.IsNullOrWhiteSpace(s.Name) || string.IsNullOrWhiteSpace(s.SignatureMeaning)) throw new AppException("Each step needs a name and a signature meaning.");
         }
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var current = await db.ApprovalRoutes.FirstOrDefaultAsync(r => r.RecordType == recordType && r.IsActive, ct);
+        var current = await db.ApprovalRoutes.FirstOrDefaultAsync(r => r.RecordType == recordType && r.SiteId == siteId && r.IsActive, ct);
         var version = 1;
         if (current is not null)
         {
             current.IsActive = false;
-            version = await db.ApprovalRoutes.Where(r => r.RecordType == recordType).MaxAsync(r => r.Version, ct) + 1;
+            version = await db.ApprovalRoutes.Where(r => r.RecordType == recordType && r.SiteId == siteId).MaxAsync(r => r.Version, ct) + 1;
             await db.SaveChangesAsync(ct);
         }
-        var route = new ApprovalRoute { RecordType = recordType, Name = req.Name.Trim(), PreventSelfApproval = req.PreventSelfApproval, Version = version };
-        route.Steps = req.Steps.Select(s => new ApprovalRouteStep { RouteId = route.Id, Order = s.Order, Name = s.Name.Trim(), RequiredPermission = s.RequiredPermission, SignatureMeaning = s.SignatureMeaning.Trim() }).ToList();
+        var route = new ApprovalRoute { RecordType = recordType, Name = req.Name.Trim(), PreventSelfApproval = req.PreventSelfApproval, Version = version, SiteId = siteId };
+        route.Steps = req.Steps.Select(s => new ApprovalRouteStep { RouteId = route.Id, Order = s.Order, Name = s.Name.Trim(), RequiredPermission = s.RequiredPermission, SignatureMeaning = s.SignatureMeaning.Trim(), RequiredSkillId = s.RequiredSkillId, RequireMfa = s.RequireMfa }).ToList();
         db.ApprovalRoutes.Add(route);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        return NoContent();
+    }
+
+    /// <summary>Removes a site-specific route; the site falls back to the shared corporate route. Requests in progress keep their route.</summary>
+    [HttpDelete("approval-routes/{recordType}/sites/{siteId:guid}")]
+    public async Task<IActionResult> RemoveSiteRoute(string recordType, Guid siteId, CancellationToken ct)
+    {
+        var current = await db.ApprovalRoutes.FirstOrDefaultAsync(r => r.RecordType == recordType && r.SiteId == siteId && r.IsActive, ct) ?? throw new NotFoundException("Site route");
+        current.IsActive = false;
+        await db.SaveChangesAsync(ct);
         return NoContent();
     }
 

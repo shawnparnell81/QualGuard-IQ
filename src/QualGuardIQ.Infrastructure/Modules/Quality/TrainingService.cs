@@ -15,7 +15,10 @@ namespace QualGuardIQ.Infrastructure.Modules.Quality;
 public sealed record CreateCourseRequest(string Title, string? Description, Guid SiteId, Guid? DepartmentId, Guid? DocumentId, bool RetrainOnRevision, int? ValidityMonths, int DueDays);
 public sealed record AssignRequest(List<Guid> UserIds, DateOnly? DueOn);
 
-public sealed class TrainingService(AppDbContext db, ModuleSupport m, INumberingService numbers, INotifier notifier, UserManager<ApplicationUser> users) : IRevisionReleasedHandler
+/// <summary>Runs after a trainee signs off an assignment (curricula use it to grant qualifications and certifications).</summary>
+public interface ITrainingCompletedHandler { Task OnCompletedAsync(TrainingAssignment assignment, CancellationToken ct); }
+
+public sealed class TrainingService(AppDbContext db, ModuleSupport m, INumberingService numbers, INotifier notifier, UserManager<ApplicationUser> users, IEnumerable<ITrainingCompletedHandler> completed) : IRevisionReleasedHandler
 {
     public const string RecordType = "TrainingCourse";
 
@@ -52,6 +55,14 @@ public sealed class TrainingService(AppDbContext db, ModuleSupport m, INumbering
         if (ids.Count == 0) throw new AppException("Select at least one person.");
         if (await db.Users.CountAsync(u => ids.Contains(u.Id) && u.IsActive, ct) != ids.Count) throw new AppException("Every trainee must be an active user.");
         return await AssignCoreAsync(c, ids, due, "Assigned", ct);
+    }
+
+    /// <summary>Assignment without a caller permission check: used by curricula, rollouts and the nightly auto-assignment job.</summary>
+    public async Task<int> AssignSystemAsync(Guid courseId, List<Guid> userIds, string reason, CancellationToken ct)
+    {
+        var c = await db.TrainingCourses.AsNoTracking().FirstAsync(x => x.Id == courseId, ct);
+        if (c.IsArchived || userIds.Count == 0) return 0;
+        return await AssignCoreAsync(c, userIds, (await m.TodayAsync(c.SiteId, ct)).AddDays(c.DueDays), reason, ct);
     }
 
     private async Task<int> AssignCoreAsync(TrainingCourse c, List<Guid> userIds, DateOnly due, string reason, CancellationToken ct)
@@ -98,6 +109,7 @@ public sealed class TrainingService(AppDbContext db, ModuleSupport m, INumbering
         a.CompletionNotes = notes?.Trim();
         a.ExpiresOn = c.ValidityMonths is { } v ? (await m.TodayAsync(a.SiteId, ct)).AddMonths(v) : null;
         await db.SaveChangesAsync(ct);
+        foreach (var h in completed) await h.OnCompletedAsync(a, ct);
     }
 
     /// <summary>Retraining: when a revision of a linked document is released, everyone who completed earlier training gets a new assignment.</summary>
