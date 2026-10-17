@@ -4,7 +4,7 @@ using QualGuardIQ.Infrastructure.Persistence;
 
 namespace QualGuardIQ.Infrastructure.Security;
 
-public sealed class AccessService(AppDbContext db) : IAccessService
+public sealed class AccessService(AppDbContext db, ICallerRestriction? restriction = null) : IAccessService
 {
     private readonly Dictionary<Guid, IReadOnlyList<PermissionGrant>> _cache = new();
 
@@ -18,7 +18,7 @@ public sealed class AccessService(AppDbContext db) : IAccessService
             join p in db.RolePermissions on a.RoleId equals p.RoleId
             where a.UserId == userId
             select new PermissionGrant(p.Permission, a.SiteId, a.DepartmentId)).Distinct().ToListAsync(ct);
-        return _cache[userId] = grants;
+        return _cache[userId] = restriction is null ? grants : restriction.Apply(userId, grants);
     }
 
     public async Task<bool> HasPermissionAsync(Guid userId, string permission, CancellationToken ct = default) =>

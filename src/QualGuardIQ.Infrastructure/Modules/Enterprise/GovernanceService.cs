@@ -26,12 +26,16 @@ public sealed record ContinuityInput(ContinuityKind Kind, string Title, Guid Sit
 public sealed record ContinuityResultInput(ContinuityResult Result, int? RecoveryMinutes, int? DataLossMinutes, string? Findings);
 public sealed record ChannelInput(string Name, NotificationChannelKind Kind, NotificationScope Scope, Guid? OrgUnitId, Guid? SiteId, string Target, List<string>? Keywords);
 public sealed record BroadcastInput(NotificationScope Scope, Guid? OrgUnitId, Guid? SiteId, string Title, string? Body);
-public sealed record ApiClientInput(string Name, Guid ServiceUserId, int RateLimitPerMinute, DateOnly? ExpiresOn);
+public sealed record ApiClientInput(string Name, Guid ServiceUserId, int RateLimitPerMinute, DateOnly? ExpiresOn, ApiClientKind Kind = ApiClientKind.General,
+    List<string>? Scopes = null, List<Guid>? SiteIds = null, List<string>? AllowedEndpoints = null);
+public sealed record ApiClientUpdate(string Name, int RateLimitPerMinute, DateOnly? ExpiresOn, List<string>? Scopes, List<Guid>? SiteIds, List<string>? AllowedEndpoints);
+public sealed record ApiClientRotate(int GraceMinutes = 0);
+public sealed record ApiClientRevoke(string Reason);
 public sealed record ApiClientCreated(Guid Id, string ClientId, string Secret, string ApiKey);
 
 /// <summary>Retention governance, business continuity exercises, scoped notification channels and broadcasts, public API clients and the Part 11 readiness check.</summary>
 public sealed class GovernanceService(AppDbContext db, ModuleSupport m, INumberingService numbers, IFileStorage storage, IHttpClientFactory http, INotifier notifier,
-    IOptions<IdentityOptions> identity, UserManager<ApplicationUser> users, RetentionEngine retention, ISecurityEventLogger security)
+    IOptions<IdentityOptions> identity, UserManager<ApplicationUser> users, RetentionEngine retention, ISecurityEventLogger security, QualGuardIQ.Application.Security.IAccessService access)
 {
     public const string ContinuityType = "ContinuityExercise";
 
@@ -269,46 +273,160 @@ public sealed class GovernanceService(AppDbContext db, ModuleSupport m, INumberi
         return new { Recipients = people.Count, Channels = sent, Sites = sites.Count };
     }
 
-    // ---------- public API clients ----------
+    // ---------- public API clients and MES devices ----------
     public static string Hash(string secret) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(secret))).ToLowerInvariant();
+    static string NewSecret() => Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).Replace('+', '-').Replace('/', '_').TrimEnd('=');
+    /// <summary>Endpoint used by an MES device when none is given.</summary>
+    public const string MesEndpoint = "POST /api/mes/events";
+    static readonly System.Text.RegularExpressions.Regex EndpointPattern = new(@"^((GET|POST|PUT|PATCH|DELETE|\*) )?/api(/[A-Za-z0-9_\-.]+)*$");
+
+    /// <summary>True when "METHOD /api/path" (or "/api/path" for any method) allows the request; a path also allows its sub-paths.</summary>
+    public static bool EndpointAllowed(IEnumerable<string> patterns, string method, string path)
+    {
+        foreach (var raw in patterns)
+        {
+            var parts = raw.Split(' ', 2);
+            var (m, p) = parts.Length == 2 ? (parts[0], parts[1]) : ("*", parts[0]);
+            if (m != "*" && !string.Equals(m, method, StringComparison.OrdinalIgnoreCase)) continue;
+            if (string.Equals(path, p, StringComparison.OrdinalIgnoreCase) || path.StartsWith(p.TrimEnd('/') + "/", StringComparison.OrdinalIgnoreCase)) return true;
+        }
+        return false;
+    }
+
+    public static string StatusOf(ApiClient c, DateOnly today) =>
+        c.RevokedAt is not null ? "Revoked" : c.ExpiresOn is { } e && e < today ? "Expired" : !c.Enabled ? "Disabled" : "Active";
+
+    async Task ApplyRestrictionsAsync(ApiClient c, string name, int rate, DateOnly? expires, List<string>? scopes, List<Guid>? sites, List<string>? endpoints, CancellationToken ct)
+    {
+        ModuleSupport.Required(name, "Name", 200);
+        if (rate is < 1 or > 6000) throw new AppException("Rate limit must be 1–6000 requests per minute.");
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var sc = (scopes ?? []).Select(x => x.Trim()).Where(x => x.Length > 0).Distinct().ToList();
+        var unknown = sc.Where(x => !Permissions.All.Contains(x)).ToList();
+        if (unknown.Count > 0) throw new AppException($"Unknown permission scope: {string.Join(", ", unknown)}.");
+        var st = (sites ?? []).Distinct().ToList();
+        if (st.Count > 0 && await db.Sites.CountAsync(x => st.Contains(x.Id) && !x.IsArchived, ct) != st.Count) throw new AppException("Every restricted site must be an active site.");
+        var ep = (endpoints ?? []).Select(x => x.Trim()).Where(x => x.Length > 0).Distinct().ToList();
+        if (c.Kind == ApiClientKind.MesDevice)
+        {
+            if (sc.Count == 0) throw new AppException("An MES device needs at least one permission scope (for example production.edit).");
+            if (st.Count == 0) throw new AppException("An MES device must be restricted to one or more sites.");
+            if (ep.Count == 0) ep = [MesEndpoint];
+            if (expires is null) throw new AppException("An MES device credential needs an expiry date.");
+            if (expires > today.AddYears(2)) throw new AppException("An MES device credential must expire within two years.");
+        }
+        var bad = ep.Where(x => !EndpointPattern.IsMatch(x)).ToList();
+        if (bad.Count > 0) throw new AppException($"Endpoints are written as \"POST /api/mes/events\" or \"/api/path\": {string.Join(", ", bad)}.");
+        if (expires is { } x2 && x2 < today) throw new AppException("The expiry date is in the past.");
+        // Every scope must be something the service user can actually do at each allowed site; a scope never adds permissions.
+        foreach (var perm in sc)
+        {
+            var scope = await access.GetScopeAsync(c.ServiceUserId, perm, ct);
+            if (st.Count == 0) { if (scope.IsEmpty) throw new AppException($"The service user does not hold {perm} at any site."); continue; }
+            var missing = st.Where(site => !scope.AllSites && !scope.SiteIds.Contains(site)).ToList();
+            if (missing.Count > 0)
+                throw new AppException($"The service user does not hold {perm} at {string.Join(", ", await db.Sites.Where(x => missing.Contains(x.Id)).Select(x => x.Code).ToListAsync(ct))}.");
+        }
+        c.Name = name.Trim(); c.RateLimitPerMinute = rate; c.ExpiresOn = expires; c.Scopes = sc; c.SiteIds = st; c.AllowedEndpoints = ep;
+    }
 
     public async Task<ApiClientCreated> CreateClientAsync(ApiClientInput r, CancellationToken ct)
     {
         await RequireApiAdminAsync(ct);
-        ModuleSupport.Required(r.Name, "Name", 200);
-        if (r.RateLimitPerMinute is < 1 or > 6000) throw new AppException("Rate limit must be 1–6000 requests per minute.");
         var svc = await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == r.ServiceUserId, ct) ?? throw new AppException("Select the service user the client acts as.");
         if (!svc.IsActive || svc.PortalKind is not null) throw new AppException("The service user must be an active staff account.");
-        var clientId = "qg_" + Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant();
-        var secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).Replace('+', '-').Replace('/', '_').TrimEnd('=');
-        var c = new ApiClient { Name = r.Name.Trim(), ClientId = clientId, SecretHash = Hash(secret), SecretHint = secret[^4..], ServiceUserId = r.ServiceUserId, RateLimitPerMinute = r.RateLimitPerMinute, ExpiresOn = r.ExpiresOn };
+        var c = new ApiClient { Kind = r.Kind, ServiceUserId = r.ServiceUserId };
+        await ApplyRestrictionsAsync(c, r.Name ?? "", r.RateLimitPerMinute, r.ExpiresOn, r.Scopes, r.SiteIds, r.AllowedEndpoints, ct);
+        c.ClientId = (r.Kind == ApiClientKind.MesDevice ? "qgm_" : "qg_") + Convert.ToHexString(RandomNumberGenerator.GetBytes(8)).ToLowerInvariant();
+        var secret = NewSecret();
+        c.SecretHash = Hash(secret); c.SecretHint = secret[^4..];
         db.ApiClients.Add(c);
         await db.SaveChangesAsync(ct);
-        return new ApiClientCreated(c.Id, clientId, secret, $"{clientId}.{secret}");
+        await security.LogAsync("ApiClientCreated", true, m.UserId, c.ClientId, $"{c.Kind} {c.Name}", ct);
+        return new ApiClientCreated(c.Id, c.ClientId, secret, $"{c.ClientId}.{secret}");
+    }
+
+    public async Task UpdateClientAsync(Guid id, ApiClientUpdate r, CancellationToken ct)
+    {
+        await RequireApiAdminAsync(ct);
+        var c = await LiveClientAsync(id, ct);
+        await ApplyRestrictionsAsync(c, r.Name ?? "", r.RateLimitPerMinute, r.ExpiresOn, r.Scopes, r.SiteIds, r.AllowedEndpoints, ct);
+        await db.SaveChangesAsync(ct);
+    }
+
+    async Task<ApiClient> LiveClientAsync(Guid id, CancellationToken ct)
+    {
+        var c = await db.ApiClients.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("API client");
+        if (c.RevokedAt is not null) throw new ConflictException("The client is revoked; register a new client instead.");
+        return c;
     }
 
     public async Task<List<object>> ClientsAsync(CancellationToken ct)
     {
         await RequireApiAdminAsync(ct);
-        return (await db.ApiClients.AsNoTracking().OrderBy(c => c.Name).ToListAsync(ct)).Select(c => (object)new { c.Id, c.Name, c.ClientId, c.SecretHint, c.ServiceUserId, c.RateLimitPerMinute, c.Enabled, c.ExpiresOn, c.LastUsedAt, c.CreatedAt }).ToList();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var now = DateTimeOffset.UtcNow;
+        return (await db.ApiClients.AsNoTracking().OrderBy(c => c.Kind).ThenBy(c => c.Name).ToListAsync(ct)).Select(c => (object)new
+        {
+            c.Id, c.Name, c.Kind, c.ClientId, c.SecretHint, c.ServiceUserId, c.Scopes, c.SiteIds, c.AllowedEndpoints, c.RateLimitPerMinute, c.Enabled, c.ExpiresOn,
+            Status = StatusOf(c, today), c.RotatedAt, PreviousSecretValidUntil = c.PreviousSecretValidUntil > now ? c.PreviousSecretValidUntil : null,
+            c.RevokedAt, c.RevokedReason, c.LastUsedAt, c.LastUsedFrom, c.LastFailureAt, c.LastFailureReason, c.FailureCount, c.CreatedAt
+        }).ToList();
     }
 
     public async Task SetClientEnabledAsync(Guid id, bool enabled, CancellationToken ct)
     {
         await RequireApiAdminAsync(ct);
-        var c = await db.ApiClients.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("API client");
+        var c = await LiveClientAsync(id, ct);
         c.Enabled = enabled;
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task<ApiClientCreated> RotateAsync(Guid id, CancellationToken ct)
+    /// <summary>New secret, shown once. With a grace period the old secret keeps working until then, so a device can be updated without downtime.</summary>
+    public async Task<ApiClientCreated> RotateAsync(Guid id, ApiClientRotate? r, CancellationToken ct)
     {
         await RequireApiAdminAsync(ct);
-        var c = await db.ApiClients.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("API client");
-        var secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32)).Replace('+', '-').Replace('/', '_').TrimEnd('=');
-        c.SecretHash = Hash(secret); c.SecretHint = secret[^4..];
+        var grace = r?.GraceMinutes ?? 0;
+        if (grace is < 0 or > 10080) throw new AppException("The grace period is 0–10,080 minutes (7 days).");
+        var c = await LiveClientAsync(id, ct);
+        var secret = NewSecret();
+        c.PreviousSecretHash = grace > 0 ? c.SecretHash : null;
+        c.PreviousSecretValidUntil = grace > 0 ? m.Now.AddMinutes(grace) : null;
+        c.SecretHash = Hash(secret); c.SecretHint = secret[^4..]; c.RotatedAt = m.Now;
         await db.SaveChangesAsync(ct);
+        await security.LogAsync("ApiClientRotated", true, m.UserId, c.ClientId, grace > 0 ? $"old secret valid {grace} min" : "old secret invalid now", ct);
         return new ApiClientCreated(c.Id, c.ClientId, secret, $"{c.ClientId}.{secret}");
+    }
+
+    /// <summary>Permanent: the client and any access token it holds stop working at once and it cannot be enabled or rotated again.</summary>
+    public async Task RevokeClientAsync(Guid id, ApiClientRevoke r, CancellationToken ct)
+    {
+        await RequireApiAdminAsync(ct);
+        ModuleSupport.Required(r.Reason, "Reason", 1000);
+        var c = await LiveClientAsync(id, ct);
+        c.RevokedAt = m.Now; c.RevokedById = m.UserId; c.RevokedReason = r.Reason.Trim(); c.Enabled = false; c.PreviousSecretHash = null; c.PreviousSecretValidUntil = null;
+        await db.SaveChangesAsync(ct);
+        await security.LogAsync("ApiClientRevoked", true, m.UserId, c.ClientId, c.RevokedReason, ct);
+    }
+
+    /// <summary>Progress of moving MES senders from user sessions/tokens to registered device clients.</summary>
+    public async Task<object> MesAuthStatusAsync(bool requireDevices, CancellationToken ct)
+    {
+        await RequireApiAdminAsync(ct);
+        var since = m.Now.AddDays(-30);
+        var byMethod = await db.MesEvents.AsNoTracking().Where(e => e.ReceivedAt >= since).GroupBy(e => e.AuthMethod).Select(g => new { Method = g.Key, Count = g.Count(), Last = g.Max(x => x.ReceivedAt) }).ToListAsync(ct);
+        var legacy = byMethod.Where(x => x.Method != "MesDevice").ToList();
+        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var devices = await db.ApiClients.AsNoTracking().Where(c => c.Kind == ApiClientKind.MesDevice).ToListAsync(ct);
+        return new
+        {
+            RequireDeviceClients = requireDevices,
+            ActiveDevices = devices.Count(d => StatusOf(d, today) == "Active"),
+            DeviceEventsLast30Days = byMethod.Where(x => x.Method == "MesDevice").Sum(x => x.Count),
+            LegacyEventsLast30Days = legacy.Sum(x => x.Count),
+            LastLegacyEventAt = legacy.Count == 0 ? (DateTimeOffset?)null : legacy.Max(x => x.Last),
+            Note = requireDevices ? "Only registered MES devices may send MES events." : "User sessions and user tokens may still send MES events until Mes:RequireDeviceClients is set to true."
+        };
     }
 
     // ---------- Part 11 ----------

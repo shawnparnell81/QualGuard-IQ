@@ -158,6 +158,10 @@ public class MesEvent : Entity
     public DateTimeOffset? ProcessedAt { get; set; }
     public string? Error { get; set; }
     public Guid SiteId { get; set; }
+    /// <summary>API client id of the sender (null when sent with a user session or user bearer token).</summary>
+    public string? ClientId { get; set; }
+    /// <summary>MesDevice, ApiClient or UserToken.</summary>
+    public string AuthMethod { get; set; } = "UserToken";
 }
 
 public enum ErpEnvironment { Sandbox = 0, Test = 1, Production = 2 }

@@ -255,6 +255,8 @@ public partial class AppDbContext
         {
             e.ToTable("api_clients"); e.HasIndex(x => x.ClientId).IsUnique();
             e.Property(x => x.Name).HasMaxLength(200); e.Property(x => x.ClientId).HasMaxLength(60); e.Property(x => x.SecretHash).HasMaxLength(200); e.Property(x => x.SecretHint).HasMaxLength(10);
+            e.Property(x => x.PreviousSecretHash).HasMaxLength(200); e.Property(x => x.RevokedReason).HasMaxLength(1000);
+            e.Property(x => x.LastUsedFrom).HasMaxLength(100); e.Property(x => x.LastFailureReason).HasMaxLength(200);
             UserReq(e, x => x.ServiceUserId);
         });
     }

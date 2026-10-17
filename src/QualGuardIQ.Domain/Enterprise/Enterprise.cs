@@ -514,17 +514,40 @@ public class NotificationChannel : Entity, IAudited
     public string AuditLabel => $"notification channel {Name}";
 }
 
-/// <summary>Public API client. Acts as its service user (the user's roles decide what it may do). Secret is stored hashed.</summary>
+public enum ApiClientKind { General = 0, MesDevice = 1 }
+
+/// <summary>
+/// Public API client or registered MES device. Acts as its service user, narrowed by the client's own restrictions: permission
+/// scopes (empty = the service user's permissions), sites (empty = the service user's sites) and endpoints (empty = any).
+/// MES devices must have scopes, sites, endpoints and an expiry date. Secrets are stored as SHA-256 hashes of 256-bit random
+/// values and are shown once, at creation or rotation. Revocation is permanent; disabling is reversible.
+/// </summary>
 public class ApiClient : Entity, IAudited
 {
     public string Name { get; set; } = "";
+    public ApiClientKind Kind { get; set; }
     public string ClientId { get; set; } = "";
     public string SecretHash { get; set; } = "";
     public string SecretHint { get; set; } = "";
+    /// <summary>The replaced secret keeps working until this time after a rotation with a grace period.</summary>
+    public string? PreviousSecretHash { get; set; }
+    public DateTimeOffset? PreviousSecretValidUntil { get; set; }
+    public DateTimeOffset? RotatedAt { get; set; }
     public Guid ServiceUserId { get; set; }
+    public List<string> Scopes { get; set; } = [];
+    public List<Guid> SiteIds { get; set; } = [];
+    /// <summary>"METHOD /api/path" or "/api/path" (any method); a path also allows its sub-paths.</summary>
+    public List<string> AllowedEndpoints { get; set; } = [];
     public int RateLimitPerMinute { get; set; } = 120;
     public bool Enabled { get; set; } = true;
     public DateOnly? ExpiresOn { get; set; }
+    public DateTimeOffset? RevokedAt { get; set; }
+    public Guid? RevokedById { get; set; }
+    public string? RevokedReason { get; set; }
     public DateTimeOffset? LastUsedAt { get; set; }
-    public string AuditLabel => $"API client {Name}";
+    public string? LastUsedFrom { get; set; }
+    public DateTimeOffset? LastFailureAt { get; set; }
+    public string? LastFailureReason { get; set; }
+    public int FailureCount { get; set; }
+    public string AuditLabel => $"{(Kind == ApiClientKind.MesDevice ? "MES device" : "API client")} {Name}";
 }

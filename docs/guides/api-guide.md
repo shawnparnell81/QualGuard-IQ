@@ -9,9 +9,10 @@ The full, generated description is in [`docs/api/openapi.yaml`](../api/openapi.y
 |---|---|
 | Browser | Identity cookie from `POST /api/auth/login`; every state-changing request sends `X-CSRF-TOKEN` (from `GET /api/auth/csrf`) |
 | Service user | `POST /api/auth/token` returns a bearer token; send `Authorization: Bearer <token>` |
-| Integration | API key created under Governance › API & channels; send it in the `X-Api-Key` header |
+| Integration | API key created under Governance › API & channels; send it in the `X-Api-Key` header, or exchange client id and secret at `POST /api/oauth/token` (client credentials) |
+| MES device | Registered under Governance › API & channels › MES devices; same headers. Must have scopes, sites and an expiry; see [MES and shop floor](../setup/erp-connections.md#mes-and-shop-floor) |
 
-Every call is authorized against the caller's permissions, scoped by site and department, exactly as in the web app.
+Every call is authorized against the caller's permissions, scoped by site and department, exactly as in the web app. An API client or MES device can be narrowed further: permission scopes, sites and allowed endpoints on the client limit what its service user may do through that key (they never add permissions). Revoked, disabled or expired clients are refused at once, including access tokens they already hold.
 
 ## Conventions
 

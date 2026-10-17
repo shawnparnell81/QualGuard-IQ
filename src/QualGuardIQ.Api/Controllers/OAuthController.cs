@@ -32,7 +32,7 @@ public sealed class OAuthController(AppDbContext db, SignInManager<ApplicationUs
         }
         if (grantType != "client_credentials") return BadRequest(new { error = "unsupported_grant_type" });
         if (string.IsNullOrWhiteSpace(clientId) || string.IsNullOrWhiteSpace(clientSecret)) return BadRequest(new { error = "invalid_request" });
-        var principal = await ApiClientAuth.AuthenticateAsync(db, signIn, security, (clientId, clientSecret), "OAuth");
+        var principal = await ApiClientAuth.AuthenticateAsync(db, signIn, security, (clientId, clientSecret), "OAuth", HttpContext.Connection.RemoteIpAddress?.ToString());
         if (principal is null) return Unauthorized(new { error = "invalid_client" });
         await security.LogAsync("ApiTokenIssued", true, null, clientId);
         return SignIn(principal, IdentityConstants.BearerScheme);

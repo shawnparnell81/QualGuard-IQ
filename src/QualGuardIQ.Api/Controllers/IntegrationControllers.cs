@@ -68,10 +68,20 @@ public sealed class IntegrationsController(ErpSyncService svc, ErpAdapterRegistr
 
 /// <summary>MES push endpoint. Idempotent per source + eventId; a repeat returns 200 with duplicate=true.</summary>
 [ApiController, Authorize, Route("api/mes")]
-public sealed class MesController(ProductionService svc) : ControllerBase
+public sealed class MesController(ProductionService svc, IConfiguration config) : ControllerBase
 {
+    /// <summary>
+    /// Send with a registered MES device key (X-Api-Key or OAuth client credentials). User sessions and user tokens are still accepted
+    /// until Mes:RequireDeviceClients is true.
+    /// </summary>
     [HttpPost("events")] [RequirePermission(Permissions.ProductionEdit)]
-    public async Task<object> Event(MesEventInput r, CancellationToken ct) { var (dup, res) = await svc.MesEventAsync(r, ct); return new { Duplicate = dup, Result = res }; }
+    public async Task<object> Event(MesEventInput r, CancellationToken ct)
+    {
+        var client = User.FindFirst(ApiKeyHandler.ClientClaim)?.Value;
+        var method = client is null ? "UserToken" : User.FindFirst(ApiKeyHandler.KindClaim)?.Value == nameof(QualGuardIQ.Domain.Enterprise.ApiClientKind.MesDevice) ? "MesDevice" : "ApiClient";
+        var (dup, res) = await svc.MesEventAsync(r, ct, new MesCaller(client, method, config.GetValue("Mes:RequireDeviceClients", false)));
+        return new { Duplicate = dup, Result = res };
+    }
 }
 
 [ApiController, Authorize, Route("api/production")]

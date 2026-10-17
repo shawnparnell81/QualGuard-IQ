@@ -14666,6 +14666,37 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/admin/api-clients/{id}':
+    put:
+      tags:
+        - ApiAdmin
+      description: 'Requires permission: `api.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiClientUpdate'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ApiClientUpdate'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ApiClientUpdate'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/admin/api-clients/{id}/rotate':
     post:
       tags:
@@ -14678,6 +14709,23 @@ paths:
           schema:
             type: string
             format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/ApiClientRotate'
+          text/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/ApiClientRotate'
+          application/*+json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/ApiClientRotate'
       responses:
         '200':
           description: OK
@@ -14691,6 +14739,49 @@ paths:
             text/json:
               schema:
                 $ref: '#/components/schemas/ApiClientCreated'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/admin/api-clients/{id}/revoke':
+    post:
+      tags:
+        - ApiAdmin
+      description: 'Requires permission: `api.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApiClientRevoke'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ApiClientRevoke'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ApiClientRevoke'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/admin/api-clients/mes-status:
+    get:
+      tags:
+        - ApiAdmin
+      description: 'Requires permission: `api.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
         '401':
           description: Not signed in
         '403':
@@ -33933,6 +34024,89 @@ components:
             - 'null'
             - string
           format: date
+        kind:
+          $ref: '#/components/schemas/ApiClientKind'
+        scopes:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        siteIds:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+            format: uuid
+        allowedEndpoints:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+    ApiClientKind:
+      type: integer
+      default: 0
+    ApiClientRevoke:
+      required:
+        - reason
+      type: object
+      properties:
+        reason:
+          type: string
+    ApiClientRotate:
+      type: object
+      properties:
+        graceMinutes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+          default: 0
+    ApiClientUpdate:
+      required:
+        - name
+        - rateLimitPerMinute
+        - expiresOn
+        - scopes
+        - siteIds
+        - allowedEndpoints
+      type: object
+      properties:
+        name:
+          type: string
+        rateLimitPerMinute:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        expiresOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        scopes:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        siteIds:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+            format: uuid
+        allowedEndpoints:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
     ApplyPlaybookInput:
       required:
         - recordType

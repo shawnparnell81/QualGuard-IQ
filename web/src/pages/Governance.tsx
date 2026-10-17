@@ -131,34 +131,77 @@ export function ContinuityPage() {
   );
 }
 
+const clientKinds = ['API client', 'MES device'];
+const clientStatusColor: Record<string, 'success' | 'default' | 'warning' | 'error'> = { Active: 'success', Disabled: 'default', Expired: 'warning', Revoked: 'error' };
+const list = (s?: string) => (s ?? '').split(/[,\n]/).map((x) => x.trim()).filter(Boolean);
+
 export function ApiAccessPage() {
   const qc = useQueryClient();
   const users = useUsers();
   const sites = useSites();
   const [tab, setTab] = useState('clients');
   const clients = useQuery({ queryKey: ['api-clients'], queryFn: () => get<any[]>('/api/admin/api-clients') });
+  const mes = useQuery({ queryKey: ['mes-auth-status'], queryFn: () => get<any>('/api/admin/api-clients/mes-status') });
+  const catalog = useQuery({ queryKey: ['perm-catalog'], queryFn: () => get<string[]>('/api/admin/roles/permissions') });
   const channels = useQuery({ queryKey: ['channels'], queryFn: () => get<any[]>('/api/admin/notification-channels') });
-  const [dlg, setDlg] = useState<null | 'client' | 'channel'>(null);
+  const [dlg, setDlg] = useState<null | 'client' | 'device' | 'channel' | { edit: any } | { rotate: any } | { revoke: any }>(null);
   const [secret, setSecret] = useState<any>(null);
-  const refresh = () => { qc.invalidateQueries({ queryKey: ['api-clients'] }); qc.invalidateQueries({ queryKey: ['channels'] }); };
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['api-clients'] }); qc.invalidateQueries({ queryKey: ['channels'] }); qc.invalidateQueries({ queryKey: ['mes-auth-status'] }); };
   const r = useRunner(refresh);
   const name = (id: string) => users.data?.find((u) => u.id === id)?.displayName ?? id;
+  const siteCode = (id: string) => sites.data?.find((s) => s.id === id)?.code ?? id;
+  const isDevice = tab === 'devices';
+  const rows = (clients.data ?? []).filter((c) => (c.kind === 1) === isDevice);
+  const scopeOptions = (catalog.data ?? []).map((p) => [p, p] as [string, string]);
+  const siteOptions = (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`] as [string, string]);
+  const restrictionInputs = (c?: any, device?: boolean) => [
+    { name: 'scopes', label: device ? 'Permission scopes (required)' : 'Permission scopes (empty = all of the service user’s)', type: 'multiselect' as const, options: scopeOptions, initial: (c?.scopes ?? (device ? ['production.edit'] : [])).join(','), helper: 'A scope never adds permissions: the service user must already hold each one at every selected site.' },
+    { name: 'sites', label: device ? 'Sites (required)' : 'Sites (empty = the service user’s sites)', type: 'multiselect' as const, options: siteOptions, initial: (c?.siteIds ?? []).join(',') },
+    { name: 'endpoints', label: 'Allowed endpoints (one per line, empty = any)', type: 'multiline' as const, initial: (c?.allowedEndpoints ?? []).join('\n'), helper: device ? 'Defaults to POST /api/mes/events. Write "METHOD /api/path" or "/api/path".' : 'Write "METHOD /api/path" or "/api/path"; a path also allows its sub-paths.' },
+    { name: 'rate', label: 'Requests per minute', initial: String(c?.rateLimitPerMinute ?? (device ? 300 : 120)) },
+    { name: 'expires', label: device ? 'Expires on (required, within two years)' : 'Expires on (optional)', type: 'date' as const, initial: c?.expiresOn ?? '' }];
+  const body = (v: Record<string, string>) => ({ scopes: list(v.scopes), siteIds: list(v.sites), allowedEndpoints: list(v.endpoints), rateLimitPerMinute: Number(v.rate), expiresOn: v.expires || null });
+  const edit = typeof dlg === 'object' && dlg && 'edit' in dlg ? dlg.edit : null;
+  const rot = typeof dlg === 'object' && dlg && 'rotate' in dlg ? dlg.rotate : null;
+  const rev = typeof dlg === 'object' && dlg && 'revoke' in dlg ? dlg.revoke : null;
   return (
-    <ModuleWorkspace module={mod('governance')} crumbs={[{ label: 'Governance', to: '/governance' }, { label: 'API & channels' }]} title="Public API and notification channels"
-      tabs={[{ label: 'API clients', value: 'clients' }, { label: 'Notification channels', value: 'channels' }]} tab={tab} onTab={setTab}
-      actions={<Button variant="contained" onClick={() => setDlg(tab === 'clients' ? 'client' : 'channel')}>{tab === 'clients' ? 'New API client' : 'New channel'}</Button>}>
+    <ModuleWorkspace module={mod('governance')} crumbs={[{ label: 'Governance', to: '/governance' }, { label: 'API & channels' }]} title="Public API, MES devices and notification channels"
+      tabs={[{ label: 'API clients', value: 'clients' }, { label: 'MES devices', value: 'devices' }, { label: 'Notification channels', value: 'channels' }]} tab={tab} onTab={setTab}
+      actions={<Button variant="contained" onClick={() => setDlg(tab === 'clients' ? 'client' : tab === 'devices' ? 'device' : 'channel')}>{tab === 'clients' ? 'New API client' : tab === 'devices' ? 'Register MES device' : 'New channel'}</Button>}>
       {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}
-      {secret && <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setSecret(null)}>Copy now — the secret is shown once and stored only as a hash.<br />Client ID: <b style={{ fontFamily: mono }}>{secret.clientId}</b><br />API key (X-Api-Key): <b style={{ fontFamily: mono }}>{secret.apiKey}</b></Alert>}
-      {tab === 'clients' && <DataTable data={clients.data ?? []} empty="No API clients."
-        columns={[{ header: 'Name', accessorKey: 'name' }, { header: 'Client ID', accessorKey: 'clientId', cell: num }, { header: 'Secret', accessorKey: 'secretHint', cell: (x) => `…${x.getValue()}` }, { header: 'Acts as', accessorKey: 'serviceUserId', cell: (x) => name(x.getValue()) },
-          { header: 'Limit / min', accessorKey: 'rateLimitPerMinute' }, { header: 'Last used', accessorKey: 'lastUsedAt', cell: (x) => fmtDateTime(x.getValue()) }, { header: 'Enabled', accessorKey: 'enabled', cell: (x) => (x.getValue() ? 'Yes' : 'No') },
-          { header: '', id: 'a', cell: (x) => <><Button size="small" onClick={() => r.run(async () => setSecret(await post(`/api/admin/api-clients/${x.row.original.id}/rotate`)))}>Rotate</Button><Button size="small" onClick={() => r.run(() => post(`/api/admin/api-clients/${x.row.original.id}/enabled`, { enabled: !x.row.original.enabled }))}>{x.row.original.enabled ? 'Disable' : 'Enable'}</Button></> }]} />}
+      {secret && <Alert severity="warning" sx={{ mb: 2 }} onClose={() => setSecret(null)} data-testid="client-secret">Copy now — the secret is shown once and stored only as a hash. It cannot be retrieved later; rotate to get a new one.<br />Client ID: <b style={{ fontFamily: mono }}>{secret.clientId}</b><br />API key (X-Api-Key): <b style={{ fontFamily: mono }}>{secret.apiKey}</b></Alert>}
+      {isDevice && mes.data && <Alert severity={mes.data.requireDeviceClients ? 'success' : 'info'} sx={{ mb: 2 }} data-testid="mes-auth-status">
+        {mes.data.activeDevices} active MES device(s). Last 30 days: {mes.data.deviceEventsLast30Days} event(s) from registered devices, {mes.data.legacyEventsLast30Days} from user sessions or user tokens{mes.data.lastLegacyEventAt ? ` (last ${fmtDateTime(mes.data.lastLegacyEventAt)})` : ''}. {mes.data.note}</Alert>}
+      {tab !== 'channels' && <DataTable data={rows} empty={isDevice ? 'No MES devices registered.' : 'No API clients.'}
+        columns={[{ header: 'Name', accessorKey: 'name' }, { header: 'Client ID', accessorKey: 'clientId', cell: num }, { header: 'Secret', accessorKey: 'secretHint', cell: (x) => `…${x.getValue()}` },
+          { header: 'Acts as', accessorKey: 'serviceUserId', cell: (x) => name(x.getValue()) },
+          { header: 'Restrictions', id: 'rs', accessorFn: (c) => [c.scopes.length ? c.scopes.join(', ') : 'all service-user permissions', c.siteIds.length ? `sites ${c.siteIds.map(siteCode).join(', ')}` : 'service-user sites', c.allowedEndpoints.length ? c.allowedEndpoints.join(', ') : 'any endpoint'].join(' · ') },
+          { header: 'Limit / min', accessorKey: 'rateLimitPerMinute' }, { header: 'Expires', accessorKey: 'expiresOn', cell: (x) => (x.getValue() ? fmtDate(x.getValue()) : '—') },
+          { header: 'Last used', id: 'lu', accessorFn: (c) => (c.lastUsedAt ? `${fmtDateTime(c.lastUsedAt)}${c.lastUsedFrom ? ` from ${c.lastUsedFrom}` : ''}` : 'Never') },
+          { header: 'Last failure', id: 'lf', accessorFn: (c) => (c.lastFailureAt ? `${fmtDateTime(c.lastFailureAt)} — ${c.lastFailureReason} (${c.failureCount} total)` : '—') },
+          { header: 'Status', accessorKey: 'status', cell: (x) => <Chip size="small" color={clientStatusColor[x.getValue()] ?? 'default'} label={x.row.original.previousSecretValidUntil ? `${x.getValue()} · old secret until ${fmtDateTime(x.row.original.previousSecretValidUntil)}` : x.getValue()} /> },
+          { header: '', id: 'a', cell: (x) => { const c = x.row.original; return c.status === 'Revoked' ? <Typography variant="caption" color="text.secondary">{c.revokedReason}</Typography> : <Stack direction="row">
+            <Button size="small" onClick={() => setDlg({ edit: c })}>Edit</Button><Button size="small" onClick={() => setDlg({ rotate: c })}>Rotate</Button>
+            <Button size="small" onClick={() => r.run(() => post(`/api/admin/api-clients/${c.id}/enabled`, { enabled: !c.enabled }))}>{c.enabled ? 'Disable' : 'Enable'}</Button>
+            <Button size="small" color="error" onClick={() => setDlg({ revoke: c })}>Revoke</Button></Stack>; } }]} />}
       {tab === 'channels' && <DataTable data={channels.data ?? []} empty="No channels. Channels stay disabled until a test message succeeds."
         columns={[{ header: 'Name', accessorKey: 'name' }, { header: 'Kind', accessorKey: 'kind', cell: (x) => channelKinds[x.getValue()] }, { header: 'Scope', accessorKey: 'scope', cell: (x) => scopes[x.getValue()] }, { header: 'Target', accessorKey: 'target' }, { header: 'Enabled', accessorKey: 'enabled', cell: (x) => (x.getValue() ? 'Yes' : 'No') },
           { header: '', id: 'a', cell: (x) => <Button size="small" onClick={() => r.run(() => post(`/api/admin/notification-channels/${x.row.original.id}/test`, { enableOnSuccess: true }))}>Send test</Button> }]} />}
-      <StepDialog open={dlg === 'client'} onClose={() => setDlg(null)} title="New API client" confirm="Create" intro="The client acts with the permissions of its service user (X-Api-Key header or OAuth client credentials at /api/oauth/token)."
-        inputs={[{ name: 'name', label: 'Name' }, { name: 'user', label: 'Service user', type: 'select', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }, { name: 'rate', label: 'Requests per minute', initial: '120' }]}
-        onConfirm={async (v) => { setSecret(await post('/api/admin/api-clients', { name: v.name, serviceUserId: v.user, rateLimitPerMinute: Number(v.rate), expiresOn: null })); refresh(); }} />
+      <StepDialog open={dlg === 'client' || dlg === 'device'} onClose={() => setDlg(null)} key={String(dlg)} title={dlg === 'device' ? 'Register MES device' : 'New API client'} confirm="Create"
+        intro={dlg === 'device' ? 'An MES device sends production events with its own credential (X-Api-Key, or OAuth client credentials at /api/oauth/token). It acts as its service user, narrowed to the scopes, sites and endpoints below.' : 'The client acts as its service user (X-Api-Key header or OAuth client credentials at /api/oauth/token), narrowed by any scopes, sites and endpoints you set.'}
+        inputs={[{ name: 'name', label: 'Name' }, { name: 'user', label: 'Service user', type: 'select', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }, ...restrictionInputs(undefined, dlg === 'device')]}
+        onConfirm={async (v) => { setSecret(await post('/api/admin/api-clients', { name: v.name, serviceUserId: v.user, kind: dlg === 'device' ? 1 : 0, ...body(v) })); refresh(); }} />
+      <StepDialog open={!!edit} onClose={() => setDlg(null)} key={edit?.id ?? 'e'} title={`Edit ${edit ? clientKinds[edit.kind] : ''}`} confirm="Save"
+        inputs={[{ name: 'name', label: 'Name', initial: edit?.name }, ...restrictionInputs(edit, edit?.kind === 1)]}
+        onConfirm={async (v) => { await put(`/api/admin/api-clients/${edit.id}`, { name: v.name, ...body(v) }); refresh(); }} />
+      <StepDialog open={!!rot} onClose={() => setDlg(null)} key={rot?.id ?? 'r'} title={`Rotate secret — ${rot?.name ?? ''}`} confirm="Rotate"
+        intro="A new secret is shown once. With a grace period the current secret keeps working until then, so the device can be updated without downtime; 0 stops it at once."
+        inputs={[{ name: 'grace', label: 'Grace period (minutes, 0–10,080)', initial: '0' }]}
+        onConfirm={async (v) => { setSecret(await post(`/api/admin/api-clients/${rot.id}/rotate`, { graceMinutes: Number(v.grace || 0) })); refresh(); }} />
+      <StepDialog open={!!rev} onClose={() => setDlg(null)} key={rev?.id ?? 'v'} title={`Revoke ${rev?.name ?? ''}`} confirm="Revoke permanently" danger
+        intro="Revocation is permanent: the key and any access token stop working at once, and the client cannot be enabled or rotated again. Use Disable for a temporary stop."
+        inputs={[{ name: 'reason', label: 'Reason', type: 'multiline' }]}
+        onConfirm={async (v) => { await post(`/api/admin/api-clients/${rev.id}/revoke`, { reason: v.reason }); refresh(); }} />
       <StepDialog open={dlg === 'channel'} onClose={() => setDlg(null)} title="New notification channel" confirm="Create"
         inputs={[{ name: 'name', label: 'Name' }, { name: 'kind', label: 'Kind', type: 'select', options: channelKinds.map((k, i) => [i, k]), initial: '2' }, { name: 'scope', label: 'Scope', type: 'select', options: scopes.map((k, i) => [i, k]), initial: '0' },
           { name: 'site', label: 'Site (site scope)', type: 'select', options: [['', 'None'], ...(sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`] as [string, string])] }, { name: 'target', label: 'Target (HTTPS webhook or email address)' }]}

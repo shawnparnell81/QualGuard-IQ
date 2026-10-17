@@ -194,7 +194,12 @@ public sealed class ApiAdminController(GovernanceService svc) : ControllerBase
     /// <summary>Creates a client. The secret is shown once in the response and stored only as a hash.</summary>
     [HttpPost("api-clients")] public Task<ApiClientCreated> Create(ApiClientInput r, CancellationToken ct) => svc.CreateClientAsync(r, ct);
     [HttpPost("api-clients/{id:guid}/enabled")] public async Task<IActionResult> Enable(Guid id, EnableRequest r, CancellationToken ct) { await svc.SetClientEnabledAsync(id, r.Enabled, ct); return NoContent(); }
-    [HttpPost("api-clients/{id:guid}/rotate")] public Task<ApiClientCreated> Rotate(Guid id, CancellationToken ct) => svc.RotateAsync(id, ct);
+    [HttpPut("api-clients/{id:guid}")] public async Task<IActionResult> Update(Guid id, ApiClientUpdate r, CancellationToken ct) { await svc.UpdateClientAsync(id, r, ct); return NoContent(); }
+    /// <summary>New secret, shown once. graceMinutes (0–10,080) keeps the old secret working that long.</summary>
+    [HttpPost("api-clients/{id:guid}/rotate")] public Task<ApiClientCreated> Rotate(Guid id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] ApiClientRotate? r, CancellationToken ct) => svc.RotateAsync(id, r, ct);
+    /// <summary>Permanent revocation; the client cannot be enabled or rotated again.</summary>
+    [HttpPost("api-clients/{id:guid}/revoke")] public async Task<IActionResult> Revoke(Guid id, ApiClientRevoke r, CancellationToken ct) { await svc.RevokeClientAsync(id, r, ct); return NoContent(); }
+    [HttpGet("api-clients/mes-status")] public Task<object> MesStatus([FromServices] IConfiguration config, CancellationToken ct) => svc.MesAuthStatusAsync(config.GetValue("Mes:RequireDeviceClients", false), ct);
 
     [HttpGet("notification-channels")] public Task<List<NotificationChannel>> Channels(CancellationToken ct) => svc.ChannelsAsync(ct);
     [HttpPost("notification-channels")] public async Task<object> CreateChannel(ChannelInput r, CancellationToken ct) => new { (await svc.SaveChannelAsync(null, r, ct)).Id };
