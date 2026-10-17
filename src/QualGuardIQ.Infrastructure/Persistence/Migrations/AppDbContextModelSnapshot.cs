@@ -1535,9 +1535,33 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<int>("AcceptanceQuantity")
                         .HasColumnType("integer");
 
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ApproverId")
+                        .HasColumnType("uuid");
+
                     b.Property<decimal>("AqlLevel")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
+
+                    b.Property<decimal?>("AqlLevelCritical")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<decimal?>("AqlLevelMajor")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<decimal?>("AqlLevelMinor")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("ClassStages")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("CodeLetter")
                         .HasColumnType("text");
@@ -1563,7 +1587,7 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("InspectionDate")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("InspectionId")
+                    b.Property<Guid?>("InspectionId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("InspectionLevel")
@@ -1601,6 +1625,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("PartId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("PartRevision")
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
                     b.Property<Guid>("PlanId")
                         .HasColumnType("uuid");
 
@@ -1611,6 +1639,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("ProductId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("PurchaseOrder")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Rationale")
                         .HasColumnType("text");
@@ -1655,7 +1687,13 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("WorkOrder")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("ApproverId");
 
                     b.HasIndex("CustomerId");
 
@@ -1683,6 +1721,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AttachmentIds")
+                        .HasColumnType("jsonb");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -1706,6 +1747,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
+
+                    b.Property<int?>("SampleUnitNumber")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Stage")
                         .HasColumnType("integer");
@@ -1749,6 +1793,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uuid");
+
+                    b.Property<int?>("DefectClass")
+                        .HasColumnType("integer");
 
                     b.Property<string>("InspectionLevel")
                         .IsRequired()
@@ -1831,6 +1878,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Description")
                         .HasColumnType("text");
+
+                    b.Property<DateOnly?>("EffectiveDate")
+                        .HasColumnType("date");
 
                     b.Property<int>("InspectionSeverity")
                         .HasColumnType("integer");
@@ -3039,6 +3089,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("DataType")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(4000)
@@ -3119,6 +3172,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<bool?>("BooleanValue")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid>("CharacteristicId")
                         .HasColumnType("uuid");
@@ -6912,6 +6968,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.AqlInspection", b =>
                 {
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ApproverId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("QualGuardIQ.Domain.MasterData.Customer", null)
                         .WithMany()
                         .HasForeignKey("CustomerId")
@@ -6920,8 +6981,7 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasOne("QualGuardIQ.Domain.Quality.Inspection", null)
                         .WithMany()
                         .HasForeignKey("InspectionId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
