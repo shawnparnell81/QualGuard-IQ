@@ -477,10 +477,14 @@ export function Marketplace() {
   const qc = useQueryClient();
   const catalog = useQuery({ queryKey: ['marketplace'], queryFn: () => get<any[]>('/api/platform/marketplace') });
   const licenses = useQuery({ queryKey: ['marketplace-licenses'], queryFn: () => get<any[]>('/api/platform/marketplace/licenses') });
+  const licensing = useQuery({ queryKey: ['marketplace-licensing'], queryFn: () => get<any>('/api/platform/marketplace/licensing') });
+  const keys = useQuery({ queryKey: ['marketplace-keys'], queryFn: () => get<any[]>('/api/platform/marketplace/licensing/keys') });
+  const [keyDlg, setKeyDlg] = useState<null | { keyId: string; pem: string; env: number; notes: string; error?: string }>(null);
+  const [revDlg, setRevDlg] = useState<null | { licenseId: string; reason: string }>(null);
   const [kind, setKind] = useState<number | 'installed' | null>(null); const [open, setOpen] = useState<string | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [licKey, setLicKey] = useState<string | null>(null); const [manifest, setManifest] = useState<string | null>(null);
-  const run = async (fn: () => Promise<unknown>, ok: string) => { setMsg(null); try { await fn(); setMsg({ ok: true, text: ok }); qc.invalidateQueries({ queryKey: ['marketplace'] }); qc.invalidateQueries({ queryKey: ['marketplace-licenses'] }); return true; } catch (e) { setMsg({ ok: false, text: (e as Error).message }); return false; } };
+  const run = async (fn: () => Promise<unknown>, ok: string) => { setMsg(null); try { await fn(); setMsg({ ok: true, text: ok }); qc.invalidateQueries({ queryKey: ['marketplace'] }); qc.invalidateQueries({ queryKey: ['marketplace-licenses'] }); qc.invalidateQueries({ queryKey: ['marketplace-licensing'] }); qc.invalidateQueries({ queryKey: ['marketplace-keys'] }); return true; } catch (e) { setMsg({ ok: false, text: (e as Error).message }); return false; } };
   const items = (catalog.data ?? []).filter((p) => kind === null || (kind === 'installed' ? !!p.installed : p.kind === kind));
   const sel = (catalog.data ?? []).find((p) => p.key === open);
   return (
@@ -512,6 +516,36 @@ export function Marketplace() {
           {!l.revoked && <Button size="small" color="error" onClick={() => run(() => post(`/api/platform/marketplace/licenses/${l.id}/revoke`, {}), 'License revoked.')}>Revoke</Button>}</Stack>; })}
         {licenses.data?.length === 0 && <Typography color="text.secondary">No licenses activated. Free extensions can be installed without one.</Typography>}
       </Paper>
+      <Paper sx={{ p: 2, mt: 2 }} data-testid="licensing-keys">
+        <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}><Typography variant="h3" sx={{ flex: 1 }}>License verification keys</Typography>
+          <Button size="small" onClick={() => setRevDlg({ licenseId: '', reason: '' })}>Revoke a license id</Button>
+          <Button size="small" variant="outlined" onClick={() => setKeyDlg({ keyId: '', pem: '', env: 1, notes: '' })}>Register public key</Button></Stack>
+        <Alert severity="info" sx={{ mb: 1 }}>{licensing.data?.custody} Signing: {licensing.data?.signing}</Alert>
+        <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>Deployment id: {licensing.data?.deploymentId ?? 'not set'} · Customer id: {licensing.data?.customerId ?? 'not set'} · Development keys: {licensing.data?.acceptDevelopmentKeys ? 'accepted (test installation)' : 'refused'}</Typography>
+        {(licensing.data?.keys ?? []).map((k: any) => { const row = (keys.data ?? []).find((x) => x.keyId === k.keyId); return <Stack key={k.keyId} direction="row" gap={2} alignItems="center" sx={{ py: 1, borderTop: 1, borderColor: 'divider' }} data-testid="licensing-key">
+          <Typography sx={{ fontFamily: mono, minWidth: 180 }}>{k.keyId}</Typography>
+          <Chip size="small" variant="outlined" color={k.environment === 1 ? 'primary' : 'warning'} label={k.environment === 1 ? 'Production' : 'Development'} />
+          <Chip size="small" color={k.status === 0 ? 'success' : k.status === 1 ? 'default' : 'error'} label={['Active', 'Retired', 'Revoked'][k.status]} />
+          <Typography variant="caption" sx={{ fontFamily: mono, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.algorithm} · {k.fingerprint.slice(0, 24)}… · {k.source}</Typography>
+          {row && row.status === 0 && <Button size="small" onClick={() => run(() => post(`/api/platform/marketplace/licensing/keys/${row.id}/retire`, {}), `Key ${k.keyId} retired; licenses it signed stay valid.`)}>Retire</Button>}
+          {row && row.status !== 2 && <Button size="small" color="error" onClick={() => run(() => post(`/api/platform/marketplace/licensing/keys/${row.id}/revoke`, {}), `Key ${k.keyId} revoked; licenses it signed no longer count.`)}>Revoke</Button>}
+        </Stack>; })}
+      </Paper>
+      <Dialog open={!!keyDlg} onClose={() => setKeyDlg(null)} fullWidth maxWidth="sm"><DialogTitle>Register a publisher public key</DialogTitle>
+        {keyDlg && <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
+          {keyDlg.error && <Alert severity="error">{keyDlg.error}</Alert>}
+          <TextField label="Key id" value={keyDlg.keyId} onChange={(e) => setKeyDlg({ ...keyDlg, keyId: e.target.value })} helperText="As printed by the publisher's license command, e.g. pub-2026-a" />
+          <TextField select label="Environment" value={keyDlg.env} onChange={(e) => setKeyDlg({ ...keyDlg, env: Number(e.target.value) })}><MenuItem value={1}>Production</MenuItem><MenuItem value={0}>Development (test installations only)</MenuItem></TextField>
+          <TextField multiline minRows={4} label="Public key (PEM)" value={keyDlg.pem} onChange={(e) => setKeyDlg({ ...keyDlg, pem: e.target.value })} InputProps={{ sx: { fontFamily: mono, fontSize: 12 } }} helperText="Public key only. A private key is refused and must never leave the publisher's offline custody." />
+          <TextField label="Notes" value={keyDlg.notes} onChange={(e) => setKeyDlg({ ...keyDlg, notes: e.target.value })} />
+        </DialogContent>}
+        <DialogActions><Button onClick={() => setKeyDlg(null)}>Cancel</Button><Button variant="contained" onClick={async () => { if (!keyDlg) return; try { await post('/api/platform/marketplace/licensing/keys', { keyId: keyDlg.keyId, publicKeyPem: keyDlg.pem, environment: keyDlg.env, notes: keyDlg.notes || null }); } catch (e) { setKeyDlg({ ...keyDlg, error: (e as Error).message }); return; } await run(async () => undefined, 'Public key registered.'); setKeyDlg(null); }}>Register</Button></DialogActions></Dialog>
+      <Dialog open={!!revDlg} onClose={() => setRevDlg(null)} fullWidth maxWidth="sm"><DialogTitle>Revoke a license id</DialogTitle>
+        {revDlg && <DialogContent sx={{ display: 'grid', gap: 1.5, pt: '8px !important' }}>
+          <TextField label="License id" value={revDlg.licenseId} onChange={(e) => setRevDlg({ ...revDlg, licenseId: e.target.value })} helperText="From the publisher's revocation notice. Blocks activation even if it was never activated here." />
+          <TextField label="Reason" value={revDlg.reason} onChange={(e) => setRevDlg({ ...revDlg, reason: e.target.value })} />
+        </DialogContent>}
+        <DialogActions><Button onClick={() => setRevDlg(null)}>Cancel</Button><Button variant="contained" color="error" onClick={async () => { if (revDlg && await run(() => post('/api/platform/marketplace/licensing/revocations', revDlg), `License ${revDlg.licenseId} revoked.`)) setRevDlg(null); }}>Revoke</Button></DialogActions></Dialog>
       <Dialog open={!!sel} onClose={() => setOpen(null)} fullWidth maxWidth="sm"><DialogTitle>{sel?.name}</DialogTitle>
         {sel && <DialogContent sx={{ display: 'grid', gap: 1.5 }}>
           <Typography variant="body2">{sel.description}</Typography>
@@ -522,7 +556,7 @@ export function Marketplace() {
         </DialogContent>}
         <DialogActions>{sel?.installed && <Button color="error" onClick={async () => { if (await run(() => del(`/api/platform/marketplace/${sel.key}`), `${sel.name} uninstalled; its configuration was removed.`)) setOpen(null); }}>Uninstall</Button>}<Box sx={{ flex: 1 }} /><Button onClick={() => setOpen(null)}>Close</Button></DialogActions></Dialog>
       <Dialog open={licKey !== null} onClose={() => setLicKey(null)} fullWidth maxWidth="sm"><DialogTitle>Activate a license</DialogTitle>
-        <DialogContent sx={{ pt: '8px !important' }}><TextField fullWidth multiline minRows={3} label="License key (QGL1…)" value={licKey ?? ''} onChange={(e) => setLicKey(e.target.value)} InputProps={{ sx: { fontFamily: mono, fontSize: 12 } }} helperText="The key is verified offline against the publisher signature; only its fingerprint is stored." /></DialogContent>
+        <DialogContent sx={{ pt: '8px !important' }}><TextField fullWidth multiline minRows={3} label="License key (QGL2… or QGL1…)" value={licKey ?? ''} onChange={(e) => setLicKey(e.target.value)} InputProps={{ sx: { fontFamily: mono, fontSize: 12 } }} helperText="The key is verified offline against the publisher signature; only its fingerprint is stored." /></DialogContent>
         <DialogActions><Button onClick={() => setLicKey(null)}>Cancel</Button><Button variant="contained" onClick={async () => { if (await run(() => post('/api/platform/marketplace/licenses', { licenseKey: licKey }), 'License activated.')) setLicKey(null); }}>Activate</Button></DialogActions></Dialog>
       <Dialog open={manifest !== null} onClose={() => setManifest(null)} fullWidth maxWidth="md"><DialogTitle>Import a package manifest</DialogTitle>
         <DialogContent sx={{ pt: '8px !important' }}><TextField fullWidth multiline minRows={10} label="manifest.json" value={manifest ?? ''} onChange={(e) => setManifest(e.target.value)} InputProps={{ sx: { fontFamily: mono, fontSize: 12 } }} helperText='{"key","name","kind","publisher","version","description","dependsOn":["module:Quality"],"requiresLicense","content":{"businessRules":[],"dataRules":[],"formComponents":[]}}' /></DialogContent>

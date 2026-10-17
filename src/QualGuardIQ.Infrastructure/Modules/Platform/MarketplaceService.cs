@@ -22,7 +22,8 @@ public sealed class ExtensionContent
 
 public sealed record ExtensionManifest(string Key, string Name, ExtensionKind Kind, string Publisher, string Version, string Description, List<string>? DependsOn, bool RequiresLicense, ExtensionContent? Content);
 public sealed record LicenseActivation(string LicenseKey);
-public sealed record LicensePayload(string LicenseId, string Licensee, List<string> Extensions, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt);
+public sealed record LicenseRevocationInput(string LicenseId, string Reason);
+public sealed record SigningKeyInput(string KeyId, string? Algorithm, string PublicKeyPem, LicenseKeyEnvironment Environment, string? Notes);
 
 /// <summary>
 /// Marketplace framework: a catalog of add-ons, quality extensions and industry packs (built-in and imported manifests), dependency management against
@@ -32,7 +33,6 @@ public sealed record LicensePayload(string LicenseId, string Licensee, List<stri
 public sealed class MarketplaceService(AppDbContext db, ModuleSupport m, PlatformService platform, RuleEngine rules, DataGovernanceService governance, FormLibraryService forms, IConfiguration config)
 {
     public static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { Converters = { new JsonStringEnumConverter(allowIntegerValues: true) } };
-    const string LicensePrefix = "QGL1";
 
     static Version V(string v) => Version.TryParse(v, out var x) ? x : throw new AppException($"'{v}' is not a version number (use major.minor.patch).");
 
@@ -62,7 +62,7 @@ public sealed class MarketplaceService(AppDbContext db, ModuleSupport m, Platfor
         await SyncBuiltInsAsync(ct);
         var packages = await db.ExtensionPackages.AsNoTracking().ToListAsync(ct);
         var installs = await db.ExtensionInstallations.AsNoTracking().ToListAsync(ct);
-        var licenses = await db.ExtensionLicenses.AsNoTracking().ToListAsync(ct);
+        var licenses = await ValidLicensesAsync(ct);
         var modules = Modules();
         return packages.GroupBy(p => p.Key).Select(g =>
         {
@@ -87,6 +87,16 @@ public sealed class MarketplaceService(AppDbContext db, ModuleSupport m, Platfor
     static bool Satisfied(string dep, HashSet<string> modules, List<ExtensionInstallation> installs) =>
         dep.StartsWith("module:", StringComparison.OrdinalIgnoreCase) ? modules.Contains(dep[7..]) : installs.Any(i => i.Key == dep && i.Enabled);
 
+    /// <summary>Licenses that still count: not revoked, signed by a key that is not revoked, and not development-signed on an installation that refuses development keys.</summary>
+    async Task<List<ExtensionLicense>> ValidLicensesAsync(CancellationToken ct)
+    {
+        var revokedKeys = await db.LicenseSigningKeys.AsNoTracking().Where(k => k.Status == LicenseKeyStatus.Revoked).Select(k => k.KeyId).ToListAsync(ct);
+        var revokedIds = await db.LicenseRevocations.AsNoTracking().Select(x => x.LicenseId).ToListAsync(ct);
+        var dev = InstallationScope.From(config).AcceptDevelopmentKeys;
+        return (await db.ExtensionLicenses.AsNoTracking().ToListAsync(ct))
+            .Where(l => !(l.SigningKeyId is { } k && revokedKeys.Contains(k)) && !revokedIds.Contains(l.LicenseId) && (dev || l.Environment == LicenseKeyEnvironment.Production)).ToList();
+    }
+
     (string State, DateTimeOffset? Until) LicenseState(ExtensionPackage p, List<ExtensionLicense> licenses)
     {
         if (!p.RequiresLicense) return ("Free", null);
@@ -98,7 +108,7 @@ public sealed class MarketplaceService(AppDbContext db, ModuleSupport m, Platfor
 
     async Task RequireLicenseAsync(ExtensionPackage p, CancellationToken ct)
     {
-        var (state, _) = LicenseState(p, await db.ExtensionLicenses.AsNoTracking().ToListAsync(ct));
+        var (state, _) = LicenseState(p, await ValidLicensesAsync(ct));
         if (state is "Unlicensed" or "Expired") throw new AppException($"{p.Name} needs a license. {(state == "Expired" ? "The license has expired." : "Activate a license that covers it first.")}");
     }
 
@@ -212,28 +222,26 @@ public sealed class MarketplaceService(AppDbContext db, ModuleSupport m, Platfor
 
     public Task<List<ExtensionLicense>> LicensesAsync(CancellationToken ct) => db.ExtensionLicenses.AsNoTracking().OrderByDescending(l => l.ExpiresAt).ToListAsync(ct);
 
-    /// <summary>Activates a license key "QGL1.&lt;payload&gt;.&lt;signature&gt;" signed with the publisher's ECDSA P-256 key; verified offline with Licensing:PublicKeyPem.</summary>
+    /// <summary>Publisher public keys this installation accepts: Licensing:PublicKeyPem (legacy, id "config-legacy", production) plus registered keys.</summary>
+    public async Task<List<VerificationKey>> VerificationKeysAsync(CancellationToken ct)
+    {
+        var keys = new List<VerificationKey>();
+        if (config["Licensing:PublicKeyPem"] is { Length: > 0 } pem) keys.Add(new(LicenseFormat.LegacyKeyId, LicenseFormat.Algorithm, pem, LicenseKeyEnvironment.Production, LicenseKeyStatus.Active, "configuration"));
+        keys.AddRange((await db.LicenseSigningKeys.AsNoTracking().OrderBy(k => k.RegisteredAt).ToListAsync(ct)).Select(k => new VerificationKey(k.KeyId, k.Algorithm, k.PublicKeyPem, k.Environment, k.Status, "registered")));
+        return keys;
+    }
+
+    /// <summary>Activates a license key (QGL2 with a key id, or legacy QGL1). Verified offline: signature, key status and environment, expiry, extension and installation scope, revocations.</summary>
     public async Task<ExtensionLicense> ActivateAsync(LicenseActivation r, CancellationToken ct)
     {
-        var pem = config["Licensing:PublicKeyPem"];
-        if (string.IsNullOrWhiteSpace(pem)) throw new AppException("License verification is not configured on this installation (Licensing:PublicKeyPem).");
-        var parts = (r.LicenseKey ?? "").Trim().Split('.');
-        if (parts.Length != 3 || parts[0] != LicensePrefix) throw new AppException("This is not a QualGuard IQ license key.");
-        byte[] payload, sig;
-        try { payload = Base64Url(parts[1]); sig = Base64Url(parts[2]); } catch (FormatException) { throw new AppException("The license key is damaged."); }
-        using (var key = ECDsa.Create())
-        {
-            key.ImportFromPem(pem);
-            if (!key.VerifyData(payload, sig, HashAlgorithmName.SHA256)) throw new AppException("The license signature is not valid.");
-        }
-        var l = JsonSerializer.Deserialize<LicensePayload>(payload, Json) ?? throw new AppException("The license key is damaged.");
-        if (l.ExpiresAt <= m.Now) throw new AppException($"This license expired on {l.ExpiresAt:yyyy-MM-dd}.");
-        if (l.Extensions is not { Count: > 0 }) throw new AppException("The license does not cover any extension.");
-        var hash = Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(r.LicenseKey!.Trim())));
+        var v = LicenseFormat.Verify(r.LicenseKey ?? "", await VerificationKeysAsync(ct), InstallationScope.From(config), m.Now);
+        var l = v.Claims;
+        if (await db.LicenseRevocations.AnyAsync(x => x.LicenseId == l.LicenseId, ct)) throw new ConflictException("This license was revoked on this installation.");
         var existing = await db.ExtensionLicenses.FirstOrDefaultAsync(x => x.LicenseId == l.LicenseId, ct);
         if (existing is { Revoked: true }) throw new ConflictException("This license was revoked on this installation.");
         var e = existing ?? new ExtensionLicense { LicenseId = l.LicenseId };
-        e.Licensee = l.Licensee; e.Extensions = l.Extensions; e.IssuedAt = l.IssuedAt; e.ExpiresAt = l.ExpiresAt; e.KeyHash = hash;
+        e.Licensee = l.Licensee; e.Extensions = l.Extensions; e.IssuedAt = l.IssuedAt; e.ExpiresAt = l.ExpiresAt; e.KeyHash = v.KeyHash;
+        e.SigningKeyId = v.KeyId; e.CustomerId = l.CustomerId; e.Deployments = l.Deployments ?? []; e.Environment = l.Environment;
         if (existing is null) db.ExtensionLicenses.Add(e);
         await db.SaveChangesAsync(ct);
         return e;
@@ -242,10 +250,75 @@ public sealed class MarketplaceService(AppDbContext db, ModuleSupport m, Platfor
     public async Task RevokeAsync(Guid id, CancellationToken ct)
     {
         var l = await db.ExtensionLicenses.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("License");
-        l.Revoked = true; await db.SaveChangesAsync(ct);
+        l.Revoked = true;
+        if (!await db.LicenseRevocations.AnyAsync(x => x.LicenseId == l.LicenseId, ct))
+            db.LicenseRevocations.Add(new LicenseRevocation { LicenseId = l.LicenseId, Reason = "Revoked on this installation.", RevokedById = m.UserId, At = m.Now });
+        await db.SaveChangesAsync(ct);
     }
 
-    static byte[] Base64Url(string s) { s = s.Replace('-', '+').Replace('_', '/'); return Convert.FromBase64String(s.PadRight(s.Length + (4 - s.Length % 4) % 4, '=')); }
+    /// <summary>Revokes a license id from the publisher's revocation notice, so it cannot be activated here even if it never was.</summary>
+    public async Task RevokeIdAsync(LicenseRevocationInput r, CancellationToken ct)
+    {
+        ModuleSupport.Required(r.LicenseId, "License id", 100); ModuleSupport.Required(r.Reason, "Reason", 2000);
+        var id = r.LicenseId.Trim();
+        if (!await db.LicenseRevocations.AnyAsync(x => x.LicenseId == id, ct))
+            db.LicenseRevocations.Add(new LicenseRevocation { LicenseId = id, Reason = r.Reason.Trim(), RevokedById = m.UserId, At = m.Now });
+        foreach (var l in await db.ExtensionLicenses.Where(x => x.LicenseId == id).ToListAsync(ct)) l.Revoked = true;
+        await db.SaveChangesAsync(ct);
+    }
+
+    public Task<List<LicenseRevocation>> RevocationsAsync(CancellationToken ct) => db.LicenseRevocations.AsNoTracking().OrderByDescending(x => x.At).ToListAsync(ct);
+
+    // ------------------------------------------------------------------ verification keys (public keys only)
+    public Task<List<LicenseSigningKey>> SigningKeysAsync(CancellationToken ct) => db.LicenseSigningKeys.AsNoTracking().OrderByDescending(k => k.RegisteredAt).ToListAsync(ct);
+
+    /// <summary>Registers a publisher public key. A private key is refused. Development keys are refused unless this installation accepts them.</summary>
+    public async Task<LicenseSigningKey> RegisterKeyAsync(SigningKeyInput r, CancellationToken ct)
+    {
+        if (!System.Text.RegularExpressions.Regex.IsMatch(r.KeyId ?? "", "^[a-z0-9][a-z0-9-]{2,59}$")) throw new AppException("Key id must be 3–60 lowercase letters, numbers or hyphens.");
+        if ((r.Algorithm ?? LicenseFormat.Algorithm) != LicenseFormat.Algorithm) throw new AppException("Only ES256 (ECDSA P-256 with SHA-256) is supported.");
+        if (r.KeyId == LicenseFormat.LegacyKeyId) throw new AppException($"'{LicenseFormat.LegacyKeyId}' is reserved for the configured key.");
+        var pem = LicenseFormat.NormalizePublicKey(r.PublicKeyPem);
+        if (r.Environment == LicenseKeyEnvironment.Development && !InstallationScope.From(config).AcceptDevelopmentKeys)
+            throw new AppException("This installation does not accept development keys (Licensing:AcceptDevelopmentKeys).");
+        if (r.Environment == LicenseKeyEnvironment.Production && r.KeyId!.StartsWith("dev-", StringComparison.Ordinal)) throw new AppException("A key id starting with 'dev-' is a development key.");
+        var fp = LicenseFormat.Fingerprint(pem);
+        if (await db.LicenseSigningKeys.AnyAsync(k => k.KeyId == r.KeyId || k.Fingerprint == fp, ct)) throw new ConflictException("This key id or public key is already registered.");
+        var k = new LicenseSigningKey { KeyId = r.KeyId!, Algorithm = LicenseFormat.Algorithm, PublicKeyPem = pem, Fingerprint = fp, Environment = r.Environment, Status = LicenseKeyStatus.Active,
+            RegisteredAt = m.Now, RegisteredById = m.UserId, Notes = r.Notes?.Trim() };
+        db.LicenseSigningKeys.Add(k);
+        await db.SaveChangesAsync(ct);
+        return k;
+    }
+
+    /// <summary>Retire (rotation: licenses it already signed stay valid, no new activations) or revoke (compromised: every license it signed stops counting).</summary>
+    public async Task SetKeyStatusAsync(Guid id, LicenseKeyStatus status, CancellationToken ct)
+    {
+        var k = await db.LicenseSigningKeys.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("Signing key");
+        if (k.Status == LicenseKeyStatus.Revoked) throw new AppException("A revoked key stays revoked; register a new key.");
+        if (status == LicenseKeyStatus.Active) throw new AppException("A retired key cannot be reactivated; register a new key.");
+        k.Status = status;
+        if (status == LicenseKeyStatus.Retired) k.RetiredAt = m.Now; else k.RevokedAt = m.Now;
+        await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>What this installation verifies with and whether signing is configured. Never returns key material beyond public keys.</summary>
+    public async Task<object> LicensingStatusAsync(CancellationToken ct)
+    {
+        var scope = InstallationScope.From(config);
+        var keys = await VerificationKeysAsync(ct);
+        string signing;
+        try { var sc = LicenseSigner.Config(config); signing = $"Configured on this host (key {sc.KeyId}, {sc.Environment}) — signing is done offline with the license command, never through the API."; }
+        catch (AppException e) { signing = e.Message; }
+        return new
+        {
+            scope.DeploymentId, scope.CustomerId, scope.AcceptDevelopmentKeys,
+            Keys = keys.Select(k => new { k.KeyId, k.Algorithm, k.Environment, k.Status, k.Source, Fingerprint = LicenseFormat.Fingerprint(k.PublicKeyPem) }),
+            Signing = signing,
+            Custody = "The production signing private key is held offline by the publisher. Installations hold public keys only."
+        };
+    }
+
 }
 
 /// <summary>Packages shipped with the product. Imported manifests use the same shape.</summary>

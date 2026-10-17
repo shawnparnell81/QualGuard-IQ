@@ -27561,6 +27561,158 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/platform/marketplace/licensing:
+    get:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/marketplace/licensing/revocations:
+    get:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LicenseRevocation'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LicenseRevocation'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LicenseRevocation'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LicenseRevocationInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/LicenseRevocationInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/LicenseRevocationInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/marketplace/licensing/keys:
+    get:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LicenseSigningKey'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LicenseSigningKey'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LicenseSigningKey'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SigningKeyInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SigningKeyInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SigningKeyInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/marketplace/licensing/keys/{id}/retire':
+    post:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/marketplace/licensing/keys/{id}/revoke':
+    post:
+      tags:
+        - Marketplace
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/forms/templates/effective:
     get:
       tags:
@@ -40529,6 +40681,20 @@ components:
           type: string
         revoked:
           type: boolean
+        signingKeyId:
+          type:
+            - 'null'
+            - string
+        customerId:
+          type:
+            - 'null'
+            - string
+        deployments:
+          type: array
+          items:
+            type: string
+        environment:
+          $ref: '#/components/schemas/LicenseKeyEnvironment'
         auditLabel:
           type:
             - 'null'
@@ -42653,6 +42819,130 @@ components:
       properties:
         licenseKey:
           type: string
+    LicenseKeyEnvironment:
+      type: integer
+    LicenseKeyStatus:
+      type: integer
+    LicenseRevocation:
+      type: object
+      properties:
+        licenseId:
+          type: string
+        reason:
+          type: string
+        revokedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        at:
+          type: string
+          format: date-time
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    LicenseRevocationInput:
+      required:
+        - licenseId
+        - reason
+      type: object
+      properties:
+        licenseId:
+          type: string
+        reason:
+          type: string
+    LicenseSigningKey:
+      type: object
+      properties:
+        keyId:
+          type: string
+        algorithm:
+          type: string
+        publicKeyPem:
+          type: string
+        fingerprint:
+          type: string
+        environment:
+          $ref: '#/components/schemas/LicenseKeyEnvironment'
+        status:
+          $ref: '#/components/schemas/LicenseKeyStatus'
+        registeredAt:
+          type: string
+          format: date-time
+        registeredById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        retiredAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        revokedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        notes:
+          type:
+            - 'null'
+            - string
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     LineDecision:
       type: integer
     LineDecisionInput:
@@ -52031,6 +52321,29 @@ components:
             - 'null'
             - string
         detail:
+          type:
+            - 'null'
+            - string
+    SigningKeyInput:
+      required:
+        - keyId
+        - algorithm
+        - publicKeyPem
+        - environment
+        - notes
+      type: object
+      properties:
+        keyId:
+          type: string
+        algorithm:
+          type:
+            - 'null'
+            - string
+        publicKeyPem:
+          type: string
+        environment:
+          $ref: '#/components/schemas/LicenseKeyEnvironment'
+        notes:
           type:
             - 'null'
             - string

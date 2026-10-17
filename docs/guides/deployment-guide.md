@@ -27,6 +27,9 @@
 | `MalwareScanning:Provider` | `None` or `ClamAV`; `MalwareScanning:AllowWhenUnavailable` defaults to `false` |
 | `Storage:MaxFileBytes`, `Storage:MaxVideoBytes` | Upload limits (defaults 100 MB and 1 GB); keep the reverse proxy limit (`client_max_body_size 1100m` in `deploy/nginx.conf`) at or above the video limit |
 | `Licensing:PublicKeyPem` | Publisher public key (PEM) used to verify marketplace licenses. This is the only licensing setting a deployment needs; the signing private key is held offline by the publisher (Shawn Parnell) and is never deployed |
+| `Licensing:DeploymentId` / `Licensing:CustomerId` | Optional. Licences limited to named deployments or a customer are accepted only when these match |
+| `Licensing:AcceptDevelopmentKeys` | Default false. Never set true on production; test installations only |
+| `Licensing:Signing:*` | Offline signing machine only (KeyId, Environment, PrivateKeyRef = env:NAME or file:/path). Not used by the API. See [license-key-custody.md](license-key-custody.md) |
 | `Seed:AdminEmail`, `Seed:AdminPassword` | First administrator, used only when no users exist |
 | `Seed:*` | Organization and application names for a new installation |
 

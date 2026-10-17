@@ -13,6 +13,13 @@ using QualGuardIQ.Infrastructure.Identity;
 using QualGuardIQ.Infrastructure.Persistence;
 using Serilog;
 
+if (args.Length > 0 && args[0] == "license")
+{
+    // Offline license tooling; does not start the web host or touch the database.
+    var cli = new ConfigurationBuilder().SetBasePath(AppContext.BaseDirectory).AddJsonFile("appsettings.json", optional: true).AddEnvironmentVariables().Build();
+    return QualGuardIQ.Api.Infrastructure.LicenseCommand.Run(args[1..], cli, Console.Out, Console.Error, DateTimeOffset.UtcNow);
+}
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Host.UseSerilog((ctx, cfg) => cfg
@@ -179,5 +186,6 @@ app.MapHealthChecks("/health/ready").AllowAnonymous();
 app.MapControllers();
 
 app.Run();
+return 0;
 
 public partial class Program;

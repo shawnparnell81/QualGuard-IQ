@@ -17,6 +17,8 @@ public partial class AppDbContext
     public DbSet<ExtensionPackage> ExtensionPackages => Set<ExtensionPackage>();
     public DbSet<ExtensionInstallation> ExtensionInstallations => Set<ExtensionInstallation>();
     public DbSet<ExtensionLicense> ExtensionLicenses => Set<ExtensionLicense>();
+    public DbSet<LicenseSigningKey> LicenseSigningKeys => Set<LicenseSigningKey>();
+    public DbSet<LicenseRevocation> LicenseRevocations => Set<LicenseRevocation>();
 
     private static void ConfigureStudio(ModelBuilder b)
     {
@@ -62,6 +64,9 @@ public partial class AppDbContext
             e.HasIndex(x => new { x.Key, x.Version }).IsUnique();
         });
         b.Entity<ExtensionInstallation>(e => { e.ToTable("extension_installations"); e.Property(x => x.Key).HasMaxLength(60); e.Property(x => x.Version).HasMaxLength(20); Json(e, x => x.Created); e.HasIndex(x => x.Key).IsUnique(); });
-        b.Entity<ExtensionLicense>(e => { e.ToTable("extension_licenses"); e.Property(x => x.LicenseId).HasMaxLength(100); e.Property(x => x.Licensee).HasMaxLength(200); e.Property(x => x.KeyHash).HasMaxLength(64); e.HasIndex(x => x.LicenseId).IsUnique(); });
+        b.Entity<ExtensionLicense>(e => { e.ToTable("extension_licenses"); e.Property(x => x.LicenseId).HasMaxLength(100); e.Property(x => x.Licensee).HasMaxLength(200); e.Property(x => x.KeyHash).HasMaxLength(64); e.HasIndex(x => x.LicenseId).IsUnique(); e.Property(x => x.SigningKeyId).HasMaxLength(60); e.Property(x => x.CustomerId).HasMaxLength(100); });
+        b.Entity<LicenseSigningKey>(e => { e.ToTable("license_signing_keys"); e.HasIndex(x => x.KeyId).IsUnique(); e.HasIndex(x => x.Fingerprint).IsUnique(); e.Property(x => x.KeyId).HasMaxLength(60); e.Property(x => x.Algorithm).HasMaxLength(20);
+            e.Property(x => x.PublicKeyPem).HasMaxLength(4000); e.Property(x => x.Fingerprint).HasMaxLength(64); e.Property(x => x.Notes).HasMaxLength(2000); });
+        b.Entity<LicenseRevocation>(e => { e.ToTable("license_revocations"); e.HasIndex(x => x.LicenseId); e.Property(x => x.LicenseId).HasMaxLength(100); e.Property(x => x.Reason).HasMaxLength(2000); });
     }
 }
