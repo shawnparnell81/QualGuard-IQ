@@ -321,7 +321,7 @@ public sealed class ProductionService(AppDbContext db, ModuleSupport m, INumberi
         {
             var decided = aql.Where(x => x.SupplierId != null && x.OverallResult != null && x.InspectionDate >= monthAgo);
             var n = await decided.CountAsync(ct); var rej = await decided.CountAsync(x => x.OverallResult == AqlDecision.Reject, ct);
-            metrics.Add(new("supplierRejectRate", "Supplier lot rejection (30 d)", n == 0 ? 0 : Math.Round(rej * 100m / n, 1), "%", rej, n, "/fai/aql"));
+            metrics.Add(new("supplierRejectRate", "Supplier lot rejection (30 d)", n == 0 ? 0 : Math.Round(rej * 100m / n, 1), "%", rej, n, "/aql"));
         }
         if (await m.TryScopeAsync(db.Complaints.AsNoTracking(), Permissions.ComplaintsView, ct) is { } cps)
             metrics.Add(new("complaints30d", "Customer complaints (30 d)", await cps.CountAsync(x => x.CreatedAt >= monthAgo, ct), null, null, null, "/complaints"));

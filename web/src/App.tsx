@@ -7,6 +7,46 @@ import { TopBar } from './layout/TopBar';
 import { CommandPalette } from './layout/CommandPalette';
 import { Login } from './pages/Login';
 
+const LiveMonitor = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.LiveMonitor })));
+const WorkOrderList = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.WorkOrderList })));
+const WorkOrderNew = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.WorkOrderNew })));
+const WorkOrderDetail = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.WorkOrderDetail })));
+const PurchaseOrderList = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.PurchaseOrderList })));
+const PurchaseOrderNew = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.PurchaseOrderNew })));
+const PurchaseOrderDetail = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.PurchaseOrderDetail })));
+const EntryLog = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.EntryLog })));
+const ShopFloorEntry = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.ShopFloorEntry })));
+const TraceSearch = lazy(() => import('./pages/Traceability').then((m) => ({ default: m.TraceSearch })));
+const LotList = lazy(() => import('./pages/Traceability').then((m) => ({ default: m.LotList })));
+const LotNew = lazy(() => import('./pages/Traceability').then((m) => ({ default: m.LotNew })));
+const LotDetail = lazy(() => import('./pages/Traceability').then((m) => ({ default: m.LotDetail })));
+const SerialList = lazy(() => import('./pages/Traceability').then((m) => ({ default: m.SerialList })));
+const SerialNew = lazy(() => import('./pages/Traceability').then((m) => ({ default: m.SerialNew })));
+const SerialDetail = lazy(() => import('./pages/Traceability').then((m) => ({ default: m.SerialDetail })));
+const ScanPage = lazy(() => import('./pages/Traceability').then((m) => ({ default: m.ScanPage })));
+const LabelsPage = lazy(() => import('./pages/Traceability').then((m) => ({ default: m.LabelsPage })));
+const RecallList = lazy(() => import('./pages/FieldQuality').then((m) => ({ default: m.RecallList })));
+const RecallNew = lazy(() => import('./pages/FieldQuality').then((m) => ({ default: m.RecallNew })));
+const RecallDetail = lazy(() => import('./pages/FieldQuality').then((m) => ({ default: m.RecallDetail })));
+const ReturnList = lazy(() => import('./pages/FieldQuality').then((m) => ({ default: m.ReturnList })));
+const ReturnNew = lazy(() => import('./pages/FieldQuality').then((m) => ({ default: m.ReturnNew })));
+const ReturnDetail = lazy(() => import('./pages/FieldQuality').then((m) => ({ default: m.ReturnDetail })));
+const WarrantyList = lazy(() => import('./pages/FieldQuality').then((m) => ({ default: m.WarrantyList })));
+const WarrantyNew = lazy(() => import('./pages/FieldQuality').then((m) => ({ default: m.WarrantyNew })));
+const WarrantyDetail = lazy(() => import('./pages/FieldQuality').then((m) => ({ default: m.WarrantyDetail })));
+const WarrantyMetrics = lazy(() => import('./pages/FieldQuality').then((m) => ({ default: m.WarrantyMetrics })));
+const ConnectionList = lazy(() => import('./pages/Integrations').then((m) => ({ default: m.ConnectionList })));
+const ConnectionNew = lazy(() => import('./pages/Integrations').then((m) => ({ default: m.ConnectionNew })));
+const ConnectionDetail = lazy(() => import('./pages/Integrations').then((m) => ({ default: m.ConnectionDetail })));
+const AdapterCatalog = lazy(() => import('./pages/Integrations').then((m) => ({ default: m.AdapterCatalog })));
+const ChangeQueue = lazy(() => import('./pages/Integrations').then((m) => ({ default: m.ChangeQueue })));
+const ErpChangeDetail = lazy(() => import('./pages/Integrations').then((m) => ({ default: m.ErpChangeDetail })));
+const KpiLibrary = lazy(() => import('./pages/Intelligence').then((m) => ({ default: m.KpiLibrary })));
+const Assistant = lazy(() => import('./pages/Intelligence').then((m) => ({ default: m.Assistant })));
+const InvestigatePage = lazy(() => import('./pages/Intelligence').then((m) => ({ default: m.InvestigatePage })));
+const RiskPage = lazy(() => import('./pages/Intelligence').then((m) => ({ default: m.RiskPage })));
+const DatasetsPage = lazy(() => import('./pages/Intelligence').then((m) => ({ default: m.DatasetsPage })));
+const AlertsAdmin = lazy(() => import('./pages/Intelligence').then((m) => ({ default: m.AlertsAdmin })));
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const MyWork = lazy(() => import('./pages/MyWork').then((m) => ({ default: m.MyWork })));
 const SignInHistory = lazy(() => import('./pages/Account').then((m) => ({ default: m.SignInHistory })));
@@ -249,6 +289,46 @@ export function App() {
               <Route path="/admin/organization" element={<OrganizationPage />} />
               <Route path="/admin/audit" element={<AuditPage />} />
               <Route path="/admin/security" element={<SecurityPage />} />
+              <Route path="/production" element={<LiveMonitor />} />
+              <Route path="/production/entry" element={<ShopFloorEntry />} />
+              <Route path="/production/entries" element={<EntryLog />} />
+              <Route path="/production/work-orders" element={<WorkOrderList />} />
+              <Route path="/production/work-orders/new" element={<WorkOrderNew />} />
+              <Route path="/production/work-orders/:id" element={<WorkOrderDetail />} />
+              <Route path="/production/purchase-orders" element={<PurchaseOrderList />} />
+              <Route path="/production/purchase-orders/new" element={<PurchaseOrderNew />} />
+              <Route path="/production/purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="/trace" element={<TraceSearch />} />
+              <Route path="/trace/scan" element={<ScanPage />} />
+              <Route path="/trace/labels" element={<LabelsPage />} />
+              <Route path="/trace/lots" element={<LotList />} />
+              <Route path="/trace/lots/new" element={<LotNew />} />
+              <Route path="/trace/lots/:id" element={<LotDetail />} />
+              <Route path="/trace/serials" element={<SerialList />} />
+              <Route path="/trace/serials/new" element={<SerialNew />} />
+              <Route path="/trace/serials/:id" element={<SerialDetail />} />
+              <Route path="/field/recalls" element={<RecallList />} />
+              <Route path="/field/recalls/new" element={<RecallNew />} />
+              <Route path="/field/recalls/:id" element={<RecallDetail />} />
+              <Route path="/field/returns" element={<ReturnList />} />
+              <Route path="/field/returns/new" element={<ReturnNew />} />
+              <Route path="/field/returns/:id" element={<ReturnDetail />} />
+              <Route path="/field/warranty" element={<WarrantyList />} />
+              <Route path="/field/warranty/new" element={<WarrantyNew />} />
+              <Route path="/field/warranty/metrics" element={<WarrantyMetrics />} />
+              <Route path="/field/warranty/:id" element={<WarrantyDetail />} />
+              <Route path="/integrations" element={<ConnectionList />} />
+              <Route path="/integrations/new" element={<ConnectionNew />} />
+              <Route path="/integrations/adapters" element={<AdapterCatalog />} />
+              <Route path="/integrations/changes" element={<ChangeQueue />} />
+              <Route path="/integrations/changes/:id" element={<ErpChangeDetail />} />
+              <Route path="/integrations/:id" element={<ConnectionDetail />} />
+              <Route path="/insights/kpis" element={<KpiLibrary />} />
+              <Route path="/insights/assistant" element={<Assistant />} />
+              <Route path="/insights/investigate" element={<InvestigatePage />} />
+              <Route path="/insights/risk" element={<RiskPage />} />
+              <Route path="/insights/datasets" element={<DatasetsPage />} />
+              <Route path="/admin/alerts" element={<AlertsAdmin />} />
               <Route path="*" element={<Box sx={{ p: 6 }}>Page not found.</Box>} />
             </Routes>
             </Suspense>
