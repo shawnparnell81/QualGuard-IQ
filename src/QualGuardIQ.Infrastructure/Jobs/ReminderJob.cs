@@ -18,6 +18,8 @@ public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegi
 {
     public const int LeadDays = 14;
     public const int CertificateLeadDays = 30;
+    /// <summary>Days past due after which an open action is escalated to the person who raised it.</summary>
+    public const int EscalationDays = 3;
 
     public async Task<int> RunAsync(CancellationToken ct)
     {
@@ -61,6 +63,16 @@ public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegi
 
         foreach (var r in await db.Risks.Where(r => r.Status != RiskStatus.Closed && r.Status != RiskStatus.Cancelled && r.ReviewDueOn <= soon).Select(r => new { r.Id, r.Number, r.Title, r.OwnerId, Due = r.ReviewDueOn }).ToListAsync(ct))
             items.Add(($"risk-review:{r.Id}:{r.Due:yyyyMMdd}:{Phase(r.Due)}", r.OwnerId, $"Review of risk {r.Number} {r.Title} {(r.Due < today ? "is overdue" : $"is due {r.Due:yyyy-MM-dd}")}", "Risk", r.Id));
+
+        var escalateBefore = today.AddDays(-EscalationDays);
+        var escalations = await db.ActionItems.Where(a => (a.Status == ActionStatus.Open || a.Status == ActionStatus.InProgress) && a.DueDate < escalateBefore && a.EscalatedAt == null && a.CreatedById != null).ToListAsync(ct);
+        foreach (var a in escalations)
+        {
+            var assignee = await db.Users.Where(u => u.Id == a.AssigneeId).Select(u => u.DisplayName).FirstOrDefaultAsync(ct);
+            items.Add(($"escalate:{a.Id}", a.CreatedById.Value, $"Escalation: action {a.Number} assigned to {assignee} is {today.DayNumber - a.DueDate.DayNumber} days overdue: {a.Title}", "Action", a.Id));
+            a.EscalatedAt = DateTimeOffset.UtcNow;
+        }
+        if (escalations.Count > 0) await db.SaveChangesAsync(ct);
 
         if (items.Count == 0) return 0;
         var keys = items.Select(i => i.Key).ToList();
