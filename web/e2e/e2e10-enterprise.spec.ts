@@ -92,6 +92,10 @@ test.describe('E2E 10: enterprise governance (Prompt 6)', () => {
     await signIn(page, users.author);
     await page.goto(`/launch/ppap/${id}`);
     await expect(page.getByTestId('ppap-element')).toHaveCount(18);
+    await expect(page.getByTestId('ppap-code')).toHaveCount(18);
+    await expect(page.getByTestId('ppap-legend')).toContainText('Retain and submit to the customer on request');
+    await page.getByRole('button', { name: 'Show level matrix' }).click();
+    await expect(page.getByTestId('ppap-matrix').getByRole('row')).toHaveCount(21);
     await shot(page, '124-ppap-elements');
     await page.goto('/launch/capability');
     await button(page, 'Calculate').click();

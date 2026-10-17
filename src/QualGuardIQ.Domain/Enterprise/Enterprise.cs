@@ -292,7 +292,8 @@ public class PhaseGate : Entity, IAudited
 }
 
 public enum PpapStatus { Draft = 0, Submitted = 1, Approved = 2, InterimApproved = 3, Rejected = 4 }
-public enum PpapRequirement { None = 0, Submit = 1, Retain = 2, AsCustomerRequires = 3 }
+/// <summary>PPAP retention/submission code: Submit = S (submit and retain), Retain = R (retain, available on request), SubmitOnRequest = * (retain, submit on request).</summary>
+public enum PpapRequirement { None = 0, Submit = 1, Retain = 2, SubmitOnRequest = 3 }
 public enum PpapElementStatus { Missing = 0, Ready = 1, NotApplicable = 2 }
 
 public class PpapSubmission : Entity, IAudited, ISiteScoped

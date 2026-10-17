@@ -76,6 +76,10 @@ Use **Test** to evaluate a rule against an existing record. The firing log shows
   uninstalling removes what it created; upgrading replaces it with the new version's content.
 - Licensed packages need an activated license key. Keys are verified offline against the publisher key configured in
   `Licensing:PublicKeyPem`; expired or revoked licenses block install, enable and upgrade.
+- **Licence signing key custody.** The publisher, Shawn Parnell, holds the extension-licence signing private key
+  offline and issues every licence key. The private key is never stored in the repository, in configuration, on a
+  server or in a deployment. Each deployment sets only `Licensing:PublicKeyPem` (the matching public key, as an
+  environment variable or secret); nothing else is needed to verify licences.
 - **Import package** adds a package from a manifest file supplied by a publisher.
 
 ## Background jobs
