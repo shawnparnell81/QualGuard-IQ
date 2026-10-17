@@ -62,6 +62,9 @@ const PlanDetail = lazy(() => import('./pages/Inspection').then((m) => ({ defaul
 const ComplaintList = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintList })));
 const ComplaintNew = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintNew })));
 const ComplaintDetail = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintDetail })));
+const ReportDashboard = lazy(() => import('./pages/Reports').then((m) => ({ default: m.ReportDashboard })));
+const ReportCatalog = lazy(() => import('./pages/Reports').then((m) => ({ default: m.ReportCatalog })));
+const ReportRun = lazy(() => import('./pages/Reports').then((m) => ({ default: m.ReportRun })));
 const RiskList = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskList })));
 const RiskNew = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskNew })));
 const RiskDetail = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskDetail })));
@@ -171,6 +174,9 @@ export function App() {
               <Route path="/reviews" element={<ReviewList />} />
               <Route path="/reviews/new" element={<ReviewNew />} />
               <Route path="/reviews/:id" element={<ReviewDetail />} />
+              <Route path="/reports" element={<ReportDashboard />} />
+              <Route path="/reports/catalog" element={<ReportCatalog />} />
+              <Route path="/reports/r/:key" element={<ReportRun />} />
               <Route path="/risks" element={<RiskList />} />
               <Route path="/risks/new" element={<RiskNew />} />
               <Route path="/risks/matrix" element={<RiskMatrix />} />
