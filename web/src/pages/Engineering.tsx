@@ -8,6 +8,7 @@ import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDate, fmtDateTime } from '../components/Status';
 import { Facts, Prose, Section, StepDialog, lookupLabel, useLookup, useRunner, useSites, useUsers } from '../components/Kit';
 import { mono } from '../theme';
+import { useAuth } from '../auth';
 import { Loading, mod, num } from './Enterprise';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -61,7 +62,7 @@ export function RequirementList() {
 }
 
 export function RequirementDetail() {
-  const { id } = useParams(); const qc = useQueryClient();
+  const { id } = useParams(); const qc = useQueryClient(); const { can } = useAuth();
   const q = useQuery({ queryKey: ['requirement', id], queryFn: () => get<any>(`/api/engineering/requirements/${id}`) });
   const targets = useQuery({ queryKey: ['trace-targets'], queryFn: () => get<Record<string, string[]>>('/api/engineering/trace-targets') });
   const [dlg, setDlg] = useState<null | 'trace' | 'revise'>(null); const [target, setTarget] = useState('');
@@ -71,7 +72,7 @@ export function RequirementDetail() {
   const d = q.data; const req = d.requirement;
   return (
     <ModuleWorkspace module={mod('engineering')} crumbs={crumbs(req.number)} title={`${req.number} · ${req.title}`}
-      actions={<Stack direction="row" gap={1}>{req.status === 0 && <Button variant="outlined" onClick={() => r.run(() => post(`/api/engineering/requirements/${id}/approve`))}>Approve</Button>}<Button variant="outlined" onClick={() => setDlg('revise')}>Revise</Button><Button variant="contained" onClick={() => setDlg('trace')}>Add trace link</Button></Stack>}>
+      actions={<Stack direction="row" gap={1}>{req.status === 0 && can('engineering.approve') && <Button variant="outlined" onClick={() => r.run(() => post(`/api/engineering/requirements/${id}/approve`))}>Approve</Button>}<Button variant="outlined" onClick={() => setDlg('revise')}>Revise</Button><Button variant="contained" onClick={() => setDlg('trace')}>Add trace link</Button></Stack>}>
       {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}
       <Stack direction={{ xs: 'column', md: 'row' }} gap={2}>
         <Box sx={{ flex: 2 }}>
