@@ -90,6 +90,28 @@ const CustomerDetail = lazy(() => import('./pages/Products').then((m) => ({ defa
 const SupplierList = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierList })));
 const SupplierNew = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierNew })));
 const SupplierDetail = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierDetail })));
+const WarehouseOverview = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.WarehouseOverview })));
+const StockPage = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.StockPage })));
+const LedgerPage = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.LedgerPage })));
+const WipPage = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.WipPage })));
+const LocationsPage = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.LocationsPage })));
+const LocationDetail = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.LocationDetail })));
+const ReceiptList = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.ReceiptList })));
+const ReceiptNew = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.ReceiptNew })));
+const ReceiptDetailPage = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.ReceiptDetailPage })));
+const HoldList = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.HoldList })));
+const HoldDetail = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.HoldDetail })));
+const MrbList = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.MrbList })));
+const MrbNew = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.MrbNew })));
+const MrbDetail = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.MrbDetail })));
+const RtvList = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.RtvList })));
+const RtvDetail = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.RtvDetail })));
+const CountList = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.CountList })));
+const CountDetailPage = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.CountDetailPage })));
+const TransferList = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.TransferList })));
+const TransferNew = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.TransferNew })));
+const TransferDetail = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.TransferDetail })));
+const LotMergePage = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.LotMergePage })));
 const ApqpList = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpList })));
 const ApqpNew = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpNew })));
 const ApqpDetail = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpDetail })));
@@ -298,6 +320,28 @@ export function App() {
               <Route path="/production/purchase-orders" element={<PurchaseOrderList />} />
               <Route path="/production/purchase-orders/new" element={<PurchaseOrderNew />} />
               <Route path="/production/purchase-orders/:id" element={<PurchaseOrderDetail />} />
+              <Route path="/warehouse" element={<WarehouseOverview />} />
+              <Route path="/warehouse/stock" element={<StockPage />} />
+              <Route path="/warehouse/ledger" element={<LedgerPage />} />
+              <Route path="/warehouse/wip" element={<WipPage />} />
+              <Route path="/warehouse/locations" element={<LocationsPage />} />
+              <Route path="/warehouse/locations/:id" element={<LocationDetail />} />
+              <Route path="/warehouse/receipts" element={<ReceiptList />} />
+              <Route path="/warehouse/receipts/new" element={<ReceiptNew />} />
+              <Route path="/warehouse/receipts/:id" element={<ReceiptDetailPage />} />
+              <Route path="/warehouse/holds" element={<HoldList />} />
+              <Route path="/warehouse/holds/:id" element={<HoldDetail />} />
+              <Route path="/warehouse/mrb" element={<MrbList />} />
+              <Route path="/warehouse/mrb/new" element={<MrbNew />} />
+              <Route path="/warehouse/mrb/:id" element={<MrbDetail />} />
+              <Route path="/warehouse/rtv" element={<RtvList />} />
+              <Route path="/warehouse/rtv/:id" element={<RtvDetail />} />
+              <Route path="/warehouse/counts" element={<CountList />} />
+              <Route path="/warehouse/counts/:id" element={<CountDetailPage />} />
+              <Route path="/warehouse/transfers" element={<TransferList />} />
+              <Route path="/warehouse/transfers/new" element={<TransferNew />} />
+              <Route path="/warehouse/transfers/:id" element={<TransferDetail />} />
+              <Route path="/warehouse/lot-merge" element={<LotMergePage />} />
               <Route path="/trace" element={<TraceSearch />} />
               <Route path="/trace/scan" element={<ScanPage />} />
               <Route path="/trace/labels" element={<LabelsPage />} />
