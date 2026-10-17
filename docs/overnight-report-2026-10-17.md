@@ -102,7 +102,7 @@ QualGuard IQ keeps its own look throughout. There is a teal top module menu on t
   - The Oracle Fusion pod host.
 
 **Known gaps**
-- The assistant is rule-based and uses no language model.
+- The assistant is rule-based and uses no external text-generation service.
 - MES push uses a user token rather than a device key.
 - The Dynamics Business Central manufacturing extension is not shipped.
 
