@@ -416,6 +416,10 @@ public class Shipment : Entity, IAudited, ISiteScoped
     public string? CarrierServiceCode { get; set; }
     public decimal? QuotedCharge { get; set; }
     public string? QuotedCurrency { get; set; }
+    /// <summary>Freight terms printed on the bill of lading (for example Prepaid, Collect, Third party).</summary>
+    public string? FreightTerms { get; set; }
+    /// <summary>Special handling or delivery instructions printed on shipping documents.</summary>
+    public string? SpecialInstructions { get; set; }
     public Guid SiteId { get; set; }
     public Guid? DepartmentId { get; set; }
     public string AuditLabel => $"shipment {Number}";

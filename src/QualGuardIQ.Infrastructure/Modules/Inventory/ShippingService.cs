@@ -332,33 +332,4 @@ public sealed partial class ShippingService(AppDbContext db, ModuleSupport m, IN
         await tx.CommitAsync(ct);
     }
 
-    // ---------------------------------------------------------------- documents
-    public async Task<byte[]> PackingListAsync(Guid id, CancellationToken ct)
-    {
-        var d = await GetAsync(id, ct);
-        var pdf = new SimplePdf($"Packing list {d.Shipment.Number}").Title($"Packing list — {d.Shipment.Number}")
-            .Field("Ship to", d.Customer ?? d.Shipment.ShipTo).Field("Customer PO", d.Shipment.CustomerPo).Field("Promised", d.Shipment.PromisedOn?.ToString("yyyy-MM-dd"));
-        foreach (var c in d.Containers.Where(c => c.Container.ParentId == null).Concat(d.Containers.Where(c => c.Container.ParentId != null)))
-        {
-            pdf.Heading($"{c.Container.Kind} {c.Container.Number}{(c.Container.ParentId is { } p ? " on " + d.Containers.First(x => x.Container.Id == p).Container.Number : "")}{(c.Container.Weight is { } w ? $" — {w:0.###} kg" : "")}");
-            if (c.Items.Count > 0) pdf.Table([("Part", 140), ("Lot", 130), ("Serial", 140), ("Qty", 102)], c.Items.Select(i => (IReadOnlyList<string?>)[i.PartNumber, i.LotNumber, i.SerialNumber, i.Quantity.ToString("0.####")]));
-        }
-        return pdf.ToBytes();
-    }
-
-    public async Task<byte[]> BillOfLadingAsync(Guid id, CancellationToken ct)
-    {
-        var d = await GetAsync(id, ct);
-        if (d.Shipment.BolNumber is null) throw new ConflictException("The bill of lading is issued when the shipment ships.");
-        var site = await db.Sites.AsNoTracking().FirstAsync(x => x.Id == d.Shipment.SiteId, ct);
-        var pdf = new SimplePdf($"{d.Shipment.BolNumber}").Title($"Bill of lading {d.Shipment.BolNumber}")
-            .Field("Shipper", $"{site.Name} ({site.Code})").Field("Consignee", d.Customer ?? d.Shipment.ShipTo).Field("Ship to address", d.Shipment.ShipTo)
-            .Field("Carrier", d.Carrier).Field("Service", d.Shipment.ServiceLevel).Field("Tracking / PRO", d.Shipment.TrackingNumber)
-            .Field("Ship date (UTC)", d.Shipment.ShippedAt?.ToString("yyyy-MM-dd")).Field("Gross weight", d.Shipment.GrossWeight is { } g ? $"{g:0.###} kg" : null)
-            .Field("Handling units", $"{d.Containers.Count(c => c.Container.ParentId == null)} ({string.Join(", ", d.Containers.Where(c => c.Container.ParentId == null).Select(c => c.Container.Kind + " " + c.Container.Number))})");
-        pdf.Heading("Contents");
-        pdf.Table([("Line", 40), ("Part", 140), ("Description", 200), ("Qty", 60), ("Rev", 72)], d.Lines.Select(l => (IReadOnlyList<string?>)[l.Line.LineNumber.ToString(), l.PartNumber, l.PartName, l.Line.Quantity.ToString("0.####"), l.Line.Revision]));
-        pdf.Line("Received in good order, subject to the classifications and tariffs in effect on the date of issue.");
-        return pdf.ToBytes();
-    }
 }

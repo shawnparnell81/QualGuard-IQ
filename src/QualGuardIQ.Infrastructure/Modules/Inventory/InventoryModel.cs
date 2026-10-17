@@ -175,7 +175,7 @@ public partial class AppDbContext
             e.HasOne<Carrier>().WithMany().HasForeignKey(x => x.CarrierId).OnDelete(R);
             e.HasIndex(x => new { x.AssignedPickerId, x.Status });
             e.HasIndex(x => new { x.AssignedVerifierId, x.Status });
-            e.Property(x => x.QuotedCharge).HasPrecision(18, 2); e.Property(x => x.CarrierServiceCode).HasMaxLength(60); e.Property(x => x.QuotedCurrency).HasMaxLength(3);
+            e.Property(x => x.QuotedCharge).HasPrecision(18, 2); e.Property(x => x.CarrierServiceCode).HasMaxLength(60); e.Property(x => x.QuotedCurrency).HasMaxLength(3); e.Property(x => x.FreightTerms).HasMaxLength(60); e.Property(x => x.SpecialInstructions).HasMaxLength(2000);
             e.Property(x => x.ShipToCountry).HasMaxLength(2); e.Property(x => x.ShipToPostalCode).HasMaxLength(20); e.Property(x => x.AddressValidationNote).HasMaxLength(1000);
             e.HasOne<CarrierConnection>().WithMany().HasForeignKey(x => x.CarrierConnectionId).OnDelete(R);
             UserReq(e, x => x.OwnerId); UserReq(e, x => x.AssignedPickerId); UserReq(e, x => x.AssignedVerifierId); UserReq(e, x => x.ValidatedById); SiteRefs(e);

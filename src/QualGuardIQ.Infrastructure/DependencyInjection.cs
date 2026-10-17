@@ -298,6 +298,7 @@ public static class DependencyInjection
         s.AddSingleton<Modules.Logistics.ICarrierAdapter>(new Modules.Logistics.CarrierApiSlotAdapter(Domain.Quality.CarrierProvider.FedEx));
         s.AddSingleton<Modules.Logistics.ICarrierAdapter>(new Modules.Logistics.CarrierApiSlotAdapter(Domain.Quality.CarrierProvider.Dhl));
         s.AddScoped<Modules.Logistics.CarrierIntegrationService>();
+        s.AddScoped<Modules.Logistics.ShippingDocumentService>();
         s.AddScoped<Jobs.CarrierTrackingJob>();
         s.AddScoped<Modules.Production.ProductionService>();
         s.AddScoped<Modules.Analytics.KpiEngine>();
