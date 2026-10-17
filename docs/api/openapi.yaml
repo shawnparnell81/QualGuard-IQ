@@ -9128,6 +9128,26 @@ paths:
         '200':
           description: OK
       security: [ ]
+  /api/auth/sso/complete:
+    post:
+      tags:
+        - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoCompleteRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SsoCompleteRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SsoCompleteRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+      security: [ ]
   /api/auth/logout:
     post:
       tags:
@@ -33614,6 +33634,299 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/auth/sso/providers:
+    get:
+      tags:
+        - Sso
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProviderButton'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProviderButton'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProviderButton'
+      security: [ ]
+  '/api/auth/sso/{id}/start':
+    get:
+      tags:
+        - Sso
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: login_hint
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+      security: [ ]
+  /api/auth/sso/callback:
+    get:
+      tags:
+        - Sso
+      parameters:
+        - name: state
+          in: query
+          schema:
+            type: string
+        - name: code
+          in: query
+          schema:
+            type: string
+        - name: error
+          in: query
+          schema:
+            type: string
+        - name: error_description
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+      security: [ ]
+  /api/admin/sso:
+    get:
+      tags:
+        - SsoAdmin
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ViewDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ViewDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ViewDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/admin/sso/providers:
+    post:
+      tags:
+        - SsoAdmin
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoProviderInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SsoProviderInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SsoProviderInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: uuid
+            application/json:
+              schema:
+                type: string
+                format: uuid
+            text/json:
+              schema:
+                type: string
+                format: uuid
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/admin/sso/providers/{id}':
+    put:
+      tags:
+        - SsoAdmin
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SsoProviderInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SsoProviderInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SsoProviderInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    delete:
+      tags:
+        - SsoAdmin
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/admin/sso/providers/{id}/check':
+    post:
+      tags:
+        - SsoAdmin
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SsoTestReport'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SsoTestReport'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SsoTestReport'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/admin/sso/providers/{id}/test':
+    get:
+      tags:
+        - SsoAdmin
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/admin/sso/providers/{id}/enable':
+    post:
+      tags:
+        - SsoAdmin
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/admin/sso/providers/{id}/disable':
+    post:
+      tags:
+        - SsoAdmin
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/admin/sso/break-glass/{userId}':
+    put:
+      tags:
+        - SsoAdmin
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BreakGlassRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/BreakGlassRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/BreakGlassRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/admin/users:
     get:
       tags:
@@ -40566,6 +40879,13 @@ components:
           type:
             - 'null'
             - string
+    BreakGlassRequest:
+      required:
+        - enabled
+      type: object
+      properties:
+        enabled:
+          type: boolean
     BroadcastInput:
       required:
         - scope
@@ -48442,6 +48762,12 @@ components:
           type: string
     HoldStatus:
       type: integer
+    IdentityProviderKind:
+      enum:
+        - Entra
+        - Google
+        - Okta
+        - Oidc
     IdsRequest:
       required:
         - ids
@@ -55183,6 +55509,20 @@ components:
             - 'null'
             - string
           format: date
+    ProviderButton:
+      required:
+        - id
+        - displayName
+        - kind
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        displayName:
+          type: string
+        kind:
+          $ref: '#/components/schemas/IdentityProviderKind'
     ProviderInput:
       required:
         - name
@@ -62703,6 +63043,105 @@ components:
           type:
             - 'null'
             - string
+    SsoCompleteRequest:
+      required:
+        - challenge
+      type: object
+      properties:
+        challenge:
+          type: string
+    SsoProviderInput:
+      required:
+        - kind
+        - displayName
+        - authority
+        - clientId
+        - clientSecret
+        - clearClientSecret
+        - scopes
+        - allowedDomains
+        - ssoRequiredDomains
+        - jitEnabled
+        - jitDefaultRoleId
+        - trustProviderMfa
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/IdentityProviderKind'
+        displayName:
+          type: string
+        authority:
+          type: string
+        clientId:
+          type: string
+        clientSecret:
+          type:
+            - 'null'
+            - string
+        clearClientSecret:
+          type: boolean
+        scopes:
+          type:
+            - 'null'
+            - string
+        allowedDomains:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        ssoRequiredDomains:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        jitEnabled:
+          type: boolean
+        jitDefaultRoleId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        trustProviderMfa:
+          type: boolean
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
+    SsoTestReport:
+      required:
+        - ok
+        - steps
+        - claims
+      type: object
+      properties:
+        ok:
+          type: boolean
+        steps:
+          type: array
+          items:
+            $ref: '#/components/schemas/SsoTestStep'
+        claims:
+          type: object
+          additionalProperties:
+            type: string
+    SsoTestStep:
+      required:
+        - name
+        - ok
+        - detail
+      type: object
+      properties:
+        name:
+          type: string
+        ok:
+          type: boolean
+        detail:
+          type: string
     StandardInput:
       required:
         - title
@@ -66478,6 +66917,8 @@ tags:
   - name: Risks
   - name: Roles
   - name: SignInPolicy
+  - name: Sso
+  - name: SsoAdmin
   - name: Users
   - name: Warehouse
   - name: Receiving
