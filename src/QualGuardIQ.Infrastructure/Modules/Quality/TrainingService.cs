@@ -45,8 +45,9 @@ public sealed class TrainingService(AppDbContext db, ModuleSupport m, INumbering
         await m.EditAsync(RecordType, courseId, ct);
         var c = await db.TrainingCourses.AsNoTracking().FirstAsync(x => x.Id == courseId, ct);
         if (c.IsArchived) throw new AppException("The course is archived.");
-        var due = r.DueOn ?? m.Today.AddDays(c.DueDays);
-        if (due < m.Today) throw new AppException("The due date cannot be in the past.");
+        var today = await m.TodayAsync(c.SiteId, ct);
+        var due = r.DueOn ?? today.AddDays(c.DueDays);
+        if (due < today) throw new AppException("The due date cannot be in the past.");
         var ids = r.UserIds.Distinct().ToList();
         if (ids.Count == 0) throw new AppException("Select at least one person.");
         if (await db.Users.CountAsync(u => ids.Contains(u.Id) && u.IsActive, ct) != ids.Count) throw new AppException("Every trainee must be an active user.");
@@ -95,7 +96,7 @@ public sealed class TrainingService(AppDbContext db, ModuleSupport m, INumbering
         a.Status = AssignmentStatus.Completed;
         a.CompletedAt = m.Now;
         a.CompletionNotes = notes?.Trim();
-        a.ExpiresOn = c.ValidityMonths is { } v ? m.Today.AddMonths(v) : null;
+        a.ExpiresOn = c.ValidityMonths is { } v ? (await m.TodayAsync(a.SiteId, ct)).AddMonths(v) : null;
         await db.SaveChangesAsync(ct);
     }
 
@@ -109,7 +110,7 @@ public sealed class TrainingService(AppDbContext db, ModuleSupport m, INumbering
             var trainees = await db.TrainingAssignments.Where(a => a.CourseId == c.Id && (a.Status == AssignmentStatus.Completed || a.Status == AssignmentStatus.Assigned))
                 .Select(a => a.UserId).Distinct().ToListAsync(ct);
             var active = await db.Users.Where(u => trainees.Contains(u.Id) && u.IsActive).Select(u => u.Id).ToListAsync(ct);
-            if (active.Count > 0) await AssignCoreAsync(c, active, m.Today.AddDays(c.DueDays), $"Retraining for revision {revision.Revision}", ct);
+            if (active.Count > 0) await AssignCoreAsync(c, active, (await m.TodayAsync(c.SiteId, ct)).AddDays(c.DueDays), $"Retraining for revision {revision.Revision}", ct);
         }
     }
 }

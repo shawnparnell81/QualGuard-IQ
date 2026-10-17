@@ -12,7 +12,7 @@ import { useAuth } from '../auth';
 import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
-import { StatusChip, auditStatus, checklistResult, findingStatus, findingType, fmtDate } from '../components/Status';
+import { localDate, StatusChip, auditStatus, checklistResult, findingStatus, findingType, fmtDate } from '../components/Status';
 import { ActionsPanel, AttachmentsAndHistory } from '../components/RecordTabs';
 import { Facts, Prose, Section, StepDialog, useRunner, useSites, useUsers } from '../components/Kit';
 import { mono } from '../theme';
@@ -73,7 +73,7 @@ export function AuditNew() {
   const sites = useSites();
   const users = useUsers();
   const [error, setError] = useState<string | null>(null);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = localDate();
   const { register, control, handleSubmit, formState: { errors, isSubmitting } } = useForm<AuditForm>({ resolver: zodResolver(auditSchema),
     defaultValues: { title: '', auditType: 'Internal', scope: '', criteria: 'ISO 9001:2015', siteId: '', leadAuditorId: '', plannedStart: today, plannedEnd: today, checklist: [{ clause: '', question: '' }] } });
   const items = useFieldArray({ control, name: 'checklist' });
@@ -171,7 +171,7 @@ export function AuditDetail() {
           { name: 'checklistItemId', label: 'Checklist item (optional)', type: 'select', options: [['', 'None'], ...d.checklist.map((c) => [c.id, `${c.sequence}. ${c.question.slice(0, 60)}`] as [string, string])] },
           { name: 'clause', label: 'Clause' }, { name: 'statement', label: 'Statement of nonconformity / observation', type: 'multiline' }, { name: 'evidence', label: 'Objective evidence', type: 'multiline' },
           { name: 'responsibleId', label: 'Responsible', type: 'select', options: (users.data ?? []).map((u) => [u.id, u.displayName]) },
-          { name: 'responseDueOn', label: 'Response due', type: 'date', initial: new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10) }]}
+          { name: 'responseDueOn', label: 'Response due', type: 'date', initial: localDate(30) }]}
         onConfirm={(v) => run(() => post(`/api/audits/${d.id}/findings`, { ...v, findingType: Number(v.findingType), checklistItemId: v.checklistItemId || null, clause: v.clause || null, evidence: v.evidence || null }))} />
       <StepDialog open={dlg === 'report'} title="Move to reporting" intro="Every checklist item must be assessed. Findings can still be raised during reporting." confirm="Move to reporting" onClose={() => setDlg(null)}
         inputs={[{ name: 'text', label: 'Audit summary', type: 'multiline' }]}

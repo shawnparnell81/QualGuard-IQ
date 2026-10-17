@@ -31,6 +31,7 @@ public static class DependencyInjection
         services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
         services.AddScoped<INumberingService, NumberingService>();
         services.AddScoped<Seeder>();
+        services.AddScoped<ISiteCalendar, SiteCalendar>();
 
         // Shared engines
         services.AddScoped<IRecordRegistry, RecordRegistry>();

@@ -84,7 +84,7 @@ public sealed class AuditService(AppDbContext db, ModuleSupport m, INumberingSer
         ModuleSupport.Required(r.Statement, "Finding statement", 4000);
         if (r.ChecklistItemId is { } ci && a.Checklist.All(c => c.Id != ci)) throw new AppException("The checklist item does not belong to this audit.");
         await m.RequireActiveUserAsync(r.ResponsibleId, "responsible person", ct);
-        if (r.ResponseDueOn < m.Today) throw new AppException("The response due date cannot be in the past.");
+        if (r.ResponseDueOn < await m.TodayAsync(a.SiteId, ct)) throw new AppException("The response due date cannot be in the past.");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var f = new AuditFinding
         {

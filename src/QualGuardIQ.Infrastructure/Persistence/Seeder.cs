@@ -25,7 +25,7 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
             {
                 ApplicationName = seed["ApplicationName"] ?? "QMS",
                 OrganizationName = seed["OrganizationName"] ?? "Organization",
-                TimeZone = seed["TimeZone"] ?? "UTC",
+                TimeZone = seed["TimeZone"] ?? "America/New_York",
                 LoginHistoryEnabled = false
             });
         }

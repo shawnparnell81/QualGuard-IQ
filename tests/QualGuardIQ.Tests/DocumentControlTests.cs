@@ -60,7 +60,7 @@ public sealed class DocumentControlTests(TestApp app)
             Assert.Equal(1, doc.Status); // Active
             revA = doc.Revisions.Single();
             Assert.Equal(3, revA.Status); // Effective
-            var today = DateOnly.FromDateTime(DateTime.UtcNow);
+            var today = TestDates.Today;
             Assert.Equal(today, revA.EffectiveDate);
 
             // the approved revision is immutable and its file is locked

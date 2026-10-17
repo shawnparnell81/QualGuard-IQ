@@ -8,10 +8,11 @@ using QualGuardIQ.Infrastructure.Persistence;
 namespace QualGuardIQ.Infrastructure.Modules.Quality;
 
 /// <summary>Common checks every quality module uses, so access rules are identical across modules.</summary>
-public sealed class ModuleSupport(AppDbContext db, IAccessService access, ICurrentUser current, IRecordRegistry records, ISearchIndexer search, IClock clock)
+public sealed class ModuleSupport(AppDbContext db, IAccessService access, ICurrentUser current, IRecordRegistry records, ISearchIndexer search, IClock clock, QualGuardIQ.Infrastructure.Services.ISiteCalendar calendar)
 {
     public Guid UserId => current.UserId ?? throw new ForbiddenException();
-    public DateOnly Today => DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+    /// <summary>Today in the site's time zone (organization zone when no site is given).</summary>
+    public Task<DateOnly> TodayAsync(Guid? siteId, CancellationToken ct) => calendar.TodayAsync(siteId, ct);
     public DateTimeOffset Now => clock.UtcNow;
 
     public async Task RequireAsync(string permission, Guid siteId, Guid? departmentId, CancellationToken ct)

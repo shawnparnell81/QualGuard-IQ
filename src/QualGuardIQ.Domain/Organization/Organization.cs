@@ -9,7 +9,7 @@ public class OrganizationSettings : Entity, IAudited
     public string OrganizationName { get; set; } = "";
     public string? PrimaryColor { get; set; }
     public Guid? LogoAttachmentId { get; set; }
-    public string TimeZone { get; set; } = "UTC";
+    public string TimeZone { get; set; } = "America/New_York";
     public bool LoginHistoryEnabled { get; set; }
     public string AuditLabel => "Organization settings";
 }
@@ -19,6 +19,8 @@ public class Site : Entity, IAudited, IArchivable
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";
     public string? Address { get; set; }
+    /// <summary>IANA time zone for business dates at this site (due, overdue, effective, "today").</summary>
+    public string TimeZone { get; set; } = "America/New_York";
     public bool IsArchived { get; set; }
     public DateTimeOffset? ArchivedAt { get; set; }
     public List<Department> Departments { get; set; } = [];

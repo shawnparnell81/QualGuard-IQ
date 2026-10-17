@@ -317,7 +317,7 @@ public sealed class TrainingController(AppDbContext db, TrainingService training
     public async Task<object> My(CancellationToken ct)
     {
         var uid = m.UserId;
-        var today = m.Today;
+        var today = await m.TodayAsync(null, ct);
         return await db.TrainingAssignments.AsNoTracking().Where(a => a.UserId == uid && (a.Status == AssignmentStatus.Assigned || a.Status == AssignmentStatus.Completed))
             .OrderBy(a => a.Status).ThenBy(a => a.DueOn).Select(a => new
             {
@@ -333,7 +333,7 @@ public sealed class TrainingController(AppDbContext db, TrainingService training
     public async Task<object> Matrix(CancellationToken ct)
     {
         var q = await m.ScopeAsync(db.TrainingAssignments.AsNoTracking().Where(a => a.Status == AssignmentStatus.Assigned || a.Status == AssignmentStatus.Completed), Permissions.TrainingView, ct);
-        var today = m.Today;
+        var today = await m.TodayAsync(null, ct);
         return await q.OrderBy(a => a.DueOn).Select(a => new
         {
             a.Id, UserName = db.Users.Where(u => u.Id == a.UserId).Select(u => u.DisplayName).First(),
@@ -358,9 +358,9 @@ public sealed class CalibrationController(AppDbContext db, CalibrationService ca
     {
         var query = await m.ScopeAsync(db.Equipment.AsNoTracking(), Permissions.CalibrationView, ct);
         if (status is not null) query = query.Where(x => x.Status == status);
-        if (dueWithinDays is { } d) { var lim = m.Today.AddDays(d); query = query.Where(x => x.Status != EquipmentStatus.Retired && x.NextDueOn != null && x.NextDueOn <= lim); }
+        if (dueWithinDays is { } d) { var lim = (await m.TodayAsync(null, ct)).AddDays(d); query = query.Where(x => x.Status != EquipmentStatus.Retired && x.NextDueOn != null && x.NextDueOn <= lim); }
         if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => EF.Functions.ILike(x.Number + " " + x.Name + " " + (x.SerialNumber ?? ""), $"%{q.Trim()}%"));
-        var today = m.Today;
+        var today = await m.TodayAsync(null, ct);
         return await query.OrderBy(x => x.NextDueOn).Select(x => new
         {
             x.Id, x.Number, x.Name, x.SerialNumber, x.Location, x.Status, x.LastCalibratedOn, x.NextDueOn, x.CalibrationIntervalDays,

@@ -14,7 +14,7 @@ internal static class Json
     public static string Str(this JsonElement e, string name) => e.GetProperty(name).GetString()!;
 
     public static async Task<Guid> AddActionAsync(this ApiClient c, string type, Guid id, Guid assignee, string title = "Corrective action") =>
-        await (await c.PostOkAsync($"/api/records/{type}/{id}/actions", new { title, description = "Implement and document", actionType = "Corrective", assigneeId = assignee, dueDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(14)), requiresVerification = true }))
+        await (await c.PostOkAsync($"/api/records/{type}/{id}/actions", new { title, description = "Implement and document", actionType = "Corrective", assigneeId = assignee, dueDate = TestDates.Today.AddDays(14), requiresVerification = true }))
             .Content.ReadFromJsonAsync<Guid>();
 
     public static async Task CompleteAndVerifyAsync(this ApiClient doer, ApiClient verifier, Guid actionId)
@@ -28,7 +28,7 @@ internal static class Json
 [Collection("api")]
 public sealed class QualityModuleTests(TestApp app)
 {
-    private static readonly DateOnly Today = DateOnly.FromDateTime(DateTime.UtcNow);
+    private static DateOnly Today => TestDates.Today;
 
     [Fact]
     public async Task Controlled_form_binds_to_template_revision_validates_and_computes()

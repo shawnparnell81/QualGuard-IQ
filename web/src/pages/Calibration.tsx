@@ -9,14 +9,14 @@ import { useAuth } from '../auth';
 import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
-import { StatusChip, calResult, equipmentStatus, fmtDate, fmtDateTime, impactStatus, ncrStatus } from '../components/Status';
+import { localDate, StatusChip, calResult, equipmentStatus, fmtDate, fmtDateTime, impactStatus, ncrStatus } from '../components/Status';
 import { AttachmentsAndHistory } from '../components/RecordTabs';
 import { Facts, Prose, SchemaForm, Section, StepDialog, useRunner } from '../components/Kit';
 import { mono } from '../theme';
 
 const mod = () => modules.find((m) => m.key === 'calibration')!;
 const num = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue())}</span>;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localDate();
 interface EqRow { id: string; number: string; name: string; serialNumber: string | null; location: string | null; status: number; lastCalibratedOn: string | null; nextDueOn: string | null; overdue: boolean; siteCode: string }
 
 export function EquipmentList() {

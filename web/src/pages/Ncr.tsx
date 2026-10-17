@@ -9,7 +9,7 @@ import { useAuth } from '../auth';
 import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
-import { StatusChip, capaStatus, dispositions, fmtDate, fmtDateTime, ncrStatus, severity } from '../components/Status';
+import { localDate, StatusChip, capaStatus, dispositions, fmtDate, fmtDateTime, ncrStatus, severity } from '../components/Status';
 import { ActionsPanel, ApprovalsPanel, AttachmentsAndHistory } from '../components/RecordTabs';
 import { CustomFieldsPanel } from '../components/RecordPanels';
 import { Facts, Prose, SchemaForm, Section, StepDialog, useRunner } from '../components/Kit';
@@ -18,7 +18,7 @@ import { useWork } from './Home';
 import { mono } from '../theme';
 
 const mod = () => modules.find((m) => m.key === 'quality')!;
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => localDate();
 const num = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue())}</span>;
 
 interface NcrRow { id: string; number: string; title: string; source: string; severity: number; status: number; partNumber: string | null; lotNumber: string | null; detectedOn: string; siteCode: string; ownerName: string }

@@ -43,9 +43,9 @@ public sealed record UpdateRevisionRequest(string ChangeSummary, DateOnly? Effec
 
 public sealed class DocumentService(
     AppDbContext db, IAccessService access, ICurrentUser current, INumberingService numbers, IRecordRegistry records,
-    WorkflowService workflow, ISearchIndexer search, INotifier notifier, IClock clock, IEnumerable<IRevisionReleasedHandler> released)
+    WorkflowService workflow, ISearchIndexer search, INotifier notifier, IClock clock, IEnumerable<IRevisionReleasedHandler> released, ISiteCalendar calendar)
 {
-    private DateOnly Today => DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
+    private Task<DateOnly> TodayAsync(Guid siteId, CancellationToken ct) => calendar.TodayAsync(siteId, ct);
 
     public async Task<ControlledDocument> CreateAsync(CreateDocumentRequest req, CancellationToken ct)
     {
@@ -98,7 +98,7 @@ public sealed class DocumentService(
         await records.RequireEditAsync(DocumentRecordTypes.ForDocument(rev.Document!.Kind), rev.DocumentId, ct);
         if (rev.Status != RevisionStatus.Draft) throw new AppException("Only draft revisions can be edited.", 409);
         if (string.IsNullOrWhiteSpace(req.ChangeSummary)) throw new AppException("A change summary is required.");
-        if (req.EffectiveDate is { } e && e < Today) throw new AppException("The effective date cannot be in the past.");
+        if (req.EffectiveDate is { } e && e < await TodayAsync(rev.Document.SiteId, ct)) throw new AppException("The effective date cannot be in the past.");
         db.Entry(rev).Property(x => x.RowVersion).OriginalValue = req.RowVersion;
         rev.ChangeSummary = req.ChangeSummary.Trim();
         rev.EffectiveDate = req.EffectiveDate;
@@ -152,12 +152,13 @@ public sealed class DocumentService(
         var rev = await db.DocumentRevisions.Include(r => r.Document).FirstAsync(r => r.Id == revisionId, ct);
         rev.Status = RevisionStatus.Approved;
         rev.ApprovedAt = clock.UtcNow;
-        rev.EffectiveDate ??= Today;
-        if (rev.EffectiveDate < Today) rev.EffectiveDate = Today;
+        var today = await TodayAsync(rev.Document!.SiteId, ct);
+        rev.EffectiveDate ??= today;
+        if (rev.EffectiveDate < today) rev.EffectiveDate = today;
         var type = DocumentRecordTypes.ForRevision(rev.Document!.Kind);
         foreach (var a in await db.Attachments.Where(a => a.OwnerType == type && a.OwnerId == rev.Id && !a.IsArchived).ToListAsync(ct)) a.IsLocked = true;
         await db.SaveChangesAsync(ct);
-        if (rev.EffectiveDate <= Today) await MakeEffectiveAsync(rev, ct);
+        if (rev.EffectiveDate <= today) await MakeEffectiveAsync(rev, ct);
     }
 
     internal async Task OnRejectedAsync(Guid revisionId, CancellationToken ct)
@@ -169,10 +170,14 @@ public sealed class DocumentService(
     /// <summary>Releases approved revisions whose effective date has arrived. Run daily by the worker.</summary>
     public async Task<int> ReleaseDueAsync(CancellationToken ct)
     {
-        var due = await db.DocumentRevisions.Include(r => r.Document)
-            .Where(r => r.Status == RevisionStatus.Approved && r.EffectiveDate <= Today).ToListAsync(ct);
-        foreach (var r in due) await MakeEffectiveAsync(r, ct);
-        return due.Count;
+        // Candidates up to tomorrow in UTC, then checked against each site's own date.
+        var horizon = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime).AddDays(1);
+        var candidates = await db.DocumentRevisions.Include(r => r.Document)
+            .Where(r => r.Status == RevisionStatus.Approved && r.EffectiveDate <= horizon).ToListAsync(ct);
+        var count = 0;
+        foreach (var r in candidates)
+            if (r.EffectiveDate <= await TodayAsync(r.Document!.SiteId, ct)) { await MakeEffectiveAsync(r, ct); count++; }
+        return count;
     }
 
     private async Task MakeEffectiveAsync(DocumentRevision rev, CancellationToken ct)
@@ -200,12 +205,13 @@ public sealed class DocumentService(
         if (doc.Status != DocumentStatus.Active) throw new AppException("Only active documents can be made obsolete.");
         if (string.IsNullOrWhiteSpace(reason)) throw new AppException("A reason is required.");
         if (doc.Revisions.Any(r => r.Status is RevisionStatus.Draft or RevisionStatus.InReview)) throw new ConflictException("Withdraw the revision in progress first.");
+        var obsoleteDay = await TodayAsync(doc.SiteId, ct);
         foreach (var r in doc.Revisions.Where(r => r.Status is RevisionStatus.Effective or RevisionStatus.Approved))
         {
             r.Status = RevisionStatus.Obsolete;
             r.ObsoletedAt = clock.UtcNow;
             r.ObsoleteReason = reason;
-            r.SupersededOn ??= Today;
+            r.SupersededOn ??= obsoleteDay;
         }
         doc.Status = DocumentStatus.Obsolete;
         await db.SaveChangesAsync(ct);

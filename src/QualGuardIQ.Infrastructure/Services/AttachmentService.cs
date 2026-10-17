@@ -11,7 +11,7 @@ namespace QualGuardIQ.Infrastructure.Services;
 
 public sealed record UploadRequest(string FileName, string ContentType, Stream Content, string? Category, string? Description, Classification Classification, Guid? ReplacesId);
 
-public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMalwareScanner scanner, IRecordRegistry records, IConfiguration config)
+public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMalwareScanner scanner, IRecordRegistry records, IConfiguration config, ISiteCalendar calendar)
 {
     private static readonly HashSet<string> Blocked = [".exe", ".dll", ".bat", ".cmd", ".com", ".msi", ".ps1", ".sh", ".js", ".vbs", ".scr", ".jar", ".html", ".htm", ".svg"];
 
@@ -98,7 +98,7 @@ public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMa
         var a = await db.Attachments.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("File");
         var r = await records.RequireEditAsync(a.OwnerType, a.OwnerId, ct);
         if (a.IsLocked || r.IsLocked) throw new AppException("This file is locked and cannot be removed.");
-        if (a.RetainUntil is { } until && until > DateOnly.FromDateTime(DateTime.UtcNow))
+        if (a.RetainUntil is { } until && until > await calendar.TodayAsync(r.SiteId, ct))
             throw new AppException($"This file is under retention until {until:yyyy-MM-dd}.");
         a.IsArchived = true;
         a.ArchivedAt = DateTimeOffset.UtcNow;

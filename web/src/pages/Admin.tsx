@@ -15,7 +15,7 @@ import { fmtDateTime } from '../components/Status';
 import { mono } from '../theme';
 
 const mod = modules.find((m) => m.key === 'admin')!;
-interface Site { id: string; code: string; name: string; isArchived: boolean; departments: { id: string; code: string; name: string }[] }
+interface Site { id: string; code: string; name: string; address?: string | null; timeZone: string; isArchived: boolean; departments: { id: string; code: string; name: string }[] }
 interface Role { id: string; name: string; description: string | null; isSystem: boolean; permissions: string[]; rowVersion: number }
 interface User { id: string; email: string; displayName: string; isActive: boolean; isLockedOut: boolean; lastSignInAt: string | null; roles: { id: string; roleId: string; roleName: string; siteId: string | null; departmentId: string | null }[] }
 
@@ -154,7 +154,7 @@ export function SitesPage() {
   const qc = useQueryClient();
   const sites = useSites();
   const [error, setError] = useState<string | null>(null);
-  const [site, setSite] = useState({ code: '', name: '', address: '' });
+  const [site, setSite] = useState({ code: '', name: '', address: '', timeZone: 'America/New_York' });
   const [dept, setDept] = useState<{ siteId: string; code: string; name: string } | null>(null);
   const run = async (f: () => Promise<unknown>) => { setError(null); try { await f(); qc.invalidateQueries({ queryKey: ['sites'] }); return true; } catch (e) { setError((e as Error).message); return false; } };
   return (
@@ -166,7 +166,8 @@ export function SitesPage() {
           <TextField size="small" label="Code" value={site.code} onChange={(e) => setSite({ ...site, code: e.target.value })} />
           <TextField size="small" label="Name" value={site.name} onChange={(e) => setSite({ ...site, name: e.target.value })} sx={{ width: 280 }} />
           <TextField size="small" label="Address" value={site.address} onChange={(e) => setSite({ ...site, address: e.target.value })} sx={{ flex: 1 }} />
-          <Button variant="contained" onClick={async () => { if (await run(() => post('/api/organization/sites', { ...site, address: site.address || null }))) setSite({ code: '', name: '', address: '' }); }}>Add</Button>
+          <TimeZoneSelect value={site.timeZone} onChange={(tz) => setSite({ ...site, timeZone: tz })} />
+          <Button variant="contained" onClick={async () => { if (await run(() => post('/api/organization/sites', { ...site, address: site.address || null }))) setSite({ code: '', name: '', address: '', timeZone: 'America/New_York' }); }}>Add</Button>
         </Stack>
       </Paper>
       <Stack gap={2}>
@@ -174,6 +175,7 @@ export function SitesPage() {
           <Paper key={s.id} sx={{ p: 2, opacity: s.isArchived ? 0.6 : 1 }}>
             <Stack direction="row" alignItems="center" gap={1}>
               <Typography sx={{ fontFamily: mono, fontWeight: 600 }}>{s.code}</Typography><Typography sx={{ flex: 1 }}>{s.name}</Typography>
+              {!s.isArchived && <TimeZoneSelect value={s.timeZone} onChange={(tz) => run(() => put(`/api/organization/sites/${s.id}`, { code: s.code, name: s.name, address: s.address ?? null, timeZone: tz }))} />}
               {s.isArchived ? <Chip size="small" label="Archived" /> : <>
                 <Button size="small" onClick={() => setDept({ siteId: s.id, code: '', name: '' })}>Add department</Button>
                 <Button size="small" color="error" onClick={() => run(() => post(`/api/organization/sites/${s.id}/archive`))}>Archive</Button></>}
@@ -310,5 +312,16 @@ export function SecurityPage() {
       ]} />
       {a.data && <Pagination sx={{ mt: 2 }} count={Math.max(1, Math.ceil(a.data.total / a.data.pageSize))} page={page} onChange={(_, v) => setPage(v)} />}
     </ModuleWorkspace>
+  );
+}
+
+const zones: string[] = (Intl as unknown as { supportedValuesOf?: (k: string) => string[] }).supportedValuesOf?.('timeZone') ?? ['America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles', 'UTC'];
+
+/** Site time zone: business dates (today, due, overdue, effective) at the site follow it. */
+function TimeZoneSelect({ value, onChange }: { value: string; onChange: (tz: string) => void }) {
+  return (
+    <TextField select size="small" label="Time zone" value={value} onChange={(e) => onChange(e.target.value)} sx={{ width: 220 }}>
+      {(zones.includes(value) ? zones : [value, ...zones]).map((z) => <MenuItem key={z} value={z}>{z}</MenuItem>)}
+    </TextField>
   );
 }

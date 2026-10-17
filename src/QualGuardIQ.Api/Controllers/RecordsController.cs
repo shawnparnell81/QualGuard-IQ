@@ -113,7 +113,7 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
 
     [HttpGet("actions")]
     public async Task<IEnumerable<ActionDto>> Actions(string type, Guid id, CancellationToken ct) =>
-        await ActionsController.ToDtos(db, await actions.ForRecordAsync(type, id, ct), ct);
+        await ActionsController.ToDtos(db, await actions.ForRecordAsync(type, id, ct), HttpContext.RequestServices.GetRequiredService<QualGuardIQ.Infrastructure.Services.ISiteCalendar>(), ct);
 
     [HttpPost("actions")]
     public async Task<ActionResult<Guid>> AddAction(string type, Guid id, CreateActionRequest req, CancellationToken ct) =>

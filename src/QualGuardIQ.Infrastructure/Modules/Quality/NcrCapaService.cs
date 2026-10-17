@@ -27,7 +27,7 @@ public sealed class NcrService(AppDbContext db, ModuleSupport m, INumberingServi
         ModuleSupport.Required(r.Description, "Description", 10000);
         ModuleSupport.Required(r.Source, "Source", 60);
         if (r.QuantityAffected < 0) throw new AppException("Quantity cannot be negative.");
-        if (r.DetectedOn > m.Today) throw new AppException("The detection date cannot be in the future.");
+        if (r.DetectedOn > await m.TodayAsync(r.SiteId, ct)) throw new AppException("The detection date cannot be in the future.");
         var owner = r.OwnerId ?? m.UserId;
         await m.RequireActiveUserAsync(owner, "owner", ct);
         await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;

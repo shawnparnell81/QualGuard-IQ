@@ -33,7 +33,7 @@ public sealed class CalibrationService(AppDbContext db, ModuleSupport m, INumber
             Number = await numbers.NextAsync(EquipmentType, r.SiteId, ct), Name = r.Name.Trim(), Manufacturer = r.Manufacturer?.Trim(), Model = r.Model?.Trim(),
             SerialNumber = r.SerialNumber?.Trim(), Location = r.Location?.Trim(), MeasurementRange = r.MeasurementRange?.Trim(), Tolerance = r.Tolerance?.Trim(),
             SiteId = r.SiteId, DepartmentId = r.DepartmentId, OwnerId = owner, CalibrationIntervalDays = r.CalibrationIntervalDays,
-            NextDueOn = r.NextDueOn ?? m.Today, Status = EquipmentStatus.Active
+            NextDueOn = r.NextDueOn ?? await m.TodayAsync(r.SiteId, ct), Status = EquipmentStatus.Active
         };
         db.Equipment.Add(e);
         await db.SaveChangesAsync(ct);
@@ -49,7 +49,7 @@ public sealed class CalibrationService(AppDbContext db, ModuleSupport m, INumber
         var e = await db.Equipment.FirstAsync(x => x.Id == equipmentId, ct);
         if (e.Status == EquipmentStatus.Retired) throw new ConflictException("Retired equipment cannot be calibrated.");
         ModuleSupport.Required(r.PerformedBy, "Performed by", 200);
-        if (r.PerformedOn > m.Today) throw new AppException("The calibration date cannot be in the future.");
+        if (r.PerformedOn > await m.TodayAsync(e.SiteId, ct)) throw new AppException("The calibration date cannot be in the future.");
         if (e.LastCalibratedOn is { } last && r.PerformedOn < last) throw new AppException("A later calibration is already recorded.");
         var pass = r.Result is CalibrationResult.Pass or CalibrationResult.PassAfterAdjustment;
         await using var tx = await db.Database.BeginTransactionAsync(ct);
@@ -116,7 +116,7 @@ public sealed class CalibrationService(AppDbContext db, ModuleSupport m, INumber
         var ia = await db.ImpactAssessments.AsNoTracking().FirstAsync(x => x.Id == impactId, ct);
         var e = await db.Equipment.AsNoTracking().FirstAsync(x => x.Id == ia.EquipmentId, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var n = await ncrs.CreateAsync(new CreateNcrRequest(title, description, "Calibration", ia.SiteId, ia.DepartmentId, null, null, null, null, m.Today, Severity.Major), ct);
+        var n = await ncrs.CreateAsync(new CreateNcrRequest(title, description, "Calibration", ia.SiteId, ia.DepartmentId, null, null, null, null, await m.TodayAsync(ia.SiteId, ct), Severity.Major), ct);
         db.RecordLinks.Add(new Domain.Shared.RecordLink { FromType = ImpactType, FromId = ia.Id, ToType = NcrService.RecordType, ToId = n.Id, LinkType = $"Out of tolerance {e.Number}" });
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);

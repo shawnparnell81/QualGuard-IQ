@@ -96,7 +96,7 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
     [HttpGet("{id:guid}/effective")]
     public async Task<IActionResult> Effective(Guid id, [FromQuery] DateOnly? on, CancellationToken ct)
     {
-        var r = await docs.EffectiveOnAsync(id, on ?? DateOnly.FromDateTime(DateTime.UtcNow), ct);
+        var r = await docs.EffectiveOnAsync(id, on ?? await HttpContext.RequestServices.GetRequiredService<QualGuardIQ.Infrastructure.Services.ISiteCalendar>().TodayAsync(await db.Documents.Where(d => d.Id == id).Select(d => (Guid?)d.SiteId).FirstOrDefaultAsync(ct), ct), ct);
         return r is null ? NotFound(new { title = "No revision was effective on that date." })
             : Ok(new RevisionDto(r.Id, r.Revision, r.Sequence, r.Status, r.ChangeSummary, r.EffectiveDate, r.SupersededOn, r.ApprovedAt, r.TrainingRequired, r.ObsoleteReason, r.RowVersion, r.FieldSchema));
     }

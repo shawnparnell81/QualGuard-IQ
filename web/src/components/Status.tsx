@@ -32,3 +32,5 @@ export const assignmentStatus = ['Assigned', 'Completed', 'Superseded', 'Cancell
 export const equipmentStatus = ['Active', 'Quarantined', 'OutOfService', 'Retired'];
 export const calResult = ['Pass', 'PassAfterAdjustment', 'OutOfTolerance', 'Fail'];
 export const impactStatus = ['Open', 'Completed'];
+/** Local calendar date (YYYY-MM-DD) offset by whole days; the server re-checks against the site's time zone. */
+export const localDate = (addDays = 0) => { const d = new Date(); d.setDate(d.getDate() + addDays); return d.toLocaleDateString('en-CA'); };

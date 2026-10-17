@@ -16,9 +16,9 @@ public sealed class OrganizationController(AppDbContext db) : ControllerBase
 {
     public sealed record BrandingDto(string ApplicationName, string OrganizationName, string? PrimaryColor);
     public sealed record SettingsDto(string ApplicationName, string OrganizationName, string? PrimaryColor, string TimeZone, bool LoginHistoryEnabled, uint RowVersion);
-    public sealed record SiteDto(Guid Id, string Code, string Name, string? Address, bool IsArchived, IReadOnlyList<DepartmentDto> Departments);
+    public sealed record SiteDto(Guid Id, string Code, string Name, string? Address, string TimeZone, bool IsArchived, IReadOnlyList<DepartmentDto> Departments);
     public sealed record DepartmentDto(Guid Id, string Code, string Name, bool IsArchived);
-    public sealed record SaveSiteRequest(string Code, string Name, string? Address);
+    public sealed record SaveSiteRequest(string Code, string Name, string? Address, string? TimeZone = null);
     public sealed record SaveDepartmentRequest(string Code, string Name);
 
     public sealed class SettingsValidator : AbstractValidator<SettingsDto>
@@ -39,6 +39,7 @@ public sealed class OrganizationController(AppDbContext db) : ControllerBase
             RuleFor(x => x.Code).NotEmpty().MaximumLength(20).Matches("^[A-Za-z0-9_-]+$");
             RuleFor(x => x.Name).NotEmpty().MaximumLength(200);
             RuleFor(x => x.Address).MaximumLength(500);
+            RuleFor(x => x.TimeZone).Must(tz => tz is null || TimeZoneInfo.TryFindSystemTimeZoneById(tz, out _)).WithMessage("Unknown time zone.");
         }
     }
 
@@ -80,7 +81,7 @@ public sealed class OrganizationController(AppDbContext db) : ControllerBase
     [Authorize]
     public async Task<IReadOnlyList<SiteDto>> Sites(CancellationToken ct) =>
         (await db.Sites.Include(s => s.Departments).AsNoTracking().OrderBy(s => s.Code).ToListAsync(ct))
-        .Select(s => new SiteDto(s.Id, s.Code, s.Name, s.Address, s.IsArchived,
+        .Select(s => new SiteDto(s.Id, s.Code, s.Name, s.Address, s.TimeZone, s.IsArchived,
             s.Departments.OrderBy(d => d.Code).Select(d => new DepartmentDto(d.Id, d.Code, d.Name, d.IsArchived)).ToList())).ToList();
 
     [HttpPost("sites")]
@@ -89,10 +90,26 @@ public sealed class OrganizationController(AppDbContext db) : ControllerBase
     {
         await v.ValidateAndThrowAsync(req, ct);
         if (await db.Sites.AnyAsync(s => s.Code == req.Code, ct)) throw new ConflictException("A site with this code already exists.");
-        var site = new Site { Code = req.Code, Name = req.Name, Address = req.Address };
+        var site = new Site { Code = req.Code, Name = req.Name, Address = req.Address, TimeZone = req.TimeZone ?? await OrgZoneAsync(ct) };
         db.Sites.Add(site);
         await db.SaveChangesAsync(ct);
         return site.Id;
+    }
+
+    private async Task<string> OrgZoneAsync(CancellationToken ct) =>
+        await db.OrganizationSettings.Select(o => o.TimeZone).FirstOrDefaultAsync(ct) ?? "America/New_York";
+
+    [HttpPut("sites/{siteId:guid}")]
+    [RequirePermission(Permissions.AdminOrganization)]
+    public async Task<IActionResult> UpdateSite(Guid siteId, SaveSiteRequest req, [FromServices] IValidator<SaveSiteRequest> v, CancellationToken ct)
+    {
+        await v.ValidateAndThrowAsync(req, ct);
+        var site = await db.Sites.FirstOrDefaultAsync(s => s.Id == siteId, ct) ?? throw new NotFoundException("Site");
+        if (await db.Sites.AnyAsync(s => s.Code == req.Code && s.Id != siteId, ct)) throw new ConflictException("A site with this code already exists.");
+        site.Code = req.Code; site.Name = req.Name; site.Address = req.Address;
+        if (req.TimeZone is not null) site.TimeZone = req.TimeZone;
+        await db.SaveChangesAsync(ct);
+        return NoContent();
     }
 
     [HttpPost("sites/{siteId:guid}/departments")]

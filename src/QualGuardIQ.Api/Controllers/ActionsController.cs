@@ -16,15 +16,16 @@ public sealed class ActionsController(ActionService actions) : ControllerBase
     public sealed record CompleteRequest(string Notes);
     public sealed record VerifyRequest(bool Effective, string Notes);
 
-    internal static async Task<List<RecordsController.ActionDto>> ToDtos(AppDbContext db, IEnumerable<ActionItem> list, CancellationToken ct)
+    internal static async Task<List<RecordsController.ActionDto>> ToDtos(AppDbContext db, IEnumerable<ActionItem> list, ISiteCalendar calendar, CancellationToken ct)
     {
         var items = list.ToList();
         var ids = items.Select(a => a.AssigneeId).Distinct().ToList();
         var names = await db.Users.Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, ct);
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = new Dictionary<Guid, DateOnly>();
+        foreach (var site in items.Select(a => a.SiteId).Distinct()) today[site] = await calendar.TodayAsync(site, ct);
         return items.Select(a => new RecordsController.ActionDto(a.Id, a.Number, a.Title, a.Description, a.ActionType, a.AssigneeId,
             names.GetValueOrDefault(a.AssigneeId, ""), a.DueDate, a.Status, a.RequiresVerification, a.CompletionNotes, a.VerificationNotes,
-            a.Status is ActionStatus.Open or ActionStatus.InProgress && a.DueDate < today)).ToList();
+            a.Status is ActionStatus.Open or ActionStatus.InProgress && a.DueDate < today[a.SiteId])).ToList();
     }
 
     [HttpPost("{id:guid}/complete")]
@@ -50,6 +51,8 @@ public sealed class MyWorkController(AppDbContext db, ICurrentUser current, Work
 {
     public sealed record SignRequest(bool Approve, string Password, string? Comment);
 
+    private ISiteCalendar Cal => HttpContext.RequestServices.GetRequiredService<ISiteCalendar>();
+
     [HttpGet("work")]
     public async Task<IActionResult> Work(CancellationToken ct)
     {
@@ -59,12 +62,12 @@ public sealed class MyWorkController(AppDbContext db, ICurrentUser current, Work
         var waitingVerification = await db.ActionItems.AsNoTracking().Where(a => a.CreatedById == uid && a.Status == ActionStatus.Completed && a.RequiresVerification).ToListAsync(ct);
         var approvals = await workflow.MyPendingAsync(ct);
         var submitted = await db.ApprovalRequests.AsNoTracking().Where(a => a.SubmittedById == uid && a.Status == ApprovalStatus.Pending).ToListAsync(ct);
-        var actionDtos = await ActionsController.ToDtos(db, mine, ct);
+        var actionDtos = await ActionsController.ToDtos(db, mine, Cal, ct);
         return Ok(new
         {
             assigned = actionDtos,
             overdue = actionDtos.Where(a => a.IsOverdue),
-            toVerify = await ActionsController.ToDtos(db, waitingVerification, ct),
+            toVerify = await ActionsController.ToDtos(db, waitingVerification, Cal, ct),
             approvals = approvals.Select(a => new { a.Request.Id, a.Request.RecordType, a.Request.RecordId, a.Request.RecordNumber, a.StepName, submittedAt = a.Request.CreatedAt }),
             waitingOnOthers = submitted.Select(a => new { a.Id, a.RecordType, a.RecordId, a.RecordNumber, submittedAt = a.CreatedAt })
         });

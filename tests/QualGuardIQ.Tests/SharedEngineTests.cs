@@ -59,7 +59,7 @@ public sealed class SharedEngineTests(TestApp app)
     {
         var (site, docId, _, authorId, author) = await DocAsync();
         var (assigneeId, assignee) = await app.CreateUserAsync([Permissions.DocumentsView], site);
-        var due = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-1);
+        var due = TestDates.Today.AddDays(-1);
         var actionId = await (await author.PostOkAsync($"/api/records/Document/{docId}/actions",
             new { title = "Update work instruction", description = "Add torque values", actionType = "Corrective", assigneeId, dueDate = due, requiresVerification = true })).Content.ReadFromJsonAsync<Guid>();
 
