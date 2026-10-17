@@ -27,16 +27,16 @@ This guide covers the Integrations module (Admin → Integrations). The vendor r
 
 | Vendor | Edition(s) | Auth | Key options |
 |---|---|---|---|
-| Oracle NetSuite | SuiteQL | OAuth 2.0 client credentials (M2M) with a JWT assertion signed **PS256** (RS256 is rejected). Upload the certificate under *OAuth 2.0 Client Credentials (M2M) Setup*. | `accountId`, `certificateId`, `scope` (default `rest_webservices`), `algorithm` |
-| SAP | S4Cloud, S4OnPrem, BusinessOne | S/4: a communication user with Basic auth, or OAuth (`auth=oauth`, `tokenUrl`). B1: Service Layer `/Login` session cookies, which re-login when the session expires. | `poService`, `version` (B1, default v1), `companyDb` |
-| Oracle Fusion SCM | FusionScm | OAuth client credentials through IDCS (`tokenUrl`, `scope`), or Basic (`auth=basic`) | `tokenUrl`, `scope` |
-| Microsoft Dynamics 365 | BusinessCentral, FinanceSupplyChain | Entra ID client credentials (`authority`, tenant) | `tenantId`, `environment` (BC), `companyId` (BC), `dataAreaId` (F&SCM) |
-| Acumatica | ContractRest | OAuth 2.0 (connected application) | `defaultVersion`, `manufacturingVersion`, `company` |
-| Infor | M3, Mongoose | ION API OAuth. The `.ionapi` values are `ti`, `iu`, `pu`, `ot`, `saak`/`sask`. `grant` defaults to client credentials. Mongoose can use `mode=direct`. | `cono` (M3), `ionProductPath`, `config` (Mongoose) |
-| Epicor Kinetic | KineticRestV2 | API key header plus Basic auth, or an IdP token (`auth=idp`, `tokenUrl`) | `company`, `baq.<Entity>` for BAQ reads |
-| Plex Smart Manufacturing | Connect | `X-Plex-Connect-Api-Key` (plus secret) and `X-Plex-Connect-Tenant-Id` | `tenantId`, `query.<Entity>`, `idField` |
-| DELMIAworks (IQMS) | WebApi | Session login (`loginPath`, `tokenHeader`) | `path.<Entity>`, `idField.<Entity>` |
-| Generic REST | Rest | bearer, basic or API key | `url.<Entity>`, `items.<Entity>`, `id.<Entity>`, `modified.<Entity>`, `next.<Entity>`, `since.<Entity>` |
+| Oracle NetSuite | SuiteQL | OAuth 2.0 client credentials (M2M) with a JWT assertion signed **PS256** (RS256 is rejected). Upload the certificate under *OAuth 2.0 Client Credentials (M2M) Setup*. The private key goes in Secrets. | Account = NetSuite account id; options `certificateId`, `scope` (default `rest_webservices`), `algorithm` |
+| SAP | S4Cloud, S4OnPrem, BusinessOne | S/4: communication user (Username + Secret, Basic) or OAuth (`auth=oauth`, `tokenUrl`). B1: Service Layer `/Login` session cookies, re-login on expiry. | Company = B1 CompanyDB; options `poService` (S/4), `version` (B1, default v1) |
+| Oracle Fusion SCM | FusionScm | OAuth client credentials through IDCS (`tokenUrl`, `scope`), or Basic (`auth=basic`) | options `auth`, `tokenUrl`, `scope` |
+| Microsoft Dynamics 365 | BusinessCentral, FinanceSupplyChain | Entra ID client credentials (ClientId + Secret) | Account = Entra tenant id; Company = BC company id; options `authority`, `environment` (BC, default production), `dataAreaId` (F&SCM) |
+| Acumatica | ContractRest | OAuth 2.0 (connected application) | options `defaultVersion`, `manufacturingVersion` |
+| Infor | M3, Mongoose | ION API OAuth from the `.ionapi` file values (`grant`, default client credentials); Mongoose also supports `mode=direct` | Company = Mongoose configuration; options `cono` (M3), `ionProductPath` (Mongoose, default CSI) |
+| Epicor Kinetic | KineticRestV2 | API key plus Basic (Username + Secret), or IdP token (`auth=idp`, `tokenUrl`) | Company = Epicor company; options `baq.<Entity>` for BAQ reads |
+| Plex Smart Manufacturing | Connect | `X-Plex-Connect-Api-Key` (Secret) and `X-Plex-Connect-Tenant-Id` | Account = tenant id; options `query.<Entity>`, `idField` |
+| DELMIAworks (IQMS) | WebApi | Session login (`loginPath`, token header `tokenHeader`) | Company = company/EPLANT; options `path.<Entity>`, `idField.<Entity>` |
+| Generic REST | Rest | `auth` = bearer, basic or apikey (`apiKeyHeader`) | options `url.<Entity>`, `items.<Entity>`, `id.<Entity>`, `modified.<Entity>`, `next.<Entity>`, `since.<Entity>`, `testEntity` |
 | CSV exchange | Csv | none (upload) | `id.<Entity>` |
 
 ## UNVERIFIED items (confirm with each customer before go-live)
