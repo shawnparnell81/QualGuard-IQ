@@ -50,6 +50,10 @@ public static class Permissions
     public const string InspectionEdit = "inspection.edit";
     /// <summary>Approve inspection plan revisions and make release/rejection decisions.</summary>
     public const string InspectionApprove = "inspection.approve";
+    public const string ChangesView = "changes.view";
+    public const string ChangesEdit = "changes.edit";
+    /// <summary>Approve changes, waive affected items, verify implementation and reopen.</summary>
+    public const string ChangesApprove = "changes.approve";
 
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
