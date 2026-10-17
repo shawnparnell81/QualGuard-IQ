@@ -135,7 +135,7 @@ public sealed class KnowledgeService(AppDbContext db, ModuleSupport m, INumberin
         var df = new Dictionary<string, int>();
         foreach (var t in tdocs) foreach (var w in t.Distinct()) df[w] = df.GetValueOrDefault(w) + 1;
         double N = docs.Count + 1;
-        Dictionary<string, double> Vec(List<string> t) => t.GroupBy(x => x).ToDictionary(g => g.Key, g => g.Count() * Math.Log(N / (1 + df.GetValueOrDefault(g.Key))));
+        Dictionary<string, double> Vec(List<string> t) => t.GroupBy(x => x).ToDictionary(g => g.Key, g => g.Count() * Math.Log(1 + N / (1 + df.GetValueOrDefault(g.Key)))); // smoothed IDF: stays positive with few documents
         var q = Vec(Terms(text)); var qn = Math.Sqrt(q.Values.Sum(v => v * v));
         if (qn == 0) return [];
         var hits = new List<KnowledgeHit>();
@@ -166,9 +166,10 @@ public sealed class KnowledgeService(AppDbContext db, ModuleSupport m, INumberin
     public async Task<Playbook> CreatePlaybookAsync(PlaybookInput r, CancellationToken ct)
     {
         CheckPlaybook(r);
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
         var p = new Playbook { Number = await numbers.NextAsync("Playbook", null, ct), Title = r.Title.Trim(), Trigger = r.Trigger, Steps = r.Steps };
         db.Playbooks.Add(p);
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
         return p;
     }
 
@@ -281,10 +282,11 @@ public sealed class KnowledgeService(AppDbContext db, ModuleSupport m, INumberin
             _ => await db.Suppliers.AsNoTracking().Where(s => s.Id == r.SubjectId).Select(s => new { s.SiteId, s.DepartmentId, s.LegalName }).FirstOrDefaultAsync(ct) is { } u ? (u.SiteId, u.DepartmentId, u.LegalName) : throw new AppException("Select an existing supplier."),
         };
         await m.RequireAsync(Permissions.ProcessEdit, site, dept, ct);
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
         var a = new MaturityAssessment { Number = await numbers.NextAsync(MaturityType, site, ct), Subject = r.Subject, SubjectId = r.SubjectId, SubjectName = name, AssessedOn = r.AssessedOn, Scores = r.Scores,
             Overall = Math.Round((decimal)r.Scores.Average(s => s.Level), 2), AssessorId = m.UserId, SiteId = site, DepartmentId = dept };
         db.MaturityAssessments.Add(a);
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
         return a;
     }
 

@@ -379,6 +379,8 @@ public sealed class EngineeringService(AppDbContext db, ModuleSupport m, INumber
     {
         await m.ViewAsync("Part", partId, ct);
         var ids = await db.BomLines.AsNoTracking().Where(b => b.ParentPartId == partId).Select(b => b.Id).ToListAsync(ct);
-        return await db.AuditEntries.AsNoTracking().Where(a => a.EntityType == nameof(BomLine) && (ids.Contains(a.EntityId) || (a.Changes != null && a.Changes.Contains(partId.ToString())))).OrderByDescending(a => a.OccurredAt).Take(200).ToListAsync(ct);
+        var key = partId.ToString();
+        var rows = await db.AuditEntries.AsNoTracking().Where(a => a.EntityType == nameof(BomLine)).OrderByDescending(a => a.OccurredAt).Take(5000).ToListAsync(ct);
+        return rows.Where(a => ids.Contains(a.EntityId) || (a.Changes != null && a.Changes.Contains(key))).Take(200).ToList();
     }
 }

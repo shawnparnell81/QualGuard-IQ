@@ -122,7 +122,7 @@ public partial class AppDbContext
         b.Entity<BomLine>(e =>
         {
             e.ToTable("bom_lines");
-            e.HasIndex(x => new { x.ParentPartId, x.ParentRevision, x.ComponentPartId }).IsUnique().AreNullsDistinct(false);
+            e.HasIndex(x => new { x.ParentPartId, x.ParentRevision, x.BomType, x.ComponentPartId }).IsUnique().AreNullsDistinct(false);
             e.Property(x => x.Quantity).HasPrecision(18, 6);
             e.HasOne<Part>().WithMany().HasForeignKey(x => x.ParentPartId).OnDelete(R);
             e.HasOne<Part>().WithMany().HasForeignKey(x => x.ComponentPartId).OnDelete(R);

@@ -28,6 +28,7 @@ public sealed class SecurityGovernanceService(AppDbContext db, ModuleSupport m, 
     public async Task<AccessReview> CreateAsync(AccessReviewInput r, CancellationToken ct)
     {
         ModuleSupport.Required(r.Title, "Title", 300);
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
         var a = new AccessReview { Number = await numbers.NextAsync("AccessReview", null, ct), Title = r.Title.Trim(), Kind = r.Kind, Findings = r.Findings?.Trim(), ReviewerId = m.UserId };
         db.AccessReviews.Add(a);
         if (r.Kind is AccessReviewKind.PrivilegedAccessReview or AccessReviewKind.AccessCertification)
@@ -42,7 +43,7 @@ public sealed class SecurityGovernanceService(AppDbContext db, ModuleSupport m, 
             db.AccessReviewItems.AddRange(rows.Select(x => new AccessReviewItem { ReviewId = a.Id, AssignmentId = x.Id, UserId = x.UserId, UserName = $"{x.DisplayName} <{x.Email}>", RoleName = x.Role,
                 Scope = x.SiteId is { } s ? sites.GetValueOrDefault(s) ?? "site" : "All sites", Privileged = x.Privileged }));
         }
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
         return a;
     }
 
@@ -107,9 +108,10 @@ public sealed class SecurityGovernanceService(AppDbContext db, ModuleSupport m, 
             case DeploymentScope.MultiPlant or DeploymentScope.Regional when sites.Count < 1: throw new AppException("Select the sites in the rollout.");
             case DeploymentScope.Global: sites = await db.Sites.Where(s => !s.IsArchived).Select(s => s.Id).ToListAsync(ct); break;
         }
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
         var d = new DeploymentRelease { Number = await numbers.NextAsync("Deployment", null, ct), Version = r.Version.Trim(), Scope = r.Scope, SiteIds = sites, PlannedOn = r.PlannedOn, Notes = r.Notes?.Trim() };
         db.DeploymentReleases.Add(d);
-        await db.SaveChangesAsync(ct);
+        await db.SaveChangesAsync(ct); await tx.CommitAsync(ct);
         return d;
     }
 
