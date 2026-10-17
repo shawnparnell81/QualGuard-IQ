@@ -70,6 +70,35 @@ public sealed class AuthController(
         return NoContent();
     }
 
+    /// <summary>Issues a bearer access token for API clients (same credential, lockout and audit rules as sign-in). Browser sessions keep using the cookie.</summary>
+    [HttpPost("token")]
+    [AllowAnonymous]
+    [EnableRateLimiting("login")]
+    public async Task<IActionResult> Token(LoginRequest req, [FromServices] IValidator<LoginRequest> validator)
+    {
+        await validator.ValidateAndThrowAsync(req);
+        var user = await users.FindByEmailAsync(req.Email);
+        if (user is null || !user.IsActive)
+        {
+            await security.LogAsync("TokenFailed", false, user?.Id, req.Email, user is null ? "Unknown account" : "Account disabled");
+            return Unauthorized(new { title = "Email or password is incorrect." });
+        }
+        var result = await signIn.CheckPasswordSignInAsync(user, req.Password, lockoutOnFailure: true);
+        if (result.IsLockedOut)
+        {
+            await security.LogAsync("SignInLockedOut", false, user.Id, user.Email);
+            return StatusCode(423, new { title = "This account is locked. Try again later or contact an administrator." });
+        }
+        if (!result.Succeeded)
+        {
+            await security.LogAsync("TokenFailed", false, user.Id, user.Email, "Wrong password");
+            return Unauthorized(new { title = "Email or password is incorrect." });
+        }
+        await security.LogAsync("TokenIssued", true, user.Id, user.Email);
+        var principal = await signIn.CreateUserPrincipalAsync(user);
+        return SignIn(principal, IdentityConstants.BearerScheme);
+    }
+
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout()
