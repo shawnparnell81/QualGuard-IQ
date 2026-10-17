@@ -363,3 +363,18 @@ public class QualityMetricFact : Entity
     public decimal? Denominator { get; set; }
     public DateTimeOffset ComputedAt { get; set; }
 }
+
+// ---------- External portals ----------
+
+/// <summary>A response written by a customer or supplier portal user against a record their organization may see (NCR, SCAR, complaint).</summary>
+public class PortalResponse : Entity, IAudited
+{
+    public string RecordType { get; set; } = "";
+    public Guid RecordId { get; set; }
+    /// <summary>Customer or Supplier.</summary>
+    public string PartyKind { get; set; } = "";
+    public Guid PartyId { get; set; }
+    public Guid AuthorId { get; set; }
+    public string Body { get; set; } = "";
+    public string AuditLabel => $"portal response on {RecordType}";
+}
