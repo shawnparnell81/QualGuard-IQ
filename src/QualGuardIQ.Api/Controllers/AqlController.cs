@@ -309,17 +309,33 @@ public sealed class AqlController(AppDbContext db, AqlService svc, CapaService c
     [HttpPost("inspections/{inspectionId:guid}/ncr", Name = "createNCRFromAql")] [RequirePermission(Permissions.NcrEdit)] [Tags("Integrations")] [ProducesResponseType<LinkedRecord>(201)]
     public async Task<ActionResult<LinkedRecord>> CreateNcr(Guid inspectionId, CreateLinkedRecordRequest r, CancellationToken ct)
     {
+        var due = await DueAsync(r.DueDate, (await svc.LoadAsync(inspectionId, false, ct)).SiteId, ct);
         var n = await svc.CreateNcrAsync(inspectionId, r.Title, r.Description, r.OwnerId, ct);
+        await SetDueAsync<Domain.Quality.Ncr>(n.Id, due, ct);
         return CreatedAtRoute("listAqlLinkedRecords", new { inspectionId }, new LinkedRecord(LinkedRecordTypeCode.NCR, n.Id, n.Number, "Nonconformance", n.Title));
     }
     [HttpPost("inspections/{inspectionId:guid}/capa", Name = "createCAPAFromAql")] [RequirePermission(Permissions.CapaEdit)] [Tags("Integrations")] [ProducesResponseType<LinkedRecord>(201)]
     public async Task<ActionResult<LinkedRecord>> CreateCapa(Guid inspectionId, CreateLinkedRecordRequest r, CancellationToken ct)
     {
         var a = await svc.LoadAsync(inspectionId, true, ct);
+        var due = await DueAsync(r.DueDate, a.SiteId, ct);
         var c = await capas.CreateAsync(new CreateCapaRequest(string.IsNullOrWhiteSpace(r.Title) ? $"Corrective action for AQL lot {a.InspectionNumber}" : r.Title,
             string.IsNullOrWhiteSpace(r.Description) ? $"AQL lot {a.InspectionNumber} ({a.PlanLabel}): {a.Rationale ?? "corrective action required"}" : r.Description,
             "Corrective", "AQL inspection", a.SiteId, a.DepartmentId, r.OwnerId), ct, (AqlService.RecordType, a.Id));
+        await SetDueAsync<Domain.Quality.Capa>(c.Id, due, ct);
         return CreatedAtRoute("listAqlLinkedRecords", new { inspectionId }, new LinkedRecord(LinkedRecordTypeCode.CAPA, c.Id, c.Number, "Corrective action", c.Title));
+    }
+    private async Task<DateOnly?> DueAsync(DateOnly? due, Guid siteId, CancellationToken ct)
+    {
+        if (due is { } d && d < await m.TodayAsync(siteId, ct)) throw new AppException("dueDate cannot be in the past.");
+        return due;
+    }
+    private async Task SetDueAsync<T>(Guid id, DateOnly? due, CancellationToken ct) where T : class
+    {
+        if (due is null) return;
+        var e = await db.Set<T>().FindAsync([id], ct);
+        switch (e) { case Domain.Quality.Ncr n: n.DueOn = due; break; case Domain.Quality.Capa c: c.DueOn = due; break; }
+        await db.SaveChangesAsync(ct);
     }
     private RecordsController Shared() { var c = ActivatorUtilities.CreateInstance<RecordsController>(HttpContext.RequestServices); c.ControllerContext = ControllerContext; return c; }
 
@@ -439,7 +455,7 @@ public sealed class AqlController(AppDbContext db, AqlService svc, CapaService c
 }
 
 /// <summary>FAI and AQL dashboards and reports (v1): thin routes over the shared report engine (reports.view plus the module's view permission; scoped to the caller's sites).
-/// Dashboards and JSON reports return a MetricSeries; reports also export csv (the full table) and pdf. xlsx is not produced (400).</summary>
+/// Dashboards and JSON reports return a MetricSeries; reports also export csv and xlsx (the full table) and pdf.</summary>
 [ApiController, Authorize, Route("api/v1"), Tags("Dashboards")]
 public sealed class FaiAqlReportsController(global::QualGuardIQ.Infrastructure.Modules.Reports.ReportService reports, AppDbContext db, ICurrentUser current, ModuleSupport m) : ControllerBase
 {
@@ -479,13 +495,13 @@ public sealed class FaiAqlReportsController(global::QualGuardIQ.Infrastructure.M
 
     private async Task<IActionResult> Report(string key, string title, string label, string value, string? unit, ReportRequest r, CancellationToken ct)
     {
-        if (r.Format == ReportFormatCode.xlsx) throw new AppException("xlsx export is not available; use csv or pdf.");
         if (r.Format != ReportFormatCode.json && !(await HttpContext.RequestServices.GetRequiredService<IAuthorizationService>().AuthorizeAsync(User, PermissionPolicyProvider.Prefix + Permissions.ReportsExport)).Succeeded) throw new ForbiddenException("Exporting needs reports.export.");
         var res = await Run(key, r.DateFrom, r.DateTo, r.SiteId, ct, r.SupplierId, r.ProductId);
         if (r.Format == ReportFormatCode.json) return Ok(Series(res, title, label, value, unit));
         db.AuditEntries.Add(new Domain.Audit.AuditEntry { OccurredAt = m.Now, UserId = current.UserId, UserName = current.UserName, Action = "Exported", EntityType = "Report", EntityId = Guid.Empty, Description = $"Exported report {key} as {r.Format}", CorrelationId = current.CorrelationId });
         await db.SaveChangesAsync(ct);
         var file = $"{key}-{res.Params.To:yyyyMMdd}";
+        if (r.Format == ReportFormatCode.xlsx) return File(global::QualGuardIQ.Infrastructure.Modules.Reports.ReportService.ToXlsx(res, title), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", file + ".xlsx");
         if (r.Format == ReportFormatCode.csv) return File(System.Text.Encoding.UTF8.GetBytes(global::QualGuardIQ.Infrastructure.Modules.Reports.ReportService.ToCsv(res)), "text/csv", file + ".csv");
         var cols = res.Columns.Take(7).ToList();
         var w = 512 / Math.Max(1, cols.Count);
