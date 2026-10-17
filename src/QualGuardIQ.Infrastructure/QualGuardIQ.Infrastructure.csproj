@@ -25,5 +25,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Modules/Enterprise/compliance-packs.json" LogicalName="compliance-packs.json" />
+    <EmbeddedResource Include="Services/Brand/logo-lockup.pdfops" LogicalName="brand-logo-lockup.pdfops" />
+    <EmbeddedResource Include="Services/Brand/logo-full-600.png" LogicalName="brand-logo-full-600.png" />
   </ItemGroup>
 </Project>

@@ -191,6 +191,12 @@ public static class ShippingDocumentRenderer
                 var lw = (double)l.Header.LogoWidthMm * Mm; logoH = Math.Min(lw * sz.H / sz.W, 22 * Mm);
                 pdf.Jpeg(w - m - lw, top, lw, logoH, logo);
             }
+            else if (l.Header.ShowLogo)
+            {
+                // no logo uploaded to the template (or a built-in layout): the QualGuard IQ logo is the default header
+                logoH = Math.Min(BrandLogo.HeightForWidth((double)l.Header.LogoWidthMm * Mm), 22 * Mm);
+                pdf.Logo(w - m - BrandLogo.WidthForHeight(logoH), top, logoH);
+            }
             var tw = w - 2 * m - (logoH > 0 ? (double)l.Header.LogoWidthMm * Mm + 10 : 0);
             pdf.TextFit(m, top, 16, tw, ShippingDocumentLayouts.Fill(l.Header.Title, d), bold: true);
             var y = top + 20;

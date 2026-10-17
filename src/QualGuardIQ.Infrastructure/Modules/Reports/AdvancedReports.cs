@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text;
 using Microsoft.EntityFrameworkCore;
+using QualGuardIQ.Infrastructure.Services;
 using QualGuardIQ.Domain.Quality;
 using QualGuardIQ.Domain.Security;
 
@@ -122,6 +123,7 @@ public sealed partial class ReportService
         for (var pg = 0; pg < pageCount; pg++)
         {
             var sb = new StringBuilder();
+            sb.Append(BrandLogo.PdfOps(pageW - margin - BrandLogo.WidthForHeight(20), pageH - margin - 20, 20));
             sb.Append($"BT /F2 12 Tf {margin} {pageH - margin - 12} Td ({Esc(Ascii(title))}) Tj ET\n");
             sb.Append($"BT /F1 8 Tf {margin} {pageH - margin - 26} Td ({Esc(Ascii($"{r.Params.From:yyyy-MM-dd} to {r.Params.To:yyyy-MM-dd} - {r.Rows.Count} rows - page {pg + 1} of {pageCount}"))}) Tj ET\n");
             var y = pageH - margin - 46;
