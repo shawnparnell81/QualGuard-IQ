@@ -20,6 +20,8 @@ public class Ncr : Entity, IAudited, ISiteScoped
     public string? LotNumber { get; set; }
     public decimal? QuantityAffected { get; set; }
     public DateOnly DetectedOn { get; set; }
+    /// <summary>Target date for resolution (set e.g. when raised from an FAI or AQL lot).</summary>
+    public DateOnly? DueOn { get; set; }
     public Severity Severity { get; set; }
     public NcrStatus Status { get; set; }
     public string? ContainmentSummary { get; set; }
@@ -67,6 +69,8 @@ public class Capa : Entity, IAudited, ISiteScoped
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
     public string ProblemStatement { get; set; } = "";
+    /// <summary>Target completion date (set e.g. when raised from an FAI or AQL lot).</summary>
+    public DateOnly? DueOn { get; set; }
     public string CapaType { get; set; } = "Corrective";
     public string Source { get; set; } = "";
     public Guid SiteId { get; set; }

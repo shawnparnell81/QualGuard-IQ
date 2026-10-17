@@ -257,11 +257,16 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
     public async Task<FAI> Review(Guid faiId, WorkflowAction r, CancellationToken ct) { await ExpectAsync(faiId, r.ExpectedVersion, ct); await svc.ReviewAsync(faiId, r.Comment, ct); return await Dto(faiId, ct); }
 
     /// <summary>Return for correction. In review: the assigned reviewer returns it. Pending approval: an approver returns it with a signed "not approved" decision (password required).</summary>
-    [HttpPost("{faiId:guid}/return", Name = "returnFai")] [RequirePermission(Permissions.FaiEdit)] [Tags("FAI Workflow")]
+    /// <summary>Return for correction. In review: the assigned reviewer (fai.edit). Awaiting approval: a signer of the current step (fai.approve); a signed decision, password required.</summary>
+    [HttpPost("{faiId:guid}/return", Name = "returnFai")] [RequirePermission(Permissions.FaiView)] [Tags("FAI Workflow")]
     public async Task<FAI> Return(Guid faiId, WorkflowAction r, CancellationToken ct)
     {
         var x = await ExpectAsync(faiId, r.ExpectedVersion, ct);
-        if (x.Status == FaiStatus.PendingApproval) await svc.ReturnFromApprovalAsync(faiId, Password(r.Password), r.Comment, ct);
+        if (x.Status == FaiStatus.PendingApproval)
+        {
+            await m.RequireAsync(Permissions.FaiApprove, x.SiteId, x.DepartmentId, ct);
+            await svc.ReturnFromApprovalAsync(faiId, Password(r.Password), r.Comment, ct);
+        }
         else await svc.ReturnAsync(faiId, r.Comment, ct);
         return await Dto(faiId, ct);
     }
@@ -356,7 +361,8 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
                 prev = d.SignedAt;
             }
             if (r.Status == ApprovalStatus.Pending && steps.FirstOrDefault(s => s.RouteId == r.RouteId && s.Order == r.CurrentStep) is { } st)
-                list.Add(new Approval(PendingStepId(r.Id, st.Order), st.Name, null, ApprovalStatusCode.Pending, null, prev, null, r.Id, st.Order, st.SignatureMeaning, null));
+                list.Add(new Approval(PendingStepId(r.Id, st.Order), st.Name, r.RequestedApproverId, ApprovalStatusCode.Pending, null, prev, null, r.Id, st.Order, st.SignatureMeaning,
+                    r.RequestedApproverId is { } ra ? await db.Users.Where(u => u.Id == ra).Select(u => u.DisplayName).FirstOrDefaultAsync(ct) : null, r.DueAt));
         }
         return list;
     }
@@ -378,6 +384,13 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
         if (r.ApproverId is { } a && !await db.Users.AnyAsync(u => u.Id == a && u.IsActive, ct)) throw new AppException("The approver must be an active user.");
         if (r.DueAt is { } due && due < m.Now) throw new AppException("dueAt cannot be in the past.");
         await svc.ReviewAsync(faiId, r.Comment, ct);
+        if (r.ApproverId is not null || r.DueAt is not null)
+        {
+            var req = await svc.PendingRequestAsync(faiId, ct);
+            var tracked = await db.ApprovalRequests.FirstAsync(x => x.Id == req.Id, ct);
+            tracked.RequestedApproverId = r.ApproverId; tracked.DueAt = r.DueAt;
+            await db.SaveChangesAsync(ct);
+        }
         var pending = (await ApprovalList(faiId, ct)).Last(x => x.Status == ApprovalStatusCode.Pending);
         return CreatedAtRoute("listFaiApprovals", new { faiId }, pending);
     }
@@ -642,16 +655,32 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
     [HttpPost("{faiId:guid}/ncr", Name = "createNCRFromFai")] [RequirePermission(Permissions.NcrEdit)] [Tags("Integrations")] [ProducesResponseType<LinkedRecord>(201)]
     public async Task<ActionResult<LinkedRecord>> CreateNcr(Guid faiId, CreateLinkedRecordRequest r, CancellationToken ct)
     {
+        var due = await DueAsync(r.DueDate, (await db.Fais.AsNoTracking().FirstOrDefaultAsync(f => f.Id == faiId, ct) ?? throw new NotFoundException("FAI")).SiteId, ct);
         var n = await svc.CreateNcrAsync(faiId, r.CharacteristicIds, r.Title, ct, r.Description, r.OwnerId);
+        await SetDueAsync<Domain.Quality.Ncr>(n.Id, due, ct);
         return CreatedAtRoute("listFaiLinkedRecords", new { faiId }, new LinkedRecord(LinkedRecordTypeCode.NCR, n.Id, n.Number, "Nonconformance", n.Title));
     }
     [HttpPost("{faiId:guid}/capa", Name = "createCAPAFromFai")] [RequirePermission(Permissions.CapaEdit)] [Tags("Integrations")] [ProducesResponseType<LinkedRecord>(201)]
     public async Task<ActionResult<LinkedRecord>> CreateCapa(Guid faiId, CreateLinkedRecordRequest r, CancellationToken ct)
     {
         var x = await svc.LoadEditAsync(faiId, ct);
+        var due = await DueAsync(r.DueDate, x.SiteId, ct);
         var title = string.IsNullOrWhiteSpace(r.Title) ? $"Corrective action for FAI {x.Number}" : r.Title;
         var c = await svc.CreateCapaAsync(faiId, title, string.IsNullOrWhiteSpace(r.Description) ? $"FAI {x.Number} ({x.PartNumber} rev {x.PartRevision}) needs corrective action." : r.Description, ct, r.OwnerId);
+        await SetDueAsync<Domain.Quality.Capa>(c.Id, due, ct);
         return CreatedAtRoute("listFaiLinkedRecords", new { faiId }, new LinkedRecord(LinkedRecordTypeCode.CAPA, c.Id, c.Number, "Corrective action", c.Title));
+    }
+    private async Task<DateOnly?> DueAsync(DateOnly? due, Guid siteId, CancellationToken ct)
+    {
+        if (due is { } d && d < await m.TodayAsync(siteId, ct)) throw new AppException("dueDate cannot be in the past.");
+        return due;
+    }
+    private async Task SetDueAsync<T>(Guid id, DateOnly? due, CancellationToken ct) where T : class
+    {
+        if (due is null) return;
+        var e = await db.Set<T>().FindAsync([id], ct);
+        switch (e) { case Domain.Quality.Ncr n: n.DueOn = due; break; case Domain.Quality.Capa c: c.DueOn = due; break; }
+        await db.SaveChangesAsync(ct);
     }
     [HttpPost("{faiId:guid}/create-ncr")] [RequirePermission(Permissions.NcrEdit)] [Tags("Integrations")]
     public Task<ActionResult<LinkedRecord>> CreateNcrLegacy(Guid faiId, CreateLinkedRecordRequest r, CancellationToken ct) => CreateNcr(faiId, r, ct);
