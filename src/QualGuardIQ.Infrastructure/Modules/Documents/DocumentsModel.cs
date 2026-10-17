@@ -77,6 +77,6 @@ public partial class AppDbContext
         ConfigureEngineering(b);
         ConfigurePlatform(b);
         ConfigureStudio(b);
-        ConfigureLabels(b); ConfigureCarrierIntegration(b); ConfigureShippingDocuments(b); ConfigureMessaging(b); ConfigureAiBoundary(b); ConfigureVideo(b);
+        ConfigureLabels(b); ConfigureCarrierIntegration(b); ConfigureShippingDocuments(b); ConfigureMessaging(b); ConfigureGenerationBoundary(b); ConfigureVideo(b);
     }
 }

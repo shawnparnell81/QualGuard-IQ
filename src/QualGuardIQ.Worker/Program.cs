@@ -29,7 +29,7 @@ sealed class JobRegistration(IRecurringJobManager jobs) : IHostedService
     {
         jobs.AddOrUpdate<NotificationEmailJob>("notification-email", j => j.RunAsync(CancellationToken.None), Cron.Minutely());
         jobs.AddOrUpdate<MessagingDeliveryJob>("messaging-delivery", j => j.RunAsync(CancellationToken.None), Cron.Minutely());
-        jobs.AddOrUpdate<AiRetentionJob>("generation-log-retention", j => j.RunAsync(CancellationToken.None), Cron.Daily(3));
+        jobs.AddOrUpdate<GenerationRetentionJob>("generation-log-retention", j => j.RunAsync(CancellationToken.None), Cron.Daily(3));
         jobs.AddOrUpdate<VideoConversionJob>("video-conversion", j => j.RunAsync(CancellationToken.None), "*/2 * * * *");
         jobs.AddOrUpdate<DocumentReleaseJob>("document-release", j => j.RunAsync(CancellationToken.None), "5 * * * *");
         jobs.AddOrUpdate<ReminderJob>("due-reminders", j => j.RunAsync(CancellationToken.None), "15 6 * * *");

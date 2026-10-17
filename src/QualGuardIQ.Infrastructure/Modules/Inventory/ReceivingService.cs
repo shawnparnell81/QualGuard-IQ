@@ -186,7 +186,7 @@ public sealed partial class ReceivingService(AppDbContext db, ModuleSupport m, I
         {
             var p = await db.Parts.AsNoTracking().FirstAsync(x => x.Id == l.PartId, ct);
             var ins = l.InspectionId is { } i ? await db.Inspections.AsNoTracking().FirstOrDefaultAsync(x => x.Id == i, ct) : null;
-            var a = l.AqlInspectionId is { } ai ? await db.AqlInspections.AsNoTracking().FirstOrDefaultAsync(x => x.Id == ai, ct) : null;
+            var a = l.AqlInspectionId is { } aqlId ? await db.AqlInspections.AsNoTracking().FirstOrDefaultAsync(x => x.Id == aqlId, ct) : null;
             rows.Add(new ReceiptLineRow(l, p.PartNumber, p.Name, l.LotId is { } lid ? await db.Lots.Where(x => x.Id == lid).Select(x => x.Number).FirstOrDefaultAsync(ct) : null,
                 ins?.Number, ins?.Status.ToString(), a?.InspectionNumber, a?.OverallResult?.ToString() ?? a?.Status.ToString(),
                 l.NcrId is { } n ? await db.Ncrs.Where(x => x.Id == n).Select(x => x.Number).FirstOrDefaultAsync(ct) : null,

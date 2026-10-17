@@ -38,10 +38,10 @@ public sealed class GapClosureGenerationBoundaryTests(TestApp app)
     static Task<JsonElement> GenerateAsync(ApiClient c, Guid ncr, string function = "record-summary") =>
         c.PostOkAsync("/api/generation/generate", new { function, recordType = "Ncr", recordId = ncr, month = (string?)null }).ContinueWith(t => t.Result.JsonAsync()).Unwrap();
 
-    async Task<AiRequestLog> LogAsync(Guid id)
+    async Task<GenerationRequestLog> LogAsync(Guid id)
     {
         using var scope = app.Services.CreateScope();
-        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().AiRequestLogs.AsNoTracking().SingleAsync(l => l.Id == id);
+        return await scope.ServiceProvider.GetRequiredService<AppDbContext>().GenerationRequestLogs.AsNoTracking().SingleAsync(l => l.Id == id);
     }
 
     [Fact]
@@ -55,7 +55,7 @@ public sealed class GapClosureGenerationBoundaryTests(TestApp app)
         Assert.False(r.GetProperty("generated").GetBoolean());
         Assert.False(r.GetProperty("reviewRequired").GetBoolean());
         Assert.Contains("Rule-based", r.GetProperty("label").GetString());
-        Assert.Equal(AiOutcome.RuleBased, (await LogAsync(r.Id("logId"))).Outcome);
+        Assert.Equal(GenerationOutcome.RuleBased, (await LogAsync(r.Id("logId"))).Outcome);
         Assert.All((await admin.GetElAsync("/api/generation/availability")).EnumerateObject(), p => Assert.False(p.Value.GetBoolean()));
 
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync("/api/generation/providers", new { name = "ext " + Guid.NewGuid().ToString("N")[..6], kind = 1, endpoint = "http://gen.example.com/v1", model = "m", secretReference = (string?)null })).StatusCode);
@@ -63,7 +63,7 @@ public sealed class GapClosureGenerationBoundaryTests(TestApp app)
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync("/api/generation/providers", new { name = "loc " + Guid.NewGuid().ToString("N")[..6], kind = 2, endpoint = "http://8.8.8.8:11434/gen", model = "m", secretReference = (string?)null })).StatusCode);
         Assert.True((await admin.PostAsync("/api/generation/providers", new { name = "loc " + Guid.NewGuid().ToString("N")[..6], kind = 2, endpoint = "http://10.0.0.5:11434/gen", model = "m", secretReference = (string?)null })).IsSuccessStatusCode);
 
-        var http = app.Services.GetRequiredService<AiHttpProvider>();
+        var http = app.Services.GetRequiredService<GenerationHttpProvider>();
         http.Override = () => new FixtureHandler().On(_ => true, () => FixtureHandler.Json("""{"text":"OK"}"""));
         try
         {
@@ -85,7 +85,7 @@ public sealed class GapClosureGenerationBoundaryTests(TestApp app)
         }
         finally { http.Override = null; }
 
-        var (_, plain) = await app.CreateUserAsync([Permissions.NcrView, Permissions.CopilotUse]);
+        var (_, plain) = await app.CreateUserAsync([Permissions.NcrView, Permissions.AssistantUse]);
         Assert.Equal(HttpStatusCode.Forbidden, (await plain.GetAsync("/api/generation/providers")).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await plain.PutAsync("/api/generation/settings", Settings(2))).StatusCode);
     }
@@ -103,19 +103,19 @@ public sealed class GapClosureGenerationBoundaryTests(TestApp app)
             var ncr = await NcrAsync(admin, site, "Burr on bracket edge");
             var r = await GenerateAsync(admin, ncr);
             Assert.True(r.GetProperty("generated").GetBoolean());
-            Assert.Equal(AiBoundaryService.GeneratedLabel, r.GetProperty("label").GetString());
+            Assert.Equal(DraftGenerationService.GeneratedLabel, r.GetProperty("label").GetString());
             Assert.Contains("[S1]", r.GetProperty("text").GetString());
             Assert.Equal(ncr, r.GetProperty("sources")[0].Id());
             Assert.True(r.GetProperty("reviewRequired").GetBoolean());
 
             var log = await LogAsync(r.Id("logId"));
-            Assert.Equal(AiOutcome.Generated, log.Outcome);
-            Assert.Equal(AiReview.Pending, log.Review);
+            Assert.Equal(GenerationOutcome.Generated, log.Outcome);
+            Assert.Equal(GenerationReview.Pending, log.Review);
             Assert.NotNull(log.PromptHash); Assert.NotNull(log.ResponseHash);
             Assert.Null(log.PromptText); Assert.Null(log.ResponseText);
 
             // nothing about the record changed; only the requester records the review
-            var (_, other) = await app.CreateUserAsync([Permissions.NcrView, Permissions.CopilotUse], site);
+            var (_, other) = await app.CreateUserAsync([Permissions.NcrView, Permissions.AssistantUse], site);
             Assert.Equal(HttpStatusCode.NotFound, (await other.PostAsync($"/api/generation/requests/{log.Id}/review", new { accepted = true })).StatusCode);
             Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync($"/api/generation/requests/{log.Id}/review", new { accepted = true })).StatusCode);
             Assert.Equal(HttpStatusCode.Conflict, (await admin.PostAsync($"/api/generation/requests/{log.Id}/review", new { accepted = false })).StatusCode);
@@ -161,8 +161,8 @@ public sealed class GapClosureGenerationBoundaryTests(TestApp app)
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var old = DateTimeOffset.UtcNow.AddDays(-31);
-                await db.AiRequestLogs.Where(l => l.Id == log.Id).ExecuteUpdateAsync(u => u.SetProperty(l => l.CreatedAt, old));
-                await scope.ServiceProvider.GetRequiredService<AiBoundaryService>().PurgeAsync(CancellationToken.None);
+                await db.GenerationRequestLogs.Where(l => l.Id == log.Id).ExecuteUpdateAsync(u => u.SetProperty(l => l.CreatedAt, old));
+                await scope.ServiceProvider.GetRequiredService<DraftGenerationService>().PurgeAsync(CancellationToken.None);
             }
             log = await LogAsync(log.Id);
             Assert.Null(log.PromptText); Assert.Null(log.ResponseText); Assert.NotNull(log.ContentPurgedAt); Assert.NotNull(log.PromptHash);
@@ -188,7 +188,7 @@ public sealed class GapClosureGenerationBoundaryTests(TestApp app)
             await UseAsync(admin, p);
             var r = await GenerateAsync(admin, ncr);
             Assert.False(r.GetProperty("generated").GetBoolean());
-            Assert.Equal(AiOutcome.Blocked, (await LogAsync(r.Id("logId"))).Outcome);
+            Assert.Equal(GenerationOutcome.Blocked, (await LogAsync(r.Id("logId"))).Outcome);
 
             await UseAsync(admin, p, allowConfidential: true);
             Assert.True((await GenerateAsync(admin, ncr)).GetProperty("generated").GetBoolean());
@@ -204,7 +204,7 @@ public sealed class GapClosureGenerationBoundaryTests(TestApp app)
     public async Task Timeouts_and_provider_errors_fall_back_to_the_rule_based_result_and_secrets_stay_out_of_prompts()
     {
         var admin = await app.AdminAsync();
-        var http = app.Services.GetRequiredService<AiHttpProvider>();
+        var http = app.Services.GetRequiredService<GenerationHttpProvider>();
         try
         {
             var site = await app.CreateSiteAsync();
@@ -215,15 +215,15 @@ public sealed class GapClosureGenerationBoundaryTests(TestApp app)
             using (var scope = app.Services.CreateScope())
             {
                 var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-                var prov = await db.AiProviders.SingleAsync(x => x.Id == slow);
-                prov.Model = "timeout"; prov.ConfigFingerprint = prov.LastTestFingerprint = AiBoundaryService.Fingerprint(prov);
+                var prov = await db.GenerationProviders.SingleAsync(x => x.Id == slow);
+                prov.Model = "timeout"; prov.ConfigFingerprint = prov.LastTestFingerprint = DraftGenerationService.Fingerprint(prov);
                 await db.SaveChangesAsync();
             }
             await UseAsync(admin, slow, timeout: 2);
             var r = await GenerateAsync(admin, ncr);
             Assert.False(r.GetProperty("generated").GetBoolean());
             var log = await LogAsync(r.Id("logId"));
-            Assert.Equal(AiOutcome.FellBack, log.Outcome);
+            Assert.Equal(GenerationOutcome.FellBack, log.Outcome);
             Assert.Contains("did not answer within 2 s", log.FallbackReason);
 
             // local model server: secret in the Authorization header only, never in the request body

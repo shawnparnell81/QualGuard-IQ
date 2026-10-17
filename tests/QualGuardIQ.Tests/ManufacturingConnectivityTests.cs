@@ -16,7 +16,7 @@ public sealed class ManufacturingConnectivityTests(TestApp app)
     static readonly string[] AllPerms =
     [
         Permissions.IntegrationsView, Permissions.IntegrationsEdit, Permissions.ProductionView, Permissions.ProductionEdit, Permissions.TraceView, Permissions.TraceEdit,
-        Permissions.RecallsView, Permissions.RecallsEdit, Permissions.ReturnsView, Permissions.ReturnsEdit, Permissions.CopilotUse, Permissions.AnalyticsView,
+        Permissions.RecallsView, Permissions.RecallsEdit, Permissions.ReturnsView, Permissions.ReturnsEdit, Permissions.AssistantUse, Permissions.AnalyticsView,
         Permissions.NcrView, Permissions.NcrEdit, Permissions.CapaView, Permissions.CapaEdit, Permissions.MasterDataView, Permissions.MasterDataEdit,
         Permissions.SuppliersView, Permissions.SuppliersEdit, Permissions.InspectionView, Permissions.InspectionEdit, Permissions.ComplaintsView, Permissions.ComplaintsEdit,
         Permissions.SpcView, Permissions.SpcEdit, Permissions.FaiView, Permissions.FaiEdit, Permissions.DrawingsView, Permissions.DrawingsEdit, Permissions.CoqView, Permissions.AuditTrailView,
@@ -406,7 +406,7 @@ public sealed class ManufacturingConnectivityTests(TestApp app)
     }
 
     // ---------------------------------------------------------------- Scenario 6
-    /// <summary>AI investigation → similar NCR retrieval → trend analysis → suggested root cause (suggestions only, permission-aware).</summary>
+    /// <summary>Assisted investigation → similar NCR retrieval → trend analysis → suggested root cause (suggestions only, permission-aware).</summary>
     [Fact]
     public async Task Scenario6_investigation_similar_ncrs_trends_suggested_root_cause()
     {
@@ -444,16 +444,16 @@ public sealed class ManufacturingConnectivityTests(TestApp app)
         var ask = await (await w.Eng.PostOkAsync("/api/intelligence/ask", new { question = $"Show me all supplier NCRs for Supplier A{w.Tag}" })).JsonAsync();
         Assert.Equal("supplier-ncrs", ask.Str("intent"));
         Assert.Equal(4, ask.GetProperty("records").GetArrayLength());
-        Assert.Contains("no external AI", ask.Str("method"));
+        Assert.Contains("no external text-generation service", ask.Str("method"));
         var summary = await w.Eng.GetElAsync($"/api/intelligence/summary/Ncr/{subject}");
         Assert.Contains(before.Str("number"), summary.Str("answer"));
 
         // permission-aware: a user without CAPA access gets no CAPA-derived suggestions; one without NCR access cannot investigate
-        var (_, ncrOnly) = await app.CreateUserAsync([Permissions.NcrView, Permissions.CopilotUse], w.Site);
+        var (_, ncrOnly) = await app.CreateUserAsync([Permissions.NcrView, Permissions.AssistantUse], w.Site);
         var limited = await ncrOnly.GetElAsync($"/api/intelligence/investigate/{subject}");
         Assert.NotEmpty(limited.GetProperty("similar").EnumerateArray());
         Assert.Empty(limited.GetProperty("rootCauses").EnumerateArray());
-        var (_, outsider) = await app.CreateUserAsync([Permissions.NcrView, Permissions.CopilotUse], await app.CreateSiteAsync());
+        var (_, outsider) = await app.CreateUserAsync([Permissions.NcrView, Permissions.AssistantUse], await app.CreateSiteAsync());
         Assert.Equal(HttpStatusCode.NotFound, (await outsider.GetAsync($"/api/intelligence/investigate/{subject}")).StatusCode);
         Assert.Equal(0, (await (await outsider.PostOkAsync("/api/intelligence/ask", new { question = $"Show me all supplier NCRs for Supplier A{w.Tag}" })).JsonAsync()).GetProperty("records").GetArrayLength());
     }

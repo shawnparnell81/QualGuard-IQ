@@ -16,7 +16,7 @@ public sealed class EngineeringTests(TestApp app)
         Permissions.MasterDataView, Permissions.MasterDataEdit, Permissions.SuppliersView, Permissions.SuppliersEdit, Permissions.InspectionView, Permissions.InspectionEdit,
         Permissions.NcrView, Permissions.NcrEdit, Permissions.CapaView, Permissions.CapaEdit, Permissions.SpcView, Permissions.SpcEdit, Permissions.ComplaintsView, Permissions.ComplaintsEdit,
         Permissions.KnowledgeView, Permissions.KnowledgeEdit, Permissions.ProcessView, Permissions.ProcessEdit, Permissions.EnterpriseView, Permissions.RisksView, Permissions.RisksEdit,
-        Permissions.ObjectivesView, Permissions.ObjectivesEdit, Permissions.CopilotUse, Permissions.AnalyticsView, Permissions.AuditsView, Permissions.AuditsEdit, Permissions.CoqView,
+        Permissions.ObjectivesView, Permissions.ObjectivesEdit, Permissions.AssistantUse, Permissions.AnalyticsView, Permissions.AuditsView, Permissions.AuditsEdit, Permissions.CoqView,
     ];
 
     private sealed record World(Guid Site, Guid UserId, ApiClient Eng, Guid ApproverId, ApiClient Approver, string Tag, Guid ProductId, Guid PartId);

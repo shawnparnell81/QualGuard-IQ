@@ -198,7 +198,7 @@ QualGuard IQ keeps its own look throughout. There is a teal top module menu on t
 - The similar-issue finder returned nothing on small data sets.
 
 **Flagged / unverified**
-- The advisor is rule-based. No outside AI service is used.
+- The advisor is rule-based. No outside text-generation service is used.
 - Supplier-risk factors with no data are left out rather than guessed.
 - A new NCR never counts as overdue, because its due date is set later in the workflow.
 

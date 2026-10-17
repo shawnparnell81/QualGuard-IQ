@@ -125,7 +125,7 @@ public static class Permissions
     /// <summary>Decide warranty claims.</summary>
     public const string ReturnsApprove = "returns.approve";
     /// <summary>Use the quality assistant (answers only include records the user can already view).</summary>
-    public const string CopilotUse = "copilot.use";
+    public const string AssistantUse = "assistant.use";
     /// <summary>Configure alert rules, outbound integration points and data exports.</summary>
     public const string AlertsAdmin = "alerts.admin";
 

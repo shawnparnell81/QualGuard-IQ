@@ -159,19 +159,19 @@ public sealed class ReturnsController(ReturnService svc) : ControllerBase
 }
 
 [ApiController, Authorize, Route("api/intelligence")]
-public sealed class IntelligenceController(KpiEngine kpis, CopilotService copilot, DatasetService data) : ControllerBase
+public sealed class IntelligenceController(KpiEngine kpis, AssistService assist, DatasetService data) : ControllerBase
 {
     [HttpGet("kpis")] [RequirePermission(Permissions.AnalyticsView)] public object Kpis() => KpiEngine.Definitions.Select(d => new { d.Key, d.Label, d.Unit, d.Formula }).ToList();
     [HttpGet("kpis/{key}")] [RequirePermission(Permissions.AnalyticsView)]
     public Task<KpiSeries> Kpi(string key, [FromQuery] DateOnly from, [FromQuery] DateOnly to, [FromQuery] KpiPeriod period = KpiPeriod.Monthly, [FromQuery] Guid? siteId = null, CancellationToken ct = default) =>
         kpis.SeriesAsync(key, period, from, to, siteId, ct);
     /// <summary>Natural-language question answered from records the caller can view.</summary>
-    [HttpPost("ask")] [RequirePermission(Permissions.CopilotUse)] public Task<CopilotAnswer> Ask(AskRequest r, CancellationToken ct) => copilot.AskAsync(r.Question, ct);
-    [HttpGet("summary/{type}/{id:guid}")] [RequirePermission(Permissions.CopilotUse)] public Task<CopilotAnswer> Summary(string type, Guid id, CancellationToken ct) => copilot.SummarizeAsync(type, id, ct);
-    [HttpGet("investigate/{ncrId:guid}")] [RequirePermission(Permissions.CopilotUse)] public Task<Investigation> Investigate(Guid ncrId, CancellationToken ct) => copilot.InvestigateAsync(ncrId, ct);
-    [HttpGet("trends")] [RequirePermission(Permissions.AnalyticsView)] public Task<Dictionary<string, List<TrendRow>>> Trends(CancellationToken ct) => copilot.TrendsAsync(ct);
-    [HttpGet("predict/{kind}")] [RequirePermission(Permissions.AnalyticsView)] public Task<List<RiskScore>> Predict(string kind, CancellationToken ct) => copilot.PredictAsync(kind, ct);
-    [HttpGet("executive")] [RequirePermission(Permissions.AnalyticsView)] public Task<ExecutiveSummary> Executive([FromQuery] DateOnly month, CancellationToken ct) => copilot.ExecutiveAsync(month, ct);
+    [HttpPost("ask")] [RequirePermission(Permissions.AssistantUse)] public Task<AssistAnswer> Ask(AskRequest r, CancellationToken ct) => assist.AskAsync(r.Question, ct);
+    [HttpGet("summary/{type}/{id:guid}")] [RequirePermission(Permissions.AssistantUse)] public Task<AssistAnswer> Summary(string type, Guid id, CancellationToken ct) => assist.SummarizeAsync(type, id, ct);
+    [HttpGet("investigate/{ncrId:guid}")] [RequirePermission(Permissions.AssistantUse)] public Task<Investigation> Investigate(Guid ncrId, CancellationToken ct) => assist.InvestigateAsync(ncrId, ct);
+    [HttpGet("trends")] [RequirePermission(Permissions.AnalyticsView)] public Task<Dictionary<string, List<TrendRow>>> Trends(CancellationToken ct) => assist.TrendsAsync(ct);
+    [HttpGet("predict/{kind}")] [RequirePermission(Permissions.AnalyticsView)] public Task<List<RiskScore>> Predict(string kind, CancellationToken ct) => assist.PredictAsync(kind, ct);
+    [HttpGet("executive")] [RequirePermission(Permissions.AnalyticsView)] public Task<ExecutiveSummary> Executive([FromQuery] DateOnly month, CancellationToken ct) => assist.ExecutiveAsync(month, ct);
     /// <summary>Flat incremental datasets for Power BI, Power Automate and data lakes (cursor paging).</summary>
     [HttpGet("datasets")] [RequirePermission(Permissions.AnalyticsView)] public string[] Datasets() => DatasetService.Datasets;
     [HttpGet("datasets/{name}")] [RequirePermission(Permissions.AnalyticsView)]

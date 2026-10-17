@@ -39,7 +39,7 @@ result instead and is recorded in the request log as *Fell back*.
 ## Safeguards
 
 * **Permission-aware sources.** Sources are gathered through the requesting user's own permissions and site and
-  department scope, exactly as the rule-based features do. Using a function needs `copilot.use`; the executive
+  department scope, exactly as the rule-based features do. Using a function needs `assistant.use`; the executive
   summary also needs `analytics.view`.
 * **Confidentiality.** Records classified *Restricted* (Data governance → record classification) are never sent.
   *Confidential* records are sent only for functions with "Confidential records" ticked. If the subject record is

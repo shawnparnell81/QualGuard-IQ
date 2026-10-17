@@ -10,19 +10,19 @@ using QualGuardIQ.Infrastructure.Persistence;
 
 namespace QualGuardIQ.Infrastructure.Modules.Engineering;
 
-public sealed record AdvisorAnswer(string Topic, string Answer, List<string> Points, List<CopilotRecord> Records, string Method);
+public sealed record AdvisorAnswer(string Topic, string Answer, List<string> Points, List<AssistRecord> Records, string Method);
 public sealed record ChatMessage(string Role, string Text);
 public sealed record DocumentAssistInput(string Kind, string Title, string? Text, Guid? DocumentId);
 public sealed record DocumentAssistResult(string Mode, string? Draft, List<string> Issues, List<string> Recommendations, string Method);
 
 /// <summary>
-/// Quality advisor built on the shared assistant (CopilotService) and enterprise intelligence: explanations of trends, risks,
+/// Quality advisor built on the shared assistant (AssistService) and enterprise intelligence: explanations of trends, risks,
 /// suppliers, complaints, NCRs and CAPAs; conversation; management review drafts held until a person approves them;
 /// document drafting and consistency checks; audit preparation. Deterministic, permission-aware, and it never approves anything.
 /// </summary>
-public sealed class AdvisorService(AppDbContext db, ModuleSupport m, CopilotService copilot, IntelligenceService intel, KnowledgeService knowledge)
+public sealed class AdvisorService(AppDbContext db, ModuleSupport m, AssistService assist, IntelligenceService intel, KnowledgeService knowledge)
 {
-    public const string Method = CopilotService.Method;
+    public const string Method = AssistService.Method;
 
     public async Task<AdvisorAnswer> ExplainAsync(string topic, Guid? id, CancellationToken ct)
     {
@@ -30,7 +30,7 @@ public sealed class AdvisorService(AppDbContext db, ModuleSupport m, CopilotServ
         {
             case "trend":
             {
-                var t = await copilot.TrendsAsync(ct);
+                var t = await assist.TrendsAsync(ct);
                 var pts = t.SelectMany(kv => kv.Value.Where(r => r.Change != 0).Take(3).Select(r => $"{kv.Key}: {r.Label} {r.Previous}→{r.Current} NCRs ({(r.Change > 0 ? "+" : "")}{r.Change}) in the last 90 days vs the 90 before")).ToList();
                 return new("trend", pts.Count == 0 ? "No recurring defect, supplier, customer or process trend in the last 180 days." : $"{pts.Count} notable movements in recurring NCR sources.", pts, [], Method);
             }
@@ -57,26 +57,26 @@ public sealed class AdvisorService(AppDbContext db, ModuleSupport m, CopilotServ
             case "complaint":
             {
                 var cid = id ?? throw new AppException("Select the complaint to analyze.");
-                var sum = await copilot.SummarizeAsync("Complaint", cid, ct);
+                var sum = await assist.SummarizeAsync("Complaint", cid, ct);
                 var c = await db.Complaints.AsNoTracking().FirstAsync(x => x.Id == cid, ct);
                 var similar = await knowledge.SimilarAsync($"{c.Title} {c.Description} {c.FailureMode}", ct);
                 var same = await db.Complaints.AsNoTracking().CountAsync(x => x.Id != cid && x.CustomerId == c.CustomerId && x.FailureMode != null && x.FailureMode == c.FailureMode, ct);
                 var pts = new List<string> { sum.Answer };
                 if (same > 0) pts.Add($"{same} other complaint(s) from this customer report the same failure mode.");
                 pts.AddRange(similar.Where(h => h.RootCause != null).Take(3).Select(h => $"Similar {h.Type} {h.Number} (similarity {h.Similarity}): root cause \"{h.RootCause}\""));
-                return new("complaint", sum.Answer, pts, sum.Records.Concat(similar.Take(5).Select(h => new CopilotRecord(h.Type, h.Id, h.Number, h.Title, "", h.Url))).ToList(), Method);
+                return new("complaint", sum.Answer, pts, sum.Records.Concat(similar.Take(5).Select(h => new AssistRecord(h.Type, h.Id, h.Number, h.Title, "", h.Url))).ToList(), Method);
             }
             case "ncr":
             {
                 var nid = id ?? throw new AppException("Select the NCR to analyze.");
-                var inv = await copilot.InvestigateAsync(nid, ct);
+                var inv = await assist.InvestigateAsync(nid, ct);
                 var pts = inv.RootCauses.Select(r => $"Possible root cause: {r.Text} (seen {r.Support}×, confidence {r.Confidence})").Concat(inv.Actions.Select(a => $"Action used before: {a.Text}")).Take(8).ToList();
                 return new("ncr", $"{inv.Similar.Count} similar NCR(s) found. {inv.Disclaimer}", pts, inv.Similar.Select(s => s.Ncr).Prepend(inv.Subject).ToList(), inv.Method);
             }
             case "capa":
             {
                 var cid = id ?? throw new AppException("Select the CAPA to analyze.");
-                var sum = await copilot.SummarizeAsync("Capa", cid, ct);
+                var sum = await assist.SummarizeAsync("Capa", cid, ct);
                 var c = await db.Capas.AsNoTracking().FirstAsync(x => x.Id == cid, ct);
                 var pts = new List<string> { sum.Answer };
                 if (c.RootCause is null) pts.Add("No root cause recorded yet; use 5 Why or fishbone from the knowledge base.");
@@ -91,14 +91,14 @@ public sealed class AdvisorService(AppDbContext db, ModuleSupport m, CopilotServ
     }
 
     /// <summary>Conversation: earlier turns give context (a follow-up like "and for suppliers?" reuses the previous subject); each answer comes from the shared assistant.</summary>
-    public async Task<CopilotAnswer> ChatAsync(List<ChatMessage> messages, CancellationToken ct)
+    public async Task<AssistAnswer> ChatAsync(List<ChatMessage> messages, CancellationToken ct)
     {
         var users = messages.Where(x => x.Role == "user" && !string.IsNullOrWhiteSpace(x.Text)).Select(x => x.Text.Trim()).ToList();
         if (users.Count == 0) throw new AppException("Ask a question.");
         if (messages.Count > 40) throw new AppException("Start a new conversation (40 messages max).");
         var q = users[^1];
         if (users.Count > 1 && Regex.IsMatch(q, @"^(and|what about|how about|for)\b", RegexOptions.IgnoreCase)) q = users[^2] + " " + Regex.Replace(q, @"^(and|what about|how about)\s*", "", RegexOptions.IgnoreCase);
-        return await copilot.AskAsync(q, ct);
+        return await assist.AskAsync(q, ct);
     }
 
     // ---------- management review assistant ----------

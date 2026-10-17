@@ -525,15 +525,15 @@ export const modules: ModuleDef[] = [
     description: 'Plant and executive quality metrics with drill-down, record relationship maps and trend history',
     icon: <HubOutlined fontSize="small" />,
     basePath: '/insights',
-    permissions: ['analytics.view', 'copilot.use'],
+    permissions: ['analytics.view', 'assistant.use'],
     sidebar: [
       { label: 'Production metrics', path: '/insights', permission: 'analytics.view' },
       { label: 'Executive overview', path: '/insights?view=executive', permission: 'analytics.view' },
       { label: 'Relationships', path: '/insights/graph', permission: 'analytics.view' },
       { label: 'KPI library', path: '/insights/kpis', permission: 'analytics.view' },
-      { label: 'Quality assistant', path: '/insights/assistant', permission: 'copilot.use', children: [
-        { label: 'Ask', path: '/insights/assistant', permission: 'copilot.use' },
-        { label: 'Investigate an NCR', path: '/insights/investigate', permission: 'copilot.use' },
+      { label: 'Quality assistant', path: '/insights/assistant', permission: 'assistant.use', children: [
+        { label: 'Ask', path: '/insights/assistant', permission: 'assistant.use' },
+        { label: 'Investigate an NCR', path: '/insights/investigate', permission: 'assistant.use' },
         { label: 'Monthly narrative', path: '/insights/assistant?view=executive', permission: 'analytics.view' },
       ] },
       { label: 'Trends & risk', path: '/insights/risk', permission: 'analytics.view' },
@@ -643,7 +643,7 @@ export const modules: ModuleDef[] = [
     description: 'Rule-based quality advisor: ask, explain, document assistant and audit preparation',
     icon: <PsychologyOutlined fontSize="small" />,
     basePath: '/advisor',
-    permissions: ['copilot.use'],
+    permissions: ['assistant.use'],
     sidebar: [
       { label: 'Ask & explain', path: '/advisor' },
       { label: 'Document assistant', path: '/advisor/documents' },

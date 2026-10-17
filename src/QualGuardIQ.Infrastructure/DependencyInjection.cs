@@ -307,9 +307,9 @@ public static class DependencyInjection
             s.AddSingleton<Modules.Messaging.IMessagingAdapter>(new Modules.Messaging.VendorSlotMessagingAdapter(k));
         s.AddScoped<Modules.Messaging.MessagingService>();
         s.AddScoped<Jobs.MessagingDeliveryJob>();
-        s.AddSingleton<Modules.Intelligence.AiHttpProvider>();
-        s.AddScoped<Modules.Intelligence.AiBoundaryService>();
-        s.AddScoped<Jobs.AiRetentionJob>();
+        s.AddSingleton<Modules.Intelligence.GenerationHttpProvider>();
+        s.AddScoped<Modules.Intelligence.DraftGenerationService>();
+        s.AddScoped<Jobs.GenerationRetentionJob>();
         s.AddSingleton<Modules.Video.VideoConverterProvider>();
         s.AddScoped<Modules.Video.VideoConversionService>();
         s.AddScoped<Jobs.VideoConversionJob>();
@@ -317,7 +317,7 @@ public static class DependencyInjection
         s.AddScoped<Jobs.CarrierTrackingJob>();
         s.AddScoped<Modules.Production.ProductionService>();
         s.AddScoped<Modules.Analytics.KpiEngine>();
-        s.AddScoped<Modules.Analytics.CopilotService>();
+        s.AddScoped<Modules.Analytics.AssistService>();
         s.AddScoped<Modules.Analytics.AlertService>();
         s.AddScoped<Modules.Analytics.DatasetService>();
         s.AddScoped<Jobs.AlertJob>();
