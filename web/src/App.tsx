@@ -1,5 +1,6 @@
 import { ReportSchedules } from './pages/ReportSchedules';
 import { MessagingAdmin, MyMessaging } from './pages/Messaging';
+import { GenerationAdmin } from './pages/Generation';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material';
@@ -361,6 +362,7 @@ export function App() {
               <Route path="/platform/dashboards" element={<DashboardDesigner />} />
               <Route path="/platform/webhooks" element={<Webhooks />} />
               <Route path="/platform/messaging" element={<MessagingAdmin />} />
+              <Route path="/platform/generation" element={<GenerationAdmin />} />
               <Route path="/platform/health" element={<PlatformHealth />} />
               <Route path="/platform/security" element={<SecurityOps />} />
               <Route path="/platform/modules" element={<ModuleRegistry />} />

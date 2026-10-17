@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { GeneratedDraft } from './Generation';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Link, Stack, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -151,6 +152,7 @@ export function NcrDetail() {
             <Section title="Disposition">{d.disposition ? <><Prose label="Disposition" text={dispositions[d.disposition]} /><Prose label="Instructions" text={d.dispositionInstructions} />{d.verifiedAt && <Prose label={`Verified ${fmtDateTime(d.verifiedAt)} by ${d.verifiedByName}`} text={d.verificationNotes} />}<Prose label="Justification" text={d.dispositionJustification} /></> : <Alert severity="info">No disposition proposed yet.</Alert>}</Section>
             <Section title="Corrective action">{d.capas.length ? d.capas.map((c) => <Stack key={c.id} direction="row" gap={1} alignItems="center"><Link component={RouterLink} to={`/capa/${c.id}`} sx={{ fontFamily: mono }}>{c.number}</Link><StatusChip status={capaStatus[c.status]} /></Stack>) : 'No CAPA linked.'}</Section>
             {d.closureNotes && <Section title="Closure"><Prose label="Notes" text={d.closureNotes} /></Section>}
+            <GeneratedDraft fn="record-summary" recordType="Ncr" recordId={d.id} />
           </Stack>}
           {tab === 'actions' && <ActionsPanel type="Ncr" id={d.id} canEdit={d.allowed.includes('actions')} canVerifyAs={d.canEdit} onChanged={refresh} />}
           {tab === 'approvals' && <ApprovalsPanel type="Ncr" id={d.id} />}
@@ -323,6 +325,7 @@ export function CapaDetail() {
             <Section title="Root cause">{d.rootCause ? <><Prose label="Method" text={d.rootCauseMethod} /><Prose label="Root cause" text={d.rootCause} /><Prose label="Contributing causes" text={d.contributingCauses} /><Prose label="Escape point" text={d.escapePoint} /><AnalysisView a={d.analysis} /></> : <Alert severity="warning">Root cause not yet determined.</Alert>}</Section>
             {d.recurrenceMonitoring && <Section title="Recurrence monitoring"><Prose label="Plan" text={d.recurrenceMonitoring} /></Section>}
             <Section title="Effectiveness"><Prose label="Criteria" text={d.effectivenessCriteria} />{d.effectivenessResult ? <><Prose label="Result" text={d.effectivenessResult} /><StatusChip status={d.wasEffective ? 'Verified' : 'Rejected'} /></> : <Box sx={{ color: 'text.secondary', fontSize: 14 }}>Verified by someone other than the owner once all actions are closed.</Box>}</Section>
+            <GeneratedDraft fn="record-summary" recordType="Capa" recordId={d.id} />
           </Stack>}
           {tab === 'actions' && <ActionsPanel type="Capa" id={d.id} canEdit={d.allowed.includes('actions')} canVerifyAs={d.canEdit} onChanged={() => qc.invalidateQueries({ queryKey: ['capa', id] })} />}
           {tab === 'more' && <AttachmentsAndHistory type="Capa" id={d.id} canEdit={d.canEdit && s < 4} />}
