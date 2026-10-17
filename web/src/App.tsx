@@ -9,6 +9,7 @@ import { Login } from './pages/Login';
 
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const MyWork = lazy(() => import('./pages/MyWork').then((m) => ({ default: m.MyWork })));
+const SignInHistory = lazy(() => import('./pages/Account').then((m) => ({ default: m.SignInHistory })));
 const Search = lazy(() => import('./pages/Search').then((m) => ({ default: m.Search })));
 const DocumentDetail = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentDetail })));
 const DocumentList = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentList })));
@@ -69,6 +70,7 @@ export function App() {
               <Route path="/" element={<Home />} />
               <Route path="/my-work" element={<MyWork />} />
               <Route path="/search" element={<Search />} />
+              <Route path="/account/sign-ins" element={<SignInHistory />} />
               <Route path="/documents" element={<DocumentList kind={0} />} />
               <Route path="/documents/new" element={<DocumentNew kind={0} />} />
               <Route path="/documents/:id" element={<DocumentDetail kind={0} />} />

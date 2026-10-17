@@ -4,7 +4,7 @@ const colors: Record<string, 'default' | 'success' | 'warning' | 'error' | 'info
   Draft: 'default', InReview: 'warning', Approved: 'info', Effective: 'success', Active: 'success', Superseded: 'default', Obsolete: 'error',
   Open: 'warning', Contained: 'info', DispositionPending: 'warning', DispositionApproved: 'info', Closed: 'success', Investigation: 'info', Implementation: 'info', EffectivenessCheck: 'warning',
   Planned: 'default', Reporting: 'warning', ActionPlanned: 'info', Submitted: 'warning', Assigned: 'warning', Quarantined: 'error', OutOfService: 'error', Retired: 'default',
-  Pass: 'success', PassAfterAdjustment: 'success', OutOfTolerance: 'error', Fail: 'error', Minor: 'default', Major: 'warning', Critical: 'error', InProgress: 'info', Completed: 'primary', Verified: 'success', Cancelled: 'default', Pending: 'warning', Rejected: 'error',
+  Pass: 'success', PassAfterAdjustment: 'success', OutOfTolerance: 'error', Fail: 'error', Minor: 'default', Major: 'warning', Critical: 'error', InProgress: 'info', Completed: 'primary', Verified: 'success', Cancelled: 'default', Pending: 'warning', Rejected: 'error', Succeeded: 'success', Failed: 'error',
 };
 const labels: Record<string, string> = { InReview: 'In review', InProgress: 'In progress', DispositionPending: 'Disposition pending', DispositionApproved: 'Disposition approved',
   EffectivenessCheck: 'Effectiveness check', ActionPlanned: 'Action planned', OutOfService: 'Out of service', PassAfterAdjustment: 'Pass after adjustment', OutOfTolerance: 'Out of tolerance' };
