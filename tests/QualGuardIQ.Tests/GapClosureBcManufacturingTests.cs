@@ -110,7 +110,7 @@ public sealed class GapClosureBcManufacturingTests(TestApp app)
             Assert.False(conn.GetProperty("enabled").GetBoolean());
             Assert.Equal(HttpStatusCode.BadRequest, (await eng.PostAsync($"/api/integrations/{id}/enabled", new { enabled = true })).StatusCode);
             var v = await eng.GetElAsync($"/api/integrations/{id}/validation");
-            Assert.Contains("GapClosureBcManufacturingTests", v.Str("fixtureTested"));
+            Assert.Contains("Recorded Business Central manufacturing responses", v.Str("fixtureTested"));
             Assert.Contains(v.GetProperty("checklist").EnumerateArray(), x => x.Str("step") == "Business Central manufacturing source");
             Assert.Contains(v.GetProperty("assumptions").EnumerateArray(), x => x.Str("topic") == "Published pages" && x.Str("status") == "Unverified");
 
