@@ -24984,6 +24984,784 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/platform/events/types:
+    get:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  type: string
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+            text/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/events:
+    post:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalEventInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ExternalEventInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ExternalEventInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/events/pump:
+    post:
+      tags:
+        - Platform
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/activity:
+    get:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: recordType
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: before
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: take
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlatformEvent'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlatformEvent'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PlatformEvent'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/webhooks:
+    get:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+            application/json:
+              schema:
+                type: array
+            text/json:
+              schema:
+                type: array
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/WebhookInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/WebhookInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/webhooks/{id}/enabled':
+    post:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WebhookEnabledRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/WebhookEnabledRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/WebhookEnabledRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/webhooks/{id}/deliveries':
+    get:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebhookDelivery'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebhookDelivery'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WebhookDelivery'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/genealogy/{type}/{id}':
+    get:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: depth
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 4
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/calendar:
+    get:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalendarItem'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalendarItem'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CalendarItem'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/resources:
+    get:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/resources/absences:
+    post:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AbsenceInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AbsenceInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AbsenceInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/my:
+    get:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/health:
+    get:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/security:
+    get:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/modules:
+    get:
+      tags:
+        - Platform
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/designer/reports:
+    get:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedReport'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedReport'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedReport'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedReportInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SavedReportInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SavedReportInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/designer/reports/{id}':
+    put:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedReportInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SavedReportInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SavedReportInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    delete:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/designer/reports/{id}/run':
+    get:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SavedReportRun'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SavedReportRun'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SavedReportRun'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/designer/schedules:
+    get:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportSchedule'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportSchedule'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReportSchedule'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ScheduleInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ScheduleInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/designer/schedules/{id}':
+    delete:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/designer/dashboards:
+    get:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dashboard'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dashboard'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dashboard'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DashboardInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DashboardInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/designer/dashboards/{id}':
+    put:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DashboardInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DashboardInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/designer/dashboards/{id}/data':
+    get:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/designer/searches:
+    get:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedSearch'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedSearch'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedSearch'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavedSearchInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SavedSearchInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SavedSearchInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/designer/searches/{id}':
+    delete:
+      tags:
+        - Designer
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/forms/templates/effective:
     get:
       tags:
@@ -30393,6 +31171,32 @@ paths:
           description: Missing permission or outside site scope
 components:
   schemas:
+    AbsenceInput:
+      required:
+        - kind
+        - resourceId
+        - from
+        - to
+        - reason
+        - siteId
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/ResourceKind'
+        resourceId:
+          type: string
+          format: uuid
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        reason:
+          type: string
+        siteId:
+          type: string
+          format: uuid
     AccessDecision:
       type: integer
     AccessDecisionInput:
@@ -32549,6 +33353,37 @@ components:
             - 'null'
             - string
         notes:
+          type:
+            - 'null'
+            - string
+    CalendarItem:
+      required:
+        - date
+        - end
+        - kind
+        - number
+        - title
+        - url
+        - status
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        end:
+          type:
+            - 'null'
+            - string
+          format: date
+        kind:
+          type: string
+        number:
+          type: string
+        title:
+          type: string
+        url:
+          type: string
+        status:
           type:
             - 'null'
             - string
@@ -35582,6 +36417,88 @@ components:
             - integer
             - string
           format: uint32
+    Dashboard:
+      type: object
+      properties:
+        name:
+          type: string
+        widgets:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardWidget'
+        shared:
+          type: boolean
+        isHome:
+          type: boolean
+        ownerId:
+          type: string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    DashboardInput:
+      required:
+        - name
+        - widgets
+        - shared
+        - isHome
+      type: object
+      properties:
+        name:
+          type: string
+        widgets:
+          type: array
+          items:
+            $ref: '#/components/schemas/DashboardWidget'
+        shared:
+          type: boolean
+        isHome:
+          type: boolean
+    DashboardWidget:
+      type: object
+      properties:
+        title:
+          type: string
+        kind:
+          $ref: '#/components/schemas/WidgetKind'
+        source:
+          type: string
+        width:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        drilldown:
+          type:
+            - 'null'
+            - string
     DatasetPage:
       required:
         - dataset
@@ -35771,6 +36688,8 @@ components:
         deliveredOn:
           type: string
           format: date
+    DeliveryStatus:
+      type: integer
     DepartmentDto:
       required:
         - id
@@ -36784,6 +37703,32 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/KpiSeries'
+    ExternalEventInput:
+      required:
+        - type
+        - recordType
+        - recordId
+        - description
+        - data
+      type: object
+      properties:
+        type:
+          type: string
+        recordType:
+          type:
+            - 'null'
+            - string
+        recordId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        description:
+          type: string
+        data:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonElement'
     FAI:
       required:
         - id
@@ -39409,6 +40354,67 @@ components:
             - 'null'
             - string
           format: uuid
+    MatrixResult:
+      required:
+        - rowField
+        - columnField
+        - valueField
+        - rows
+        - columns
+        - cells
+        - rowTotals
+        - columnTotals
+        - total
+      type: object
+      properties:
+        rowField:
+          type: string
+        columnField:
+          type: string
+        valueField:
+          type:
+            - 'null'
+            - string
+        rows:
+          type: array
+          items:
+            type: string
+        columns:
+          type: array
+          items:
+            type: string
+        cells:
+          type: array
+          items:
+            type: array
+            items:
+              pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+              type:
+                - number
+                - string
+              format: double
+        rowTotals:
+          type: array
+          items:
+            pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+            type:
+              - number
+              - string
+            format: double
+        columnTotals:
+          type: array
+          items:
+            pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+            type:
+              - number
+              - string
+            format: double
+        total:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
     MaturityInput:
       required:
         - subject
@@ -41420,6 +42426,44 @@ components:
         - Active
         - Inactive
         - Obsolete
+    PlatformEvent:
+      type: object
+      properties:
+        id:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        occurredAt:
+          type: string
+          format: date-time
+        type:
+          type: string
+        source:
+          type: string
+        recordType:
+          type:
+            - 'null'
+            - string
+        recordId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        userId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        userName:
+          type: string
+        description:
+          type: string
+        data:
+          type:
+            - 'null'
+            - string
     Playbook:
       type: object
       properties:
@@ -43651,6 +44695,8 @@ components:
           type: string
         usesDates:
           type: boolean
+    ReportFormat:
+      type: integer
     ReportFormatCode:
       enum:
         - json
@@ -43751,6 +44797,65 @@ components:
           oneOf:
             - type: 'null'
             - $ref: '#/components/schemas/ReportChart'
+    ReportSchedule:
+      type: object
+      properties:
+        savedReportId:
+          type: string
+          format: uuid
+        cron:
+          type: string
+        recipients:
+          type: array
+          items:
+            type: string
+            format: uuid
+        format:
+          $ref: '#/components/schemas/ReportFormat'
+        enabled:
+          type: boolean
+        nextRunAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        lastRunAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        ownerId:
+          type: string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     RequirementInput:
       required:
         - title
@@ -43868,6 +44973,8 @@ components:
         retest:
           type: boolean
           default: true
+    ResourceKind:
+      type: integer
     ResultCode:
       enum:
         - Pass
@@ -45222,6 +46329,238 @@ components:
           type: string
         name:
           type: string
+    SavedReport:
+      type: object
+      properties:
+        name:
+          type: string
+        reportKey:
+          type: string
+        kind:
+          $ref: '#/components/schemas/SavedReportKind'
+        columns:
+          type: array
+          items:
+            type: string
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rangeDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        filterColumn:
+          type:
+            - 'null'
+            - string
+        filterValue:
+          type:
+            - 'null'
+            - string
+        rowField:
+          type:
+            - 'null'
+            - string
+        columnField:
+          type:
+            - 'null'
+            - string
+        valueField:
+          type:
+            - 'null'
+            - string
+        shared:
+          type: boolean
+        ownerId:
+          type: string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    SavedReportInput:
+      required:
+        - name
+        - reportKey
+        - kind
+        - columns
+        - siteId
+        - rangeDays
+        - filterColumn
+        - filterValue
+        - rowField
+        - columnField
+        - valueField
+        - shared
+      type: object
+      properties:
+        name:
+          type: string
+        reportKey:
+          type: string
+        kind:
+          $ref: '#/components/schemas/SavedReportKind'
+        columns:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rangeDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        filterColumn:
+          type:
+            - 'null'
+            - string
+        filterValue:
+          type:
+            - 'null'
+            - string
+        rowField:
+          type:
+            - 'null'
+            - string
+        columnField:
+          type:
+            - 'null'
+            - string
+        valueField:
+          type:
+            - 'null'
+            - string
+        shared:
+          type: boolean
+    SavedReportKind:
+      type: integer
+    SavedReportRun:
+      required:
+        - id
+        - name
+        - kind
+        - title
+        - columns
+        - rows
+        - matrix
+        - params
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/SavedReportKind'
+        title:
+          type: string
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReportColumn'
+        rows:
+          type: array
+          items:
+            type: object
+        matrix:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/MatrixResult'
+        params:
+          $ref: '#/components/schemas/ReportParams'
+    SavedSearch:
+      type: object
+      properties:
+        name:
+          type: string
+        text:
+          type: string
+        recordType:
+          type:
+            - 'null'
+            - string
+        ownerId:
+          type: string
+          format: uuid
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    SavedSearchInput:
+      required:
+        - name
+        - text
+        - recordType
+      type: object
+      properties:
+        name:
+          type: string
+        text:
+          type: string
+        recordType:
+          type:
+            - 'null'
+            - string
     SaveFieldRequest:
       required:
         - recordType
@@ -45723,6 +47062,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ChecklistQuestion'
+    ScheduleInput:
+      required:
+        - savedReportId
+        - cron
+        - recipients
+        - format
+      type: object
+      properties:
+        savedReportId:
+          type: string
+          format: uuid
+        cron:
+          type: string
+        recipients:
+          type: array
+          items:
+            type: string
+            format: uuid
+        format:
+          $ref: '#/components/schemas/ReportFormat'
+        enabled:
+          type: boolean
+          default: true
     ScoreWeightsInput:
       required:
         - quality
@@ -50224,6 +51586,89 @@ components:
             - number
             - string
           format: double
+    WebhookDelivery:
+      type: object
+      properties:
+        id:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        subscriptionId:
+          type: string
+          format: uuid
+        eventId:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        eventType:
+          type: string
+        status:
+          $ref: '#/components/schemas/DeliveryStatus'
+        attempts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        lastStatusCode:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        lastError:
+          type:
+            - 'null'
+            - string
+        createdAt:
+          type: string
+          format: date-time
+        nextAttemptAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        deliveredAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+    WebhookEnabledRequest:
+      required:
+        - enabled
+      type: object
+      properties:
+        enabled:
+          type: boolean
+    WebhookInput:
+      required:
+        - name
+        - url
+        - events
+        - recordTypes
+      type: object
+      properties:
+        name:
+          type: string
+        url:
+          type: string
+        events:
+          type: array
+          items:
+            type: string
+        recordTypes:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+    WidgetKind:
+      type: integer
     WipRow:
       required:
         - workOrderId
@@ -50569,6 +52014,8 @@ tags:
   - name: Objectives
   - name: Reviews
   - name: Organization
+  - name: Platform
+  - name: Designer
   - name: Forms
   - name: Ncrs
   - name: Capas
