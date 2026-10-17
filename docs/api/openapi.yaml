@@ -34756,6 +34756,107 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/shipping-terms':
+    put:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShippingTermsInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ShippingTermsInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ShippingTermsInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/document-templates':
+    get:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TemplateChoice'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TemplateChoice'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TemplateChoice'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/documents':
+    get:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeneratedRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeneratedRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeneratedRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/shipping/shipments/{id}/custody':
     get:
       tags:
@@ -35436,6 +35537,486 @@ paths:
       responses:
         '200':
           description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/shipping/document-sections:
+    get:
+      tags:
+        - ShippingDocument
+      description: 'Requires permission: `shipping.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SectionCatalog'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SectionCatalog'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SectionCatalog'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/shipping/document-templates:
+    get:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            $ref: '#/components/schemas/ShippingDocumentKind'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TemplateRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TemplateRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TemplateRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TemplateInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TemplateInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/TemplateDetail'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateDetail'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/TemplateDetail'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/document-templates/{id}':
+    get:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/TemplateDetail'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplateDetail'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/TemplateDetail'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemplateUpdate'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TemplateUpdate'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TemplateUpdate'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/document-templates/{id}/revisions':
+    post:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/document-template-revisions/{id}':
+    put:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RevisionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RevisionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RevisionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/document-template-revisions/{id}/logo':
+    post:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  $ref: '#/components/schemas/IFormFile'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    delete:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    get:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/document-template-revisions/{id}/submit':
+    post:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/document-template-revisions/{id}/approve':
+    post:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRevisionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ApproveRevisionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ApproveRevisionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/document-template-revisions/{id}/reject':
+    post:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RejectRevisionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RejectRevisionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RejectRevisionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/document-template-revisions/{id}/preview':
+    get:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: shipmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/shipping/manifest:
+    get:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: carrierId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/shipping/generated-documents:
+    get:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: kind
+          in: query
+          schema:
+            $ref: '#/components/schemas/ShippingDocumentKind'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeneratedRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeneratedRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/GeneratedRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/generated-documents/{id}':
+    get:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/generated-documents/{id}/reproduce':
+    post:
+      tags:
+        - ShippingDocument
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ReproduceResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReproduceResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ReproduceResult'
         '401':
           description: Not signed in
         '403':
@@ -36274,6 +36855,19 @@ components:
         - Rejected
         - Returned
         - Canceled
+    ApproveRevisionInput:
+      required:
+        - notes
+        - effectiveFrom
+      type: object
+      properties:
+        notes:
+          type: string
+        effectiveFrom:
+          type:
+            - 'null'
+            - string
+          format: date-time
     ApqpHeaderInput:
       required:
         - title
@@ -42487,6 +43081,109 @@ components:
             - number
             - string
           format: double
+    DocFooter:
+      type: object
+      properties:
+        text:
+          type:
+            - 'null'
+            - string
+        pageNumbers:
+          type: boolean
+          default: true
+    DocHeader:
+      required:
+        - title
+      type: object
+      properties:
+        title:
+          type: string
+        subtitle:
+          type:
+            - 'null'
+            - string
+        showLogo:
+          type: boolean
+          default: true
+        logoWidthMm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+          default: 40
+    DocLayout:
+      required:
+        - page
+        - header
+        - footer
+        - sections
+      type: object
+      properties:
+        page:
+          $ref: '#/components/schemas/DocPage'
+        header:
+          $ref: '#/components/schemas/DocHeader'
+        footer:
+          $ref: '#/components/schemas/DocFooter'
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/DocSection'
+    DocPage:
+      type: object
+      properties:
+        size:
+          type: string
+          default: Letter
+        orientation:
+          type: string
+          default: portrait
+        marginMm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+          default: 15
+    DocSection:
+      required:
+        - type
+      type: object
+      properties:
+        type:
+          type: string
+        title:
+          type:
+            - 'null'
+            - string
+        columns:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        text:
+          type:
+            - 'null'
+            - string
+        field:
+          type:
+            - 'null'
+            - string
+        signatures:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        sizeMm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
     DocumentAssistInput:
       required:
         - kind
@@ -44593,6 +45290,55 @@ components:
             - string
           format: double
         via:
+          type:
+            - 'null'
+            - string
+    GeneratedRow:
+      required:
+        - id
+        - kind
+        - reference
+        - templateCode
+        - templateRevision
+        - builtIn
+        - pages
+        - pdfSha256
+        - generatedAt
+        - generatedBy
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/ShippingDocumentKind'
+        reference:
+          type: string
+        templateCode:
+          type:
+            - 'null'
+            - string
+        templateRevision:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        builtIn:
+          type: boolean
+        pages:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        pdfSha256:
+          type: string
+        generatedAt:
+          type: string
+          format: date-time
+        generatedBy:
           type:
             - 'null'
             - string
@@ -52854,6 +53600,13 @@ components:
             - integer
             - string
           format: uint32
+    RejectRevisionInput:
+      required:
+        - reason
+      type: object
+      properties:
+        reason:
+          type: string
     RelatedRecord:
       required:
         - type
@@ -53136,6 +53889,35 @@ components:
             - integer
             - string
           format: int32
+    ReproduceResult:
+      required:
+        - identical
+        - storedSha256
+        - reproducedSha256
+        - templateCode
+        - templateRevision
+        - builtIn
+      type: object
+      properties:
+        identical:
+          type: boolean
+        storedSha256:
+          type: string
+        reproducedSha256:
+          type: string
+        templateCode:
+          type:
+            - 'null'
+            - string
+        templateRevision:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        builtIn:
+          type: boolean
     RequestLogRow:
       required:
         - id
@@ -54216,6 +54998,156 @@ components:
         readyToSubmit:
           type: boolean
           default: false
+    RevisionInput:
+      required:
+        - layout
+        - customerId
+        - carrierId
+        - priority
+        - changeSummary
+        - effectiveFrom
+      type: object
+      properties:
+        layout:
+          $ref: '#/components/schemas/DocLayout'
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        carrierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        priority:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        changeSummary:
+          type:
+            - 'null'
+            - string
+        effectiveFrom:
+          type:
+            - 'null'
+            - string
+          format: date-time
+    RevisionRow:
+      required:
+        - id
+        - revision
+        - status
+        - state
+        - layout
+        - hasLogo
+        - customerId
+        - customer
+        - carrierId
+        - carrier
+        - priority
+        - changeSummary
+        - createdAt
+        - createdBy
+        - submittedAt
+        - submittedBy
+        - approvedAt
+        - approvedBy
+        - approvalNotes
+        - rejectedReason
+        - effectiveFrom
+        - contentHash
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        revision:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        status:
+          $ref: '#/components/schemas/TemplateRevisionStatus'
+        state:
+          type: string
+        layout:
+          $ref: '#/components/schemas/DocLayout'
+        hasLogo:
+          type: boolean
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        customer:
+          type:
+            - 'null'
+            - string
+        carrierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        carrier:
+          type:
+            - 'null'
+            - string
+        priority:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        changeSummary:
+          type:
+            - 'null'
+            - string
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type:
+            - 'null'
+            - string
+        submittedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        submittedBy:
+          type:
+            - 'null'
+            - string
+        approvedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        approvedBy:
+          type:
+            - 'null'
+            - string
+        approvalNotes:
+          type:
+            - 'null'
+            - string
+        rejectedReason:
+          type:
+            - 'null'
+            - string
+        effectiveFrom:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        contentHash:
+          type:
+            - 'null'
+            - string
     RevisionStatus:
       type: integer
     ReworkCompleteInput:
@@ -56148,6 +57080,61 @@ components:
           type:
             - 'null'
             - string
+    SectionCatalog:
+      required:
+        - sections
+        - placeholders
+        - builtIn
+      type: object
+      properties:
+        sections:
+          type: array
+          items:
+            $ref: '#/components/schemas/SectionInfo'
+        placeholders:
+          type: array
+          items:
+            type: string
+        builtIn:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/DocLayout'
+    SectionInfo:
+      required:
+        - type
+        - label
+        - kinds
+      type: object
+      properties:
+        type:
+          type: string
+        label:
+          type: string
+        kinds:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShippingDocumentKind'
+        columns:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        fields:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        usesText:
+          type: boolean
+          default: false
+        usesSignatures:
+          type: boolean
+          default: false
+        usesSize:
+          type: boolean
+          default: false
     SecurityEventDto:
       required:
         - id
@@ -56575,6 +57562,14 @@ components:
             - string
           format: double
         quotedCurrency:
+          type:
+            - 'null'
+            - string
+        freightTerms:
+          type:
+            - 'null'
+            - string
+        specialInstructions:
           type:
             - 'null'
             - string
@@ -57093,6 +58088,22 @@ components:
           format: uint32
     ShipmentVerificationState:
       type: integer
+    ShippingDocumentKind:
+      type: integer
+    ShippingTermsInput:
+      required:
+        - freightTerms
+        - specialInstructions
+      type: object
+      properties:
+        freightTerms:
+          type:
+            - 'null'
+            - string
+        specialInstructions:
+          type:
+            - 'null'
+            - string
     ShipToInput:
       required:
         - address
@@ -59144,6 +60155,180 @@ components:
             - string
     SyncRunStatus:
       type: integer
+    TemplateChoice:
+      required:
+        - kind
+        - templateId
+        - templateCode
+        - templateName
+        - revision
+        - builtIn
+        - reason
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/ShippingDocumentKind'
+        templateId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        templateCode:
+          type:
+            - 'null'
+            - string
+        templateName:
+          type:
+            - 'null'
+            - string
+        revision:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        builtIn:
+          type: boolean
+        reason:
+          type: string
+    TemplateDetail:
+      required:
+        - template
+        - revisions
+      type: object
+      properties:
+        template:
+          $ref: '#/components/schemas/TemplateRow'
+        revisions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevisionRow'
+    TemplateInput:
+      required:
+        - code
+        - name
+        - kind
+        - description
+        - siteId
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/ShippingDocumentKind'
+        description:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    TemplateRevisionStatus:
+      type: integer
+    TemplateRow:
+      required:
+        - id
+        - code
+        - name
+        - kind
+        - description
+        - siteId
+        - site
+        - active
+        - effectiveRevision
+        - pendingRevision
+        - draftRevision
+        - customer
+        - carrier
+        - priority
+        - canEdit
+        - canApprove
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/ShippingDocumentKind'
+        description:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        site:
+          type:
+            - 'null'
+            - string
+        active:
+          type: boolean
+        effectiveRevision:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        pendingRevision:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        draftRevision:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        customer:
+          type:
+            - 'null'
+            - string
+        carrier:
+          type:
+            - 'null'
+            - string
+        priority:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        canEdit:
+          type: boolean
+        canApprove:
+          type: boolean
+    TemplateUpdate:
+      required:
+        - name
+        - description
+        - active
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type:
+            - 'null'
+            - string
+        active:
+          type: boolean
     TestRequest:
       required:
         - enableOnSuccess
@@ -61443,3 +62628,4 @@ tags:
   - name: Receiving
   - name: Shipping
   - name: CarrierIntegration
+  - name: ShippingDocument
