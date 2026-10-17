@@ -44,7 +44,7 @@ public sealed class GapClosureErpValidationTests(TestApp app)
             Assert.False(s.GetProperty("canEnable").GetBoolean());
             Assert.Equal("Not run", GateStatus(s, ErpValidationGate.Connection));
             Assert.Equal("Sandbox", (await eng.GetElAsync($"/api/integrations/{id}")).Str("environment"));
-            Assert.Contains("ErpAdapterTests.Plex", s.Str("fixtureTested"));
+            Assert.Contains("Recorded Plex responses", s.Str("fixtureTested"));
             Assert.Contains("do not show that a connector works", s.Str("disclaimer"));
             Assert.Contains(s.GetProperty("supportedEntities").EnumerateArray(), e => e.GetInt32() == (int)ErpEntity.Item);
             Assert.NotEmpty(s.GetProperty("unsupportedEntities").EnumerateArray());

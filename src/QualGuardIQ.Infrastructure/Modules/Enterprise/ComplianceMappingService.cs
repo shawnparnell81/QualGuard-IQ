@@ -56,7 +56,7 @@ public sealed class ComplianceMappingService(AppDbContext db, ModuleSupport m)
                 row.Publisher = "AIAG — checked against reproductions published by Quality-One International and Accurate Products";
                 row.Reference = "https://quality-one.com/wp-content/uploads/2016/12/PPAP-Submission-Levels.pdf ; https://www.accurate-prod.com/wp-content/uploads/2024/04/ppap-level-requirements.pdf";
                 row.VerifiedOn = new DateOnly(2026, 10, 17); row.EffectiveOn = row.VerifiedOn;
-                row.VerifiedByName = "Cell-by-cell comparison with two independent published reproductions (automated test PpapMatrixTests)";
+                row.VerifiedByName = "Cell-by-cell comparison with two independent published reproductions (automated check in the test suite)";
                 row.ReviewComments = "All 20 rows × 5 levels agree with both reproductions. Verified against secondary reproductions, not a licensed copy of the AIAG manual; re-verify if the customer supplies the manual or customer-specific requirements.";
             }
             else

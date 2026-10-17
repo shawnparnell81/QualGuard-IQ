@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { choose, dialog, signIn, users } from './support';
+import { choose, dialog, signIn, users, shot } from './support';
 
 /** Gap 27: an administrator adds a sandbox SMS provider, which stays off until tested; a test message shows in the delivery log; a user opts in and out themselves. */
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
@@ -50,5 +50,6 @@ test.describe('E2E 23: SMS and push', () => {
     await up.goto('/platform/messaging');
     await expect(up.getByText(/needs api.admin/)).toBeVisible();
     await ctx.close();
+    await shot(page, '27-sms-push-providers');
   });
 });

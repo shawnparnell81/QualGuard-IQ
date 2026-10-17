@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, localDate, signIn, state, users } from './support';
+import { Api, localDate, signIn, state, users, shot } from './support';
 
 /** Gap 5: customer and supplier portal journeys in the browser, plus the same boundaries checked directly against the API. */
 const PW = 'portal-password-long-1';
@@ -93,6 +93,7 @@ test.describe('E2E 15: customer and supplier portals', () => {
     await page.goto(`/portal/complaints/${answered}`);
     await expect(page.getByText(`8D report ${t} sent with containment and root cause.`)).toBeVisible();
     await signOutAndCheck(page, `/portal/complaints/${answered}`, `Leaking valve ${t}`);
+    await shot(page, '05-customer-portal');
   });
 
   test('a supplier sees only its own NCRs and SCARs, responds when the SCAR waits for it, uploads evidence, sees its scorecard and reported audits, and cannot open another supplier by URL', async ({ page }) => {
@@ -182,6 +183,7 @@ test.describe('E2E 15: customer and supplier portals', () => {
     await page.goto(`/portal/scars/${scarA}`);
     await expect(page.getByText('Degassing time shortened.')).toBeVisible();
     await signOutAndCheck(page, `/portal/scars/${scarA}`, `Casting porosity ${t}`);
+    await shot(page, '05-supplier-portal');
   });
 });
 

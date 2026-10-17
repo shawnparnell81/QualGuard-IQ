@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, localDate, signIn, state, users } from './support';
+import { Api, localDate, signIn, state, users, shot } from './support';
 
 /** Gap 11: assigned shipments are verified offline by scan; offline scans never release a shipment until the release conditions are confirmed online. */
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
@@ -113,6 +113,7 @@ test.describe('E2E 18: offline shipping verification at the scan station', () =>
     await page.goto(`/shipping/shipments/${s1.id}`);
     await page.getByRole('tab', { name: 'Custody' }).click();
     await expect(page.getByText('Verification confirmed online')).toBeVisible();
+    await shot(page, '11-offline-verification');
   });
 
   test('a lead assigns the verifier at the desk; signing out wipes the downloaded verification work', async ({ page }) => {

@@ -77,3 +77,12 @@ export async function choose(page: Page, label: string | RegExp, option: string 
 }
 
 export const dialog = (page: Page) => page.getByRole('dialog');
+
+/** Saves a screenshot when E2E_SCREENSHOT_DIR is set (documentation captures); does nothing otherwise. */
+export async function shot(page: Page, name: string) {
+  const dir = process.env.E2E_SCREENSHOT_DIR;
+  if (!dir) return;
+  fs.mkdirSync(dir, { recursive: true });
+  await page.waitForLoadState('networkidle').catch(() => undefined);
+  await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: true });
+}
