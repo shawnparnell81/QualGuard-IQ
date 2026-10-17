@@ -271,6 +271,10 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.Property(x => x.Name).HasMaxLength(100).IsRequired();
             e.Property(x => x.RequiredPermission).HasMaxLength(100).IsRequired();
             e.Property(x => x.SignatureMeaning).HasMaxLength(100).IsRequired();
+            e.Property(x => x.ConditionField).HasMaxLength(100);
+            e.Property(x => x.ConditionOperator).HasMaxLength(30);
+            e.Property(x => x.ConditionValue).HasMaxLength(500);
+            e.Property(x => x.EscalationPermission).HasMaxLength(100);
             e.HasIndex(x => new { x.RouteId, x.Order }).IsUnique();
         });
         b.Entity<ApprovalRequest>(e =>

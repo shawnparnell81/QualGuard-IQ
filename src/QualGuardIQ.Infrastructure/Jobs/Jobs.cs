@@ -106,3 +106,10 @@ public sealed class ReportScheduleJob(QualGuardIQ.Infrastructure.Modules.Platfor
 {
     public Task RunAsync(CancellationToken ct) => designer.RunSchedulesAsync(ct);
 }
+
+/// <summary>Every 15 minutes: escalate approval stages waiting beyond their designed escalation time.</summary>
+public sealed class ApprovalEscalationJob(QualGuardIQ.Infrastructure.Services.WorkflowService workflow)
+{
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 300)]
+    public Task RunAsync(CancellationToken ct) => workflow.EscalateAsync(ct);
+}

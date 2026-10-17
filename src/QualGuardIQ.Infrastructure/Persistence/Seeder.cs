@@ -51,8 +51,8 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
                 {
                     RecordType = type, Name = name, PreventSelfApproval = true,
                     Steps = DefaultRouteSteps.TryGetValue(type, out var names)
-                        ? names.Select((n, k) => new ApprovalRouteStep { Order = k + 1, Name = n, RequiredPermission = perm, SignatureMeaning = $"Approved ({n})" }).ToList()
-                        : [new ApprovalRouteStep { Order = 1, Name = "Approval", RequiredPermission = perm, SignatureMeaning = "Approved" }]
+                        ? names.Select((n, k) => new ApprovalRouteStep { Order = k + 1, Stage = k + 1, Name = n, RequiredPermission = perm, SignatureMeaning = $"Approved ({n})" }).ToList()
+                        : [new ApprovalRouteStep { Order = 1, Stage = 1, Name = "Approval", RequiredPermission = perm, SignatureMeaning = "Approved" }]
                 });
         }
         // common parcel carriers; LTL and customer-arranged carriers are added by users

@@ -52,6 +52,7 @@ public static class DependencyInjection
             services.AddSingleton<IMalwareScanner, NoMalwareScanner>();
         services.AddScoped<AttachmentService>();
         services.AddScoped<WorkflowService>();
+        services.AddScoped<RecordConditions>();
         services.AddScoped<ActionService>();
         services.AddScoped<CustomFieldService>();
 
