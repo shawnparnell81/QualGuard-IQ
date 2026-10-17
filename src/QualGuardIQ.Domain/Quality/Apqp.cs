@@ -111,6 +111,15 @@ public class ControlPlanLine : Entity
     public Guid? PfmeaLineId { get; set; }
     public Guid? InspectionPlanId { get; set; }
     public Guid? SpcChartId { get; set; }
+    /// <summary>Operation name or number within the process step.</summary>
+    public string? Operation { get; set; }
+    /// <summary>The process characteristic controlled with a product characteristic on the same line (Characteristic holds the product one).</summary>
+    public string? ProcessCharacteristic { get; set; }
+    public string? Tolerance { get; set; }
+    /// <summary>Gauge or inspection equipment (free text, for example the gauge number).</summary>
+    public string? InspectionEquipment { get; set; }
+    public Guid? OwnerId { get; set; }
+    public Guid? WorkInstructionId { get; set; }
 }
 
 // ---------- SPC and MSA ----------

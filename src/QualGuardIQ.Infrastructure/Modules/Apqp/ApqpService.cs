@@ -17,7 +17,8 @@ public sealed record PfmeaLineInput(int StepSequence, string ProcessFunction, st
     int Severity, int Occurrence, int Detection, string? SpecialCharacteristic, string? RecommendedAction, Guid? ResponsibleId, DateOnly? DueOn,
     DateOnly? CompletedOn = null, string? ActionTaken = null, int? RevisedSeverity = null, int? RevisedOccurrence = null, int? RevisedDetection = null);
 public sealed record ControlPlanLineInput(int StepSequence, string ProcessStep, string? MachineOrTool, string Characteristic, string CharacteristicType, string? SpecialCharacteristic,
-    string? Specification, string Method, string SampleSize, string Frequency, string? ControlMethod, string ReactionPlan, Guid? PfmeaLineId, Guid? InspectionPlanId, Guid? SpcChartId);
+    string? Specification, string Method, string SampleSize, string Frequency, string? ControlMethod, string ReactionPlan, Guid? PfmeaLineId, Guid? InspectionPlanId, Guid? SpcChartId,
+    string? Operation = null, string? ProcessCharacteristic = null, string? Tolerance = null, string? InspectionEquipment = null, Guid? OwnerId = null, Guid? WorkInstructionId = null);
 
 /// <summary>
 /// Process flows, PFMEAs and control plans. All three are revision-controlled the same way:
@@ -241,31 +242,46 @@ public sealed class ApqpService(AppDbContext db, ModuleSupport m, INumberingServ
     {
         var plan = (ControlPlan)await LoadDraftAsync(PlanType, id, ct);
         foreach (var l in lines)
-        {
-            ModuleSupport.Required(l.ProcessStep, "Process step", 500);
-            ModuleSupport.Required(l.Characteristic, "Characteristic", 500);
-            ModuleSupport.Required(l.Method, "Method", 500);
-            ModuleSupport.Required(l.SampleSize, "Sample size", 50);
-            ModuleSupport.Required(l.Frequency, "Frequency", 100);
-            ModuleSupport.Required(l.ReactionPlan, "Reaction plan", 2000);
-            if (l.CharacteristicType is not ("Product" or "Process")) throw new AppException("Characteristic type is Product or Process.");
-            if (l.PfmeaLineId is { } pl)
-            {
-                if (plan.PfmeaId is null) throw new AppException("Link the control plan to a PFMEA before referencing PFMEA lines.");
-                if (!await db.PfmeaLines.AnyAsync(x => x.Id == pl && x.PfmeaId == plan.PfmeaId, ct)) throw new AppException("The PFMEA line is not part of the linked PFMEA.");
-            }
-            if (l.InspectionPlanId is { } ip && !await db.InspectionPlans.AnyAsync(x => x.Id == ip, ct)) throw new AppException("Select an existing inspection plan.");
-            if (l.SpcChartId is { } sc && !await db.SpcCharts.AnyAsync(x => x.Id == sc, ct)) throw new AppException("Select an existing SPC chart.");
-        }
+            if ((await PlanLineErrorsAsync(plan, l, ct)).FirstOrDefault() is { } error) throw new AppException(error);
         db.ControlPlanLines.RemoveRange(db.ControlPlanLines.Where(x => x.PlanId == id));
-        db.ControlPlanLines.AddRange(lines.Select(l => new ControlPlanLine
-        {
-            PlanId = id, StepSequence = l.StepSequence, ProcessStep = l.ProcessStep.Trim(), MachineOrTool = l.MachineOrTool, Characteristic = l.Characteristic.Trim(), CharacteristicType = l.CharacteristicType,
-            SpecialCharacteristic = l.SpecialCharacteristic, Specification = l.Specification, Method = l.Method.Trim(), SampleSize = l.SampleSize.Trim(), Frequency = l.Frequency.Trim(),
-            ControlMethod = l.ControlMethod, ReactionPlan = l.ReactionPlan.Trim(), PfmeaLineId = l.PfmeaLineId, InspectionPlanId = l.InspectionPlanId, SpcChartId = l.SpcChartId
-        }));
+        db.ControlPlanLines.AddRange(lines.Select(l => NewPlanLine(id, l)));
         await db.SaveChangesAsync(ct);
     }
+
+    /// <summary>Every rule a control plan line must meet (shared by the editor and bulk import). Empty when the line is valid.</summary>
+    public async Task<List<string>> PlanLineErrorsAsync(ControlPlan plan, ControlPlanLineInput l, CancellationToken ct)
+    {
+        var errors = new List<string>();
+        void Try(Action a) { try { a(); } catch (AppException e) { errors.Add(e.Message); } }
+        Try(() => ModuleSupport.Required(l.ProcessStep, "Process step", 500));
+        Try(() => ModuleSupport.Required(l.Characteristic, "Characteristic", 500));
+        Try(() => ModuleSupport.Required(l.Method, "Method", 500));
+        Try(() => ModuleSupport.Required(l.SampleSize, "Sample size", 50));
+        Try(() => ModuleSupport.Required(l.Frequency, "Frequency", 100));
+        Try(() => ModuleSupport.Required(l.ReactionPlan, "Reaction plan", 2000));
+        foreach (var (v, n, max) in new[] { (l.MachineOrTool, "Machine or tool", 500), (l.Specification, "Specification", 500), (l.ControlMethod, "Control method", 500), (l.Operation, "Operation", 200),
+            (l.ProcessCharacteristic, "Process characteristic", 500), (l.Tolerance, "Tolerance", 200), (l.InspectionEquipment, "Inspection equipment", 300), (l.SpecialCharacteristic, "Special characteristic", 20) })
+            if (v is { } x && x.Length > max) errors.Add($"{n} is longer than {max} characters.");
+        if (l.CharacteristicType is not ("Product" or "Process")) errors.Add("Characteristic type is Product or Process.");
+        if (l.PfmeaLineId is { } pl)
+        {
+            if (plan.PfmeaId is null) errors.Add("Link the control plan to a PFMEA before referencing PFMEA lines.");
+            else if (!await db.PfmeaLines.AnyAsync(x => x.Id == pl && x.PfmeaId == plan.PfmeaId, ct)) errors.Add("The PFMEA line is not part of the linked PFMEA.");
+        }
+        if (l.InspectionPlanId is { } ip && !await db.InspectionPlans.AnyAsync(x => x.Id == ip, ct)) errors.Add("Select an existing inspection plan.");
+        if (l.SpcChartId is { } sc && !await db.SpcCharts.AnyAsync(x => x.Id == sc, ct)) errors.Add("Select an existing SPC chart.");
+        if (l.WorkInstructionId is { } wi && !await db.Documents.AnyAsync(x => x.Id == wi, ct)) errors.Add("Select an existing work instruction document.");
+        if (l.OwnerId is { } o) { try { await m.RequireActiveUserAsync(o, "line owner", ct); } catch (AppException e) { errors.Add(e.Message); } }
+        return errors;
+    }
+
+    public static ControlPlanLine NewPlanLine(Guid planId, ControlPlanLineInput l) => new()
+    {
+        PlanId = planId, StepSequence = l.StepSequence, ProcessStep = l.ProcessStep.Trim(), MachineOrTool = l.MachineOrTool, Characteristic = l.Characteristic.Trim(), CharacteristicType = l.CharacteristicType,
+        SpecialCharacteristic = l.SpecialCharacteristic, Specification = l.Specification, Method = l.Method.Trim(), SampleSize = l.SampleSize.Trim(), Frequency = l.Frequency.Trim(),
+        ControlMethod = l.ControlMethod, ReactionPlan = l.ReactionPlan.Trim(), PfmeaLineId = l.PfmeaLineId, InspectionPlanId = l.InspectionPlanId, SpcChartId = l.SpcChartId,
+        Operation = l.Operation, ProcessCharacteristic = l.ProcessCharacteristic, Tolerance = l.Tolerance, InspectionEquipment = l.InspectionEquipment, OwnerId = l.OwnerId, WorkInstructionId = l.WorkInstructionId
+    };
 
     // ---------- lifecycle ----------
     public async Task SubmitAsync(string type, Guid id, CancellationToken ct)

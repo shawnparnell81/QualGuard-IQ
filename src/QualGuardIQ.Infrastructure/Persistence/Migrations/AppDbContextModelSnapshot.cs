@@ -8357,6 +8357,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<string>("InspectionEquipment")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
                     b.Property<Guid?>("InspectionPlanId")
                         .HasColumnType("uuid");
 
@@ -8369,11 +8373,22 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)");
 
+                    b.Property<string>("Operation")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("PfmeaLineId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("PlanId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("ProcessCharacteristic")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("ProcessStep")
                         .IsRequired()
@@ -8410,19 +8425,30 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<int>("StepSequence")
                         .HasColumnType("integer");
 
+                    b.Property<string>("Tolerance")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("WorkInstructionId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("InspectionPlanId");
 
+                    b.HasIndex("OwnerId");
+
                     b.HasIndex("PlanId");
 
                     b.HasIndex("SpcChartId");
+
+                    b.HasIndex("WorkInstructionId");
 
                     b.ToTable("control_plan_lines", "qms");
                 });
@@ -18392,6 +18418,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasForeignKey("InspectionPlanId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("QualGuardIQ.Domain.Quality.ControlPlan", null)
                         .WithMany()
                         .HasForeignKey("PlanId")
@@ -18401,6 +18432,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasOne("QualGuardIQ.Domain.Quality.SpcChart", null)
                         .WithMany()
                         .HasForeignKey("SpcChartId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Documents.ControlledDocument", null)
+                        .WithMany()
+                        .HasForeignKey("WorkInstructionId")
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 

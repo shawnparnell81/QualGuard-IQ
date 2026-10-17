@@ -38105,6 +38105,32 @@ components:
             - 'null'
             - string
           format: uuid
+        operation:
+          type:
+            - 'null'
+            - string
+        processCharacteristic:
+          type:
+            - 'null'
+            - string
+        tolerance:
+          type:
+            - 'null'
+            - string
+        inspectionEquipment:
+          type:
+            - 'null'
+            - string
+        ownerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        workInstructionId:
+          type:
+            - 'null'
+            - string
+          format: uuid
     ControlPlanPhase:
       type: integer
       default: 2

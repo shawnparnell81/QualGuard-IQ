@@ -101,3 +101,22 @@ A released PFMEA never changes. Importing into it asks for a change reason and c
 copied) and adds the imported lines to it in the same step; if the import is refused, no revision is created. Every import and preview
 is listed under **Line imports** with the file name, mode, revision and counts, and committed imports are written to the audit trail
 with the file's SHA-256 fingerprint.
+
+## Importing control plan lines from a spreadsheet
+
+Open a control plan and choose **Import lines**. It works like the PFMEA import above (template with a Help sheet, .xlsx or .csv,
+column mapping, dry-run preview, add or replace, all-or-nothing unless you import only the valid rows, rejected-row download,
+released plans revised in the same step, history and audit).
+
+- Required fields: Step, Process step, Measurement method, Sample size, Frequency, Reaction plan, and a **product characteristic** or a
+  **process characteristic** (or both). A line with a product characteristic is a Product line and keeps the process characteristic
+  next to it; a line with only a process characteristic is a Process line.
+- Optional fields: Operation, Machine / tool, Special characteristic (your organization's codes), Specification, Tolerance, Inspection
+  equipment (gauge), Control method, Owner (email or name of an active user).
+- **Related PFMEA item** links the line to a line of the plan's linked PFMEA by its failure mode. If two PFMEA lines share the failure
+  mode, write it as `step: failure mode` (for example `20: Bore oversize`). The plan must be linked to a PFMEA first.
+- **Related inspection plan** is the inspection plan number; **Related work instruction** is the controlled document number (obsolete
+  documents are refused).
+- A row is a Duplicate when the plan (or an earlier row) already has the same step and characteristic.
+
+The new columns (operation, process characteristic, tolerance, inspection equipment, owner) can also be edited in the plan's line editor.

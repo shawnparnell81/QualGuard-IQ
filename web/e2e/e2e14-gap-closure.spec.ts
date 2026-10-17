@@ -319,4 +319,34 @@ test.describe('E2E 14: gap closure', () => {
     expect(lines.map((l) => l.rpn).sort()).toEqual([72, 84]);
     await expect(page.getByRole('row').filter({ hasText: 'line-3-pfmea.csv' }).first()).toContainText('2 ok · 1 rejected');
   });
+  test('control plan lines import with PFMEA links, row errors and the new characteristic columns in the editor', async ({ page }) => {
+    const admin = await Api.as(users.admin);
+    const t = Date.now().toString(36);
+    const pf = await admin.post<{ id: string }>('/api/apqp/pfmea', { title: `CP link PFMEA ${t}`, siteId: state().siteId });
+    await admin.put(`/api/apqp/pfmea/${pf.id}/lines`, [{ stepSequence: 20, processFunction: 'Bore', failureMode: 'Bore oversize', failureEffect: 'Leak', failureCause: 'Tool wear', preventionControls: null, detectionControls: null,
+      severity: 6, occurrence: 3, detection: 3, recommendedAction: null, responsibleId: null, dueOn: null, specialCharacteristic: null, completedOn: null, actionTaken: null, revisedSeverity: null, revisedOccurrence: null, revisedDetection: null }]);
+    const cp = await admin.post<{ id: string; number: string }>('/api/apqp/plans', { title: `Import plan ${t}`, siteId: state().siteId, phase: 2, pfmeaId: pf.id });
+    const csv = ['Step,Process step,Operation,Product characteristic,Process characteristic,Specification,Tolerance,Measurement method,Inspection equipment,Sample size,Frequency,Reaction plan,Related PFMEA item',
+      '20,Bore,Op 20A,Bore diameter,Spindle speed,25.00,±0.03,Air gauge,AG-114,5,Hourly,Stop line and quarantine,Bore oversize',
+      '30,Wash,,,Nozzle pressure,3 bar,,Pressure gauge,PG-2,1,Each shift,Clean nozzle,',
+      '40,Deburr,,Edge break,,,,Visual,,5,Hourly,Rework,Not in the PFMEA'].join('\n');
+    await signIn(page, users.admin);
+    await page.goto(`/apqp/plans/${cp.id}`);
+    await page.getByRole('button', { name: 'Import lines' }).click();
+    const d = dialog(page);
+    await d.getByTestId('import-file').setInputFiles({ name: 'cp-lines.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+    await d.getByRole('button', { name: 'Preview' }).click();
+    const summary = d.getByTestId('import-summary');
+    await expect(summary).toContainText('3 rows');
+    await expect(summary).toContainText('2 ready');
+    await expect(d.getByTestId('import-rows')).toContainText('PFMEA item "Not in the PFMEA" is not a failure mode of the linked PFMEA');
+    await d.getByLabel(/Import the 2 valid rows/).check();
+    await d.getByRole('button', { name: 'Import 2 lines' }).click();
+    await expect(d).toHaveCount(0);
+    await expect(page.getByTestId('import-done')).toContainText(`2 line(s) imported into ${cp.number} rev 1. 1 rejected row(s) left out.`);
+    await expect(page.locator('input[value="AG-114"]')).toHaveCount(1);
+    await expect(page.locator('input[value="Spindle speed"]')).toHaveCount(1);
+    const lines = await admin.get<{ stepSequence: number; characteristicType: string; pfmeaLineId: string | null }[]>(`/api/apqp/plans/${cp.id}/lines`);
+    expect(lines.map((l) => `${l.stepSequence}:${l.characteristicType}:${l.pfmeaLineId ? 'linked' : '-'}`)).toEqual(['20:Product:linked', '30:Process:-']);
+  });
 });

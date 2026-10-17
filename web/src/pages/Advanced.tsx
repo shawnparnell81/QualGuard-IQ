@@ -77,18 +77,19 @@ const lineCols: Record<Kind, [string, string, 'text' | 'number' | 'date' | 'user
   flows: [['sequence', 'Seq', 'number'], ['name', 'Step', 'text'], ['stepType', 'Type', 'text'], ['inputs', 'Inputs', 'text'], ['outputs', 'Outputs', 'text']],
   pfmea: [['stepSequence', 'Step', 'number'], ['processFunction', 'Function', 'text'], ['failureMode', 'Failure mode', 'text'], ['failureEffect', 'Effect', 'text'], ['failureCause', 'Cause', 'text'],
     ['preventionControls', 'Prevention', 'text'], ['detectionControls', 'Detection controls', 'text'], ['severity', 'S', 'number'], ['occurrence', 'O', 'number'], ['detection', 'D', 'number'], ['recommendedAction', 'Recommended action', 'text'], ['responsibleId', 'Responsible', 'user'], ['dueOn', 'Due', 'date']],
-  plans: [['stepSequence', 'Step', 'number'], ['processStep', 'Process step', 'text'], ['machineOrTool', 'Machine / tool', 'text'], ['characteristic', 'Characteristic', 'text'], ['characteristicType', 'Product / Process', 'text'],
-    ['specialCharacteristic', 'Special', 'text'], ['specification', 'Specification', 'text'], ['method', 'Method', 'text'], ['sampleSize', 'Sample', 'text'], ['frequency', 'Frequency', 'text'], ['controlMethod', 'Control method', 'text'], ['reactionPlan', 'Reaction plan', 'text']],
+  plans: [['stepSequence', 'Step', 'number'], ['processStep', 'Process step', 'text'], ['operation', 'Operation', 'text'], ['machineOrTool', 'Machine / tool', 'text'], ['characteristic', 'Characteristic', 'text'], ['characteristicType', 'Product / Process', 'text'],
+    ['processCharacteristic', 'Process characteristic', 'text'], ['specialCharacteristic', 'Special', 'text'], ['specification', 'Specification', 'text'], ['tolerance', 'Tolerance', 'text'], ['method', 'Method', 'text'], ['inspectionEquipment', 'Equipment', 'text'],
+    ['sampleSize', 'Sample', 'text'], ['frequency', 'Frequency', 'text'], ['controlMethod', 'Control method', 'text'], ['reactionPlan', 'Reaction plan', 'text'], ['ownerId', 'Owner', 'user']],
 };
 const blank: Record<Kind, Line> = {
   flows: { sequence: 10, name: '', stepType: 'Operation', inputs: '', outputs: '' },
   pfmea: { stepSequence: 10, processFunction: '', failureMode: '', failureEffect: '', failureCause: '', preventionControls: '', detectionControls: '', severity: 5, occurrence: 5, detection: 5, recommendedAction: '', responsibleId: '', dueOn: '' },
-  plans: { stepSequence: 10, processStep: '', machineOrTool: '', characteristic: '', characteristicType: 'Product', specialCharacteristic: '', specification: '', method: '', sampleSize: '', frequency: '', controlMethod: '', reactionPlan: '' },
+  plans: { stepSequence: 10, processStep: '', operation: '', machineOrTool: '', characteristic: '', characteristicType: 'Product', processCharacteristic: '', specialCharacteristic: '', specification: '', tolerance: '', method: '', inspectionEquipment: '', sampleSize: '', frequency: '', controlMethod: '', reactionPlan: '', ownerId: '' },
 };
 const toInput = (kind: Kind, l: Line) => { const o: Line = {}; for (const [k] of lineCols[kind]) o[k] = l[k] === '' || l[k] === undefined ? null : l[k];
   if (kind === 'pfmea') Object.assign(o, { specialCharacteristic: l.specialCharacteristic ?? null, completedOn: l.completedOn ?? null, actionTaken: l.actionTaken ?? null, revisedSeverity: l.revisedSeverity ?? null, revisedOccurrence: l.revisedOccurrence ?? null, revisedDetection: l.revisedDetection ?? null });
   if (kind === 'flows') Object.assign(o, { ownerId: l.ownerId ?? null, workInstructionId: l.workInstructionId ?? null, inspectionPlanId: l.inspectionPlanId ?? null });
-  if (kind === 'plans') Object.assign(o, { pfmeaLineId: l.pfmeaLineId ?? null, inspectionPlanId: l.inspectionPlanId ?? null, spcChartId: l.spcChartId ?? null });
+  if (kind === 'plans') Object.assign(o, { pfmeaLineId: l.pfmeaLineId ?? null, inspectionPlanId: l.inspectionPlanId ?? null, spcChartId: l.spcChartId ?? null, workInstructionId: l.workInstructionId ?? null });
   return o; };
 
 /** Risk colour for a PFMEA action priority: these are QualGuard's own tones, not a copied palette. */

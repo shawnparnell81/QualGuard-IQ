@@ -67,15 +67,42 @@ public sealed class ApqpImportService(AppDbContext db, ModuleSupport m, ApqpServ
     static readonly string[] PfmeaExample = ["10", "Press bearing to depth 12.0 ±0.1 mm", "Bearing pressed too shallow", "Noise at end of line; warranty return", "7", "Press stop worn",
         "Hard stop with PM every 5,000 cycles", "4", "100% depth gauge after press", "3", "", "", "SC", "", "", "", "", "", "", "", ""];
 
+    public static readonly IReadOnlyList<ImportColumn> PlanColumns =
+    [
+        new("stepSequence", "Step", true, "Process step number (whole number).", "Step no", "Step number", "Part/process number", "Process number", "Seq"),
+        new("processStep", "Process step", true, "Process name or operation description.", "Process name", "Process name / operation description", "Step name"),
+        new("operation", "Operation", false, "Operation name or number within the step.", "Op", "Operation number", "Op no"),
+        new("machineOrTool", "Machine / tool", false, "Machine, device, jig or tool for manufacturing.", "Machine", "Tool", "Machine, device, jig, tools"),
+        new("productCharacteristic", "Product characteristic", false, "Product characteristic controlled (at least one of product or process characteristic).", "Product", "Product char"),
+        new("processCharacteristic", "Process characteristic", false, "Process characteristic controlled.", "Process", "Process char", "Process parameter"),
+        new("specialCharacteristic", "Special characteristic", false, "Classification code configured for your organization (default CC, SC, KPC, KCC, HI, OS, YC, YS).", "Class", "Special char", "Special char class", "Classification"),
+        new("specification", "Specification", false, "Product/process specification.", "Spec", "Product/process specification", "Specification/tolerance"),
+        new("tolerance", "Tolerance", false, "Tolerance, if kept apart from the specification.", "Tol"),
+        new("method", "Measurement method", true, "Evaluation or measurement technique.", "Method", "Evaluation/measurement technique", "Measurement technique"),
+        new("inspectionEquipment", "Inspection equipment", false, "Gauge or inspection equipment (for example the gauge number).", "Gauge", "Equipment", "Measuring equipment"),
+        new("sampleSize", "Sample size", true, "Sample size, for example 5 or 100%.", "Size", "Sample"),
+        new("frequency", "Frequency", true, "Sample frequency, for example Hourly or Each lot.", "Freq", "Sample frequency"),
+        new("controlMethod", "Control method", false, "How the characteristic is controlled (SPC chart, checklist, error-proofing…).", "Control"),
+        new("reactionPlan", "Reaction plan", true, "What the operator does when out of control.", "Reaction", "Reaction plan / corrective action"),
+        new("owner", "Owner", false, "Email address or display name of an active user responsible for the control.", "Responsible", "Responsibility"),
+        new("pfmeaItem", "Related PFMEA item", false, "Failure mode of the linked PFMEA (optionally \"step: failure mode\").", "PFMEA item", "PFMEA line", "PFMEA reference", "Failure mode"),
+        new("inspectionPlan", "Related inspection plan", false, "Inspection plan number.", "Inspection plan", "Inspection plan number"),
+        new("workInstruction", "Related work instruction", false, "Controlled document number of the work instruction.", "Work instruction", "WI", "Work instruction number"),
+    ];
+    static readonly string[] PlanExample = ["20", "Bore", "Op 20A", "Mill 3", "Bore diameter", "Spindle speed", "CC", "25.00", "±0.03", "Air gauge", "AG-114", "5", "Hourly", "X̄-R chart",
+        "Stop line; quarantine since last good check; notify quality", "", "", "", ""];
+
     public static IReadOnlyList<ImportColumn> ColumnsFor(string type) => type switch
     {
         ApqpService.PfmeaType => PfmeaColumns,
+        ApqpService.PlanType => PlanColumns,
         _ => throw new AppException("Bulk import is available for PFMEAs and control plans.")
     };
 
     public (byte[] Content, string ContentType, string FileName) Template(string type, string format) => type switch
     {
         ApqpService.PfmeaType => TabularImport.Template(PfmeaColumns, PfmeaExample, format == "csv" ? "csv" : "xlsx", "pfmea-import-template"),
+        ApqpService.PlanType => TabularImport.Template(PlanColumns, PlanExample, format == "csv" ? "csv" : "xlsx", "control-plan-import-template"),
         _ => throw new AppException("Bulk import is available for PFMEAs and control plans.")
     };
 
@@ -121,8 +148,9 @@ public sealed class ApqpImportService(AppDbContext db, ModuleSupport m, ApqpServ
         var existing = mode == "Append" ? await ExistingKeysAsync(type, doc.Id, ct) : [];
         foreach (var p in prepared.Where(p => p.Result.Status == "Accepted" && p.DuplicateKey is not null))
         {
-            if (existing.Contains(p.DuplicateKey!)) { Mark(p, "Duplicate", "The revision already has this line (same step, failure mode and cause)."); continue; }
-            if (!seen.Add(p.DuplicateKey!)) Mark(p, "Duplicate", "Repeats an earlier row of the file (same step, failure mode and cause).");
+            var what = type == ApqpService.PfmeaType ? "same step, failure mode and cause" : "same step and characteristic";
+            if (existing.Contains(p.DuplicateKey!)) { Mark(p, "Duplicate", $"The revision already has this line ({what})."); continue; }
+            if (!seen.Add(p.DuplicateKey!)) Mark(p, "Duplicate", $"Repeats an earlier row of the file ({what}).");
         }
         var results = prepared.Select(p => p.Result).ToList();
         int accepted = results.Count(x => x.Status == "Accepted"), rejected = results.Count(x => x.Status == "Rejected"), dups = results.Count(x => x.Status == "Duplicate");
@@ -181,12 +209,20 @@ public sealed class ApqpImportService(AppDbContext db, ModuleSupport m, ApqpServ
         public Dictionary<string, Guid> Users = new(StringComparer.OrdinalIgnoreCase);
         public HashSet<string> AmbiguousUsers = new(StringComparer.OrdinalIgnoreCase);
         public string[] Special = [];
+        public ControlPlan? Plan;
+        public List<PfmeaRef>? PfmeaLines;
     }
+    sealed record PfmeaRef(Guid Id, int Step, string FailureMode);
 
     async Task<Ctx> ContextAsync(string type, ApqpDocument doc, string mode, CancellationToken ct)
     {
         var c = new Ctx { Special = SpecialCodes };
         if (doc is Pfmea { ProcessFlowId: { } flow }) c.FlowSteps = (await db.ProcessFlowSteps.AsNoTracking().Where(x => x.FlowId == flow).Select(x => x.Sequence).ToListAsync(ct)).ToHashSet();
+        if (doc is ControlPlan plan)
+        {
+            c.Plan = plan;
+            if (plan.PfmeaId is { } pf) c.PfmeaLines = await db.PfmeaLines.AsNoTracking().Where(x => x.PfmeaId == pf).Select(x => new PfmeaRef(x.Id, x.StepSequence, x.FailureMode)).ToListAsync(ct);
+        }
         foreach (var u in await db.Users.AsNoTracking().Where(u => u.IsActive && u.PortalKind == null).Select(u => new { u.Id, u.Email, u.DisplayName }).ToListAsync(ct))
         {
             if (u.Email is { } e) c.Users[e] = u.Id;
@@ -199,10 +235,13 @@ public sealed class ApqpImportService(AppDbContext db, ModuleSupport m, ApqpServ
     {
         ApqpService.PfmeaType => (await db.PfmeaLines.AsNoTracking().Where(x => x.PfmeaId == id).Select(x => new { x.StepSequence, x.FailureMode, x.FailureCause }).ToListAsync(ct))
             .Select(x => PfmeaKey(x.StepSequence, x.FailureMode, x.FailureCause)).ToHashSet(),
+        ApqpService.PlanType => (await db.ControlPlanLines.AsNoTracking().Where(x => x.PlanId == id).Select(x => new { x.StepSequence, x.Characteristic, x.CharacteristicType, x.ProcessCharacteristic }).ToListAsync(ct))
+            .Select(x => PlanKey(x.StepSequence, x.CharacteristicType, x.Characteristic, x.ProcessCharacteristic)).ToHashSet(),
         _ => []
     };
 
     static string PfmeaKey(int step, string mode, string cause) => $"{step}|{TabularImport.Norm(mode)}|{TabularImport.Norm(cause)}";
+    static string PlanKey(int step, string type, string characteristic, string? process) => $"{step}|{type}|{TabularImport.Norm(characteristic)}|{TabularImport.Norm(process ?? "")}";
 
     async Task<Prepared> PrepareAsync(string type, ImportSourceRow row, Dictionary<string, string?> map, Ctx ctx, CancellationToken ct)
     {
@@ -265,6 +304,50 @@ public sealed class ApqpImportService(AppDbContext db, ModuleSupport m, ApqpServ
                 var res = new ImportRowResult(row.RowNumber, errors.Count == 0 ? "Accepted" : "Rejected", errors, warnings, row.Values, calc);
                 return new Prepared(res, errors.Count == 0 ? pid => ApqpService.NewPfmeaLine(pid, input) : null, errors.Count == 0 ? PfmeaKey(step, input.FailureMode, input.FailureCause) : null);
             }
+            case ApqpService.PlanType:
+            {
+                var step = Int("stepSequence", "Step", true);
+                if (V("stepSequence") is not null && step < 0) errors.Add("Step cannot be negative.");
+                var product = V("productCharacteristic"); var process = V("processCharacteristic");
+                if (product is null && process is null) errors.Add("Enter a product characteristic or a process characteristic.");
+                Guid? pfmeaLine = null;
+                if (V("pfmeaItem") is { } item)
+                {
+                    if (ctx.PfmeaLines is null) errors.Add("Link the control plan to a PFMEA before referencing PFMEA items.");
+                    else
+                    {
+                        var (st, fm) = item.Split(':', 2) is [var a, var b] && TabularImport.TryInt(a.Trim(), out var sn) ? ((int?)sn, b.Trim()) : (null, item);
+                        var hits = ctx.PfmeaLines.Where(x => TabularImport.Norm(x.FailureMode) == TabularImport.Norm(fm) && (st is null || x.Step == st)).ToList();
+                        if (hits.Count == 1) pfmeaLine = hits[0].Id;
+                        else errors.Add(hits.Count == 0 ? $"PFMEA item \"{item}\" is not a failure mode of the linked PFMEA." : $"PFMEA item \"{item}\" matches {hits.Count} lines; write it as \"step: failure mode\".");
+                    }
+                }
+                Guid? ip = null;
+                if (V("inspectionPlan") is { } ipn)
+                {
+                    ip = await db.InspectionPlans.AsNoTracking().Where(x => x.Number == ipn).Select(x => (Guid?)x.Id).FirstOrDefaultAsync(ct);
+                    if (ip is null) errors.Add($"Inspection plan \"{ipn}\" does not exist.");
+                    else if (!await m.CanAsync(Permissions.InspectionView, ctx.Plan!.SiteId, null, ct)) errors.Add($"You cannot view inspection plan \"{ipn}\".");
+                }
+                Guid? wi = null;
+                if (V("workInstruction") is { } win)
+                {
+                    var docRow = await db.Documents.AsNoTracking().Where(x => x.Number == win).Select(x => new { x.Id, x.Status }).FirstOrDefaultAsync(ct);
+                    if (docRow is null) errors.Add($"Work instruction \"{win}\" is not a controlled document.");
+                    else if (docRow.Status == Domain.Documents.DocumentStatus.Obsolete) errors.Add($"Work instruction \"{win}\" is obsolete.");
+                    else wi = docRow.Id;
+                }
+                var input = new ControlPlanLineInput(step, V("processStep") ?? "", V("machineOrTool"), product ?? process ?? "", product is not null ? "Product" : "Process", Special("specialCharacteristic"),
+                    V("specification"), V("method") ?? "", V("sampleSize") ?? "", V("frequency") ?? "", V("controlMethod"), V("reactionPlan") ?? "", pfmeaLine, ip, null,
+                    V("operation"), product is not null ? process : null, V("tolerance"), V("inspectionEquipment"), Person("owner", "Owner"), wi);
+                // Shared line rules (the same ones the plan editor enforces); the characteristic message is already given above.
+                errors.AddRange((await apqp.PlanLineErrorsAsync(ctx.Plan!, input, ct)).Where(x => !(product is null && process is null && x.StartsWith("Characteristic ")) && !errors.Contains(x)));
+                if (errors.Count == 0 && input.SpecialCharacteristic is { } sc && sc.Equals("CC", StringComparison.OrdinalIgnoreCase) && input.ControlMethod is null)
+                    warnings.Add("Critical characteristic without a control method.");
+                var res = new ImportRowResult(row.RowNumber, errors.Count == 0 ? "Accepted" : "Rejected", errors, warnings, row.Values, calc);
+                return new Prepared(res, errors.Count == 0 ? pid => ApqpService.NewPlanLine(pid, input) : null,
+                    errors.Count == 0 ? PlanKey(step, input.CharacteristicType, input.Characteristic, input.ProcessCharacteristic) : null);
+            }
             default: throw new AppException("Bulk import is available for PFMEAs and control plans.");
         }
     }
@@ -282,6 +365,10 @@ public sealed class ApqpImportService(AppDbContext db, ModuleSupport m, ApqpServ
             case ApqpService.PfmeaType:
                 if (mode == "Replace") db.PfmeaLines.RemoveRange(db.PfmeaLines.Where(x => x.PfmeaId == targetId));
                 db.PfmeaLines.AddRange(lines.Cast<PfmeaLine>());
+                break;
+            case ApqpService.PlanType:
+                if (mode == "Replace") db.ControlPlanLines.RemoveRange(db.ControlPlanLines.Where(x => x.PlanId == targetId));
+                db.ControlPlanLines.AddRange(lines.Cast<ControlPlanLine>());
                 break;
         }
         await db.SaveChangesAsync(ct);
