@@ -33,20 +33,22 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
   return (
     <AppBar position="sticky" color="primary" elevation={0}>
       <Toolbar variant="dense" sx={{ gap: 1, minHeight: 52 }}>
-        <Box component={RouterLink} to="/" sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'inherit', textDecoration: 'none', mr: 2 }}>
+        <Box component={RouterLink} to="/" aria-label={brand?.applicationName ?? 'Home'} sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'inherit', textDecoration: 'none', mr: { xs: 0.5, sm: 2 } }}>
           <Box sx={{ width: 26, height: 26, borderRadius: '6px', bgcolor: 'secondary.main', display: 'grid', placeItems: 'center', fontFamily: mono, fontWeight: 600, fontSize: 13 }}>
             {(brand?.applicationName ?? 'Q').slice(0, 1)}
           </Box>
-          <Typography sx={{ fontWeight: 600, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>{brand?.applicationName}</Typography>
+          <Typography sx={{ fontWeight: 600, letterSpacing: '0.01em', whiteSpace: 'nowrap', display: { xs: 'none', sm: 'block' } }}>{brand?.applicationName}</Typography>
         </Box>
         <ModuleNav />
         <Box component="form" onSubmit={(e) => { e.preventDefault(); if (q.trim()) nav(`/search?q=${encodeURIComponent(q.trim())}`); }}
-          sx={{ display: 'flex', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.12)', borderRadius: 1, px: 1, width: 220, flexShrink: 0, ml: 1 }}>
+          sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', bgcolor: 'rgba(255,255,255,0.12)', borderRadius: 1, px: 1, width: 220, flexShrink: 0, ml: 1 }}>
           <SearchIcon fontSize="small" sx={{ opacity: 0.8 }} />
           <InputBase value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search records" sx={{ color: 'inherit', ml: 1, flex: 1, fontSize: 13 }} inputProps={{ 'aria-label': 'Search records' }} />
           <Tooltip title="Command palette"><Box component="button" type="button" onClick={onOpenPalette}
             sx={{ fontFamily: mono, fontSize: 11, border: '1px solid rgba(255,255,255,0.4)', borderRadius: 0.5, px: 0.6, color: 'inherit', bgcolor: 'transparent', cursor: 'pointer' }}>Ctrl K</Box></Tooltip>
         </Box>
+        {/* Narrow screens: the search box would push the bar wider than the phone; the palette searches records too. */}
+        <Tooltip title="Search"><IconButton color="inherit" onClick={onOpenPalette} aria-label="Search" sx={{ display: { xs: 'inline-flex', md: 'none' } }}><SearchIcon /></IconButton></Tooltip>
         <Tooltip title="My Work"><IconButton color="inherit" component={RouterLink} to="/my-work"><AssignmentIndOutlined /></IconButton></Tooltip>
         <Tooltip title="Notifications">
           <IconButton color="inherit" onClick={(e) => setNotifEl(e.currentTarget)}>
@@ -95,7 +97,7 @@ function ModuleNav() {
       if (total <= avail) { setFit(widths.length); return; }
       let used = 96, n = 0;
       while (n < widths.length && used + widths[n] <= avail) used += widths[n++];
-      setFit(Math.max(1, n));
+      setFit(n); // on a phone every module can move into the menu
     };
     calc();
     const ro = new ResizeObserver(calc);
@@ -120,7 +122,7 @@ function ModuleNav() {
       {shown.map((m) => btn(m, isActive(m)))}
       {rest.length > 0 && <>
         <Button color="inherit" size="small" endIcon={<ExpandMore />} onClick={(e) => setMoreEl(e.currentTarget)} aria-label="More modules"
-          sx={{ px: 1.25, whiteSpace: 'nowrap', flexShrink: 0, borderRadius: 0, borderBottom: '2px solid', borderColor: restActive ? 'secondary.light' : 'transparent' }}>{restActive ? restActive.label : 'More'}</Button>
+          sx={{ px: 1.25, whiteSpace: 'nowrap', flexShrink: 0, borderRadius: 0, borderBottom: '2px solid', borderColor: restActive ? 'secondary.light' : 'transparent' }}>{restActive ? restActive.label : shown.length === 0 ? 'Modules' : 'More'}</Button>
         <Menu anchorEl={moreEl} open={!!moreEl} onClose={() => setMoreEl(null)}>
           {rest.map((m) => <MenuItem key={m.key} component={RouterLink} to={m.basePath} onClick={() => setMoreEl(null)} selected={isActive(m)} sx={{ gap: 1.5 }}>{m.icon}<ListItemText primary={m.label} /></MenuItem>)}
         </Menu>

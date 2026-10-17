@@ -276,6 +276,7 @@ test.describe('E2E 14: gap closure', () => {
     await expect(row).toContainText('POST /api/mes/events');
     await expect(row).toContainText('Active');
     await expect(row).not.toContainText('Never');
+    await shot(page, '08-mes-devices-active');
     await expect(page.getByText(apiKey.split('.')[1])).toHaveCount(0);
 
     await row.getByRole('button', { name: 'Rotate' }).click();
@@ -292,7 +293,7 @@ test.describe('E2E 14: gap closure', () => {
     await expect(row.getByRole('button', { name: 'Enable' })).toHaveCount(0);
     expect((await device.post('/api/mes/events', ev('3'))).status()).toBe(401);
     await device.dispose();
-    await shot(page, '08-mes-devices');
+    await shot(page, '08-mes-devices-revoked');
   });
 
   test('PFMEA lines import from a spreadsheet with a mapping preview, row errors, recalculated RPN and the rejected rows left out', async ({ page }) => {

@@ -68,6 +68,7 @@ test.describe('E2E 16: PO receiving at the scan station', () => {
     const result = page.getByTestId('receive-result');
     await expect(result).toContainText('Awaiting inspection');
     await expect(result).toContainText(/Hold HOLD-/);
+    await shot(page, '12-po-receiving-scan-station');
     await result.getByRole('link', { name: /Labels \(3\)/ }).click();
     await expect(page.getByTestId('receipt-label')).toHaveCount(3);
     await expect(page.getByTestId('receipt-label').first()).toContainText('Lot · line 1');
@@ -76,6 +77,8 @@ test.describe('E2E 16: PO receiving at the scan station', () => {
     await page.getByRole('link', { name: /RCV-/ }).first().click();
     await expect(page.getByText('Scan station')).toBeVisible();
     await expect(page.getByText(/Hold HOLD-/)).toBeVisible();
+    // Nothing on the phone layout is wider than the screen.
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(412);
     await shot(page, '12-po-receiving');
   });
 
