@@ -17,6 +17,14 @@ const validationKinds = ['Process', 'Equipment', 'Software', 'Test method'];
 const validationStatus = ['Planning', 'ProtocolApproval', 'Execution', 'ResultsApproval', 'Released', 'Cancelled'];
 const evidenceTypes = ['Document', 'Audit', 'Capa', 'TrainingCourse', 'Validation', 'ControlPlan', 'Risk'];
 
+export const mappingStates = ['Draft', 'Unverified', 'Under review', 'Verified', 'Superseded', 'Rejected'];
+const stateColor: Record<number, 'default' | 'warning' | 'info' | 'success' | 'error'> = { 0: 'default', 1: 'warning', 2: 'info', 3: 'success', 4: 'default', 5: 'error' };
+/** Verification state of shipped mapping content; unverified content is always labelled as such. */
+export function VerificationChip({ v }: { v?: { state: number; verified: boolean; label: string } }) {
+  if (!v) return <Chip size="small" color="warning" variant="outlined" label="Unverified" />;
+  return <Chip size="small" data-testid="verification-chip" color={v.verified ? 'success' : 'warning'} variant="outlined" title={v.label} label={v.verified ? 'Verified content' : `${mappingStates[v.state] ?? 'Unverified'} content — not verified`} />;
+}
+
 export function ComplianceHome() {
   const [site, setSite] = useSite();
   const qc = useQueryClient();
@@ -25,12 +33,14 @@ export function ComplianceHome() {
   const packs = useQuery({ queryKey: ['packs', site], enabled: !!site, queryFn: () => get<any[]>(`/api/compliance/packs?siteId=${site}`) });
   const cov = useQuery({ queryKey: ['coverage', site], enabled: !!site, queryFn: () => get<any>(`/api/compliance/coverage?siteId=${site}`) });
   const obl = useQuery({ queryKey: ['obligations', site], enabled: !!site, queryFn: () => get<any[]>(`/api/compliance/obligations?siteId=${site}`) });
-  const [dlg, setDlg] = useState<null | 'new' | { map: string }>(null);
-  const refresh = () => ['packs', 'coverage', 'obligations'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
+  const maps = useQuery({ queryKey: ['compliance-mappings'], enabled: tab === 'verify', queryFn: () => get<any>('/api/compliance/mappings') });
+  const [dlg, setDlg] = useState<null | 'new' | { map: string } | { submit: any } | { decide: any } | { history: any }>(null);
+  const hist = useQuery({ queryKey: ['compliance-mapping-history', (dlg as any)?.history?.id], enabled: !!(dlg as any)?.history, queryFn: () => get<any[]>(`/api/compliance/mappings/${(dlg as any).history.id}/history`) });
+  const refresh = () => ['packs', 'coverage', 'obligations', 'compliance-mappings'].forEach((k) => qc.invalidateQueries({ queryKey: [k] }));
   const r = useRunner(refresh);
   return (
     <ModuleWorkspace module={mod('compliance')} crumbs={[{ label: 'Compliance' }]} title="Regulatory and customer compliance"
-      tabs={[{ label: 'Packs', value: 'packs' }, { label: `Obligations (${obl.data?.length ?? 0})`, value: 'obl' }, { label: 'Coverage', value: 'cov' }]} tab={tab} onTab={setTab}
+      tabs={[{ label: 'Packs', value: 'packs' }, { label: `Obligations (${obl.data?.length ?? 0})`, value: 'obl' }, { label: 'Coverage', value: 'cov' }, { label: 'Content verification', value: 'verify' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}><SiteSelect value={site} onChange={setSite} />{can('compliance.edit') && <Button variant="contained" onClick={() => setDlg('new')}>Add obligation</Button>}</Stack>}>
       {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}
       {tab === 'packs' && <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 1.5 }}>
@@ -38,6 +48,7 @@ export function ComplianceHome() {
           <Paper key={p.code} data-testid="pack" sx={{ p: 2, borderTop: 4, borderColor: p.enabled ? 'success.main' : 'divider' }}>
             <Typography sx={{ fontWeight: 600 }}>{p.name}</Typography>
             <Typography variant="caption" color="text.secondary">{p.source} · {p.clauseCount} clauses (numbers and titles only)</Typography>
+            <Box sx={{ mt: 1 }}><VerificationChip v={p.verification} /></Box>
             <Box sx={{ mt: 1.5 }}>{can('compliance.edit') && <Button size="small" variant={p.enabled ? 'outlined' : 'contained'} onClick={() => r.run(() => post(`/api/compliance/packs/${p.code}/enable?siteId=${site}`, { enabled: !p.enabled }))}>{p.enabled ? 'Disable' : 'Enable for site'}</Button>}</Box>
           </Paper>))}
       </Box>}
@@ -46,12 +57,40 @@ export function ComplianceHome() {
           { header: 'Source', id: 's', accessorFn: (o: any) => sources[o.obligation.source] }, { header: 'Pack', id: 'p', accessorFn: (o: any) => o.obligation.packCode ?? 'Own' },
           { header: 'Evidence', id: 'm', accessorFn: (o: any) => o.mappings.length, cell: (x) => (x.getValue() ? <Chip size="small" color="success" label={`${x.getValue()} linked`} /> : <Chip size="small" label="Not mapped" />) },
           { header: '', id: 'a', cell: (x) => can('compliance.edit') && <Button size="small" onClick={() => setDlg({ map: x.row.original.obligation.id })}>Map evidence</Button> }]} />}
+      {tab === 'cov' && cov.data?.disclaimer && <Alert severity="info" sx={{ mb: 2 }} data-testid="coverage-disclaimer">{cov.data.disclaimer}</Alert>}
       {tab === 'cov' && cov.data && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-        <Section title="By pack"><Table size="small"><TableHead><TableRow>{['Pack', 'Obligations', 'Mapped', 'Audited', 'Coverage'].map((h) => <TableCell key={h}>{h}</TableCell>)}</TableRow></TableHead>
-          <TableBody>{cov.data.byPack.map((p: any) => <TableRow key={p.pack}><TableCell>{p.pack}</TableCell><TableCell>{p.total}</TableCell><TableCell>{p.mapped}</TableCell><TableCell>{p.audited}</TableCell>
+        <Section title="By pack"><Table size="small"><TableHead><TableRow>{['Pack', 'Content', 'Obligations', 'Mapped', 'Audited', 'Coverage'].map((h) => <TableCell key={h}>{h}</TableCell>)}</TableRow></TableHead>
+          <TableBody>{cov.data.byPack.map((p: any) => <TableRow key={p.pack}><TableCell>{p.pack}</TableCell><TableCell>{p.pack === '(own)' ? <Typography variant="caption">Own</Typography> : <VerificationChip v={{ state: p.verificationState, verified: p.contentVerified, label: p.verificationLabel }} />}</TableCell><TableCell>{p.total}</TableCell><TableCell>{p.mapped}</TableCell><TableCell>{p.audited}</TableCell>
             <TableCell sx={{ minWidth: 120 }}><LinearProgress variant="determinate" value={p.total ? (100 * p.mapped) / p.total : 0} /></TableCell></TableRow>)}</TableBody></Table></Section>
         <Section title="By source"><Table size="small"><TableBody>{cov.data.bySource.map((s: any) => <TableRow key={s.source}><TableCell>{s.source}</TableCell><TableCell>{s.mapped} / {s.total} mapped</TableCell></TableRow>)}</TableBody></Table></Section>
       </Box>}
+      {tab === 'verify' && maps.data && <>
+        <Alert severity="info" sx={{ mb: 2 }}>{maps.data.disclaimer}</Alert>
+        <DataTable data={maps.data.mappings.map((g: any) => ({ ...g.versions[0], status: g.status, count: g.versions.length }))} empty="No mapping content."
+          columns={[{ header: 'Content', id: 'n', accessorFn: (x: any) => x.name }, { header: 'Version', id: 'v', accessorFn: (x: any) => x.mappingVersion, cell: (x) => <span>v{x.getValue()} <Typography component="span" variant="caption" color="text.secondary">({x.row.original.packVersion})</Typography></span> },
+            { header: 'State', id: 's', accessorFn: (x: any) => x.state, cell: (x) => <Chip size="small" data-testid="mapping-state" color={stateColor[x.getValue()]} label={mappingStates[x.getValue()]} /> },
+            { header: 'Counts as', id: 'c', accessorFn: (x: any) => x.status.label, cell: (x) => <VerificationChip v={x.row.original.status} /> },
+            { header: 'Source', id: 'src', accessorFn: (x: any) => x.sourceTitle ?? '', cell: (x) => <Box><Typography variant="body2">{x.row.original.sourceTitle ?? '—'}</Typography><Typography variant="caption" color="text.secondary">{[x.row.original.edition, x.row.original.publisher].filter(Boolean).join(' · ')}</Typography></Box> },
+            { header: 'Verified', id: 'vd', accessorFn: (x: any) => x.verifiedOn ?? '', cell: (x) => x.getValue() ? `${x.getValue()} · ${x.row.original.verifiedByName ?? ''}` : '—' },
+            { header: '', id: 'a', cell: (x) => { const v = x.row.original; return <Stack direction="row" gap={0.5}>
+              {can('compliance.edit') && [0, 1, 5].includes(v.state) && <Button size="small" onClick={() => setDlg({ submit: v })}>Submit for review</Button>}
+              {can('compliance.verify') && v.state === 2 && <Button size="small" variant="contained" onClick={() => setDlg({ decide: v })}>Review</Button>}
+              {can('compliance.edit') && [3, 4].includes(v.state) && <Button size="small" onClick={() => r.run(() => post(`/api/compliance/mappings/${v.id}/revise`))}>New version</Button>}
+              <Button size="small" onClick={() => setDlg({ history: v })}>History</Button></Stack>; } }]} />
+      </>}
+      <StepDialog open={!!dlg && typeof dlg === 'object' && 'submit' in dlg} onClose={() => setDlg(null)} title="Submit for verification" confirm="Submit"
+        intro="Name the authoritative source the content was checked against. Record clause identifiers and references only; do not paste standard text."
+        inputs={[{ name: 'sourceTitle', label: 'Source title', initial: (dlg as any)?.submit?.sourceTitle ?? '' }, { name: 'edition', label: 'Edition', initial: (dlg as any)?.submit?.edition ?? '' },
+          { name: 'publisher', label: 'Owner / publisher', initial: (dlg as any)?.submit?.publisher ?? '' }, { name: 'reference', label: 'Reference (licensed copy, document number or URL)', initial: (dlg as any)?.submit?.reference ?? '' }, { name: 'comment', label: 'Comments', type: 'multiline' }]}
+        onConfirm={async (v) => { await post(`/api/compliance/mappings/${(dlg as any).submit.id}/submit`, v); refresh(); }} />
+      <StepDialog open={!!dlg && typeof dlg === 'object' && 'decide' in dlg} onClose={() => setDlg(null)} title="Review mapping content" confirm="Record decision"
+        intro={`${(dlg as any)?.decide?.name ?? ''} — checked against ${(dlg as any)?.decide?.sourceTitle ?? ''} (${(dlg as any)?.decide?.edition ?? ''}). You cannot review your own submission.`}
+        inputs={[{ name: 'verify', label: 'Decision', type: 'select', options: [['true', 'Verified — matches the source'], ['false', 'Rejected — does not match']], initial: 'true' }, { name: 'effectiveOn', label: 'Effective date', type: 'date' }, { name: 'comment', label: 'Review comments', type: 'multiline' }]}
+        onConfirm={async (v) => { await post(`/api/compliance/mappings/${(dlg as any).decide.id}/decision`, { verify: v.verify === 'true', comment: v.comment, effectiveOn: v.effectiveOn || null }); refresh(); }} />
+      {!!dlg && typeof dlg === 'object' && 'history' in dlg && <Paper variant="outlined" sx={{ p: 2, mt: 2 }} data-testid="mapping-history">
+        <Stack direction="row" alignItems="center"><Typography sx={{ fontWeight: 600, flex: 1 }}>History — {(dlg as any).history.name} v{(dlg as any).history.mappingVersion}</Typography><Button size="small" onClick={() => setDlg(null)}>Close</Button></Stack>
+        <Table size="small"><TableBody>{(hist.data ?? []).map((e: any) => <TableRow key={e.id}><TableCell>{fmtDateTime(e.at)}</TableCell><TableCell>{e.fromState == null ? '—' : mappingStates[e.fromState]} → {mappingStates[e.toState]}</TableCell><TableCell>{e.byName}</TableCell><TableCell>{e.comment}</TableCell></TableRow>)}</TableBody></Table>
+      </Paper>}
       <StepDialog open={dlg === 'new'} onClose={() => setDlg(null)} title="Add obligation" confirm="Add"
         inputs={[{ name: 'source', label: 'Source', type: 'select', options: sources.map((s, i) => [i, s]), initial: '0' }, { name: 'reference', label: 'Reference (e.g. customer-specific requirement section)' }, { name: 'title', label: 'Title' }, { name: 'party', label: 'Customer / authority' }]}
         onConfirm={async (v) => { await post('/api/compliance/obligations', { source: Number(v.source || 0), reference: v.reference, title: v.title, party: v.party, siteId: site }); refresh(); }} />

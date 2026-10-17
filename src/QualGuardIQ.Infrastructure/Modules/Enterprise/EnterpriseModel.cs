@@ -30,6 +30,8 @@ public partial class AppDbContext
     public DbSet<CapabilityStudy> CapabilityStudies => Set<CapabilityStudy>();
     public DbSet<RetentionPolicy> RetentionPolicies => Set<RetentionPolicy>();
     public DbSet<RetentionDecision> RetentionDecisions => Set<RetentionDecision>();
+    public DbSet<ComplianceMapping> ComplianceMappings => Set<ComplianceMapping>();
+    public DbSet<ComplianceMappingEvent> ComplianceMappingEvents => Set<ComplianceMappingEvent>();
     public DbSet<RetentionPolicyVersion> RetentionPolicyVersions => Set<RetentionPolicyVersion>();
     public DbSet<RecordConfidentiality> RecordConfidentialities => Set<RecordConfidentiality>();
     public DbSet<ContinuityExercise> ContinuityExercises => Set<ContinuityExercise>();
@@ -203,6 +205,20 @@ public partial class AppDbContext
             e.HasOne<Department>().WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(R);
             e.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(R);
             e.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(R);
+        });
+        b.Entity<ComplianceMapping>(e =>
+        {
+            e.ToTable("compliance_mappings"); e.HasIndex(x => new { x.Key, x.MappingVersion }).IsUnique();
+            e.Property(x => x.Key).HasMaxLength(60); e.Property(x => x.Name).HasMaxLength(200); e.Property(x => x.PackVersion).HasMaxLength(20); e.Property(x => x.ContentHash).HasMaxLength(64);
+            e.Property(x => x.SourceTitle).HasMaxLength(300); e.Property(x => x.Edition).HasMaxLength(100); e.Property(x => x.Publisher).HasMaxLength(300); e.Property(x => x.Reference).HasMaxLength(1000);
+            e.Property(x => x.VerifiedByName).HasMaxLength(300); e.Property(x => x.ReviewComments).HasMaxLength(4000);
+            UserReq(e, x => x.VerifiedById); UserReq(e, x => x.SubmittedById);
+        });
+        b.Entity<ComplianceMappingEvent>(e =>
+        {
+            e.ToTable("compliance_mapping_events"); e.HasIndex(x => x.MappingId);
+            e.Property(x => x.ByName).HasMaxLength(300); e.Property(x => x.Comment).HasMaxLength(4000);
+            e.HasOne<ComplianceMapping>().WithMany().HasForeignKey(x => x.MappingId).OnDelete(R);
         });
         b.Entity<RetentionPolicyVersion>(e =>
         {

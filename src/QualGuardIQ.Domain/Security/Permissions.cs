@@ -146,6 +146,8 @@ public static class Permissions
     /// <summary>Compliance obligations, packs and requirement mapping.</summary>
     public const string ComplianceView = "compliance.view";
     public const string ComplianceEdit = "compliance.edit";
+    /// <summary>Verify or reject compliance mapping content against an authoritative source.</summary>
+    public const string ComplianceVerify = "compliance.verify";
     /// <summary>Process, equipment, software and test method validation.</summary>
     public const string ValidationView = "validation.view";
     public const string ValidationEdit = "validation.edit";

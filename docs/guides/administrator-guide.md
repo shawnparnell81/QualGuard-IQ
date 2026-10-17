@@ -57,6 +57,26 @@ Use **Test** to evaluate a rule against an existing record. The firing log shows
   is shown per domain. A rule marked *blocking* stops change requests that would break it.
 - Changes to master data are requested, approved on the *Master data change* route, then applied automatically.
 
+## Compliance mapping verification (Compliance › Content verification)
+
+Shipped mapping content — every compliance pack's clause list and the PPAP submission level matrix — carries a
+verification state: Draft, Unverified, Under review, Verified, Superseded or Rejected. Each version records the source
+title, edition, owner/publisher, reference, verification date, verified by, review comments, effective and superseded
+dates, a pack version (content fingerprint) and a mapping version. Every state change is kept in the mapping history.
+
+- Packs, coverage and the PPAP page show the state. Unverified content is labelled "not verified", and coverage
+  carries a notice that mapping is an evidence aid, not a statement or guarantee of compliance.
+- A person with *compliance.edit* submits a version for review with the authoritative source it was checked against
+  (clause identifiers and references only, never standard text). A different person with *compliance.verify* verifies
+  or rejects it with comments. Rejected versions can be corrected and resubmitted.
+- "New version" starts a replacement draft (for example for a new edition); the verified version keeps counting until
+  the replacement is verified, then it is superseded. If an upgrade changes shipped content, the old version is
+  superseded automatically and the new one starts Unverified.
+- Shipped state on 17 October 2026: the PPAP matrix is Verified against AIAG PPAP 4th edition Table 4.2 as reproduced by
+  Quality-One ("PPAP Submission Levels" PDF) and Accurate Products ("Retention/Submission Requirements" PDF), which agree
+  cell by cell. It was not checked against a licensed copy of the AIAG manual. All pack clause lists, including
+  IATF 16949 and AS9100, are Unverified until checked against licensed copies of the standards.
+
 ## Retention, continuity and recovery
 
 - An active retention policy for a record type (without product family or regulatory category) sets the retention

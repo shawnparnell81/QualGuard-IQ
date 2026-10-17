@@ -10,7 +10,7 @@ public static class DocumentHelpers
     {
         var r = await c.PostOkAsync("/api/documents", new
         {
-            kind, title, documentType = kind == 0 ? "Procedure" : "Detail Drawing", siteId, departmentId = (Guid?)null, ownerId = (Guid?)null,
+            kind, title, documentType = kind switch { 0 => "Procedure", 1 => "Detail Drawing", _ => "Inspection Record" }, siteId, departmentId = (Guid?)null, ownerId = (Guid?)null,
             reviewIntervalMonths = 24, initialRevision = "A", partNumber, drawingSize = kind == 1 ? "B" : null, sheetCount = kind == 1 ? 2 : (int?)null, changeSummary = "Initial release"
         });
         return await r.Content.ReadFromJsonAsync<Guid>();

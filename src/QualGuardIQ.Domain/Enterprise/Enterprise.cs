@@ -181,6 +181,51 @@ public class ComplianceObligation : Entity, IAudited, ISiteScoped
     public string AuditLabel => $"obligation {Number} {Reference}";
 }
 
+public enum MappingVerificationState { Draft = 0, Unverified = 1, UnderReview = 2, Verified = 3, Superseded = 4, Rejected = 5 }
+public enum ComplianceMappingKind { CompliancePack = 0, PpapMatrix = 1 }
+
+/// <summary>
+/// Verification record for one version of shipped compliance mapping content (a pack's clause list or the PPAP matrix).
+/// Content stays Unverified until an authorized person checks it against a named authoritative source; nothing here is a
+/// statement that an organization complies with a standard.
+/// </summary>
+public class ComplianceMapping : Entity, IAudited
+{
+    public string Key { get; set; } = "";
+    public ComplianceMappingKind Kind { get; set; }
+    public string Name { get; set; } = "";
+    public int MappingVersion { get; set; } = 1;
+    /// <summary>Short fingerprint of the shipped content this version describes.</summary>
+    public string PackVersion { get; set; } = "";
+    public string ContentHash { get; set; } = "";
+    public MappingVerificationState State { get; set; } = MappingVerificationState.Unverified;
+    public string? SourceTitle { get; set; }
+    public string? Edition { get; set; }
+    public string? Publisher { get; set; }
+    public string? Reference { get; set; }
+    public DateOnly? VerifiedOn { get; set; }
+    public Guid? VerifiedById { get; set; }
+    public string? VerifiedByName { get; set; }
+    public string? ReviewComments { get; set; }
+    public DateOnly? EffectiveOn { get; set; }
+    public DateOnly? SupersededOn { get; set; }
+    public Guid? SubmittedById { get; set; }
+    public string AuditLabel => $"compliance mapping {Key} v{MappingVersion}";
+}
+
+/// <summary>State change of a compliance mapping (who, from, to, when, comment). Never changed.</summary>
+public class ComplianceMappingEvent : Entity, IAudited, IAppendOnly
+{
+    public Guid MappingId { get; set; }
+    public MappingVerificationState? FromState { get; set; }
+    public MappingVerificationState ToState { get; set; }
+    public Guid? ById { get; set; }
+    public string ByName { get; set; } = "";
+    public DateTimeOffset At { get; set; }
+    public string? Comment { get; set; }
+    public string AuditLabel => $"compliance mapping {FromState} → {ToState}";
+}
+
 public class CompliancePackActivation : Entity, IAudited
 {
     public string PackCode { get; set; } = "";

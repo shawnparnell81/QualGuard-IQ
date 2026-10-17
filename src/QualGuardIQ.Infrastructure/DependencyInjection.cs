@@ -212,6 +212,7 @@ public static class DependencyInjection
         s.AddScoped<Modules.Enterprise.ProjectService>();
         s.AddScoped<Modules.Enterprise.GovernanceService>();
         s.AddScoped<Modules.Enterprise.RetentionEngine>();
+        s.AddScoped<Modules.Enterprise.ComplianceMappingService>();
         s.AddScoped<Modules.Enterprise.ImpactService>();
         s.AddScoped<Jobs.WorkforceJob>();
         void P<T>(string type, string view, string edit, Func<T, (string, string, string, string, bool)> d) where T : QualGuardIQ.Domain.Common.Entity, QualGuardIQ.Domain.Common.ISiteScoped =>

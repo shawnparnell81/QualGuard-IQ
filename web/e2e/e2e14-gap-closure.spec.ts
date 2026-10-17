@@ -159,4 +159,20 @@ test.describe('E2E 14: gap closure', () => {
     await expect(page.getByTestId('library-page')).toHaveText('Page 1 of 22');
     await expect(page.getByText(`${tag}-0001.pdf`)).toBeVisible();
   });
+
+  test('compliance mapping content shows its verification state and unverified packs never read as compliance', async ({ page }) => {
+    await signIn(page, users.admin);
+    await page.goto('/compliance');
+    const iatf = page.getByTestId('pack').filter({ hasText: 'IATF 16949' });
+    await expect(iatf.getByTestId('verification-chip')).toHaveText(/not verified/);
+    await page.getByRole('tab', { name: 'Coverage' }).click();
+    await expect(page.getByTestId('coverage-disclaimer')).toContainText('not a statement or guarantee');
+    await page.getByRole('tab', { name: 'Content verification' }).click();
+    const ppap = page.getByRole('row').filter({ hasText: 'PPAP submission level matrix' });
+    await expect(ppap.getByTestId('mapping-state')).toHaveText('Verified');
+    await expect(ppap).toContainText('Quality-One');
+    for (const name of ['IATF 16949', 'AS9100']) await expect(page.getByRole('row').filter({ hasText: name }).first().getByTestId('mapping-state')).toHaveText('Unverified');
+    await ppap.getByRole('button', { name: 'History' }).click();
+    await expect(page.getByTestId('mapping-history')).toContainText('Verified');
+  });
 });

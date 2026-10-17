@@ -1070,6 +1070,163 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("capability_studies", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Enterprise.ComplianceMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Edition")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateOnly?>("EffectiveOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MappingVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PackVersion")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Publisher")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ReviewComments")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("SourceTitle")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("State")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SubmittedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("SupersededOn")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("VerifiedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("VerifiedByName")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateOnly?>("VerifiedOn")
+                        .HasColumnType("date");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SubmittedById");
+
+                    b.HasIndex("VerifiedById");
+
+                    b.HasIndex("Key", "MappingVersion")
+                        .IsUnique();
+
+                    b.ToTable("compliance_mappings", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Enterprise.ComplianceMappingEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ByName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("FromState")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("MappingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("ToState")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MappingId");
+
+                    b.ToTable("compliance_mapping_events", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Enterprise.ComplianceObligation", b =>
                 {
                     b.Property<Guid>("Id")
@@ -16583,6 +16740,28 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasOne("QualGuardIQ.Domain.Organization.Site", null)
                         .WithMany()
                         .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Enterprise.ComplianceMapping", b =>
+                {
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("SubmittedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("VerifiedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Enterprise.ComplianceMappingEvent", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Enterprise.ComplianceMapping", null)
+                        .WithMany()
+                        .HasForeignKey("MappingId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

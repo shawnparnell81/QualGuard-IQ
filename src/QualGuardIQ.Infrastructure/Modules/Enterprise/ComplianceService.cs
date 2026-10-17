@@ -23,7 +23,7 @@ public sealed record ObligationRow(ComplianceObligation Obligation, List<RecordI
 /// compliance-packs.json); enabling a pack for a site creates one obligation per clause. Mapping an obligation to procedures,
 /// forms, records or audits uses the shared relationship engine. No compliance logic is hard-coded per standard.
 /// </summary>
-public sealed class ComplianceService(AppDbContext db, ModuleSupport m, INumberingService numbers, IRecordRegistry records)
+public sealed class ComplianceService(AppDbContext db, ModuleSupport m, INumberingService numbers, IRecordRegistry records, ComplianceMappingService mappings)
 {
     public const string ObligationType = "ComplianceObligation";
     public static readonly string[] MappableTypes = ["Document", "FormTemplate", "FormRecord", "Audit", "AuditProgram", "TrainingCourse", "ControlPlan", "Pfmea", "Validation", "Ncr", "Capa", "Equipment", "Skill", "TrainingCurriculum", "CorporateStandard"];
@@ -42,7 +42,9 @@ public sealed class ComplianceService(AppDbContext db, ModuleSupport m, INumberi
     {
         await m.RequireAsync(Permissions.ComplianceView, siteId, null, ct);
         var active = await db.CompliancePackActivations.AsNoTracking().Where(a => a.SiteId == siteId && a.Enabled).Select(a => a.PackCode).ToListAsync(ct);
-        return Packs.Select(p => new { p.Code, p.Name, p.Source, ClauseCount = p.Clauses.Count, Enabled = active.Contains(p.Code) });
+        var status = await mappings.StatusesAsync(ct);
+        return Packs.Select(p => new { p.Code, p.Name, p.Source, ClauseCount = p.Clauses.Count, Enabled = active.Contains(p.Code),
+            Verification = status.GetValueOrDefault("pack:" + p.Code) ?? new MappingStatus("pack:" + p.Code, p.Name, 0, MappingVerificationState.Unverified, false, "Unverified", ComplianceMappingService.Disclaimer) });
     }
 
     public async Task<int> EnablePackAsync(string code, Guid siteId, bool enabled, CancellationToken ct)
@@ -139,10 +141,19 @@ public sealed class ComplianceService(AppDbContext db, ModuleSupport m, INumberi
         var rows = await db.ComplianceObligations.AsNoTracking().Where(o => o.SiteId == siteId && o.Applicable)
             .Select(o => new { o.PackCode, o.Source, Mapped = db.RecordLinks.Any(l => l.FromType == ObligationType && l.FromId == o.Id),
                 Audited = db.RecordLinks.Any(l => l.FromType == ObligationType && l.FromId == o.Id && (l.ToType == "Audit" || l.ToType == "AuditProgram")) }).ToListAsync(ct);
+        var status = await mappings.StatusesAsync(ct);
         return new
         {
             Total = rows.Count, Mapped = rows.Count(r => r.Mapped), Audited = rows.Count(r => r.Audited),
-            ByPack = rows.GroupBy(r => r.PackCode ?? "(own)").Select(g => new { Pack = g.Key, Total = g.Count(), Mapped = g.Count(r => r.Mapped), Audited = g.Count(r => r.Audited) }).OrderBy(x => x.Pack),
+            // Coverage counts mapped evidence only. It is never presented as compliance, and unverified pack content is labelled as such.
+            ComplianceMappingService.Disclaimer,
+            ByPack = rows.GroupBy(r => r.PackCode ?? "(own)").Select(g =>
+            {
+                var v = g.Key == "(own)" ? null : status.GetValueOrDefault("pack:" + g.Key);
+                return new { Pack = g.Key, Total = g.Count(), Mapped = g.Count(r => r.Mapped), Audited = g.Count(r => r.Audited),
+                    VerificationState = g.Key == "(own)" ? (MappingVerificationState?)null : v?.State ?? MappingVerificationState.Unverified, ContentVerified = v?.Verified ?? false,
+                    VerificationLabel = g.Key == "(own)" ? "Organization's own obligations" : v?.Label ?? "Unverified — not verified against an authoritative source" };
+            }).OrderBy(x => x.Pack),
             BySource = rows.GroupBy(r => r.Source).Select(g => new { Source = g.Key.ToString(), Total = g.Count(), Mapped = g.Count(r => r.Mapped) })
         };
     }
