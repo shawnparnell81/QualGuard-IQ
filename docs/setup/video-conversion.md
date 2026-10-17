@@ -20,7 +20,8 @@ the original otherwise.
 | `Video:TimeoutMinutes` | `30` | A conversion running longer is stopped and retried. |
 | `Video:MaxAttempts` | `3` | Attempts before a conversion is marked Failed (retries after 5 min, 30 min, 2 h). |
 
-Environment variables use double underscores, e.g. `Video__FfmpegPath=/usr/bin/ffmpeg`.
+Environment variables use double underscores, e.g. `Video__FfmpegPath=/usr/bin/ffmpeg`. The API and worker images in
+`deploy/` install ffmpeg and `docker-compose.yml` sets this path on both, so the Docker setup converts out of the box.
 
 Without `Video:FfmpegPath` uploads are still accepted and queued; the content library shows *Playback copies are not
 being made* with this requirement, nothing is marked as converted, and no attempts are used up. Queued videos are
