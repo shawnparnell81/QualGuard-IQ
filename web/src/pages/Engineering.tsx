@@ -28,7 +28,7 @@ export function RequirementList() {
   const q = useQuery({ queryKey: ['requirements'], queryFn: () => get<any[]>('/api/engineering/requirements') });
   const tr = useQuery({ queryKey: ['traceability'], enabled: tab === 'matrix', queryFn: () => get<any>('/api/engineering/traceability') });
   return (
-    <ModuleWorkspace module={mod('engineering')} crumbs={[{ label: 'Engineering' }]} title="Product requirements"
+    <ModuleWorkspace module={mod('product-design')} crumbs={[{ label: 'Engineering' }]} title="Product requirements"
       tabs={[{ label: 'Register', value: 'list' }, { label: 'Traceability matrix', value: 'matrix' }]} tab={tab} onTab={setTab}
       actions={<Button variant="contained" onClick={() => setOpen(true)}>New requirement</Button>}>
       {tab === 'list' && <DataTable data={q.data ?? []} onRowClick={(r) => nav(`/engineering/requirements/${r.id}`)} empty="No requirements captured."
@@ -71,7 +71,7 @@ export function RequirementDetail() {
   if (!q.data) return <Loading m="engineering" crumbs={crumbs('Requirement')} q={q} />;
   const d = q.data; const req = d.requirement;
   return (
-    <ModuleWorkspace module={mod('engineering')} crumbs={crumbs(req.number)} title={`${req.number} · ${req.title}`}
+    <ModuleWorkspace module={mod('product-design')} crumbs={crumbs(req.number)} title={`${req.number} · ${req.title}`}
       actions={<Stack direction="row" gap={1}>{req.status === 0 && can('engineering.approve') && <Button variant="outlined" onClick={() => r.run(() => post(`/api/engineering/requirements/${id}/approve`))}>Approve</Button>}<Button variant="outlined" onClick={() => setDlg('revise')}>Revise</Button><Button variant="contained" onClick={() => setDlg('trace')}>Add trace link</Button></Stack>}>
       {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}
       <Stack direction={{ xs: 'column', md: 'row' }} gap={2}>
@@ -111,7 +111,7 @@ export function DesignReviewList() {
   const q = useQuery({ queryKey: ['design-reviews'], queryFn: () => get<any[]>('/api/engineering/reviews') });
   const [open, setOpen] = useState(false);
   return (
-    <ModuleWorkspace module={mod('engineering')} crumbs={crumbs('Design reviews')} title="Design reviews" actions={<Button variant="contained" onClick={() => setOpen(true)}>Plan review</Button>}>
+    <ModuleWorkspace module={mod('product-design')} crumbs={crumbs('Design reviews')} title="Design reviews" actions={<Button variant="contained" onClick={() => setOpen(true)}>Plan review</Button>}>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(5, 1fr)' }, gap: 1.5 }}>
         {reviewKinds.map((k, i) => (
           <Paper key={k} variant="outlined" sx={{ p: 1, bgcolor: 'grey.50', minHeight: 160 }} data-testid={`gate-${k}`}>
@@ -139,7 +139,7 @@ export function DesignReviewDetail() {
   if (!q.data) return <Loading m="engineering" crumbs={crumbs('Design review')} q={q} />;
   const d = q.data; const rv = d.review;
   return (
-    <ModuleWorkspace module={mod('engineering')} crumbs={[{ label: 'Engineering', to: '/engineering' }, { label: 'Design reviews', to: '/engineering/reviews' }, { label: rv.number }]} title={`${rv.number} · ${rv.title}`}
+    <ModuleWorkspace module={mod('product-design')} crumbs={[{ label: 'Engineering', to: '/engineering' }, { label: 'Design reviews', to: '/engineering/reviews' }, { label: rv.number }]} title={`${rv.number} · ${rv.title}`}
       actions={<Stack direction="row" gap={1}>
         <Button variant="outlined" onClick={() => setDlg('finding')}>Add finding</Button><Button variant="outlined" onClick={() => setDlg('action')}>Add action</Button>
         {rv.status === 0 && <Button variant="outlined" onClick={() => setDlg('hold')}>Record meeting</Button>}
@@ -175,7 +175,7 @@ export function BomQuality() {
   const r = useRunner(() => qc.invalidateQueries({ queryKey: ['bom', part] }));
   const lines = q.data?.lines ?? [];
   return (
-    <ModuleWorkspace module={mod('engineering')} crumbs={crumbs('BOM quality')} title="Bill of materials quality"
+    <ModuleWorkspace module={mod('product-design')} crumbs={crumbs('BOM quality')} title="Bill of materials quality"
       tabs={[{ label: 'Engineering BOM', value: '1' }, { label: 'Manufacturing BOM', value: '0' }, { label: 'Change history', value: 'h' }]} tab={tab} onTab={setTab}
       actions={part && tab !== 'h' ? <Button variant="contained" onClick={() => setOpen(true)}>Add line</Button> : undefined}>
       <TextField select size="small" label="Parent part" value={part} onChange={(e) => setPart(e.target.value)} sx={{ minWidth: 320, mb: 2 }}>
@@ -204,7 +204,7 @@ export function Variants() {
   const q = useQuery({ queryKey: ['variants', product], enabled: !!product, queryFn: () => get<any[]>(`/api/engineering/products/${product}/variants`) });
   const split = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
   return (
-    <ModuleWorkspace module={mod('engineering')} crumbs={crumbs('Variants')} title="Product configuration and variants" actions={product ? <Button variant="contained" onClick={() => setOpen(true)}>New variant</Button> : undefined}>
+    <ModuleWorkspace module={mod('product-design')} crumbs={crumbs('Variants')} title="Product configuration and variants" actions={product ? <Button variant="contained" onClick={() => setOpen(true)}>New variant</Button> : undefined}>
       <TextField select size="small" label="Product" value={product} onChange={(e) => setProduct(e.target.value)} sx={{ minWidth: 320, mb: 2 }}>
         {(products.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}</TextField>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>

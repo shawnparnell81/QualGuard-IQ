@@ -159,3 +159,58 @@ public class RecoveryObjective : Entity, IAudited
     public Guid? ProcedureDocumentId { get; set; }
     public string AuditLabel => $"recovery objective {Scenario}";
 }
+
+public enum ExtensionKind { AddOn = 0, QualityExtension = 1, IndustryPack = 2 }
+
+/// <summary>
+/// A marketplace package version: what it is, what it needs (platform modules as "module:X", other packages by key), whether it needs a license,
+/// and the configuration it installs through the existing engines (business rules, data quality rules, form library components).
+/// </summary>
+public class ExtensionPackage : Entity, IAudited
+{
+    public string Key { get; set; } = "";
+    public string Name { get; set; } = "";
+    public ExtensionKind Kind { get; set; }
+    public string Publisher { get; set; } = "";
+    public string Version { get; set; } = "1.0.0";
+    public string Description { get; set; } = "";
+    public List<string> DependsOn { get; set; } = [];
+    public bool RequiresLicense { get; set; }
+    public bool BuiltIn { get; set; }
+    public string ContentJson { get; set; } = "{}";
+    public string AuditLabel => $"extension package {Key} {Version}";
+}
+
+public class InstalledItem
+{
+    public string Type { get; set; } = "";
+    public Guid Id { get; set; }
+    public string Label { get; set; } = "";
+}
+
+public class InstalledItems { public List<InstalledItem> Items { get; set; } = []; }
+
+/// <summary>An installed package on this installation, with the version installed and the configuration items it created.</summary>
+public class ExtensionInstallation : Entity, IAudited
+{
+    public string Key { get; set; } = "";
+    public string Version { get; set; } = "";
+    public bool Enabled { get; set; } = true;
+    public DateTimeOffset InstalledAt { get; set; }
+    public Guid InstalledById { get; set; }
+    public InstalledItems Created { get; set; } = new();
+    public string AuditLabel => $"extension {Key} {Version}";
+}
+
+/// <summary>A signed license activated on this installation. The key itself is not stored, only its SHA-256.</summary>
+public class ExtensionLicense : Entity, IAudited
+{
+    public string LicenseId { get; set; } = "";
+    public string Licensee { get; set; } = "";
+    public List<string> Extensions { get; set; } = [];
+    public DateTimeOffset IssuedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+    public string KeyHash { get; set; } = "";
+    public bool Revoked { get; set; }
+    public string AuditLabel => $"license {LicenseId}";
+}

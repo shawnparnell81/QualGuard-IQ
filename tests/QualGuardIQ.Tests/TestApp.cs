@@ -31,7 +31,11 @@ public sealed class TestApp : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Storage:AccessKey", Environment.GetEnvironmentVariable("QMS_TEST_S3_KEY") ?? "qgiqminio");
         builder.UseSetting("Storage:SecretKey", Environment.GetEnvironmentVariable("QMS_TEST_S3_SECRET") ?? "qgiqminio-local-dev");
         builder.UseSetting("Storage:Bucket", "qms-test");
+        builder.UseSetting("Licensing:PublicKeyPem", LicenseSigner.ExportSubjectPublicKeyInfoPem());
     }
+
+    /// <summary>Test-only publisher key used to sign marketplace licenses.</summary>
+    public static readonly System.Security.Cryptography.ECDsa LicenseSigner = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
 
     public async Task InitializeAsync()
     {

@@ -399,10 +399,29 @@ public sealed class PlatformService(AppDbContext db, ModuleSupport m, IAccessSer
     }
 
     /// <summary>Module (plugin) registry: every module registers its record types; the platform reports versions, dependencies and initialization state.</summary>
+    static readonly Type[] ModuleTypes = typeof(PlatformService).Assembly.GetTypes().Where(t => t.Namespace?.StartsWith("QualGuardIQ.Infrastructure.Modules.", StringComparison.Ordinal) == true).ToArray();
+    /// <summary>Code modules are the namespaces under Infrastructure.Modules.</summary>
+    static readonly Lazy<string[]> ModuleNames = new(() => ModuleTypes.Select(t => t.Namespace!.Split('.')[3]).Distinct().Order().ToArray());
+    /// <summary>A record type belongs to the module whose service declares its type-name constant (e.g. NcrService.RecordType = "Ncr" → Quality, FaiService → Fai).</summary>
+    static readonly Lazy<Dictionary<string, string>> RecordTypeModules = new(() =>
+    {
+        var map = new Dictionary<string, string>();
+        foreach (var t in ModuleTypes)
+            foreach (var f in t.GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static).Where(f => f.IsLiteral && f.FieldType == typeof(string) && f.Name.EndsWith("Type", StringComparison.Ordinal)))
+                map.TryAdd((string)f.GetRawConstantValue()!, t.Namespace!.Split('.')[3]);
+        return map;
+    });
+
     public object Modules()
     {
         var version = typeof(PlatformService).Assembly.GetName().Version?.ToString() ?? "1.0.0";
-        var byModule = providers.GroupBy(p => p.GetType().Namespace?.Split('.').LastOrDefault() ?? "Core").ToDictionary(g => g.Key, g => g.Select(p => p.Type).OrderBy(x => x).ToList());
+        var byModule = ModuleNames.Value.ToDictionary(n => n, _ => new List<string>());
+        foreach (var p in providers)
+        {
+            var module = RecordTypeModules.Value.GetValueOrDefault(p.Type) ?? p.GetType().Namespace?.Split('.').LastOrDefault() ?? "Core";
+            (byModule.TryGetValue(module, out var list) ? list : byModule[module] = []).Add(p.Type);
+        }
+        foreach (var l in byModule.Values) l.Sort(StringComparer.Ordinal);
         var deps = new Dictionary<string, string[]>
         {
             ["Quality"] = ["Core"], ["Documents"] = ["Core"], ["Complaints"] = ["Quality", "MasterData"], ["Inspection"] = ["Quality", "MasterData"], ["Fai"] = ["Inspection", "Documents"],
