@@ -35,7 +35,7 @@ public sealed class RiskService(AppDbContext db, ModuleSupport m, INumberingServ
         [new(1, "Certain to detect"), new(2, "High"), new(3, "Moderate"), new(4, "Low"), new(5, "Undetectable")],
         false,
         [new(1, "Low", "#2e7d32", false, false), new(5, "Medium", "#f9a825", false, false), new(10, "High", "#ef6c00", true, false), new(17, "Critical", "#c62828", true, true)],
-        ["Organizational", "Process", "Product", "Project", "Supplier", "Customer", "Equipment", "Quality", "Operational", "Change", "System", "Improvement opportunity"]);
+        ["Strategic", "Organizational", "Process", "Product", "Project", "Supplier", "Customer", "Equipment", "Quality", "Operational", "Change", "System", "Improvement opportunity"]);
 
     public async Task<RiskSettingsDto> GetSettingsAsync(CancellationToken ct)
     {

@@ -83,7 +83,7 @@ public sealed partial class IntelligenceService(AppDbContext db, ModuleSupport m
         var q = await m.ScopeAsync(db.Risks.AsNoTracking(), Permissions.RisksView, ct);
         var risks = await q.Where(r => (siteId == null || r.SiteId == siteId) && r.Kind == RiskKind.Risk && r.Status != RiskStatus.Cancelled)
             .Select(r => new { r.Id, r.Number, r.Title, r.Category, r.SiteId, r.Status, P = r.ResidualProbability ?? r.Probability, S = r.ResidualSeverity ?? r.Severity, Score = r.ResidualScore ?? r.InitialScore, Band = r.ResidualBand ?? r.InitialBand, r.CreatedAt, r.UpdatedAt }).ToListAsync(ct);
-        string Cat(string c) => EnterpriseRiskCategories.FirstOrDefault(x => string.Equals(x, c, StringComparison.OrdinalIgnoreCase)) ?? "Operational";
+        string Cat(string c) => c is "Organizational" or "Project" ? "Strategic" : c is "Quality" or "Equipment" or "Process" ? (c == "Quality" ? "Product" : "Operational") : EnterpriseRiskCategories.FirstOrDefault(x => string.Equals(x, c, StringComparison.OrdinalIgnoreCase)) ?? "Operational";
         var open = risks.Where(r => r.Status != RiskStatus.Closed).ToList();
         var heat = Enumerable.Range(1, 5).SelectMany(p => Enumerable.Range(1, 5).Select(s => new { Probability = p, Severity = s, Count = open.Count(r => r.P == p && r.S == s) })).ToList();
         var today = DateOnly.FromDateTime(m.Now.UtcDateTime);
@@ -95,7 +95,7 @@ public sealed partial class IntelligenceService(AppDbContext db, ModuleSupport m
             Closed = risks.Count(r => r.Status == RiskStatus.Closed && r.UpdatedAt.ToString("yyyy-MM") == mo),
             Open = risks.Count(r => string.Compare(r.CreatedAt.ToString("yyyy-MM"), mo, StringComparison.Ordinal) <= 0 && !(r.Status == RiskStatus.Closed && string.Compare(r.UpdatedAt.ToString("yyyy-MM"), mo, StringComparison.Ordinal) <= 0))
         }).ToList();
-        var byCat = EnterpriseRiskCategories.Select(c => new { Category = c, Open = open.Count(r => Cat(r.Category) == c), High = open.Count(r => Cat(r.Category) == c && r.Band == "High"), AvgScore = open.Where(r => Cat(r.Category) == c).Select(r => (decimal)r.Score).DefaultIfEmpty().Average() }).ToList();
+        var byCat = EnterpriseRiskCategories.Select(c => new { Category = c, Open = open.Count(r => Cat(r.Category) == c), High = open.Count(r => Cat(r.Category) == c && (r.Band == "High" || r.Band == "Critical")), AvgScore = open.Where(r => Cat(r.Category) == c).Select(r => (decimal)r.Score).DefaultIfEmpty().Average() }).ToList();
         var supplierHigh = (await SupplierRiskAsync(null, null, ct)).Where(s => s.Level == "High").Take(10).ToList();
         return new { Heatmap = heat, Categories = byCat, Ranking = open.OrderByDescending(r => r.Score).Take(25).Select(r => new { r.Id, r.Number, r.Title, Category = Cat(r.Category), r.P, r.S, r.Score, r.Band }), Trend = trend, SupplierRisks = supplierHigh };
     }

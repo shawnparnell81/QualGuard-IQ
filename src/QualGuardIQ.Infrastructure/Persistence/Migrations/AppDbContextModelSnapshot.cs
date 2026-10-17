@@ -5488,10 +5488,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("SupplierId");
 
-                    b.HasIndex("ParentPartId", "ParentRevision", "ComponentPartId")
+                    b.HasIndex("ParentPartId", "ParentRevision", "BomType", "ComponentPartId")
                         .IsUnique();
 
-                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("ParentPartId", "ParentRevision", "ComponentPartId"), false);
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("ParentPartId", "ParentRevision", "BomType", "ComponentPartId"), false);
 
                     b.ToTable("bom_lines", "qms");
                 });
