@@ -1912,6 +1912,229 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("capas", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.ChangeItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid>("ChangeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ClosedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CompletionNotes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid?>("EvidenceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("EvidenceLabel")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("EvidenceType")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid?>("RecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecordLabel")
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)");
+
+                    b.Property<string>("RecordType")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("RequiredAction")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ChangeId");
+
+                    b.HasIndex("RecordType", "RecordId");
+
+                    b.ToTable("ChangeItems", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.ChangeRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ChangeType")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("CommunicationPlan")
+                        .HasColumnType("text");
+
+                    b.Property<decimal?>("CostImpact")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CurrentCondition")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ImpactAnalysis")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImplementationNotes")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ImplementationPlan")
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly?>("ImplementedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Justification")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("PlannedEffectiveOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("PostImplementationReview")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ProposedCondition")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("ReopenCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReopenReason")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("RequesterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Risk")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RiskAssessment")
+                        .HasColumnType("text");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("ScheduleImpact")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ValidationPlan")
+                        .HasColumnType("text");
+
+                    b.Property<string>("VerificationNotes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("VerifiedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool?>("WasEffective")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("RequesterId");
+
+                    b.HasIndex("SiteId", "Status");
+
+                    b.ToTable("ChangeRequests", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.Complaint", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4643,6 +4866,30 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasOne("QualGuardIQ.Domain.Organization.Site", null)
                         .WithMany()
                         .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.ChangeItem", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Quality.ChangeRequest", null)
+                        .WithMany()
+                        .HasForeignKey("ChangeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.ChangeRequest", b =>
+                {
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RequesterId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });

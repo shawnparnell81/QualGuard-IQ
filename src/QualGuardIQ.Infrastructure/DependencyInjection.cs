@@ -102,6 +102,11 @@ public static class DependencyInjection
         s.AddScoped<SupplierQualityService>();
         s.AddScoped<Modules.Complaints.ComplaintService>();
         s.AddScoped<Modules.Inspection.InspectionService>();
+        s.AddScoped<Modules.Changes.ChangeService>();
+        P<ChangeRequest>(Modules.Changes.ChangeService.RecordType, Permissions.ChangesView, Permissions.ChangesEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/changes/{x.Id}", x.Status is ChangeStatus.Closed or ChangeStatus.Cancelled or ChangeStatus.InReview));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Changes.ChangeService.RecordType,
+            (id, ct) => sp.GetRequiredService<Modules.Changes.ChangeService>().OnApprovedAsync(id, ct),
+            (id, c, ct) => sp.GetRequiredService<Modules.Changes.ChangeService>().OnRejectedAsync(id, c, ct)));
         P<InspectionPlan>(Modules.Inspection.InspectionService.PlanType, Permissions.InspectionView, Permissions.InspectionEdit, x => (x.Number, x.Title, x.IsObsolete ? "Obsolete" : "Active", $"/inspection/plans/{x.Id}", false));
         P<InspectionPlanRevision>(Modules.Inspection.InspectionService.RevisionType, Permissions.InspectionView, Permissions.InspectionEdit, x => (x.PlanNumber + " rev " + x.Revision, "Inspection plan revision " + x.Revision, x.Status.ToString(), $"/inspection/plans/{x.PlanId}", x.Status != PlanRevisionStatus.Draft));
         P<Inspection>(Modules.Inspection.InspectionService.RecordType, Permissions.InspectionView, Permissions.InspectionEdit, x => (x.Number, $"{x.InspectionType} inspection {x.PartNumber} {x.LotNumber}".Trim(), x.Status.ToString(), $"/inspection/{x.Id}", x.Status is InspectionStatus.Released or InspectionStatus.Rejected or InspectionStatus.Cancelled));

@@ -56,5 +56,6 @@ public partial class AppDbContext
         ConfigureMasterData(b);
         ConfigureComplaints(b);
         ConfigureInspection(b);
+        ConfigureChanges(b);
     }
 }
