@@ -6,6 +6,12 @@ certified or compliant.
 
 The application and organization names are configuration (Organization settings, seeded from `Seed:*`).
 
+## Modules
+
+Document Control, Drawings (Products & Engineering), Controlled Forms, Nonconformances (NCR), CAPA, Audits,
+Training and Calibration, on shared engines for approvals with electronic signatures, actions, attachments,
+comments, record links, notifications, custom fields, search, numbering and the audit trail.
+
 ## Layout
 
 | Project | Purpose |
