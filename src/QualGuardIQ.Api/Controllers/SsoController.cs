@@ -93,7 +93,9 @@ public sealed class SsoAdminController(SsoService sso, AppDbContext db, IAccessS
         IReadOnlyList<string> AllowedDomains, IReadOnlyList<string> SsoRequiredDomains, bool JitEnabled, Guid? JitDefaultRoleId, bool TrustProviderMfa, bool IsEnabled,
         DateTimeOffset? LastTestAt, bool LastTestSucceeded, string? LastTestBy, SsoTestReport? LastTest, bool TestCurrent, int LinkedAccounts, uint RowVersion);
     public sealed record AdminRow(Guid Id, string Email, string DisplayName, bool BreakGlass, bool MfaEnabled);
-    public sealed record ViewDto(string CallbackUrl, IReadOnlyList<ProviderDto> Providers, IReadOnlyList<AdminRow> Administrators);
+    public sealed record RoleOption(Guid Id, string Name);
+    /// <summary>JitRoles: roles that may be given automatically to accounts created at first sign-in (none with administration permissions).</summary>
+    public sealed record ViewDto(string CallbackUrl, IReadOnlyList<ProviderDto> Providers, IReadOnlyList<AdminRow> Administrators, IReadOnlyList<RoleOption> JitRoles);
     public sealed record BreakGlassRequest(bool Enabled);
 
     [HttpGet]
@@ -107,7 +109,10 @@ public sealed class SsoAdminController(SsoService sso, AppDbContext db, IAccessS
                 admins.Add(new AdminRow(u.Id, u.Email!, u.DisplayName, u.SsoBreakGlass, u.MfaSecret != null));
         string callback;
         try { callback = SsoController.RedirectUri(config, env, Request); } catch (AppException e) { callback = e.Message; }
-        return new ViewDto(callback, list.Select(p => Dto(p, links.GetValueOrDefault(p.Id))).ToList(), admins);
+        var global = Permissions.GlobalOnly.ToArray();
+        var roles = await db.QmsRoles.AsNoTracking().Where(r => !r.Permissions.Any(x => global.Contains(x.Permission))).OrderBy(r => r.Name)
+            .Select(r => new RoleOption(r.Id, r.Name)).ToListAsync(ct);
+        return new ViewDto(callback, list.Select(p => Dto(p, links.GetValueOrDefault(p.Id))).ToList(), admins, roles);
     }
 
     static ProviderDto Dto(IdentityProvider p, int linked)

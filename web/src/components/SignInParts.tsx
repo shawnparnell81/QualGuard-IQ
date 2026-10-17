@@ -162,3 +162,51 @@ export function RecoveryCodes({ codes, appName, account, onDone, doneLabel = 'Co
 }
 
 export const visuallyHidden = { position: 'absolute', width: 1, height: 1, p: 0, m: -1, overflow: 'hidden', clip: 'rect(0 0 0 0)', whiteSpace: 'nowrap', border: 0 } as const;
+
+export type ProviderKind = 'Entra' | 'Google' | 'Okta' | 'Oidc';
+export interface SsoProviderButton { id: string; displayName: string; kind: ProviderKind }
+export const useSsoProviders = () => useQuery({ queryKey: ['sso-providers'], queryFn: () => get<SsoProviderButton[]>('/api/auth/sso/providers'), staleTime: 60_000 });
+
+/** Small provider mark for the sign-in buttons (drawn here; nothing is loaded from the provider). */
+export function ProviderMark({ kind, size = 18 }: { kind: ProviderKind; size?: number }) {
+  if (kind === 'Entra') return (
+    <svg width={size} height={size} viewBox="0 0 21 21" aria-hidden="true"><rect x="1" y="1" width="9" height="9" fill="#f25022" /><rect x="11" y="1" width="9" height="9" fill="#7fba00" /><rect x="1" y="11" width="9" height="9" fill="#00a4ef" /><rect x="11" y="11" width="9" height="9" fill="#ffb900" /></svg>
+  );
+  if (kind === 'Google') return (
+    <svg width={size} height={size} viewBox="0 0 48 48" aria-hidden="true">
+      <path fill="#4285F4" d="M45.1 24.5c0-1.6-.1-3.1-.4-4.5H24v8.5h11.8c-.5 2.8-2.1 5.1-4.4 6.7v5.6h7.1c4.2-3.8 6.6-9.5 6.6-16.3z" />
+      <path fill="#34A853" d="M24 46c5.9 0 10.9-2 14.5-5.3l-7.1-5.6c-2 1.3-4.5 2.1-7.4 2.1-5.7 0-10.5-3.8-12.2-9H4.5v5.7C8.1 41.1 15.5 46 24 46z" />
+      <path fill="#FBBC05" d="M11.8 28.2c-.4-1.3-.7-2.7-.7-4.2s.3-2.9.7-4.2v-5.7H4.5C3 17.1 2.1 20.4 2.1 24s.9 6.9 2.4 9.9l7.3-5.7z" />
+      <path fill="#EA4335" d="M24 10.8c3.2 0 6.1 1.1 8.4 3.3l6.3-6.3C34.9 4.2 29.9 2 24 2 15.5 2 8.1 6.9 4.5 14.1l7.3 5.7c1.7-5.2 6.5-9 12.2-9z" />
+    </svg>
+  );
+  if (kind === 'Okta') return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="#007dc1" strokeWidth="5" /></svg>
+  );
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12.65 10A6 6 0 1 0 12.65 14H17v4h4v-4h2v-4H12.65zM7 14a2 2 0 1 1 0-4 2 2 0 0 1 0 4z" /></svg>
+  );
+}
+
+/** The browser leaves the app for the provider's sign-in page; the provider sends it back to the API's callback. */
+export const startSso = (id: string, email?: string) =>
+  window.location.assign(`/api/auth/sso/${id}/start${email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? `?login_hint=${encodeURIComponent(email)}` : ''}`);
+
+/** "Sign in with ..." buttons for every enabled identity provider, under an "or" divider. Renders nothing when none are on. */
+export function SsoButtons({ email, highlight }: { email?: string; highlight?: string | null }) {
+  const providers = useSsoProviders().data ?? [];
+  if (providers.length === 0) return null;
+  return (
+    <Box sx={{ display: 'grid', gap: 1.25, mt: 2.5 }}>
+      <Stack direction="row" alignItems="center" gap={1.5} aria-hidden="true">
+        <Box sx={{ flex: 1, borderTop: 1, borderColor: 'divider' }} /><Typography variant="caption" color="text.secondary">or</Typography><Box sx={{ flex: 1, borderTop: 1, borderColor: 'divider' }} />
+      </Stack>
+      {providers.map((p) => (
+        <Button key={p.id} variant={highlight === p.id ? 'contained' : 'outlined'} size="large" color={highlight === p.id ? 'primary' : 'inherit'} onClick={() => startSso(p.id, email)}
+          startIcon={<ProviderMark kind={p.kind} />} sx={{ py: 1, justifyContent: 'center', borderColor: 'divider', bgcolor: highlight === p.id ? undefined : 'background.paper' }}>
+          Sign in with {p.displayName}
+        </Button>
+      ))}
+    </Box>
+  );
+}
