@@ -1477,6 +1477,411 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("sites", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.AqlDefectCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DefectCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("DefectType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DefectCode")
+                        .IsUnique();
+
+                    b.ToTable("aql_defect_categories", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.AqlInspection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AcceptanceQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("AqlLevel")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("CodeLetter")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CriticalDefects")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("HundredPercent")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("InspectionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InspectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InspectionLevel")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<string>("InspectionNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("InspectorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LotNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("LotSize")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MajorDefects")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinorDefects")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("OverallResult")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PlanLabel")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Rationale")
+                        .HasColumnType("text");
+
+                    b.Property<int>("RejectionQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("SampleSize")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SamplingRecommendation")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Stage")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Stages")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("InspectionId")
+                        .IsUnique();
+
+                    b.HasIndex("InspectionNumber")
+                        .IsUnique();
+
+                    b.HasIndex("InspectorId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("PlanId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SupplierId", "InspectionDate");
+
+                    b.ToTable("aql_inspections", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.AqlInspectionDefect", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DefectCategoryId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("InspectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("QuantityFound")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("Stage")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DefectCategoryId");
+
+                    b.HasIndex("InspectionId");
+
+                    b.ToTable("aql_inspection_defects", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_aql_defect_qty", "\"QuantityFound\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.AqlPlanDetail", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AcceptQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("AqlLevel")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<string>("CodeLetter")
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("InspectionLevel")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<Guid>("InspectionLevelId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("LotSizeMax")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LotSizeMin")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RejectQuantity")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("SampleSize")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SamplingCodeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Stage")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InspectionLevelId");
+
+                    b.HasIndex("SamplingCodeId");
+
+                    b.HasIndex("PlanId", "InspectionLevelId", "AqlLevel", "LotSizeMin", "Stage")
+                        .IsUnique();
+
+                    b.ToTable("aql_plan_details", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_aql_detail", "\"SampleSize\" > 0 AND \"AcceptQuantity\" >= 0 AND \"RejectQuantity\" > \"AcceptQuantity\" AND \"LotSizeMin\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.AqlSamplingPlan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ActivatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ChangeReason")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("ClearanceNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<int>("InspectionSeverity")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("InspectionType")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PlanName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("RejectOnCritical")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Revision")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<decimal?>("SamplingFrequency")
+                        .HasPrecision(6, 4)
+                        .HasColumnType("numeric(6,4)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanName", "InspectionSeverity")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 1");
+
+                    b.HasIndex("PlanName", "InspectionSeverity", "Revision")
+                        .IsUnique();
+
+                    b.ToTable("aql_sampling_plans", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.Audit", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2351,6 +2756,90 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.DrawingBalloon", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AcceptanceCriteria")
+                        .HasColumnType("text");
+
+                    b.Property<int>("BalloonNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Class")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("DrawingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DrawingReference")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<string>("DrawingRevision")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<string>("InspectionMethod")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("LowerTolerance")
+                        .HasPrecision(20, 8)
+                        .HasColumnType("numeric(20,8)");
+
+                    b.Property<decimal?>("Nominal")
+                        .HasPrecision(20, 8)
+                        .HasColumnType("numeric(20,8)");
+
+                    b.Property<string>("RequirementSource")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("Units")
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("UpperTolerance")
+                        .HasPrecision(20, 8)
+                        .HasColumnType("numeric(20,8)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DrawingId", "DrawingRevision", "BalloonNumber")
+                        .IsUnique();
+
+                    b.ToTable("drawing_balloons", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.Equipment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2470,6 +2959,489 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_equipment_interval", "\"CalibrationIntervalDays\" BETWEEN 1 AND 3650");
                         });
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FaiBalloonDrawing", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DrawingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DrawingRevision")
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<Guid>("FaiId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("FileAttachmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UploadDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UploadedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DrawingId");
+
+                    b.HasIndex("FaiId");
+
+                    b.HasIndex("FileAttachmentId");
+
+                    b.HasIndex("UploadedById");
+
+                    b.ToTable("fai_balloon_drawing", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FaiCharacteristic", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AcceptanceCriteria")
+                        .HasColumnType("text");
+
+                    b.Property<int>("BalloonNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("CarriedOver")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Class")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("DrawingReference")
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<Guid>("FaiId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FaiNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("InspectionMethod")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("LowerTolerance")
+                        .HasPrecision(20, 8)
+                        .HasColumnType("numeric(20,8)");
+
+                    b.Property<decimal?>("MeasuredValue")
+                        .HasPrecision(20, 8)
+                        .HasColumnType("numeric(20,8)");
+
+                    b.Property<Guid?>("NcrId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Nominal")
+                        .HasPrecision(20, 8)
+                        .HasColumnType("numeric(20,8)");
+
+                    b.Property<string>("RequirementSource")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Result")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("Units")
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("UpperTolerance")
+                        .HasPrecision(20, 8)
+                        .HasColumnType("numeric(20,8)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NcrId");
+
+                    b.HasIndex("FaiId", "BalloonNumber")
+                        .IsUnique();
+
+                    b.ToTable("fai_characteristics", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FaiCharacteristicResult", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CharacteristicId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("EquipmentCalibrationDueOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("EquipmentNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Evidence")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("FaiId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("InspectionDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("InspectionEquipmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("InspectionSequence")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("InspectorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("MeasuredValue")
+                        .HasPrecision(20, 8)
+                        .HasColumnType("numeric(20,8)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Observation")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("PassFail")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FaiId");
+
+                    b.HasIndex("InspectionEquipmentId");
+
+                    b.HasIndex("InspectorId");
+
+                    b.HasIndex("CharacteristicId", "InspectionSequence")
+                        .IsUnique();
+
+                    b.ToTable("fai_characteristic_results", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FaiRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ApproverId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("BaseFaiId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BatchNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid?>("ChangeId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Comments")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CustomerApprovalReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<bool>("CustomerApprovalRequired")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateOnly?>("CustomerApprovedOn")
+                        .HasColumnType("date");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DrawingId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DrawingNumber")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("DrawingRevision")
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<DateOnly?>("DueOn")
+                        .HasColumnType("date");
+
+                    b.Property<int>("FaiRevision")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("InitiatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("InspectionCompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("InspectionPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("InspectionStartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("InspectorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LotNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<Guid>("PartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PartNumber")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PartRevision")
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<string>("Process")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("ProductionDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Reason")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("ReviewerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Specification")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid?>("SpecificationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApproverId");
+
+                    b.HasIndex("BaseFaiId");
+
+                    b.HasIndex("ChangeId");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("DrawingId");
+
+                    b.HasIndex("DueOn");
+
+                    b.HasIndex("InitiatedById");
+
+                    b.HasIndex("InspectionPlanId");
+
+                    b.HasIndex("InspectorId");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("ReviewerId");
+
+                    b.HasIndex("SpecificationId");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("SiteId", "Status");
+
+                    b.ToTable("fai_master", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FaiRevisionHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DrawingRevision")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("FaiId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("FaiRevision")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("Snapshot")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FaiId", "FaiRevision");
+
+                    b.ToTable("fai_revision_history", "qms");
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.FormRecord", b =>
@@ -2856,6 +3828,56 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasIndex("PlanRevisionId");
 
                     b.ToTable("InspectionCharacteristics", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.InspectionLevel", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.ToTable("inspection_levels", "qms");
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.InspectionPlan", b =>
@@ -4095,6 +5117,309 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("RiskSettings", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.SamplingCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Letter")
+                        .IsRequired()
+                        .HasMaxLength(5)
+                        .HasColumnType("character varying(5)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("SampleSize")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Letter")
+                        .IsUnique();
+
+                    b.ToTable("sampling_codes", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_sampling_code_n", "\"SampleSize\" > 0");
+                        });
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.SamplingRevision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("ChangeReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("DetailCount")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("PlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PlanName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<string>("Revision")
+                        .IsRequired()
+                        .HasMaxLength(25)
+                        .HasColumnType("character varying(25)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PlanId");
+
+                    b.ToTable("sampling_revisions", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.SupplierAqlMetric", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AcceptancePercentage")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("CriticalDefects")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("DefectPpm")
+                        .HasPrecision(20, 4)
+                        .HasColumnType("numeric(20,4)");
+
+                    b.Property<int>("InspectionsCompleted")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LotsAccepted")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("LotsRejected")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MajorDefects")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MinorDefects")
+                        .HasColumnType("integer");
+
+                    b.Property<DateOnly>("ReportingPeriodEnd")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("ReportingPeriodStart")
+                        .HasColumnType("date");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("UnitsSampled")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupplierId", "ReportingPeriodStart", "ReportingPeriodEnd")
+                        .IsUnique();
+
+                    b.ToTable("supplier_aql_metrics", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.SupplierAqlScorecard", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("AcceptanceRate")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("DefectRate")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<DateOnly>("PeriodEnd")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("PeriodStart")
+                        .HasColumnType("date");
+
+                    b.Property<string>("Rating")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal>("RejectionRate")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<decimal>("Score")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SupplierId", "PeriodStart", "PeriodEnd")
+                        .IsUnique();
+
+                    b.ToTable("supplier_aql_scorecards", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.SupplierReceivingInspection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("AqlInspectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("InspectionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("LotNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PurchaseOrder")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<decimal?>("QuantityReceived")
+                        .HasColumnType("numeric");
+
+                    b.Property<DateOnly>("ReceivedOn")
+                        .HasColumnType("date");
+
+                    b.Property<int?>("Result")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("Shipment")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AqlInspectionId");
+
+                    b.HasIndex("InspectionId")
+                        .IsUnique();
+
+                    b.HasIndex("SupplierId", "ReceivedOn");
+
+                    b.ToTable("supplier_receiving_inspections", "qms");
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.TrainingAssignment", b =>
@@ -5585,6 +6910,82 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Navigation("Site");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.AqlInspection", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.Inspection", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("InspectorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Part", null)
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.AqlSamplingPlan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.AqlInspectionDefect", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Quality.AqlDefectCategory", null)
+                        .WithMany()
+                        .HasForeignKey("DefectCategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.AqlInspection", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.AqlPlanDetail", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Quality.InspectionLevel", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionLevelId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.AqlSamplingPlan", null)
+                        .WithMany("Details")
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.SamplingCode", null)
+                        .WithMany()
+                        .HasForeignKey("SamplingCodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.Audit", b =>
                 {
                     b.HasOne("QualGuardIQ.Domain.Organization.Department", null)
@@ -5734,6 +7135,15 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.DrawingBalloon", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Documents.ControlledDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DrawingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.Equipment", b =>
                 {
                     b.HasOne("QualGuardIQ.Domain.Organization.Department", null)
@@ -5750,6 +7160,164 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasOne("QualGuardIQ.Domain.Organization.Site", null)
                         .WithMany()
                         .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FaiBalloonDrawing", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Documents.ControlledDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DrawingId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.FaiRecord", null)
+                        .WithMany()
+                        .HasForeignKey("FaiId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Shared.Attachment", null)
+                        .WithMany()
+                        .HasForeignKey("FileAttachmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UploadedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FaiCharacteristic", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Quality.FaiRecord", null)
+                        .WithMany()
+                        .HasForeignKey("FaiId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.Ncr", null)
+                        .WithMany()
+                        .HasForeignKey("NcrId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FaiCharacteristicResult", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Quality.FaiCharacteristic", null)
+                        .WithMany()
+                        .HasForeignKey("CharacteristicId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.FaiRecord", null)
+                        .WithMany()
+                        .HasForeignKey("FaiId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.Equipment", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionEquipmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("InspectorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FaiRecord", b =>
+                {
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ApproverId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.FaiRecord", null)
+                        .WithMany()
+                        .HasForeignKey("BaseFaiId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.ChangeRequest", null)
+                        .WithMany()
+                        .HasForeignKey("ChangeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Organization.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Documents.ControlledDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DrawingId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("InitiatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.InspectionPlan", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionPlanId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("InspectorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Part", null)
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Organization.Site", null)
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Documents.ControlledDocument", null)
+                        .WithMany()
+                        .HasForeignKey("SpecificationId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FaiRevisionHistory", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Quality.FaiRecord", null)
+                        .WithMany()
+                        .HasForeignKey("FaiId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -6036,6 +7604,53 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.SamplingRevision", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Quality.AqlSamplingPlan", null)
+                        .WithMany()
+                        .HasForeignKey("PlanId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.SupplierAqlMetric", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.SupplierAqlScorecard", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.SupplierReceivingInspection", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Quality.AqlInspection", null)
+                        .WithMany()
+                        .HasForeignKey("AqlInspectionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.Inspection", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.TrainingAssignment", b =>
                 {
                     b.HasOne("QualGuardIQ.Domain.Quality.TrainingCourse", null)
@@ -6185,6 +7800,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Organization.Site", b =>
                 {
                     b.Navigation("Departments");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.AqlSamplingPlan", b =>
+                {
+                    b.Navigation("Details");
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.Audit", b =>

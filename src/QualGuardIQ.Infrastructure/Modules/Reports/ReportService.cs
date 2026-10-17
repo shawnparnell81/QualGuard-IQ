@@ -294,6 +294,93 @@ public sealed class ReportService(AppDbContext db, ModuleSupport m, IAccessServi
                 ("capas", capa.FirstOrDefault(x => x.SiteId == k.SiteId && x.DepartmentId == k.DepartmentId)?.N ?? 0))).OrderBy(x => (string?)x["site"]).ThenBy(x => (string?)x["department"]).ToList();
             return ([C("site", "Site"), C("department", "Department"), C("ncrs", "NCRs", "number"), C("complaints", "Complaints", "number"), C("capas", "Open CAPAs", "number")], rows, new("bar", "site", ["ncrs", "complaints"]));
         });
+        // ---------- FAI / AQL ----------
+        async Task<List<Dictionary<string, object?>>> FaiRows(IQueryable<FaiRecord> q, CancellationToken ct)
+        {
+            var today = await m.TodayAsync(null, ct);
+            var rows = await q.OrderByDescending(x => x.CreatedAt).Take(5000).Select(x => new { x.Id, x.Number, x.Title, x.Type, x.Status, x.PartNumber, x.PartRevision, x.DrawingNumber, x.DrawingRevision, x.DueOn, x.ApprovedAt,
+                Total = db.FaiCharacteristics.Count(c => c.FaiId == x.Id), Passed = db.FaiCharacteristics.Count(c => c.FaiId == x.Id && c.Result == CharResult.Pass), Failed = db.FaiCharacteristics.Count(c => c.FaiId == x.Id && c.Result == CharResult.Fail),
+                Supplier = db.Suppliers.Where(s => s.Id == x.SupplierId).Select(s => s.Code).FirstOrDefault() }).ToListAsync(ct);
+            return rows.Select(x => R(("number", x.Number), ("title", x.Title), ("type", x.Type.ToString()), ("status", x.Status.ToString()), ("part", $"{x.PartNumber} {x.PartRevision}".Trim()), ("drawing", x.DrawingNumber is null ? null : $"{x.DrawingNumber} rev {x.DrawingRevision}"),
+                ("supplier", x.Supplier), ("characteristics", x.Total), ("passed", x.Passed), ("failed", x.Failed), ("due", x.DueOn), ("overdue", x.DueOn < today && (int)x.Status <= 4 ? "Yes" : ""), ("approved", x.ApprovedAt), ("_url", $"/fai/{x.Id}"))).ToList();
+        }
+        List<ReportColumn> faiCols = [C("number", "FAI"), C("title", "Title"), C("type", "Type"), C("status", "Status"), C("part", "Part"), C("drawing", "Drawing"), C("supplier", "Supplier"), C("characteristics", "Characteristics", "number"), C("passed", "Passed", "number"), C("failed", "Failed", "number"), C("due", "Due", "date"), C("overdue", "Overdue"), C("approved", "Approved", "datetime")];
+        Add("fai.register", "FAI register", "FAI", Permissions.FaiView, "First article inspections created in the period with characteristic accountability.", true, async (p, f, t, ct) =>
+            (faiCols, await FaiRows((await Q(db.Fais.AsNoTracking(), Permissions.FaiView, p, ct)).Where(x => x.CreatedAt >= Utc(f) && x.CreatedAt < Utc(t.AddDays(1))), ct), null));
+        Add("fai.open", "Open FAIs", "FAI", Permissions.FaiView, "FAIs in draft, inspection, review, correction or approval.", false, async (p, f, t, ct) =>
+            (faiCols, await FaiRows((await Q(db.Fais.AsNoTracking(), Permissions.FaiView, p, ct)).Where(x => (int)x.Status <= 4), ct), null));
+        Add("fai.overdue", "Overdue FAIs", "FAI", Permissions.FaiView, "Open FAIs past their due date.", false, async (p, f, t, ct) =>
+        {
+            var today = await m.TodayAsync(p.SiteId, ct);
+            return (faiCols, await FaiRows((await Q(db.Fais.AsNoTracking(), Permissions.FaiView, p, ct)).Where(x => (int)x.Status <= 4 && x.DueOn < today), ct), null);
+        });
+        Add("fai.summary", "FAI summary", "FAI", Permissions.FaiView, "FAIs by status and type for FAIs created in the period.", true, async (p, f, t, ct) =>
+        {
+            var q = (await Q(db.Fais.AsNoTracking(), Permissions.FaiView, p, ct)).Where(x => x.CreatedAt >= Utc(f) && x.CreatedAt < Utc(t.AddDays(1)));
+            var g = await q.GroupBy(x => new { x.Type, x.Status }).Select(x => new { x.Key.Type, x.Key.Status, N = x.Count() }).ToListAsync(ct);
+            return ([C("type", "Type"), C("status", "Status"), C("count", "FAIs", "number")], g.OrderBy(x => x.Type).ThenBy(x => x.Status).Select(x => R(("type", x.Type.ToString()), ("status", x.Status.ToString()), ("count", x.N))).ToList(), new("bar", "status", ["count"]));
+        });
+        Add("fai.yield", "FAI first-pass yield", "FAI", Permissions.FaiView, "FAIs approved per month; first pass = approved at revision 1 with no failed characteristic.", true, async (p, f, t, ct) =>
+        {
+            var q = (await Q(db.Fais.AsNoTracking(), Permissions.FaiView, p, ct)).Where(x => x.ApprovedAt >= Utc(f) && x.ApprovedAt < Utc(t.AddDays(1)) || (x.Status == FaiStatus.Rejected && x.UpdatedAt >= Utc(f) && x.UpdatedAt < Utc(t.AddDays(1))));
+            var rows = await q.Select(x => new { At = x.ApprovedAt ?? x.UpdatedAt, x.Status, First = x.FaiRevision == 1 && !db.FaiCharacteristicResults.Any(r => r.FaiId == x.Id && r.PassFail == CharResult.Fail) }).ToListAsync(ct);
+            return ([C("month", "Month"), C("decided", "Decided", "number"), C("firstPass", "First pass", "number"), C("failed", "Failed / reworked", "number"), C("passRate", "Pass rate %", "number"), C("failRate", "Fail rate %", "number")],
+                Months(f, t, mo => { var x = rows.Where(r => r.At.ToString("yyyy-MM") == mo).ToList(); var fp = x.Count(r => r.First && r.Status != FaiStatus.Rejected);
+                    return R(("month", (object?)mo), ("decided", x.Count), ("firstPass", fp), ("failed", x.Count - fp), ("passRate", x.Count == 0 ? null : Math.Round(100.0 * fp / x.Count, 1)), ("failRate", x.Count == 0 ? null : Math.Round(100.0 * (x.Count - fp) / x.Count, 1))); }),
+                new("bar", "month", ["firstPass", "failed"]));
+        });
+        Add("fai.characteristics", "Characteristic pass rate", "FAI", Permissions.FaiView, "Inspected FAI characteristics by class with pass rate (measurements recorded in the period).", true, async (p, f, t, ct) =>
+        {
+            var fais = (await Q(db.Fais.AsNoTracking(), Permissions.FaiView, p, ct)).Select(x => x.Id);
+            var rows = await db.FaiCharacteristicResults.AsNoTracking().Where(r => fais.Contains(r.FaiId) && r.InspectionDate >= Utc(f) && r.InspectionDate < Utc(t.AddDays(1)))
+                .Join(db.FaiCharacteristics, r => r.CharacteristicId, c => c.Id, (r, c) => new { c.Class, r.PassFail }).GroupBy(x => x.Class).Select(g => new { g.Key, N = g.Count(), P = g.Count(x => x.PassFail == CharResult.Pass) }).ToListAsync(ct);
+            return ([C("class", "Class"), C("measured", "Measurements", "number"), C("passed", "Passed", "number"), C("failed", "Failed", "number"), C("passRate", "Pass rate %", "number")],
+                rows.Select(x => R(("class", x.Key.ToString()), ("measured", x.N), ("passed", x.P), ("failed", x.N - x.P), ("passRate", x.N == 0 ? 0 : Math.Round(100.0 * x.P / x.N, 1)))).ToList(), new("bar", "class", ["passRate"]));
+        });
+        Add("aql.lots", "AQL lot decisions", "AQL", Permissions.InspectionView, "AQL-sampled lots decided in the period.", true, async (p, f, t, ct) =>
+        {
+            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => a.Status == AqlInspectionStatus.Decided && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
+            var rows = await q.OrderByDescending(a => a.InspectionDate).Select(a => new { a.Id, a.InspectionId, a.InspectionNumber, a.LotNumber, a.LotSize, a.SampleSize, a.InspectionLevel, a.AqlLevel, a.Severity, a.OverallResult, a.AcceptanceQuantity, a.RejectionQuantity, a.CriticalDefects, a.MajorDefects, a.MinorDefects, a.InspectionDate,
+                Supplier = db.Suppliers.Where(s => s.Id == a.SupplierId).Select(s => s.Code).FirstOrDefault() }).ToListAsync(ct);
+            return ([C("number", "Inspection"), C("supplier", "Supplier"), C("lot", "Lot"), C("lotSize", "Lot size", "number"), C("sample", "Sample", "number"), C("level", "Level"), C("aql", "AQL", "number"), C("mode", "Mode"), C("ac", "Ac", "number"), C("re", "Re", "number"), C("critical", "Critical", "number"), C("major", "Major", "number"), C("minor", "Minor", "number"), C("result", "Result"), C("date", "Date", "datetime")],
+                rows.Select(a => R(("number", a.InspectionNumber), ("supplier", a.Supplier), ("lot", a.LotNumber), ("lotSize", a.LotSize), ("sample", a.SampleSize), ("level", a.InspectionLevel), ("aql", a.AqlLevel), ("mode", a.Severity.ToString()), ("ac", a.AcceptanceQuantity), ("re", a.RejectionQuantity),
+                    ("critical", a.CriticalDefects), ("major", a.MajorDefects), ("minor", a.MinorDefects), ("result", a.OverallResult.ToString()), ("date", a.InspectionDate), ("_url", $"/inspection/{a.InspectionId}"))).ToList(), null);
+        });
+        Add("aql.summary", "AQL acceptance, rejection, defect rate and PPM by month", "AQL", Permissions.InspectionView, "Lot acceptance/rejection rates, defect rate and PPM of decided AQL lots.", true, async (p, f, t, ct) =>
+        {
+            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => a.Status == AqlInspectionStatus.Decided && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
+            var rows = await q.Select(a => new { a.InspectionDate, a.OverallResult, a.SampleSize, D = a.CriticalDefects + a.MajorDefects + a.MinorDefects }).ToListAsync(ct);
+            return ([C("month", "Month"), C("lots", "Lots", "number"), C("accepted", "Accepted", "number"), C("rejected", "Rejected", "number"), C("acceptanceRate", "Acceptance %", "number"), C("rejectionRate", "Rejection %", "number"), C("defectRate", "Defect rate %", "number"), C("ppm", "PPM", "number")],
+                Months(f, t, mo => { var x = rows.Where(r => r.InspectionDate.ToString("yyyy-MM") == mo).ToList(); var n = x.Count; var acc = x.Count(r => r.OverallResult == AqlDecision.Accept); var units = x.Sum(r => r.SampleSize); var d = x.Sum(r => r.D);
+                    return R(("month", (object?)mo), ("lots", n), ("accepted", acc), ("rejected", n - acc), ("acceptanceRate", n == 0 ? null : Modules.Fai.AqlService.Rate(acc, n)), ("rejectionRate", n == 0 ? null : Modules.Fai.AqlService.Rate(n - acc, n)),
+                        ("defectRate", units == 0 ? null : Modules.Fai.AqlService.Rate(d, units)), ("ppm", units == 0 ? null : Modules.Fai.AqlService.Ppm(d, units))); }), new("line", "month", ["acceptanceRate", "rejectionRate"]));
+        });
+        Add("aql.suppliers", "Supplier AQL performance and ranking", "AQL", Permissions.InspectionView, "Suppliers ranked by lot acceptance rate then PPM for lots decided in the period.", true, async (p, f, t, ct) =>
+        {
+            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => a.SupplierId != null && a.Status == AqlInspectionStatus.Decided && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
+            var g = await q.GroupBy(a => a.SupplierId).Select(x => new { Id = x.Key, N = x.Count(), Acc = x.Count(a => a.OverallResult == AqlDecision.Accept), Units = x.Sum(a => a.SampleSize), D = x.Sum(a => a.CriticalDefects + a.MajorDefects + a.MinorDefects) }).ToListAsync(ct);
+            var names = await db.Suppliers.AsNoTracking().Where(s => g.Select(x => x.Id).Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => s.Code + " " + s.LegalName, ct);
+            var rows = g.Select(x => new { x, rate = Modules.Fai.AqlService.Rate(x.Acc, x.N), ppm = Modules.Fai.AqlService.Ppm(x.D, x.Units) }).OrderByDescending(x => x.rate).ThenBy(x => x.ppm)
+                .Select((x, k) => R(("rank", k + 1), ("supplier", names.GetValueOrDefault(x.x.Id!.Value)), ("lots", x.x.N), ("accepted", x.x.Acc), ("rejected", x.x.N - x.x.Acc), ("acceptanceRate", x.rate), ("rejectionRate", Modules.Fai.AqlService.Rate(x.x.N - x.x.Acc, x.x.N)), ("ppm", x.ppm), ("_url", $"/suppliers/{x.x.Id}"))).ToList();
+            return ([C("rank", "Rank", "number"), C("supplier", "Supplier"), C("lots", "Lots", "number"), C("accepted", "Accepted", "number"), C("rejected", "Rejected", "number"), C("acceptanceRate", "Acceptance %", "number"), C("rejectionRate", "Rejection %", "number"), C("ppm", "PPM", "number")], rows, new("bar", "supplier", ["acceptanceRate"]));
+        });
+        Add("aql.defects", "AQL defect analysis", "AQL", Permissions.InspectionView, "Defects found in AQL samples by code, classification and category.", true, async (p, f, t, ct) =>
+        {
+            var lots = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1))).Select(a => a.Id);
+            var g = await db.AqlInspectionDefects.AsNoTracking().Where(d => lots.Contains(d.InspectionId)).Join(db.AqlDefectCategories, d => d.DefectCategoryId, c => c.Id, (d, c) => new { c.DefectCode, c.Description, c.DefectType, c.Category, d.QuantityFound })
+                .GroupBy(x => new { x.DefectCode, x.Description, x.DefectType, x.Category }).Select(x => new { x.Key, Q = x.Sum(y => y.QuantityFound) }).ToListAsync(ct);
+            return ([C("code", "Code"), C("description", "Description"), C("type", "Classification"), C("category", "Category"), C("quantity", "Quantity", "number")],
+                g.OrderByDescending(x => x.Q).Select(x => R(("code", x.Key.DefectCode), ("description", x.Key.Description), ("type", x.Key.DefectType.ToString()), ("category", x.Key.Category), ("quantity", x.Q))).ToList(), new("bar", "code", ["quantity"]));
+        });
+        Add("aql.ppm", "Supplier defect PPM trend", "AQL", Permissions.InspectionView, "Defect PPM by supplier and month (decided AQL lots).", true, async (p, f, t, ct) =>
+        {
+            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => a.SupplierId != null && a.Status == AqlInspectionStatus.Decided && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
+            var rows = await q.Select(a => new { a.SupplierId, a.InspectionDate, a.SampleSize, D = a.CriticalDefects + a.MajorDefects + a.MinorDefects }).ToListAsync(ct);
+            var names = await db.Suppliers.AsNoTracking().Where(s => rows.Select(r => r.SupplierId).Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => s.Code, ct);
+            var g = rows.GroupBy(r => (r.SupplierId, Month: r.InspectionDate.ToString("yyyy-MM"))).OrderBy(x => x.Key.Month)
+                .Select(x => R(("month", x.Key.Month), ("supplier", names.GetValueOrDefault(x.Key.SupplierId!.Value)), ("units", x.Sum(r => r.SampleSize)), ("defects", x.Sum(r => r.D)), ("ppm", Modules.Fai.AqlService.Ppm(x.Sum(r => r.D), x.Sum(r => r.SampleSize))))).ToList();
+            return ([C("month", "Month"), C("supplier", "Supplier"), C("units", "Units sampled", "number"), C("defects", "Defects", "number"), C("ppm", "PPM", "number")], g, null);
+        });
         return r;
     }
 }

@@ -50,10 +50,13 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
                 db.ApprovalRoutes.Add(new ApprovalRoute
                 {
                     RecordType = type, Name = name, PreventSelfApproval = true,
-                    Steps = [new ApprovalRouteStep { Order = 1, Name = "Approval", RequiredPermission = perm, SignatureMeaning = "Approved" }]
+                    Steps = DefaultRouteSteps.TryGetValue(type, out var names)
+                        ? names.Select((n, k) => new ApprovalRouteStep { Order = k + 1, Name = n, RequiredPermission = perm, SignatureMeaning = $"Approved ({n})" }).ToList()
+                        : [new ApprovalRouteStep { Order = 1, Name = "Approval", RequiredPermission = perm, SignatureMeaning = "Approved" }]
                 });
         }
         await db.SaveChangesAsync(ct);
+        await new Modules.Fai.AqlService(db, null!).SeedAsync(ct);
 
         var email = seed["AdminEmail"];
         var password = seed["AdminPassword"];
@@ -83,12 +86,16 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
         ("Risk", "Residual risk acceptance", Permissions.RisksApprove),
         ("QualityObjective", "Quality objective approval", Permissions.ObjectivesApprove),
         ("ManagementReview", "Management review approval", Permissions.ReviewsApprove),
+        ("Fai", "First article approval", Permissions.FaiApprove),
     ];
+
+    /// <summary>Multi-step default routes (administrators can change steps and permissions).</summary>
+    public static readonly Dictionary<string, string[]> DefaultRouteSteps = new() { ["Fai"] = ["Quality", "Engineering", "Manufacturing"] };
 
     public static readonly (string Type, string Prefix)[] DefaultSequences =
     [
         ("Document", "DOC-"), ("Drawing", "DWG-"), ("FormTemplate", "FT-"), ("FormRecord", "FR-"),
         ("Ncr", "NCR-"), ("Capa", "CAPA-"), ("Audit", "AUD-"), ("AuditFinding", "AF-"),
-        ("Equipment", "EQ-"), ("CalibrationEvent", "CAL-"), ("Action", "ACT-"), ("TrainingCourse", "TRN-"), ("ImpactAssessment", "IA-"), ("SupplierCorrectiveAction", "SCAR-"), ("Complaint", "CC-"), ("InspectionPlan", "IP-"), ("Inspection", "INS-"), ("ChangeRequest", "CHG-"), ("Risk", "RSK-"), ("MaintenanceEvent", "MNT-"), ("QualityObjective", "OBJ-"), ("ManagementReview", "MR-")
+        ("Equipment", "EQ-"), ("CalibrationEvent", "CAL-"), ("Action", "ACT-"), ("TrainingCourse", "TRN-"), ("ImpactAssessment", "IA-"), ("SupplierCorrectiveAction", "SCAR-"), ("Complaint", "CC-"), ("InspectionPlan", "IP-"), ("Inspection", "INS-"), ("ChangeRequest", "CHG-"), ("Risk", "RSK-"), ("MaintenanceEvent", "MNT-"), ("QualityObjective", "OBJ-"), ("ManagementReview", "MR-"), ("Fai", "FAI-")
     ];
 }

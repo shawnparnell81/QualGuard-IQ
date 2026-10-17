@@ -76,6 +76,11 @@ public static class Permissions
     /// <summary>See overdue actions across all modules in scope.</summary>
     public const string ActionsView = "actions.view";
 
+    public const string FaiView = "fai.view";
+    public const string FaiEdit = "fai.edit";
+    /// <summary>Sign FAI approval steps (Quality, Engineering, Manufacturing steps are configured on the FAI route).</summary>
+    public const string FaiApprove = "fai.approve";
+
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
         .Where(f => f.IsLiteral && f.FieldType == typeof(string))
