@@ -15,12 +15,18 @@ public static class DocumentRecordTypes
     public const string Drawing = "Drawing";
     public const string DocumentRevision = "DocumentRevision";
     public const string DrawingRevision = "DrawingRevision";
+    public const string FormTemplate = "FormTemplate";
+    public const string FormTemplateRevision = "FormTemplateRevision";
 
-    public static string ForDocument(DocumentKind k) => k == DocumentKind.Drawing ? Drawing : Document;
-    public static string ForRevision(DocumentKind k) => k == DocumentKind.Drawing ? DrawingRevision : DocumentRevision;
-    public static (string View, string Edit, string Approve) Perms(DocumentKind k) => k == DocumentKind.Drawing
-        ? (Permissions.DrawingsView, Permissions.DrawingsEdit, Permissions.DrawingsApprove)
-        : (Permissions.DocumentsView, Permissions.DocumentsEdit, Permissions.DocumentsApprove);
+    public static string ForDocument(DocumentKind k) => k switch { DocumentKind.Drawing => Drawing, DocumentKind.FormTemplate => FormTemplate, _ => Document };
+    public static string ForRevision(DocumentKind k) => k switch { DocumentKind.Drawing => DrawingRevision, DocumentKind.FormTemplate => FormTemplateRevision, _ => DocumentRevision };
+    public static string Path(DocumentKind k) => k switch { DocumentKind.Drawing => "drawings", DocumentKind.FormTemplate => "forms/templates", _ => "documents" };
+    public static (string View, string Edit, string Approve) Perms(DocumentKind k) => k switch
+    {
+        DocumentKind.Drawing => (Permissions.DrawingsView, Permissions.DrawingsEdit, Permissions.DrawingsApprove),
+        DocumentKind.FormTemplate => (Permissions.FormsView, Permissions.FormsEdit, Permissions.FormsApprove),
+        _ => (Permissions.DocumentsView, Permissions.DocumentsEdit, Permissions.DocumentsApprove)
+    };
 }
 
 /// <summary>Notified when a revision becomes effective (for example, Training assigns retraining).</summary>
@@ -33,7 +39,7 @@ public sealed record CreateDocumentRequest(DocumentKind Kind, string Title, stri
     int ReviewIntervalMonths, string? InitialRevision, string? PartNumber, string? DrawingSize, int? SheetCount, string? ChangeSummary);
 public sealed record UpdateDocumentRequest(string Title, string DocumentType, Guid? DepartmentId, Guid OwnerId, int ReviewIntervalMonths,
     string? PartNumber, string? DrawingSize, int? SheetCount, uint RowVersion);
-public sealed record UpdateRevisionRequest(string ChangeSummary, DateOnly? EffectiveDate, bool TrainingRequired, uint RowVersion);
+public sealed record UpdateRevisionRequest(string ChangeSummary, DateOnly? EffectiveDate, bool TrainingRequired, uint RowVersion, string? FieldSchema = null);
 
 public sealed class DocumentService(
     AppDbContext db, IAccessService access, ICurrentUser current, INumberingService numbers, IRecordRegistry records,
@@ -97,6 +103,11 @@ public sealed class DocumentService(
         rev.ChangeSummary = req.ChangeSummary.Trim();
         rev.EffectiveDate = req.EffectiveDate;
         rev.TrainingRequired = req.TrainingRequired;
+        if (rev.Document.Kind == DocumentKind.FormTemplate && req.FieldSchema is not null)
+        {
+            Application.Forms.FormSchema.Parse(req.FieldSchema);
+            rev.FieldSchema = req.FieldSchema;
+        }
         await db.SaveChangesAsync(ct);
     }
 
@@ -110,7 +121,7 @@ public sealed class DocumentService(
         var last = doc.Revisions.OrderByDescending(r => r.Sequence).First();
         var next = string.IsNullOrWhiteSpace(label) ? NextLabel(last.Revision) : label.Trim().ToUpperInvariant();
         if (doc.Revisions.Any(r => r.Revision == next)) throw new ConflictException($"Revision {next} already exists.");
-        var rev = new DocumentRevision { DocumentId = doc.Id, Revision = next, Sequence = last.Sequence + 1, Status = RevisionStatus.Draft, ChangeSummary = changeSummary.Trim(), TrainingRequired = last.TrainingRequired };
+        var rev = new DocumentRevision { DocumentId = doc.Id, Revision = next, Sequence = last.Sequence + 1, Status = RevisionStatus.Draft, ChangeSummary = changeSummary.Trim(), TrainingRequired = last.TrainingRequired, FieldSchema = last.FieldSchema };
         db.DocumentRevisions.Add(rev);
         await db.SaveChangesAsync(ct);
         return rev;
@@ -122,7 +133,12 @@ public sealed class DocumentService(
         var type = DocumentRecordTypes.ForRevision(rev.Document!.Kind);
         await records.RequireEditAsync(type, rev.Id, ct);
         if (rev.Status != RevisionStatus.Draft) throw new ConflictException("Only draft revisions can be submitted.");
-        if (!await db.Attachments.AnyAsync(a => a.OwnerType == type && a.OwnerId == rev.Id && !a.IsArchived, ct))
+        if (rev.Document.Kind == DocumentKind.FormTemplate)
+        {
+            if (string.IsNullOrWhiteSpace(rev.FieldSchema)) throw new AppException("Define the form fields before submitting for approval.");
+            Application.Forms.FormSchema.Parse(rev.FieldSchema);
+        }
+        else if (!await db.Attachments.AnyAsync(a => a.OwnerType == type && a.OwnerId == rev.Id && !a.IsArchived, ct))
             throw new AppException("Attach the controlled file before submitting for approval.");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await workflow.SubmitAsync(type, rev.Id, ct);
@@ -255,7 +271,7 @@ public sealed class DocumentRecordProvider(AppDbContext db, string type, Documen
         var d = await db.Documents.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.Kind == kind, ct);
         if (d is null) return null;
         var (v, e, _) = DocumentRecordTypes.Perms(kind);
-        var path = kind == DocumentKind.Drawing ? "drawings" : "documents";
+        var path = DocumentRecordTypes.Path(kind);
         return new RecordInfo(type, d.Id, d.SiteId, d.DepartmentId, d.Number, d.Title, d.Status.ToString(), v, e, $"/{path}/{d.Id}", d.Status == DocumentStatus.Obsolete);
     }
 }
@@ -268,7 +284,7 @@ public sealed class RevisionRecordProvider(AppDbContext db, string type, Documen
         var r = await db.DocumentRevisions.AsNoTracking().Include(x => x.Document).FirstOrDefaultAsync(x => x.Id == id && x.Document!.Kind == kind, ct);
         if (r is null) return null;
         var (v, e, _) = DocumentRecordTypes.Perms(kind);
-        var path = kind == DocumentKind.Drawing ? "drawings" : "documents";
+        var path = DocumentRecordTypes.Path(kind);
         return new RecordInfo(type, r.Id, r.Document!.SiteId, r.Document.DepartmentId, $"{r.Document.Number} Rev {r.Revision}", r.Document.Title,
             r.Status.ToString(), v, e, $"/{path}/{r.DocumentId}?rev={r.Id}", r.Status != RevisionStatus.Draft);
     }

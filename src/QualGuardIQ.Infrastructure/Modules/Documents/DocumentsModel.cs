@@ -39,6 +39,7 @@ public partial class AppDbContext
             e.Property(x => x.Revision).HasMaxLength(10).IsRequired();
             e.Property(x => x.ChangeSummary).HasMaxLength(4000).IsRequired();
             e.Property(x => x.ObsoleteReason).HasMaxLength(1000);
+            e.Property(x => x.FieldSchema).HasColumnType("jsonb");
             e.HasIndex(x => new { x.DocumentId, x.Revision }).IsUnique();
             e.HasIndex(x => new { x.DocumentId, x.Sequence }).IsUnique();
             // At most one effective revision and one open (draft or in review) revision per document.
@@ -51,5 +52,6 @@ public partial class AppDbContext
     private static void ConfigureModules(ModelBuilder b)
     {
         ConfigureDocuments(b);
+        ConfigureQuality(b);
     }
 }

@@ -2,7 +2,7 @@ using QualGuardIQ.Domain.Common;
 
 namespace QualGuardIQ.Domain.Documents;
 
-public enum DocumentKind { Document = 0, Drawing = 1 }
+public enum DocumentKind { Document = 0, Drawing = 1, FormTemplate = 2 }
 public enum DocumentStatus { Draft = 0, Active = 1, Obsolete = 2 }
 public enum RevisionStatus { Draft = 0, InReview = 1, Approved = 2, Effective = 3, Superseded = 4, Obsolete = 5 }
 
@@ -43,6 +43,8 @@ public class DocumentRevision : Entity, IAudited, IContentLock
     public DateTimeOffset? ObsoletedAt { get; set; }
     public string? ObsoleteReason { get; set; }
     public bool TrainingRequired { get; set; }
+    /// <summary>Form templates only: JSON field definitions. Frozen with the revision.</summary>
+    public string? FieldSchema { get; set; }
     public string AuditLabel => $"revision {Revision} of {Document?.Number ?? DocumentId.ToString()}";
 
     public string StatusProperty => nameof(Status);

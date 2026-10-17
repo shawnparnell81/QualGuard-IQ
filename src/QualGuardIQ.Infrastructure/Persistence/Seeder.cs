@@ -74,12 +74,15 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
     [
         ("DocumentRevision", "Document revision approval", Permissions.DocumentsApprove),
         ("DrawingRevision", "Drawing revision approval", Permissions.DrawingsApprove),
+        ("FormTemplateRevision", "Form template approval", Permissions.FormsApprove),
+        ("FormRecord", "Form record review", Permissions.FormsApprove),
+        ("Ncr", "NCR disposition approval", Permissions.NcrApprove),
     ];
 
     public static readonly (string Type, string Prefix)[] DefaultSequences =
     [
         ("Document", "DOC-"), ("Drawing", "DWG-"), ("FormTemplate", "FT-"), ("FormRecord", "FR-"),
         ("Ncr", "NCR-"), ("Capa", "CAPA-"), ("Audit", "AUD-"), ("AuditFinding", "AF-"),
-        ("Equipment", "EQ-"), ("CalibrationEvent", "CAL-"), ("Action", "ACT-"), ("TrainingCourse", "TRN-")
+        ("Equipment", "EQ-"), ("CalibrationEvent", "CAL-"), ("Action", "ACT-"), ("TrainingCourse", "TRN-"), ("ImpactAssessment", "IA-")
     ];
 }
