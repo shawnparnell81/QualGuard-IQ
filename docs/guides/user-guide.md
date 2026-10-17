@@ -325,3 +325,25 @@ stored data and revision and confirms it is identical.
 
 **Manifest** (Document templates → Manifest): choose the site, carrier and ship date to print the list of shipments
 for the driver to sign. Manifests are recorded like other documents.
+
+## Report schedules and board report distribution
+
+Open **Platform → Report schedules** to send a saved report or a board report on a regular schedule.
+
+1. Choose **New schedule**, give it a name, and pick the source: a saved report (it must be shared before anyone else can receive it) or a board report (executive, board or strategic risk; needs `enterprise.view`).
+2. Enter the frequency as a cron expression (`0 7 * * 1` is Mondays at 07:00) and pick the **time zone** the time is read in. Daylight-saving changes are handled; a time that does not exist on the change day moves to the next valid day.
+3. Add **people** and/or **recipient groups** (roles). Group membership is read on every run.
+4. Pick the **delivery**. The **secure link** is the default: each person signs in and sees only what their own permissions allow. Attachment modes (PDF, Excel, CSV) appear only when an administrator has enabled them (see below) and need `reports.export`.
+5. Choose how many attempts a failed run gets (1–5). Retries wait 5 minutes, 15 minutes, 1 hour, then 4 hours. When the last attempt fails, the owner is notified and the schedule waits for its next regular time.
+
+Every run checks each recipient again: inactive accounts, portal accounts and people without the report's permission are excluded and listed with the reason in the run's **History**. Attached files and board editions go only to people whose access covers every site in the content. A run always works with the schedule owner's permissions, never more; if the owner's account is deactivated the schedule pauses itself.
+
+**Pause** stops runs and retries (with an optional reason); **Resume** picks the next future time and does not send missed runs. **Run now** sends immediately without moving the next regular run. Administrators see every schedule on **All schedules**.
+
+### Board report editions
+
+A board report schedule never sends live data. It sends the **latest approved edition**: a frozen copy of the report taken when it was generated. Generate an edition on **Board editions** (or tick "generate a new draft edition on each run" on the schedule); someone with `reports.approve` who did not generate it approves or rejects it with notes. If no edition is approved yet, the run is recorded as skipped.
+
+### Delivery policy (administrators)
+
+On **Delivery policy**, holders of `platform.admin` decide whether files may be attached at all, which formats, whether confidential reports (all board reports, and saved reports marked confidential) may be attached, the maximum file size (larger files fall back to the secure link), how many days attached files are kept (they are purged afterwards; the history stays), and optionally which email domains may receive attachments. Files are mailed only when the mail server connection uses TLS (`Email:UseTls`); otherwise the email carries the link only. Each recipient can also download the file from the notification while it is retained; downloads are recorded in the history.

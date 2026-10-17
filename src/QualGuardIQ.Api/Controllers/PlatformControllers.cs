@@ -149,6 +149,7 @@ public sealed class ReportDistributionController(ReportDistributionService svc) 
     [HttpPost("schedules/{id:guid}/run")] public Task<DistributionRow> RunNow(Guid id, CancellationToken ct) => svc.RunNowAsync(id, ct);
     [HttpGet("schedules/{id:guid}/history")] public Task<List<DistributionRow>> History(Guid id, CancellationToken ct) => svc.HistoryAsync(id, ct);
 
+    [HttpGet("groups")] public Task<List<GroupRow>> Groups(CancellationToken ct) => svc.GroupsAsync(ct);
     [HttpGet("policy")] public Task<ReportDeliveryPolicy> Policy(CancellationToken ct) => svc.PolicyAsync(ct);
     [HttpPut("policy")] public Task<ReportDeliveryPolicy> SavePolicy(PolicyInput r, CancellationToken ct) => svc.SavePolicyAsync(r, ct);
 
