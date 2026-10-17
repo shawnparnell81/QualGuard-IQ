@@ -48,8 +48,8 @@ function CharacteristicEditor({ value, onChange }: { value: Char[]; onChange: (v
             <TableCell sx={{ ...cell, width: 60 }}><TextField {...tf} value={c.unit ?? ''} onChange={(e) => set(i, { unit: e.target.value })} /></TableCell>
             <TableCell sx={{ ...cell, minWidth: 110 }}><TextField {...tf} value={c.method ?? ''} onChange={(e) => set(i, { method: e.target.value })} /></TableCell>
             <TableCell sx={{ ...cell, width: 50 }}><TextField {...tf} type="number" value={c.sampleSize ?? ''} onChange={(e) => set(i, { sampleSize: numOrNull(e.target.value) })} /></TableCell>
-            <TableCell sx={cell}><Checkbox size="small" checked={c.requiresEquipment} onChange={(e) => set(i, { requiresEquipment: e.target.checked })} /></TableCell>
-            <TableCell sx={cell}><Checkbox size="small" checked={c.isCritical} onChange={(e) => set(i, { isCritical: e.target.checked })} /></TableCell>
+            <TableCell sx={cell}><Checkbox size="small" slotProps={{ input: { 'aria-label': `Characteristic ${i + 1} requires equipment` } }} checked={c.requiresEquipment} onChange={(e) => set(i, { requiresEquipment: e.target.checked })} /></TableCell>
+            <TableCell sx={cell}><Checkbox size="small" slotProps={{ input: { 'aria-label': `Characteristic ${i + 1} is critical` } }} checked={c.isCritical} onChange={(e) => set(i, { isCritical: e.target.checked })} /></TableCell>
             <TableCell sx={cell}><IconButton size="small" aria-label="Remove characteristic" onClick={() => onChange(value.filter((_, j) => j !== i))}><DeleteOutline fontSize="small" /></IconButton></TableCell>
           </TableRow>))}
         </TableBody>
@@ -310,7 +310,7 @@ export function InspectionDetail() {
                   <TableCell sx={{ minWidth: 170 }}>{editing ? <TextField size="small" variant="standard" select fullWidth value={e.equipmentId} onChange={(ev) => setE({ equipmentId: ev.target.value })} slotProps={{ htmlInput: { 'aria-label': `${c.name} equipment` } }}>
                       <MenuItem value="">{c.requiresEquipment ? '— choose —' : 'None'}</MenuItem>{(equipment.data ?? []).map((q2) => <MenuItem key={q2.id} value={q2.id}>{q2.number} {q2.name}</MenuItem>)}</TextField>
                     : r?.equipmentNumber ? <Tooltip title={`Calibration due ${fmtDate(r.equipmentCalibrationDueOn)}`}><span style={{ fontFamily: mono }}>{r.equipmentNumber}</span></Tooltip> : '—'}</TableCell>
-                  <TableCell>{editing ? <TextField size="small" variant="standard" value={e.notes} onChange={(ev) => setE({ notes: ev.target.value })} /> : r?.notes ?? ''}</TableCell>
+                  <TableCell>{editing ? <TextField size="small" variant="standard" value={e.notes} onChange={(ev) => setE({ notes: ev.target.value })} slotProps={{ htmlInput: { 'aria-label': `${c.name} notes` } }} /> : r?.notes ?? ''}</TableCell>
                 </TableRow>;
               })}</TableBody>
             </Table></Box>

@@ -141,10 +141,10 @@ export function ApqpDetail() {
             <TableHead><TableRow>{cols.map(([k2, l]) => <TableCell key={k2}>{l}</TableCell>)}{kind === 'pfmea' && <><TableCell>RPN</TableCell><TableCell>Priority</TableCell><TableCell>Revised</TableCell><TableCell /></>}{editable && <TableCell />}</TableRow></TableHead>
             <TableBody>
               {rows.map((r, i) => <TableRow key={r.id ?? `n${i}`}>
-                {cols.map(([k2, , t]) => <TableCell key={k2} sx={{ minWidth: t === 'number' ? 56 : 120 }}>
-                  {t === 'user' ? (editable ? <TextField select size="small" variant="standard" value={r[k2] ?? ''} onChange={(e) => setCell(i, k2, e.target.value, t)} sx={{ minWidth: 120 }}><MenuItem value="">—</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+                {cols.map(([k2, l, t]) => <TableCell key={k2} sx={{ minWidth: t === 'number' ? 56 : 120 }}>
+                  {t === 'user' ? (editable ? <TextField select size="small" variant="standard" value={r[k2] ?? ''} onChange={(e) => setCell(i, k2, e.target.value, t)} sx={{ minWidth: 120 }} slotProps={{ htmlInput: { 'aria-label': `${l} row ${i + 1}` } }}><MenuItem value="">—</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
                     : (users.data?.find((u) => u.id === r[k2])?.displayName ?? '—'))
-                  : editable ? <TextField size="small" variant="standard" type={t} value={r[k2] ?? ''} onChange={(e) => setCell(i, k2, e.target.value, t)} inputProps={{ 'aria-label': k2 }} /> : (t === 'date' ? fmtDate(r[k2]) : (r[k2] ?? '—'))}</TableCell>)}
+                  : editable ? <TextField size="small" variant="standard" type={t} value={r[k2] ?? ''} onChange={(e) => setCell(i, k2, e.target.value, t)} slotProps={{ htmlInput: { 'aria-label': `${l} row ${i + 1}` } }} /> : (t === 'date' ? fmtDate(r[k2]) : (r[k2] ?? '—'))}</TableCell>)}
                 {kind === 'pfmea' && <>
                   <TableCell sx={{ fontFamily: mono }}>{r.rpn ?? r.severity * r.occurrence * r.detection}</TableCell>
                   <TableCell>{r.priority != null && <Box component="span" sx={{ px: 1, py: 0.25, borderRadius: 1, color: '#fff', fontSize: 12, bgcolor: prioTone[r.priority] }}>{priorities[r.priority]}</Box>}</TableCell>
@@ -342,7 +342,7 @@ export function MsaDetail() {
       {s.status !== 0 && <MsaResultVersions id={id!} />}
       <Section title="Measurements" action={s.status === 0 && can('spc.edit') ? (text === null ? <Button size="small" onClick={() => setText(asText)}>Edit</Button>
         : <Stack direction="row" gap={1}><Button size="small" onClick={() => setText(null)}>Cancel</Button><Button size="small" variant="contained" disabled={busy} onClick={() => run(() => put(`/api/spc/msa/${id}/measurements`, parse(text)))}>Save</Button></Stack>) : undefined}>
-        {text !== null ? <TextField multiline minRows={10} fullWidth value={text} onChange={(e) => setText(e.target.value)} helperText={`One reading per line: operator, part, trial, ${attr ? 'result, reference result' : 'value, reference (bias/linearity)'}`} InputProps={{ sx: { fontFamily: mono, fontSize: 13 } }} />
+        {text !== null ? <TextField multiline minRows={10} fullWidth label="Measurements" value={text} onChange={(e) => setText(e.target.value)} helperText={`One reading per line: operator, part, trial, ${attr ? 'result, reference result' : 'value, reference (bias/linearity)'}`} InputProps={{ sx: { fontFamily: mono, fontSize: 13 } }} />
           : <DataTable data={q.data?.measurements ?? []} columns={[{ header: 'Operator', accessorKey: 'operator' }, { header: 'Part', accessorKey: 'part' }, { header: 'Trial', accessorKey: 'trial' },
             { header: attr ? 'Result' : 'Value', accessorFn: (m) => (attr ? m.attribute : m.value), cell: num }, { header: 'Reference', accessorFn: (m) => (attr ? m.attributeReference : m.reference) ?? '' }]} />}
       </Section>
@@ -413,8 +413,8 @@ function LpaRun({ id, onDone }: { id: string; onDone: () => void }) {
       {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
       {qs.map((x, i) => <Stack key={i} direction="row" gap={2} alignItems="center" sx={{ py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
         <Typography sx={{ flex: 1 }}>{i + 1}. {x}</Typography>
-        <TextField select size="small" value={ans[i]?.pass === false ? 'fail' : 'pass'} onChange={(e) => setAns({ ...ans, [i]: { pass: e.target.value === 'pass', note: ans[i]?.note ?? '' } })} sx={{ width: 110 }}><MenuItem value="pass">Pass</MenuItem><MenuItem value="fail">Fail</MenuItem></TextField>
-        <TextField size="small" placeholder="Note" value={ans[i]?.note ?? ''} onChange={(e) => setAns({ ...ans, [i]: { pass: ans[i]?.pass ?? true, note: e.target.value } })} />
+        <TextField select size="small" value={ans[i]?.pass === false ? 'fail' : 'pass'} onChange={(e) => setAns({ ...ans, [i]: { pass: e.target.value === 'pass', note: ans[i]?.note ?? '' } })} sx={{ width: 110 }} slotProps={{ htmlInput: { 'aria-label': `Question ${i + 1} result` } }}><MenuItem value="pass">Pass</MenuItem><MenuItem value="fail">Fail</MenuItem></TextField>
+        <TextField size="small" placeholder="Note" slotProps={{ htmlInput: { 'aria-label': `Question ${i + 1} note` } }} value={ans[i]?.note ?? ''} onChange={(e) => setAns({ ...ans, [i]: { pass: ans[i]?.pass ?? true, note: e.target.value } })} />
       </Stack>)}
       <Stack direction="row" gap={1} sx={{ mt: 2 }}><Button onClick={onDone}>Close</Button>
         <Button variant="contained" disabled={busy || !qs.length} onClick={() => run(() => post(`/api/lpa/audits/${id}/complete`, { answers: qs.map((x, i) => ({ question: x, pass: ans[i]?.pass ?? true, note: ans[i]?.note || null })) }))}>Complete audit</Button></Stack>

@@ -161,9 +161,9 @@ export function ValidationDetail() {
                 <TableRow key={t.id ?? i}>
                   <TableCell>{t.sequence}</TableCell>
                   {rows ? <>
-                    <TableCell><TextField select size="small" value={t.stage} onChange={(e) => edit(i, 'stage', e.target.value)}>{['IQ', 'OQ', 'PQ'].map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}</TextField></TableCell>
-                    <TableCell><TextField size="small" fullWidth placeholder="Test" value={t.description} onChange={(e) => edit(i, 'description', e.target.value)} /></TableCell>
-                    <TableCell><TextField size="small" fullWidth placeholder="Acceptance criteria" value={t.acceptanceCriteria} onChange={(e) => edit(i, 'acceptanceCriteria', e.target.value)} /></TableCell><TableCell /><TableCell />
+                    <TableCell><TextField select size="small" value={t.stage} onChange={(e) => edit(i, 'stage', e.target.value)} slotProps={{ htmlInput: { 'aria-label': `Stage for test ${t.sequence}` } }}>{['IQ', 'OQ', 'PQ'].map((s) => <MenuItem key={s} value={s}>{s}</MenuItem>)}</TextField></TableCell>
+                    <TableCell><TextField size="small" fullWidth placeholder="Test" slotProps={{ htmlInput: { 'aria-label': `Test ${t.sequence}` } }} value={t.description} onChange={(e) => edit(i, 'description', e.target.value)} /></TableCell>
+                    <TableCell><TextField size="small" fullWidth placeholder="Acceptance criteria" slotProps={{ htmlInput: { 'aria-label': `Acceptance criteria for test ${t.sequence}` } }} value={t.acceptanceCriteria} onChange={(e) => edit(i, 'acceptanceCriteria', e.target.value)} /></TableCell><TableCell /><TableCell />
                   </> : <>
                     <TableCell>{t.stage}</TableCell><TableCell>{t.description}</TableCell><TableCell>{t.acceptanceCriteria}</TableCell>
                     <TableCell>{t.passed == null ? '—' : <Chip size="small" color={t.passed ? 'success' : 'error'} label={t.passed ? 'Pass' : 'Fail'} />}<Typography variant="caption" display="block">{t.actualResult}</Typography></TableCell>

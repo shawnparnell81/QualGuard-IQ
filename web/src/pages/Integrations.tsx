@@ -267,9 +267,9 @@ function MappingRow({ entity, m, edit, csv, onSave, onRun, onCsv }: { entity: nu
   return (
     <TableRow>
       <TableCell sx={{ fontWeight: 600 }}>{erpEntities[entity]}</TableCell>
-      <TableCell><TextField select size="small" variant="standard" value={mode} disabled={!edit} onChange={(e) => setMode(Number(e.target.value))}>{syncMode.map((s, i) => <MenuItem key={s} value={i}>{s}</MenuItem>)}</TextField></TableCell>
-      <TableCell><TextField select size="small" variant="standard" value={cf} disabled={!edit} onChange={(e) => setCf(Number(e.target.value))}>{conflict.map((s, i) => <MenuItem key={s} value={i}>{s}</MenuItem>)}</TextField></TableCell>
-      <TableCell><TextField size="small" variant="standard" value={cron} disabled={!edit} onChange={(e) => setCron(e.target.value)} sx={{ '& input': { fontFamily: mono } }} /></TableCell>
+      <TableCell><TextField select size="small" variant="standard" value={mode} disabled={!edit} onChange={(e) => setMode(Number(e.target.value))} slotProps={{ htmlInput: { 'aria-label': `${erpEntities[entity]} sync mode` } }}>{syncMode.map((s, i) => <MenuItem key={s} value={i}>{s}</MenuItem>)}</TextField></TableCell>
+      <TableCell><TextField select size="small" variant="standard" value={cf} disabled={!edit} onChange={(e) => setCf(Number(e.target.value))} slotProps={{ htmlInput: { 'aria-label': `${erpEntities[entity]} conflict rule` } }}>{conflict.map((s, i) => <MenuItem key={s} value={i}>{s}</MenuItem>)}</TextField></TableCell>
+      <TableCell><TextField size="small" variant="standard" value={cron} disabled={!edit} onChange={(e) => setCron(e.target.value)} sx={{ '& input': { fontFamily: mono } }} slotProps={{ htmlInput: { 'aria-label': `${erpEntities[entity]} schedule (cron)` } }} /></TableCell>
       <TableCell>{fmtDateTime(m?.nextRunAt)}</TableCell>
       <TableCell><Stack direction="row" gap={0.5}>
         {edit && dirty && <Button size="small" variant="contained" onClick={() => onSave({ direction: 0, mode, conflict: cf, cron, fieldMap: null, validationRules: null })}>Save</Button>}
