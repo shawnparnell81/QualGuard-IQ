@@ -1,11 +1,14 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
+// API origin for the dev proxy; UI tests point this at their own API instance.
+const api = process.env.QGIQ_API_URL ?? 'http://localhost:5080';
+
 export default defineConfig({
   plugins: [react()],
   server: {
     port: 5173,
-    proxy: { '/api': 'http://localhost:5080', '/health': 'http://localhost:5080' },
+    proxy: { '/api': api, '/health': api },
   },
   build: {
     rolldownOptions: {

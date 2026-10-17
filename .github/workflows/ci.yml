@@ -41,3 +41,35 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: npm audit --audit-level=high
+  ui:
+    runs-on: ubuntu-latest
+    needs: [backend, web]
+    services:
+      postgres:
+        image: postgres:18
+        env: { POSTGRES_USER: qgiq, POSTGRES_PASSWORD: ci_only, POSTGRES_DB: postgres }
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+      minio:
+        image: bitnami/minio:latest
+        env: { MINIO_ROOT_USER: ci_minio, MINIO_ROOT_PASSWORD: ci_minio_secret }
+        ports: ["9000:9000"]
+    env:
+      E2E_PGPORT: "5432"
+      E2E_PGPASSWORD: ci_only
+      E2E_S3_KEY: ci_minio
+      E2E_S3_SECRET: ci_minio_secret
+    defaults: { run: { working-directory: web } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with: { dotnet-version: "10.0.x" }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: dotnet build ../src/QualGuardIQ.Api
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with: { name: playwright-report, path: web/playwright-report }

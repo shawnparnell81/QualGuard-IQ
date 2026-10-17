@@ -1,0 +1,25 @@
+import { Api, saveState, users } from './support';
+
+const view = ['documents.view', 'drawings.view', 'forms.view', 'ncr.view', 'capa.view', 'audits.view', 'training.view', 'calibration.view'];
+const edit = ['documents.edit', 'drawings.edit', 'forms.edit', 'ncr.edit', 'capa.edit', 'audits.edit', 'training.edit', 'calibration.edit'];
+const approve = ['documents.approve', 'drawings.approve', 'forms.approve', 'ncr.approve', 'capa.approve', 'audits.approve', 'calibration.approve'];
+
+/** Creates the site, roles and people the UI tests sign in as. Runs once against a fresh database. */
+export default async function globalSetup() {
+  const admin = await Api.as(users.admin);
+  const siteId = await admin.post<string>('/api/organization/sites', { code: 'E2E', name: 'Test Plant', address: null, timeZone: 'America/New_York' });
+  const role = (name: string, permissions: string[]) => admin.post<string>('/api/admin/roles', { name, description: `${name} (UI tests)`, permissions });
+  const roles = {
+    author: await role('Quality Engineer', [...view, ...edit]),
+    approver: await role('Quality Approver', [...view, ...approve]),
+    viewer: await role('Read Only', view),
+  };
+  const ids: Record<string, string> = {};
+  for (const u of [users.author, users.approver, users.viewer, users.outsider]) {
+    ids[u.key] = await admin.post<string>('/api/admin/users', { email: u.email, displayName: u.name, password: u.password });
+    const r = roles[u.key as keyof typeof roles];
+    if (r) await admin.post(`/api/admin/users/${ids[u.key]}/roles`, { roleId: r, siteId, departmentId: null });
+  }
+  saveState({ siteId, ids });
+  await admin.dispose();
+}
