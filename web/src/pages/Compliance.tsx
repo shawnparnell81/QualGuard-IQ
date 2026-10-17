@@ -152,7 +152,7 @@ export function ValidationDetail() {
       {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}
       <Stack direction="row" sx={{ mb: 2 }}>{['Planning', 'Protocol approval', 'Execution', 'Results approval', 'Released'].map((s, i) => (
         <Box key={s} sx={{ flex: 1, py: 0.75, textAlign: 'center', fontSize: 12.5, bgcolor: i < st ? 'primary.main' : i === st ? 'secondary.main' : 'action.hover', color: i <= st ? 'common.white' : 'text.secondary', clipPath: 'polygon(0 0, 94% 0, 100% 50%, 94% 100%, 0 100%, 6% 50%)' }}>{s}</Box>))}</Stack>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 280px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Stack gap={2}>
           <Section title="Protocol tests" action={st === 0 && <Stack direction="row" gap={1}><Button size="small" onClick={() => setRows([...tests, { stage: 'IQ', sequence: tests.length + 1, description: '', acceptanceCriteria: '' }])}>Add test</Button>
             {rows && <Button size="small" variant="contained" onClick={() => r.run(() => put(`/api/validation/${id}/tests`, rows.map((t) => ({ stage: t.stage, sequence: Number(t.sequence), description: t.description, acceptanceCriteria: t.acceptanceCriteria }))))}>Save tests</Button>}</Stack>}>

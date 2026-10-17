@@ -125,7 +125,7 @@ function ConnectionForm({ initial, onSaved }: { initial?: Conn; onSaved: (id: st
   const ad = adapters.data?.find((a) => a.system === v.system);
   const ed = ad?.editions.find((e) => e.edition === v.edition) ?? ad?.editions[0];
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 380px' }, gap: 2 }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 380px' }, gap: 2 }}>
       <Paper sx={{ p: 3, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, alignSelf: 'start' }}>
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Name" value={v.name} onChange={set('name')} sx={{ gridColumn: '1 / -1' }} />

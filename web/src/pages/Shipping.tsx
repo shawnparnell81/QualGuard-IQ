@@ -170,7 +170,7 @@ export function ShipmentDetail() {
         {live && <Button color="inherit" onClick={() => setDlg('cancel')}>Cancel shipment</Button>}</Stack>}>
       <StageRail status={s.status} />
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 280px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Box>
           {tab === 'lines' && <Paper><Table size="small"><TableHead><TableRow><TableCell>#</TableCell><TableCell>Part</TableCell><TableCell>Lot</TableCell><TableCell align="right">Ordered</TableCell><TableCell align="right">Picked</TableCell><TableCell align="right">Verified</TableCell></TableRow></TableHead>
             <TableBody>{d.data!.lines.map((l) => <TableRow key={l.line.id}><TableCell>{l.line.lineNumber}</TableCell><TableCell><b style={{ fontFamily: mono }}>{l.partNumber}</b>{l.line.revision ? ` rev ${l.line.revision}` : ''} <Typography component="span" variant="body2" color="text.secondary">{l.partName}</Typography></TableCell>

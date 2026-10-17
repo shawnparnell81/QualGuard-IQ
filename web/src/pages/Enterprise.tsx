@@ -198,7 +198,7 @@ export function StandardDetail() {
   return (
     <ModuleWorkspace module={mod('enterprise')} crumbs={[{ label: 'Corporate standards', to: '/enterprise/standards' }, { label: s.number }]} title={`${s.number} — ${s.title}`}
       actions={<Button variant="contained" onClick={() => setDlg({ kind: 'rollout' })}>Roll out to a site</Button>}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 280px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Section title={`Site rollout (${verified}/${ro.data?.length ?? 0} verified)`}>
           <LinearProgress variant="determinate" value={ro.data?.length ? (100 * verified) / ro.data.length : 0} sx={{ mb: 2, height: 8, borderRadius: 1 }} />
           <Table size="small"><TableHead><TableRow>{['Site', 'Status', 'Due', 'Local procedure', 'Verified', ''].map((h) => <TableCell key={h}>{h}</TableCell>)}</TableRow></TableHead>

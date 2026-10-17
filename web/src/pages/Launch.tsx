@@ -70,7 +70,7 @@ export function ProjectDetail() {
             <LinearProgress variant="determinate" value={Number(b.pct)} sx={{ my: 0.5 }} /><Typography variant="caption">{b.done}/{b.total}{b.overdue ? ` · ${b.overdue} overdue` : ''}</Typography>
           </Paper>))}
       </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 280px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Section title={`Phase ${ph} deliverables`}>
           <Table size="small"><TableBody>{q.data.deliverables.filter((d: any) => d.phase === ph).map((d: any) => (
             <TableRow key={d.id}><TableCell>{d.name}</TableCell><TableCell>{d.linkedType ? <Chip size="small" label={d.linkedType} onClick={() => nav(`/records/${d.linkedType}/${d.linkedId}`)} /> : null}</TableCell>
@@ -191,7 +191,7 @@ export function CapabilityStudies() {
   const idx = (v: number | null) => (v == null ? '—' : Number(v).toFixed(2));
   return (
     <ModuleWorkspace module={mod('launch')} crumbs={[{ label: 'Launch', to: '/launch' }, { label: 'Capability' }]} title="Process capability">
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 320px' }, gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 320px' }, gap: 2, mb: 2 }}>
         <Section title="Calculator">
           <Stack direction="row" gap={1.5} sx={{ mb: 1.5 }}><TextField size="small" label="LSL" value={lsl} onChange={(e) => setLsl(e.target.value)} /><TextField size="small" label="USL" value={usl} onChange={(e) => setUsl(e.target.value)} /><TextField size="small" label="Subgroup size" value={n} onChange={(e) => setN(e.target.value)} /></Stack>
           <TextField fullWidth multiline minRows={4} label="Measurements" value={values} onChange={(e) => setValues(e.target.value)} />
