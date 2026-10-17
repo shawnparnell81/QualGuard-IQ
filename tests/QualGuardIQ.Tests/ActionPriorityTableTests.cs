@@ -7,6 +7,8 @@ namespace QualGuardIQ.Tests;
 /// Checks every one of the 1000 S/O/D combinations against the published AIAG-VDA FMEA Handbook (2019)
 /// "Table AP – Action Priority for DFMEA and PFMEA", transcribed here independently of PfmeaMath.
 /// Rows: severity band, occurrence band. Columns: detection 7-10, 5-6, 2-4, 1.
+/// Cross-checked row by row on 2026-10-17 against https://relyence.com/help/user-guide/fmea-ap.html and a second
+/// independent transcription of handbook pp. 70-71 / 116-117; no differences.
 /// </summary>
 public sealed class ActionPriorityTableTests
 {
