@@ -10818,14 +10818,78 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("msa_measurements", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.MsaResultVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CalculationVersion")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsOfRecord")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("StudyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Verdict")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StudyId", "CreatedAt");
+
+                    b.ToTable("msa_result_versions", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.MsaStudy", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("CalculationVersion")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
                     b.Property<string>("Characteristic")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)");
+
+                    b.Property<decimal>("ConfidenceLevel")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)")
+                        .HasDefaultValue(0.95m);
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -10911,7 +10975,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("SiteId");
 
-                    b.ToTable("msa_studies", "qms");
+                    b.ToTable("msa_studies", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_msa_confidence", "\"ConfidenceLevel\" BETWEEN 0.80 AND 0.999");
+                        });
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.Ncr", b =>
@@ -18158,6 +18225,15 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.MsaMeasurement", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Quality.MsaStudy", null)
+                        .WithMany()
+                        .HasForeignKey("StudyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.MsaResultVersion", b =>
                 {
                     b.HasOne("QualGuardIQ.Domain.Quality.MsaStudy", null)
                         .WithMany()

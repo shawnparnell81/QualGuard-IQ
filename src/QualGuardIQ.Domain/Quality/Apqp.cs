@@ -176,7 +176,24 @@ public class MsaStudy : Entity, IAudited, ISiteScoped
     public Guid OwnerId { get; set; }
     public Guid SiteId { get; set; }
     public Guid? DepartmentId { get; set; }
+    /// <summary>Confidence level for significance tests (bias t-test), 0.80 to 0.999. Default 0.95.</summary>
+    public decimal ConfidenceLevel { get; set; } = 0.95m;
+    /// <summary>Calculation version of the frozen Result; null for results frozen before versioning (legacy approximation).</summary>
+    public string? CalculationVersion { get; set; }
     public string AuditLabel => $"MSA {Number}";
+}
+
+/// <summary>Every computed MSA result kept with its calculation version. Results are never rewritten; a recalculation adds a row.</summary>
+public class MsaResultVersion : Entity, IAppendOnly
+{
+    public Guid StudyId { get; set; }
+    public string CalculationVersion { get; set; } = "";
+    public string Result { get; set; } = "";
+    public string? Verdict { get; set; }
+    /// <summary>Why this result was recorded: "Submitted", "Recalculated", "Original (before calculation versioning)".</summary>
+    public string Reason { get; set; } = "";
+    /// <summary>True for the result the study's approval was based on.</summary>
+    public bool IsOfRecord { get; set; }
 }
 
 public class MsaMeasurement : Entity

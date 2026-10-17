@@ -58,3 +58,9 @@ after the data steward approves it; the master record's history shows the old an
 ## Notifications
 
 Notifications appear under the bell icon and, when email is configured, by email. They link straight to the record.
+
+## MSA bias study calculation (calculation version bias-t/2)
+- The bias is the mean of the readings minus the reference value. Significance is a two-sided one-sample Student t-test with n − 1 degrees of freedom at the study's confidence level (default 95%, configurable 80%–99.9% when the study is created).
+- The result shows the inputs (n, mean, reference, standard deviation), the standard error, the t statistic, the exact critical t, the p-value and the confidence interval for the bias. Quantiles and p-values come from MathNet.Numerics; they are checked in the test suite against values computed independently with SciPy.
+- Fewer than 2 readings: no result. Fewer than 10: the result carries a note (AIAG recommends at least 10). All readings identical: t is undefined; any non-zero bias is treated as significant.
+- Results frozen before this version (calculation "msa/1", which used a five-step approximation of the critical t) are kept unchanged as the result of record. "Recalculate" adds a new result version beside the original; it never changes what was approved.
