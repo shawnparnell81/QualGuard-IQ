@@ -3,6 +3,7 @@ import { Box, Button, LinearProgress, MenuItem, Paper, Stack, TextField, Typogra
 import { useQuery } from '@tanstack/react-query';
 import { get } from '../api';
 import { mono } from '../theme';
+import { tones } from '../brand';
 
 export const stockStatus = ['Available', 'AwaitingInspection', 'Quarantined', 'Rejected', 'Mrb', 'Damaged', 'InTransit', 'AwaitingDisposition'];
 export const stockStatusLabel = ['Available', 'Awaiting inspection', 'Quarantined', 'Rejected', 'MRB', 'Damaged', 'In transit', 'Awaiting disposition'];
@@ -50,10 +51,10 @@ export function LocationSelect({ label, value, onChange, siteId, purposes: only,
   );
 }
 
-/** Tone per stock status: available stock is green-teal, anything blocked is rust, transit is slate. */
-export const statusTone = (s: number) => (s === 0 ? '#2E6B5E' : s === 6 ? '#4F6F7A' : s === 1 ? '#B4842A' : '#A4473B');
+/** Tone per stock status: available stock is green, anything blocked is rust, transit is slate. */
+export const statusTone = (s: number) => (s === 0 ? tones.ok : s === 6 ? tones.slate : s === 1 ? tones.warn : tones.bad);
 export function StockBadge({ status, held }: { status: number; held?: boolean }) {
-  const tone = held && status === 0 ? '#A4473B' : statusTone(status);
+  const tone = held && status === 0 ? tones.bad : statusTone(status);
   return <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75, fontSize: 12.5, color: tone, fontWeight: 600 }}>
     <Box component="span" sx={{ width: 8, height: 8, borderRadius: '2px', bgcolor: tone }} />{held && status === 0 ? 'On hold' : stockStatusLabel[status]}</Box>;
 }
@@ -72,7 +73,7 @@ export function MetricTile({ label, value, unit, num, den, note, onClick }: { la
 
 export function FillBar({ pct }: { pct?: number | null }) {
   if (pct == null) return <Typography variant="caption" color="text.secondary">No capacity set</Typography>;
-  return <Stack direction="row" alignItems="center" gap={1}><LinearProgress variant="determinate" value={Math.min(100, pct)} sx={{ flex: 1, height: 10, borderRadius: 1, bgcolor: '#E6E1D6', '& .MuiLinearProgress-bar': { bgcolor: pct > 90 ? '#A4473B' : pct > 70 ? '#B4842A' : '#2E6B5E' } }} /><Typography sx={{ fontFamily: mono, fontSize: 12.5, width: 52, textAlign: 'right' }}>{pct}%</Typography></Stack>;
+  return <Stack direction="row" alignItems="center" gap={1}><LinearProgress variant="determinate" value={Math.min(100, pct)} sx={{ flex: 1, height: 10, borderRadius: 1, bgcolor: 'divider', '& .MuiLinearProgress-bar': { bgcolor: pct > 90 ? tones.bad : pct > 70 ? tones.warn : tones.ok } }} /><Typography sx={{ fontFamily: mono, fontSize: 12.5, width: 52, textAlign: 'right' }}>{pct}%</Typography></Stack>;
 }
 
 /**

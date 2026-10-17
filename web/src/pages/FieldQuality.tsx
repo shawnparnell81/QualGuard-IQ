@@ -11,7 +11,7 @@ import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDate, fmtDateTime, localDate, severity } from '../components/Status';
 import { Facts, Prose, Section, StepDialog, lookupLabel, useLookup, useRunner, useSites } from '../components/Kit';
 import { AttachmentsAndHistory } from '../components/RecordTabs';
-import { mono } from '../theme';
+import { mono, useChartColors } from '../theme';
 
 const mod = modules.find((m) => m.key === 'field')!;
 export const recallStatus = ['Open', 'Investigation', 'Containment', 'Notification', 'PendingClosure', 'Closed', 'Cancelled'];
@@ -358,6 +358,7 @@ interface Metrics { claimQuantity: number; shippedQuantity: number; ppm: number;
 interface G { id?: string; label: string; claims: number; quantity: number; cost: number }
 
 export function WarrantyMetrics() {
+  const cc = useChartColors();
   const [from, setFrom] = useState(localDate(-365));
   const [to, setTo] = useState(localDate());
   const q = useQuery({ queryKey: ['wmetrics', from, to], queryFn: () => get<Metrics>(`/api/warranty/metrics?from=${from}&to=${to}`) });
@@ -374,8 +375,8 @@ export function WarrantyMetrics() {
             <Paper key={l} sx={{ p: 1.75, borderTop: 3, borderTopColor: 'secondary.main' }}><Typography variant="caption" color="text.secondary">{l}</Typography><Typography sx={{ fontFamily: mono, fontSize: 26 }}>{val}</Typography><Typography variant="caption" color="text.secondary">{sub}</Typography></Paper>)}
         </Box>
         <Section title="Trend">
-          <Box sx={{ height: 260 }}><ResponsiveContainer><ComposedChart data={d.trend}><CartesianGrid stroke="#E2DED5" /><XAxis dataKey="period" /><YAxis yAxisId="l" /><YAxis yAxisId="r" orientation="right" /><Tooltip />
-            <Bar yAxisId="l" dataKey="claims" fill="#B4632A" name="Claims" /><Line yAxisId="r" dataKey="ppm" stroke="#1F4E4A" name="PPM" /></ComposedChart></ResponsiveContainer></Box>
+          <Box sx={{ height: 260 }}><ResponsiveContainer><ComposedChart data={d.trend}><CartesianGrid stroke={cc.grid} /><XAxis dataKey="period" /><YAxis yAxisId="l" /><YAxis yAxisId="r" orientation="right" /><Tooltip />
+            <Bar yAxisId="l" dataKey="claims" fill={cc.accent} name="Claims" /><Line yAxisId="r" dataKey="ppm" stroke={cc.primary} name="PPM" /></ComposedChart></ResponsiveContainer></Box>
         </Section>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2, mt: 2 }}>{grp('By product', d.byProduct)}{grp('By component', d.byComponent)}{grp('By supplier', d.bySupplier)}</Box>
       </>}

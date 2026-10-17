@@ -16,6 +16,7 @@ import { LocationSelect, MetricTile, ScanField, carrierKinds, containerKinds, pi
 import { Custody, FlowChart, RefLedger, SitePicker, qty, type Dash } from './Warehouse';
 import { ShipmentDocumentsPanel } from './ShippingDocuments';
 import { ShipmentCarrierPanel } from './Carriers';
+import { tones } from '../brand';
 
 const mod = modules.find((m) => m.key === 'shipping')!;
 const mnum = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue() ?? '')}</span>;
@@ -50,7 +51,7 @@ export function LogisticsOverview() {
             <TableBody>{(d.data?.carriers ?? []).map((c) => (
               <TableRow key={c.carrierId}><TableCell>{c.name}</TableCell><TableCell align="right">{c.shipments}</TableCell><TableCell align="right">{c.delivered}</TableCell>
                 <TableCell align="right" sx={{ fontFamily: mono }}>{c.onTimePct != null ? `${c.onTimePct.toFixed(0)}%` : '—'} <Typography component="span" variant="caption" color="text.secondary">({c.onTime}/{c.withPromise})</Typography></TableCell>
-                <TableCell><Box sx={{ height: 8, bgcolor: '#E6E1D6' }}><Box sx={{ height: 8, width: `${c.onTimePct ?? 0}%`, bgcolor: (c.onTimePct ?? 0) >= 95 ? '#2E6B5E' : '#B4842A' }} /></Box></TableCell></TableRow>))}
+                <TableCell><Box sx={{ height: 8, bgcolor: 'divider' }}><Box sx={{ height: 8, width: `${c.onTimePct ?? 0}%`, bgcolor: (c.onTimePct ?? 0) >= 95 ? tones.ok : tones.warn }} /></Box></TableCell></TableRow>))}
               {d.data && d.data.carriers.length === 0 && <TableRow><TableCell colSpan={5}><Typography color="text.secondary">No carrier shipments yet.</Typography></TableCell></TableRow>}</TableBody></Table>
         </Section>
         <Section title="Inbound vs outbound (30 days)"><FlowChart d={d.data} /></Section>
@@ -137,7 +138,7 @@ const stageRail = ['Draft', 'Picking', 'Picked', 'Packed', 'Verified', 'Shipped'
 function StageRail({ status }: { status: number }) {
   return <Box sx={{ display: 'grid', gridTemplateColumns: `repeat(${stageRail.length}, 1fr)`, mb: 2, border: 1, borderColor: 'divider', bgcolor: 'background.paper' }}>
     {stageRail.map((s, i) => (
-      <Box key={s} sx={{ py: 1, textAlign: 'center', borderRight: i < stageRail.length - 1 ? 1 : 0, borderColor: 'divider', bgcolor: status === 7 ? 'action.disabledBackground' : i < status ? '#DCE8E4' : i === status ? 'primary.main' : undefined, color: i === status && status !== 7 ? 'primary.contrastText' : 'text.primary' }}>
+      <Box key={s} sx={{ py: 1, textAlign: 'center', borderRight: i < stageRail.length - 1 ? 1 : 0, borderColor: 'divider', bgcolor: status === 7 ? 'action.disabledBackground' : i < status ? 'action.selected' : i === status ? 'primary.main' : undefined, color: i === status && status !== 7 ? 'primary.contrastText' : 'text.primary' }}>
         <Typography variant="caption" sx={{ fontWeight: 700, letterSpacing: 0.5 }}>{i + 1}. {s.toUpperCase()}</Typography></Box>))}
   </Box>;
 }
@@ -279,7 +280,7 @@ function PackTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
   }
   const remaining = [...groups.values()].map((g) => ({ ...g, left: g.picked - items.filter((i) => i.lineId === g.lineId && (i.serialNumber ?? i.lotNumber ?? '') === g.ident).reduce((a, i) => a + i.quantity, 0) })).filter((g) => g.left > 0);
   const tree = (pid?: string, depth = 0): React.ReactNode => d.containers.filter((c) => (c.container.parentId ?? undefined) === pid).map((c) => (
-    <Box key={c.container.id} sx={{ ml: depth * 3, mb: 1, borderLeft: 3, borderColor: c.container.verified ? '#2E6B5E' : 'divider', pl: 1.5 }}>
+    <Box key={c.container.id} sx={{ ml: depth * 3, mb: 1, borderLeft: 3, borderColor: c.container.verified ? 'success.main' : 'divider', pl: 1.5 }}>
       <Typography component="div" sx={{ fontWeight: 600 }}><span style={{ fontFamily: mono }}>QG:CTN:{c.container.number}</span> · {containerKinds[c.container.kind]}{c.container.weight != null ? ` · ${qty(c.container.weight)} kg` : ''}{c.container.lengthCm != null ? ` · ${qty(c.container.lengthCm)}×${qty(c.container.widthCm ?? 0)}×${qty(c.container.heightCm ?? 0)} cm` : ''}{c.container.verified && <Chip size="small" color="success" label="verified" sx={{ ml: 1 }} />}</Typography>
       {c.items.map((i) => <Typography key={i.id} variant="body2" sx={{ fontFamily: mono }}>{i.partNumber} {i.serialNumber ?? i.lotNumber ?? ''} × {qty(i.quantity)}</Typography>)}
       {tree(c.container.id, depth + 1)}

@@ -8,6 +8,8 @@ import { mod } from './Enterprise';
 import { useAuth } from '../auth';
 import { useTypeLabel, useUsers } from '../components/Kit';
 import { VideoPlayer } from '../components/VideoPlayer';
+import { alpha } from '@mui/material/styles';
+import { tones } from '../brand';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const P = () => mod('platform');
@@ -58,7 +60,7 @@ export function WorkflowDesigner() {
           <Box sx={{ minWidth: 90, display: 'grid', placeItems: 'center' }}><Chip color="primary" label="Submitted" /></Box>
           {stages.map((st, i) => <Box key={st} sx={{ display: 'flex', alignItems: 'stretch' }}>
             <Box sx={{ alignSelf: 'center', px: 1, color: 'text.secondary', fontSize: 22 }}>➜</Box>
-            <Paper variant="outlined" sx={{ p: 1.5, minWidth: 250, bgcolor: 'rgba(0,128,128,.04)', borderStyle: 'dashed' }} data-testid={`stage-${i + 1}`}>
+            <Paper variant="outlined" sx={{ p: 1.5, minWidth: 250, bgcolor: (t) => alpha(t.palette.primary.main, 0.04), borderStyle: 'dashed' }} data-testid={`stage-${i + 1}`}>
               <Typography variant="overline" sx={{ display: 'block' }}>Stage {i + 1}{route.steps.filter((s) => s.stage === st).length > 1 ? ' · parallel (all must sign)' : ''}</Typography>
               <Stack gap={1}>{route.steps.filter((s) => s.stage === st).map((s) => <Paper key={s.order} onClick={() => setEditing(s.order)} sx={{ p: 1.25, cursor: 'pointer', borderLeft: 4, borderColor: s.conditionField ? 'warning.main' : 'primary.main', outline: editing === s.order ? '2px solid' : 'none', outlineColor: 'primary.main' }}>
                 <Typography variant="body2" sx={{ fontWeight: 600 }}>{s.name}</Typography>
@@ -170,7 +172,7 @@ export function FormDesigner() {
           <Typography variant="overline" sx={{ display: 'block', mt: 2 }}>Library</Typography>
           <Stack gap={.75}>{(library.data ?? []).filter((c) => c.status === 1).map((c) => <Button key={c.id} size="small" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} onClick={() => insert(c)}>⧉ {c.name} v{c.version}</Button>)}
             {(library.data ?? []).filter((c) => c.status === 1).length === 0 && <Typography variant="caption" color="text.secondary">No published components.</Typography>}</Stack></Paper>
-        <Paper sx={{ p: 1.5, minHeight: 300, bgcolor: 'rgba(0,128,128,.03)' }}><Typography variant="overline">Canvas · {fields.length} fields</Typography>
+        <Paper sx={{ p: 1.5, minHeight: 300, bgcolor: (t) => alpha(t.palette.primary.main, 0.03) }}><Typography variant="overline">Canvas · {fields.length} fields</Typography>
           <Stack gap={1}>{fields.map((x, i) => <Paper key={i} onClick={() => setSel(i)} sx={{ p: 1.25, cursor: 'pointer', display: 'flex', gap: 1.5, alignItems: 'center', outline: sel === i ? '2px solid' : 'none', outlineColor: 'primary.main' }}>
             <Box sx={{ width: 28, height: 28, borderRadius: 1, bgcolor: 'primary.main', color: 'primary.contrastText', display: 'grid', placeItems: 'center', fontFamily: mono, fontSize: 13 }}>{ftypes.find((t) => t[0] === x.type)?.[2]}</Box>
             <Box sx={{ flex: 1 }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{x.label}{x.required ? ' *' : ''}</Typography><Typography variant="caption" sx={{ fontFamily: mono }}>{x.key}</Typography></Box>
@@ -470,7 +472,7 @@ export function RecoveryCenter() {
   );
 }
 
-const extKinds = ['Add-on', 'Quality extension', 'Industry pack']; const extColors = ['#5c6bc0', '#00897b', '#ef6c00'];
+const extKinds = ['Add-on', 'Quality extension', 'Industry pack']; const extColors = [tones.slate, tones.primary, '#ef6c00'];
 const licColor: Record<string, 'default' | 'success' | 'warning' | 'error'> = { Free: 'default', Licensed: 'success', Expired: 'error', Unlicensed: 'warning' };
 
 /** Marketplace: add-ons, quality extensions and industry packs; dependencies on platform modules and other packages; signed licenses; versions. */

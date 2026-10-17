@@ -30,7 +30,7 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
   return (
     <Box sx={{ display: 'flex', minHeight: 'calc(100vh - 52px)', position: 'relative' }}>
       {narrow && <Box sx={{ width: 48, flexShrink: 0 }} />}
-      <Box component="aside" sx={{ width: collapsed ? 48 : 248, flexShrink: 0, borderRight: 1, borderColor: 'divider', bgcolor: '#EFECE5', transition: 'width 150ms',
+      <Box component="aside" sx={{ width: collapsed ? 48 : 248, flexShrink: 0, borderRight: 1, borderColor: 'divider', bgcolor: 'background.sidebar', transition: 'width 150ms',
         ...(narrow ? { position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 20, boxShadow: peek ? 6 : 0 } : {}) }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', px: collapsed ? 0 : 2, py: 1.5 }}>
           {!collapsed && <Typography variant="overline" color="text.secondary" sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>{module.icon}{module.label}</Typography>}
@@ -88,7 +88,7 @@ function SideItem({ item, depth, current }: { item: NavItem; depth: number; curr
   }
   return (
     <ListItemButton component={RouterLink} to={item.path} selected={selected}
-      sx={{ pl: 2 + depth * 2, borderLeft: '3px solid', borderColor: selected ? 'secondary.main' : 'transparent', '&.Mui-selected': { bgcolor: 'rgba(31,78,74,0.08)' } }}>
+      sx={{ pl: 2 + depth * 2, borderLeft: '3px solid', borderColor: selected ? 'secondary.main' : 'transparent', '&.Mui-selected': { bgcolor: 'action.selected' } }}>
       <ListItemText primary={item.label} slotProps={{ primary: { fontSize: 13 } }} />
     </ListItemButton>
   );

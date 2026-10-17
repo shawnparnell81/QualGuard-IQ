@@ -285,7 +285,7 @@ function JsonDiff({ before, after }: { before?: string; after: string }) {
   const a = JSON.parse(after) as Record<string, unknown>;
   const keys = Array.from(new Set([...Object.keys(b), ...Object.keys(a)]));
   return <Table size="small"><TableHead><TableRow><TableCell>Field</TableCell><TableCell>Current</TableCell><TableCell>From ERP</TableCell></TableRow></TableHead>
-    <TableBody>{keys.map((k) => { const ch = JSON.stringify(b[k]) !== JSON.stringify(a[k]); return <TableRow key={k} sx={{ bgcolor: ch ? '#FBF3E8' : undefined }}>
+    <TableBody>{keys.map((k) => { const ch = JSON.stringify(b[k]) !== JSON.stringify(a[k]); return <TableRow key={k} sx={{ bgcolor: ch ? 'rgba(183,121,31,0.12)' : undefined }}>
       <TableCell sx={{ fontFamily: mono }}>{k}</TableCell><TableCell sx={{ fontFamily: mono }}>{b[k] === undefined ? '—' : String(JSON.stringify(b[k]))}</TableCell><TableCell sx={{ fontFamily: mono, fontWeight: ch ? 600 : undefined }}>{a[k] === undefined ? '—' : String(JSON.stringify(a[k]))}</TableCell></TableRow>; })}</TableBody></Table>;
 }
 

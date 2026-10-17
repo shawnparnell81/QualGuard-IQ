@@ -13,7 +13,8 @@ import { StatusChip, fmtDate, fmtDateTime, localDate } from '../components/Statu
 import { Facts, Section, StepDialog, lookupLabel, useLookup, useSites } from '../components/Kit';
 import { AttachmentsAndHistory } from '../components/RecordTabs';
 import { LabelPanel } from '../components/LabelPrint';
-import { mono } from '../theme';
+import { mono, useChartColors } from '../theme';
+import { tones } from '../brand';
 import {
   FillBar, LocationSelect, MetricTile, StockBadge, categories, countFreq, countStatus, holdKinds, holdStatus, lineStatus, locKinds, mrbDisp, mrbStatus, purposes, receiptKinds, receiptStatus,
   rtvStatus, stockStatusLabel, transferKinds, transferStatus, txKinds, useCarriers, useLocations, type LocationRow, type StockRow, type TxRow,
@@ -43,13 +44,14 @@ export interface Dash { tiles: Tile[]; utilization: { warehouseId: string; code:
   carriers: { carrierId: string; name: string; shipments: number; delivered: number; onTime: number; withPromise: number; onTimePct?: number }[]; inboundByDay: Record<string, number>; outboundByDay: Record<string, number> }
 
 export function FlowChart({ d }: { d?: Dash }) {
+  const cc = useChartColors();
   const flow = useMemo(() => {
     const days = Array.from(new Set([...Object.keys(d?.inboundByDay ?? {}), ...Object.keys(d?.outboundByDay ?? {})])).sort();
     return days.map((k) => ({ day: k.slice(5), inbound: d?.inboundByDay[k] ?? 0, outbound: d?.outboundByDay[k] ?? 0 }));
   }, [d]);
   if (flow.length === 0) return <Typography color="text.secondary">No receipts or shipments in the last 30 days.</Typography>;
-  return <Box sx={{ height: 240 }}><ResponsiveContainer><BarChart data={flow}><CartesianGrid strokeDasharray="3 3" stroke="#E6E1D6" /><XAxis dataKey="day" fontSize={11} /><YAxis fontSize={11} /><Tooltip /><Legend />
-    <Bar dataKey="inbound" name="Inbound" fill="#2E6B5E" /><Bar dataKey="outbound" name="Outbound" fill="#B4632A" /></BarChart></ResponsiveContainer></Box>;
+  return <Box sx={{ height: 240 }}><ResponsiveContainer><BarChart data={flow}><CartesianGrid strokeDasharray="3 3" stroke={cc.grid} /><XAxis dataKey="day" fontSize={11} /><YAxis fontSize={11} /><Tooltip /><Legend />
+    <Bar dataKey="inbound" name="Inbound" fill={cc.primary} /><Bar dataKey="outbound" name="Outbound" fill={cc.accent} /></BarChart></ResponsiveContainer></Box>;
 }
 
 export function WarehouseOverview() {
@@ -65,7 +67,7 @@ export function WarehouseOverview() {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.2fr 1fr' }, gap: 2 }}>
         <Section title="Warehouse utilization">
           <Stack gap={1.5}>{(d.data?.utilization ?? []).map((u) => (
-            <Box key={u.warehouseId} onClick={() => nav(`/warehouse/locations/${u.warehouseId}`)} sx={{ cursor: 'pointer', p: 1, borderRadius: 1, '&:hover': { bgcolor: '#F3F0E8' } }}>
+            <Box key={u.warehouseId} onClick={() => nav(`/warehouse/locations/${u.warehouseId}`)} sx={{ cursor: 'pointer', p: 1, borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}>
               <Stack direction="row" justifyContent="space-between"><Typography sx={{ fontFamily: mono, fontWeight: 600 }}>{u.code}</Typography>
                 <Typography variant="caption" color="text.secondary">{u.occupied}/{u.locations} locations occupied · {qty(u.onHand)} units{u.capacity ? ` of ${qty(u.capacity)}` : ''}</Typography></Stack>
               <FillBar pct={u.utilization} />
@@ -380,7 +382,7 @@ export function ReceiptDetailPage() {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Box>
           {tab === 'lines' && <Stack gap={1.5}>{d.data!.lines.map((x) => (
-            <Paper key={x.line.id} variant="outlined" sx={{ p: 2, borderLeft: 5, borderLeftColor: x.line.status === 2 ? '#2E6B5E' : x.line.status === 1 ? '#B4842A' : x.line.status >= 3 ? '#A4473B' : 'divider' }}>
+            <Paper key={x.line.id} variant="outlined" sx={{ p: 2, borderLeft: 5, borderLeftColor: x.line.status === 2 ? tones.ok : x.line.status === 1 ? tones.warn : x.line.status >= 3 ? tones.bad : 'divider' }}>
               <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={1}>
                 <Box><Typography sx={{ fontFamily: mono, fontWeight: 600 }}>{x.line.lineNumber}. {x.partNumber}{x.line.revision ? ` rev ${x.line.revision}` : ''}</Typography>
                   <Typography variant="body2" color="text.secondary">{x.partName} · lot <span style={{ fontFamily: mono }}>{x.lotNumber ?? '—'}</span>{x.line.supplierLotNumber ? ` · supplier lot ${x.line.supplierLotNumber}` : ''}</Typography>

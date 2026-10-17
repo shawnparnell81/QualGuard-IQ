@@ -12,6 +12,7 @@ import { StatusChip, fmtDate, fmtDateTime, localDate } from '../components/Statu
 import { Section, StepDialog, lookupLabel, useLookup, useSites } from '../components/Kit';
 import { AttachmentsAndHistory } from '../components/RecordTabs';
 import { mono } from '../theme';
+import { tones } from '../brand';
 
 const mod = modules.find((m) => m.key === 'trace')!;
 export const lotKind = ['Raw material', 'Component', 'Finished product', 'Supplier lot', 'Customer lot', 'WIP'];
@@ -167,11 +168,11 @@ export function SerialNew() {
   );
 }
 
-const nodeTone = (s: string) => (['OnHold', 'Quarantined', 'Returned', 'Scrapped'].includes(s) ? '#A4473B' : s === 'Shipped' ? '#2F6690' : '#1F4E4A');
+const nodeTone = (s: string) => (['OnHold', 'Quarantined', 'Returned', 'Scrapped'].includes(s) ? tones.bad : s === 'Shipped' ? tones.info : tones.primary);
 
 function NodeCard({ n, onOpen, root }: { n: GNode; onOpen: () => void; root?: boolean }) {
   return (
-    <Paper variant="outlined" onClick={onOpen} sx={{ p: 1, minWidth: 150, cursor: 'pointer', borderLeft: 4, borderLeftColor: nodeTone(n.status), bgcolor: root ? '#EAF1EF' : undefined, '&:hover': { boxShadow: 1 } }}>
+    <Paper variant="outlined" onClick={onOpen} sx={{ p: 1, minWidth: 150, cursor: 'pointer', borderLeft: 4, borderLeftColor: nodeTone(n.status), bgcolor: root ? 'action.selected' : undefined, '&:hover': { boxShadow: 1 } }}>
       <Typography variant="caption" color="text.secondary">{n.kind}{n.via ? ` · ${n.via}` : ''}{n.quantity != null ? ` · ${n.quantity}` : ''}</Typography>
       <Typography sx={{ fontFamily: mono, fontWeight: 600, fontSize: 13 }}>{n.number}</Typography>
       <Typography variant="caption" display="block">{n.partNumber}{n.revision ? ` rev ${n.revision}` : ''}</Typography>
@@ -188,13 +189,13 @@ export function GenealogyMap({ g }: { g: Genealogy }) {
   const fwd = Math.max(0, ...g.forward.map((x) => x.depth));
   const col = (title: string, body: React.ReactNode, tone?: string) => <Stack gap={1} sx={{ minWidth: 160 }}><Typography variant="overline" sx={{ color: tone ?? 'text.secondary' }}>{title}</Typography>{body}</Stack>;
   const arrow = <Box sx={{ alignSelf: 'center', color: 'text.secondary', fontSize: 22, px: 0.5 }}>→</Box>;
-  const parties = (ps: Party[]) => ps.map((p) => <Paper key={p.id} variant="outlined" sx={{ p: 1, bgcolor: '#F6F4EF' }}><Typography sx={{ fontWeight: 600, fontSize: 13 }}>{p.code}</Typography><Typography variant="caption" display="block">{p.name}</Typography><Typography variant="caption" color="text.secondary">{p.quantity} · {[...p.lots, ...p.serials].slice(0, 3).join(', ')}</Typography></Paper>);
+  const parties = (ps: Party[]) => ps.map((p) => <Paper key={p.id} variant="outlined" sx={{ p: 1, bgcolor: 'background.default' }}><Typography sx={{ fontWeight: 600, fontSize: 13 }}>{p.code}</Typography><Typography variant="caption" display="block">{p.name}</Typography><Typography variant="caption" color="text.secondary">{p.quantity} · {[...p.lots, ...p.serials].slice(0, 3).join(', ')}</Typography></Paper>);
   const cols: React.ReactNode[] = [];
-  cols.push(col('Suppliers', g.suppliers.length ? parties(g.suppliers) : <Typography variant="caption" color="text.secondary">None recorded</Typography>, '#4F6F7A'));
+  cols.push(col('Suppliers', g.suppliers.length ? parties(g.suppliers) : <Typography variant="caption" color="text.secondary">None recorded</Typography>, tones.slate));
   for (let d = back; d >= 1; d--) { cols.push(arrow); cols.push(col(`Inputs −${d}`, g.backward.filter((x) => x.depth === d).map((x) => <NodeCard key={x.id} n={x} onOpen={() => open(x)} />))); }
-  cols.push(arrow); cols.push(col('This record', <NodeCard n={g.root} root onOpen={() => {}} />, '#1F4E4A'));
+  cols.push(arrow); cols.push(col('This record', <NodeCard n={g.root} root onOpen={() => {}} />, tones.primary));
   for (let d = 1; d <= fwd; d++) { cols.push(arrow); cols.push(col(`Outputs +${d}`, g.forward.filter((x) => x.depth === d).map((x) => <NodeCard key={x.id} n={x} onOpen={() => open(x)} />))); }
-  cols.push(arrow); cols.push(col('Customers', g.customers.length ? parties(g.customers) : <Typography variant="caption" color="text.secondary">Not shipped</Typography>, '#B4632A'));
+  cols.push(arrow); cols.push(col('Customers', g.customers.length ? parties(g.customers) : <Typography variant="caption" color="text.secondary">Not shipped</Typography>, tones.accent));
   return <Paper sx={{ p: 2, overflowX: 'auto' }}><Stack direction="row" gap={1} alignItems="flex-start">{cols.map((c, i) => <Box key={i}>{c}</Box>)}</Stack></Paper>;
 }
 

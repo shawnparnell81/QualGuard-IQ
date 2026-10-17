@@ -9,6 +9,8 @@ import { fmtDateTime } from '../components/Status';
 import { Section, lookupLabel, useLookup, useRunner } from '../components/Kit';
 import { mono } from '../theme';
 import { Loading, SiteSelect, Tile, mod, num, useSite } from './Enterprise';
+import { alpha } from '@mui/material/styles';
+import { tones } from '../brand';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const C = (label: string) => [{ label: 'Quality OS', to: '/qos' }, { label }];
@@ -35,7 +37,7 @@ export function CommandCenter() {
   const d = q.data; const g = d.globalStatus;
   return (
     <ModuleWorkspace module={mod('qos')} crumbs={[{ label: 'Quality OS' }]} title="Global quality command center">
-      <Paper sx={{ p: 2, mb: 2, display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap', background: 'linear-gradient(90deg, rgba(0,121,107,.08), transparent)' }}>
+      <Paper sx={{ p: 2, mb: 2, display: 'flex', gap: 3, alignItems: 'center', flexWrap: 'wrap', background: (t) => `linear-gradient(90deg, ${alpha(t.palette.primary.main, 0.1)}, transparent)` }}>
         <Gauge value={g.corporate.score} label="Corporate quality score" size={150} />
         {g.regions.map((r: any) => <Gauge key={r.id} value={r.score} label={`${r.name} (region)`} size={100} />)}
         <Box sx={{ flex: 1, minWidth: 260 }}>
@@ -87,7 +89,7 @@ export function FactoryCenter() {
       {q.error && <Alert severity="error">{(q.error as Error).message}</Alert>}
       {d && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(6, 1fr)' }, gap: 1 }}>
         <Lane title="Quality alerts" items={d.qualityAlerts} color="#c62828" /><Lane title="SPC" items={d.spcViolations} color="#6a1b9a" /><Lane title="Production" items={d.productionAlerts} color="#ef6c00" />
-        <Lane title="NCRs" items={d.openNcrs} color="#d84315" /><Lane title="CAPAs" items={d.openCapas} color="#1565c0" /><Lane title="Suppliers" items={d.supplierIssues} color="#00796b" />
+        <Lane title="NCRs" items={d.openNcrs} color="#d84315" /><Lane title="CAPAs" items={d.openCapas} color="#1565c0" /><Lane title="Suppliers" items={d.supplierIssues} color={tones.slate} />
       </Box>}
     </ModuleWorkspace>
   );
