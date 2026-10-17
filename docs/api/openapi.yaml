@@ -26734,6 +26734,10 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PermissionGrant'
+        portalKind:
+          type:
+            - 'null'
+            - string
     Metric:
       required:
         - key

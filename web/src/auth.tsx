@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { get, post, resetCsrf } from './api';
 
 export interface Grant { permission: string; siteId: string | null; departmentId: string | null }
-export interface Me { id: string; email: string; displayName: string; grants: Grant[] }
+export interface Me { id: string; email: string; displayName: string; grants: Grant[]; portalKind?: string | null }
 
 interface AuthState {
   me: Me | null;

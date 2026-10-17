@@ -11,7 +11,7 @@ namespace QualGuardIQ.Api.Auth;
 /// </summary>
 public sealed class PortalBoundary(RequestDelegate next)
 {
-    static readonly string[] Allowed = ["/api/portal", "/api/auth", "/api/account"];
+    static readonly string[] Allowed = ["/api/portal", "/api/auth", "/api/account", "/api/organization/branding"];
 
     public async Task InvokeAsync(HttpContext ctx, AppDbContext db, IMemoryCache cache)
     {
