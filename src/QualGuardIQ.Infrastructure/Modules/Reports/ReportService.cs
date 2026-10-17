@@ -51,6 +51,40 @@ public sealed class ReportService(AppDbContext db, ModuleSupport m, IAccessServi
         return new ReportResult(r.Def, p with { From = from, To = to }, cols, rows, chart);
     }
 
+    /// <summary>Excel workbook of the report table: header row, typed cells (numbers, dates), text that starts like a formula is stored as text.</summary>
+    public static byte[] ToXlsx(ReportResult r, string title)
+    {
+        using var wb = new ClosedXML.Excel.XLWorkbook();
+        var name = new string(title.Select(ch => "[]:*?/\\".Contains(ch) ? '-' : ch).ToArray()); var ws = wb.Worksheets.Add(name.Length > 31 ? name[..31] : name);
+        for (var i = 0; i < r.Columns.Count; i++) { ws.Cell(1, i + 1).Value = r.Columns[i].Label; ws.Cell(1, i + 1).Style.Font.Bold = true; }
+        var rowNo = 2;
+        foreach (var row in r.Rows)
+        {
+            for (var i = 0; i < r.Columns.Count; i++)
+            {
+                var c = ws.Cell(rowNo, i + 1);
+                switch (row.GetValueOrDefault(r.Columns[i].Key))
+                {
+                    case null: break;
+                    case int n: c.Value = n; break;
+                    case long n: c.Value = n; break;
+                    case decimal n: c.Value = n; break;
+                    case double n: c.Value = n; break;
+                    case bool b: c.Value = b; break;
+                    case DateOnly d: c.Value = d.ToDateTime(TimeOnly.MinValue); c.Style.DateFormat.Format = "yyyy-mm-dd"; break;
+                    case DateTimeOffset t: c.Value = t.UtcDateTime; c.Style.DateFormat.Format = "yyyy-mm-dd hh:mm"; break;
+                    case var v: c.SetValue(v.ToString() ?? ""); c.Style.NumberFormat.Format = "@"; break;
+                }
+            }
+            rowNo++;
+        }
+        ws.SheetView.FreezeRows(1);
+        ws.Columns().AdjustToContents(1, Math.Min(rowNo, 200));
+        using var ms = new MemoryStream();
+        wb.SaveAs(ms);
+        return ms.ToArray();
+    }
+
     public static string ToCsv(ReportResult r)
     {
         var sb = new StringBuilder();
