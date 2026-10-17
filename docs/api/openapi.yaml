@@ -13305,6 +13305,134 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/compliance/mappings:
+    get:
+      tags:
+        - ComplianceMappings
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/compliance/mappings/{id}/history':
+    get:
+      tags:
+        - ComplianceMappings
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ComplianceMappingEvent'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ComplianceMappingEvent'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ComplianceMappingEvent'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/compliance/mappings/{id}/submit':
+    post:
+      tags:
+        - ComplianceMappings
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MappingSubmitInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/MappingSubmitInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/MappingSubmitInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/compliance/mappings/{id}/decision':
+    post:
+      tags:
+        - ComplianceMappings
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MappingDecisionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/MappingDecisionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/MappingDecisionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/compliance/mappings/{id}/revise':
+    post:
+      tags:
+        - ComplianceMappings
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/validation:
     get:
       tags:
@@ -36678,6 +36806,61 @@ components:
       properties:
         notes:
           type: string
+    ComplianceMappingEvent:
+      type: object
+      properties:
+        mappingId:
+          type: string
+          format: uuid
+        fromState:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/MappingVerificationState'
+        toState:
+          $ref: '#/components/schemas/MappingVerificationState'
+        byId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        byName:
+          type: string
+        at:
+          type: string
+          format: date-time
+        comment:
+          type:
+            - 'null'
+            - string
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     ComplianceObligation:
       type: object
       properties:
@@ -43091,6 +43274,22 @@ components:
             - 'null'
             - string
           format: date
+    MappingDecisionInput:
+      required:
+        - verify
+        - comment
+        - effectiveOn
+      type: object
+      properties:
+        verify:
+          type: boolean
+        comment:
+          type: string
+        effectiveOn:
+          type:
+            - 'null'
+            - string
+          format: date
     MappingInput:
       required:
         - targetType
@@ -43107,6 +43306,29 @@ components:
           type:
             - 'null'
             - string
+    MappingSubmitInput:
+      required:
+        - sourceTitle
+        - edition
+        - publisher
+        - reference
+        - comment
+      type: object
+      properties:
+        sourceTitle:
+          type: string
+        edition:
+          type: string
+        publisher:
+          type: string
+        reference:
+          type: string
+        comment:
+          type:
+            - 'null'
+            - string
+    MappingVerificationState:
+      type: integer
     MasterChangeInput:
       required:
         - domainKey
@@ -55542,6 +55764,7 @@ tags:
   - name: Workforce
   - name: AuditPrograms
   - name: Compliance
+  - name: ComplianceMappings
   - name: Validation
   - name: Launch
   - name: Governance

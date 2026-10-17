@@ -24,7 +24,7 @@ public sealed record CapabilityInput(string Title, string Characteristic, Guid S
     decimal? Lsl, decimal? Usl, int SubgroupSize, List<decimal> Values, decimal RequiredCpk = 1.33m);
 
 /// <summary>Project quality planning and APQP (phase gates, deliverables, readiness), PPAP submissions and capability studies.</summary>
-public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingService numbers, IRecordRegistry records, UserManager<ApplicationUser> users, INotifier notifier)
+public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingService numbers, IRecordRegistry records, UserManager<ApplicationUser> users, INotifier notifier, ComplianceMappingService mappings)
 {
     public const string ProjectType = "QualityProject", PpapType = "Ppap", CapabilityType = "CapabilityStudy";
     public static readonly string[] PhaseNames = ["", "Plan and define program", "Product design and development", "Process design and development", "Product and process validation", "Launch", "Feedback, assessment and corrective action"];
@@ -218,7 +218,7 @@ public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingS
             Condition = PpapMatrix.Rows.First(x => x.ElementCode == e.Code).Condition, Status = e.Status.ToString(), e.LinkedType, e.LinkedId, e.Notes,
             SuggestedType = PpapElements.First(x => x.Code == e.Code).LinkType }),
             Matrix = PpapMatrix.Rows.Select(x => new { x.Key, x.ElementCode, x.Name, x.Condition, Levels = Enumerable.Range(1, 5).Select(x.CodeFor).ToArray() }),
-            Legend = PpapMatrix.Legend.Select(x => new { x.Code, x.Meaning }) };
+            Legend = PpapMatrix.Legend.Select(x => new { x.Code, x.Meaning }), MatrixVerification = (await mappings.StatusesAsync(ct)).GetValueOrDefault(ComplianceMappingService.PpapKey) };
     }
 
     public async Task UpdateElementAsync(Guid id, int code, PpapElementUpdate r, CancellationToken ct)

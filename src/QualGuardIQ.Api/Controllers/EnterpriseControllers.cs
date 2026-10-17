@@ -105,6 +105,17 @@ public sealed class ComplianceController(ComplianceService svc) : ControllerBase
     [HttpGet("coverage")] [RequirePermission(Permissions.ComplianceView)] public Task<object> Coverage([FromQuery] Guid siteId, CancellationToken ct) => svc.CoverageAsync(siteId, ct);
 }
 
+/// <summary>Verification workflow for shipped compliance mapping content (packs and the PPAP matrix).</summary>
+[ApiController, Authorize, Route("api/compliance/mappings")]
+public sealed class ComplianceMappingsController(ComplianceMappingService svc) : ControllerBase
+{
+    [HttpGet] public Task<object> List(CancellationToken ct) => svc.ListAsync(ct);
+    [HttpGet("{id:guid}/history")] public Task<List<ComplianceMappingEvent>> History(Guid id, CancellationToken ct) => svc.HistoryAsync(id, ct);
+    [HttpPost("{id:guid}/submit")] public async Task<IActionResult> Submit(Guid id, MappingSubmitInput r, CancellationToken ct) { await svc.SubmitAsync(id, r, ct); return NoContent(); }
+    [HttpPost("{id:guid}/decision")] public async Task<IActionResult> Decide(Guid id, MappingDecisionInput r, CancellationToken ct) { await svc.DecideAsync(id, r, ct); return NoContent(); }
+    [HttpPost("{id:guid}/revise")] public async Task<object> Revise(Guid id, CancellationToken ct) => new { (await svc.ReviseAsync(id, ct)).Id };
+}
+
 [ApiController, Authorize, Route("api/validation")]
 public sealed class ValidationController(ValidationService svc) : ControllerBase
 {

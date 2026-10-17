@@ -120,14 +120,14 @@ const reqLabel: Record<string, string> = { Submit: 'Submit to customer', Retain:
 const codeColor: Record<string, 'error' | 'default' | 'warning'> = { S: 'error', R: 'default', '*': 'warning' };
 
 /** AIAG PPAP 4th Edition Table 4.2 codes: legend plus the full level matrix with the submission's level highlighted. */
-function PpapMatrixPanel({ matrix, legend, level }: { matrix: any[]; legend: any[]; level: number }) {
+function PpapMatrixPanel({ matrix, legend, level, verification }: { matrix: any[]; legend: any[]; level: number; verification?: any }) {
   const [open, setOpen] = useState(false);
   return (
     <Paper variant="outlined" sx={{ p: 1.5, mb: 1.5 }} data-testid="ppap-legend">
       <Stack direction="row" gap={2} alignItems="center" flexWrap="wrap">
         <Typography variant="caption" sx={{ fontWeight: 700 }}>Codes</Typography>
         {legend.map((l) => <Stack key={l.code} direction="row" gap={0.75} alignItems="center"><Chip size="small" label={l.code} color={codeColor[l.code]} sx={{ fontFamily: mono, minWidth: 32 }} /><Typography variant="caption">{l.meaning}</Typography></Stack>)}
-        <Box sx={{ flex: 1 }} /><Button size="small" onClick={() => setOpen(!open)}>{open ? 'Hide level matrix' : 'Show level matrix'}</Button>
+        <Box sx={{ flex: 1 }} /><Chip size="small" variant="outlined" data-testid="ppap-matrix-verification" color={verification?.verified ? 'success' : 'warning'} title={verification?.label} label={verification?.verified ? 'Matrix verified' : 'Matrix not verified'} /><Button size="small" onClick={() => setOpen(!open)}>{open ? 'Hide level matrix' : 'Show level matrix'}</Button>
       </Stack>
       {open && <Table size="small" sx={{ mt: 1 }} data-testid="ppap-matrix">
         <TableBody>
@@ -160,7 +160,7 @@ export function PpapDetail() {
         {q.data.status === 'Submitted' && <Button variant="contained" onClick={() => setDec(true)}>Record customer decision</Button>}</Stack>}>
       {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}
       <LinearProgress variant="determinate" value={(100 * ready) / Math.max(1, q.data.elements.length)} sx={{ height: 8, borderRadius: 1, mb: 1 }} /><Typography variant="caption">{ready} of {q.data.elements.length} elements ready or not applicable</Typography>
-      <Box sx={{ mt: 1.5 }}><PpapMatrixPanel matrix={q.data.matrix ?? []} legend={q.data.legend ?? []} level={s.level} /></Box>
+      <Box sx={{ mt: 1.5 }}><PpapMatrixPanel matrix={q.data.matrix ?? []} legend={q.data.legend ?? []} level={s.level} verification={q.data.matrixVerification} /></Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 1.25 }}>
         {q.data.elements.map((e: any) => (
           <Paper key={e.code} data-testid="ppap-element" onClick={() => draft && setEl(e)} sx={{ p: 1.5, cursor: draft ? 'pointer' : undefined, borderLeft: 4, borderColor: e.status === 'Ready' ? 'success.main' : e.status === 'NotApplicable' ? 'grey.400' : e.requirement === 'Submit' ? 'error.main' : 'warning.main' }}>
