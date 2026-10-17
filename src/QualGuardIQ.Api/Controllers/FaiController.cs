@@ -320,8 +320,8 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
     public async Task<PagedAuditEvents> WorkflowHistory(Guid faiId, [FromQuery] int page = 1, [FromQuery] int pageSize = 25, CancellationToken ct = default)
     {
         await m.ViewAsync(FaiService.RecordType, faiId, ct);
-        var status = (await db.AuditEntries.AsNoTracking().Where(e => e.EntityId == faiId && e.EntityType == nameof(FaiRecord) && (e.Action == "Created" || (e.Changes != null && e.Changes.Contains("\"Status\""))))
-            .ToListAsync(ct)).Select(ToDto).Select(e => e with { Action = e.Action == "Created" ? "Created" : "StatusChanged" });
+        var status = (await db.AuditEntries.AsNoTracking().Where(e => e.EntityId == faiId && e.EntityType == nameof(FaiRecord) && (e.Action == "Created" || e.Changes != null))
+            .ToListAsync(ct)).Where(e => e.Action == "Created" || e.Changes!.Contains("\"Status\"")).Select(ToDto).Select(e => e with { Action = e.Action == "Created" ? "Created" : "StatusChanged" });
         var signatures = await db.ApprovalDecisions.AsNoTracking().Join(db.ApprovalRequests.Where(r => r.RecordType == FaiService.RecordType && r.RecordId == faiId), d => d.RequestId, r => r.Id, (d, r) => d).ToListAsync(ct);
         var sig = signatures.Select(d => new AuditEvent(d.Id, d.Approved ? "Approved" : "NotApproved", d.SignerId, d.SignedAt, null,
             System.Text.Json.JsonSerializer.SerializeToElement(new { step = d.StepName, stepOrder = d.StepOrder, approved = d.Approved }), d.Approved ? d.Meaning : d.Comment, null, "ApprovalDecision", d.RequestId, d.SignerName, d.Comment));
