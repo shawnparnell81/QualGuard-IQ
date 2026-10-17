@@ -38,7 +38,7 @@ export const checklistResult = ['Not assessed', 'Conforming', 'Nonconforming', '
 export const findingType = ['Major nonconformity', 'Minor nonconformity', 'Observation', 'Opportunity for improvement'];
 export const findingStatus = ['Open', 'ActionPlanned', 'Verified', 'Closed'];
 export const assignmentStatus = ['Assigned', 'Completed', 'Superseded', 'Cancelled'];
-export const equipmentStatus = ['Active', 'Quarantined', 'OutOfService', 'Retired'];
+export const equipmentStatus = ['Active', 'Quarantined', 'OutOfService', 'Retired', 'Down'];
 export const calResult = ['Pass', 'PassAfterAdjustment', 'OutOfTolerance', 'Fail'];
 export const impactStatus = ['Open', 'Completed'];
 /** Local calendar date (YYYY-MM-DD) offset by whole days; the server re-checks against the site's time zone. */
