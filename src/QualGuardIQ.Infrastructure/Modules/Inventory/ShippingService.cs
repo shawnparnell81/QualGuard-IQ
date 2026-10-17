@@ -14,7 +14,7 @@ public sealed record CarrierInput(string Code, string Name, CarrierKind Kind, st
 public sealed record ShipmentLineInput(Guid PartId, string? Revision, decimal Quantity, Guid? LotId);
 public sealed record ShipmentInput(ShipmentKind Kind, Guid? CustomerId, Guid? SupplierId, Guid? ToSiteId, string? ShipTo, string? CustomerPo, DateOnly? PromisedOn, Guid StagingLocationId, Guid? CarrierId,
     string? ServiceLevel, string? Notes, Guid SiteId, Guid? DepartmentId, List<ShipmentLineInput> Lines);
-public sealed record PickConfirmInput(string? LocationCode, string? ItemCode, decimal Quantity);
+public sealed record PickConfirmInput(string? LocationCode, string? ItemCode, decimal Quantity, string? ClientRequestId = null, DateTimeOffset? DeviceTimestamp = null, bool Offline = false);
 public sealed record PackItemInput(Guid LineId, Guid? LotId, Guid? SerialId, decimal Quantity);
 public sealed record PackInput(ContainerKind Kind, Guid? ParentId, decimal? Weight, List<PackItemInput> Items);
 public sealed record VerifyScan(string Code, decimal? Quantity);
@@ -30,7 +30,7 @@ public sealed record ContainerRow(ShipmentContainer Container, List<PackedRow> I
 public sealed record PackedRow(Guid Id, Guid LineId, string PartNumber, string? LotNumber, string? SerialNumber, decimal Quantity);
 
 /// <summary>Shipping: pick lists from available, unheld stock; pick verification by scan; packing hierarchy; scan verification; ship with genealogy; BOL and packing list.</summary>
-public sealed class ShippingService(AppDbContext db, ModuleSupport m, INumberingService numbers, InventoryService inv, TraceabilityService trace)
+public sealed partial class ShippingService(AppDbContext db, ModuleSupport m, INumberingService numbers, InventoryService inv, TraceabilityService trace)
 {
     public const string ShipmentType = "Shipment", ContainerType = "ShipmentContainer";
 
@@ -166,43 +166,6 @@ public sealed class ShippingService(AppDbContext db, ModuleSupport m, INumbering
     }
 
     /// <summary>Confirms a pick. Scanned location and item must match the task (pick verification); stock moves to the staging location, still allocated to the shipment.</summary>
-    public async Task ConfirmPickAsync(Guid id, Guid taskId, PickConfirmInput r, CancellationToken ct)
-    {
-        var s = await EditAsync(id, ct, ShipmentStatus.Picking);
-        var t = await db.PickTasks.FirstOrDefaultAsync(x => x.Id == taskId && x.ShipmentId == id, ct) ?? throw new NotFoundException("Pick task");
-        if (t.Status != PickStatus.Open) throw new ConflictException("The pick is already confirmed.");
-        var loc = await db.WarehouseLocations.AsNoTracking().FirstAsync(x => x.Id == t.LocationId, ct);
-        if (r.LocationCode is { Length: > 0 } lc && !string.Equals(lc.Replace("QG:LOC:", "").Trim(), loc.Code, StringComparison.OrdinalIgnoreCase)) throw new ConflictException($"Wrong location: pick from {loc.Code}.");
-        if (r.ItemCode is { Length: > 0 } ic)
-        {
-            var item = await inv.ItemAsync(ic, ct);
-            if (item.PartId != t.PartId) throw new ConflictException("Wrong part scanned.");
-            if (t.LotId is not null && item.LotId != t.LotId) throw new ConflictException("Wrong lot scanned for this pick.");
-            if (t.SerialId is not null && item.SerialId != t.SerialId) throw new ConflictException("Wrong serial scanned for this pick.");
-        }
-        if (r.Quantity <= 0 || r.Quantity > t.Quantity) throw new AppException($"Pick quantity must be between 0 and {t.Quantity:0.####}.");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
-        await inv.PostAsync(new Move(InventoryTxKind.Pick, t.PartId, r.Quantity, t.LotId, t.SerialId, t.LocationId, StockStatus.Available, FromAllocated: true, ToLocationId: s.StagingLocationId, ToStatus: StockStatus.Available, ToAllocated: true,
-            RefType: ShipmentType, RefId: s.Id, RefNumber: s.Number, Reason: "Picked"), ct);
-        if (r.Quantity < t.Quantity)
-        {
-            // release the unpicked allocation
-            var b = await db.InventoryBalances.FirstAsync(x => x.PartId == t.PartId && x.LotId == t.LotId && x.SerialId == t.SerialId && x.LocationId == t.LocationId && x.Status == StockStatus.Available && x.WorkOrderId == null, ct);
-            b.Allocated -= t.Quantity - r.Quantity;
-        }
-        t.QuantityPicked = r.Quantity; t.Status = r.Quantity < t.Quantity ? PickStatus.Short : PickStatus.Picked; t.PickedById = m.UserId; t.PickedAt = m.Now;
-        var line = await db.ShipmentLines.FirstAsync(x => x.Id == t.LineId, ct);
-        line.QuantityPicked += r.Quantity;
-        await db.SaveChangesAsync(ct);
-        if (!await db.PickTasks.AnyAsync(x => x.ShipmentId == id && x.Status == PickStatus.Open, ct))
-        {
-            var lines = await db.ShipmentLines.Where(x => x.ShipmentId == id).ToListAsync(ct);
-            if (lines.Any(x => x.QuantityPicked < x.Quantity)) throw new ConflictException("A pick was short; rebuild the pick list after the shortage is resolved.");
-            s.Status = ShipmentStatus.Picked;
-            await db.SaveChangesAsync(ct);
-        }
-        await tx.CommitAsync(ct);
-    }
 
     /// <summary>Packs picked items into a carton, pallet or container (cartons can go on pallets: packaging hierarchy).</summary>
     public async Task<ShipmentContainer> PackAsync(Guid id, PackInput r, CancellationToken ct)

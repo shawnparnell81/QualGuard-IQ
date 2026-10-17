@@ -132,6 +132,14 @@ public sealed class ShippingController(ShippingService svc, InventoryService inv
     /// <summary>Allocates available, unheld stock and builds the pick list.</summary>
     [HttpPost("shipments/{id:guid}/pick-list")] public Task<List<PickTask>> PickList(Guid id, CancellationToken ct) => svc.BuildPickListAsync(id, ct);
     [HttpPost("shipments/{id:guid}/picks/{taskId:guid}")] public async Task<IActionResult> Pick(Guid id, Guid taskId, PickConfirmInput r, CancellationToken ct) { await svc.ConfirmPickAsync(id, taskId, r, ct); return NoContent(); }
+    /// <summary>Scan-station / device pick confirmation: idempotent on clientRequestId, records the device time, returns the outcome (Accepted or Duplicate). Conflicts return 409 with the reason.</summary>
+    [HttpPost("shipments/{id:guid}/picks/{taskId:guid}/confirm")] public Task<PickConfirmResult> ConfirmPick(Guid id, Guid taskId, PickConfirmInput r, CancellationToken ct) => svc.ConfirmPickAsync(id, taskId, r, ct);
+    /// <summary>Every pick confirmation received for the shipment (accepted, duplicate replays excluded, refused with their conflict code).</summary>
+    [HttpGet("shipments/{id:guid}/pick-confirmations")] public Task<List<PickConfirmationRow>> PickConfirmations(Guid id, CancellationToken ct) => svc.PickConfirmationsAsync(id, ct);
+    [HttpGet("shipments/{id:guid}/pickers")] public Task<List<PickerOption>> Pickers(Guid id, CancellationToken ct) => svc.PickersAsync(id, ct);
+    [HttpPut("shipments/{id:guid}/picker")] public async Task<object> AssignPicker(Guid id, AssignPickerInput r, CancellationToken ct) { var s = await svc.AssignPickerAsync(id, r, ct); return new { s.Id, s.AssignedPickerId, s.AssignedAt }; }
+    /// <summary>The caller's assigned open pick work, for download to a scan device.</summary>
+    [HttpGet("my-picks")] [RequirePermission(Permissions.ShippingEdit)] public Task<MyPicks> MyPicks(CancellationToken ct) => svc.MyPicksAsync(ct);
     [HttpPost("shipments/{id:guid}/containers")] public async Task<object> Pack(Guid id, PackInput r, CancellationToken ct) { var c = await svc.PackAsync(id, r, ct); return new { c.Id, c.Number }; }
     [HttpPost("shipments/{id:guid}/verify")] public Task<VerifyResult> Verify(Guid id, VerifyInput r, CancellationToken ct) => svc.VerifyAsync(id, r, ct);
     [HttpPost("shipments/{id:guid}/ship")] public async Task<IActionResult> Ship(Guid id, ShipInput r, CancellationToken ct) { await svc.ShipAsync(id, r, ct); return NoContent(); }
