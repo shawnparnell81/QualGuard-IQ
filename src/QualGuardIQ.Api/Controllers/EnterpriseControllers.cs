@@ -245,3 +245,27 @@ public sealed class MessagingController(QualGuardIQ.Infrastructure.Modules.Messa
     [AllowAnonymous, HttpPost("callbacks/{providerId:guid}")]
     public async Task<IActionResult> Callback(Guid providerId, QualGuardIQ.Infrastructure.Modules.Messaging.StatusCallback r, [FromHeader(Name = "X-Callback-Token")] string? token, CancellationToken ct) { await svc.CallbackAsync(providerId, token, r, ct); return NoContent(); }
 }
+
+/// <summary>Optional generated drafts (disabled by default; the built-in rule-based features remain the default and the fallback).</summary>
+[ApiController, Authorize, Route("api/generation")]
+public sealed class GenerationController(QualGuardIQ.Infrastructure.Modules.Intelligence.AiBoundaryService svc) : ControllerBase
+{
+    public sealed record SecretInput(string? Secret);
+    public sealed record EnabledInput(bool Enabled);
+    public sealed record ReviewInput(bool Accepted);
+    [HttpGet("settings")] public Task<QualGuardIQ.Domain.Intelligence.AiSettings> Settings(CancellationToken ct) => svc.SettingsAsync(ct);
+    [HttpPut("settings")] public async Task<IActionResult> SaveSettings(QualGuardIQ.Infrastructure.Modules.Intelligence.AiSettingsInput r, CancellationToken ct) { await svc.SaveSettingsAsync(r, ct); return NoContent(); }
+    [HttpGet("providers")] public Task<List<QualGuardIQ.Infrastructure.Modules.Intelligence.AiProviderRow>> Providers(CancellationToken ct) => svc.ProvidersAsync(ct);
+    [HttpPost("providers")] public async Task<object> Create(QualGuardIQ.Infrastructure.Modules.Intelligence.AiProviderInput r, CancellationToken ct) => new { Id = await svc.SaveProviderAsync(null, r, ct) };
+    [HttpPut("providers/{id:guid}")] public async Task<IActionResult> Update(Guid id, QualGuardIQ.Infrastructure.Modules.Intelligence.AiProviderInput r, CancellationToken ct) { await svc.SaveProviderAsync(id, r, ct); return NoContent(); }
+    [HttpPut("providers/{id:guid}/secret")] public async Task<IActionResult> Secret(Guid id, SecretInput r, CancellationToken ct) { await svc.SetSecretAsync(id, r.Secret, ct); return NoContent(); }
+    [HttpPost("providers/{id:guid}/test")] public async Task<object> Test(Guid id, CancellationToken ct) { var (ok, msg) = await svc.TestAsync(id, ct); return new { Ok = ok, Message = msg }; }
+    [HttpPost("providers/{id:guid}/enabled")] public async Task<IActionResult> Enabled(Guid id, EnabledInput r, CancellationToken ct) { await svc.SetEnabledAsync(id, r.Enabled, ct); return NoContent(); }
+    [HttpPost("providers/{id:guid}/approval")] public async Task<IActionResult> Approve(Guid id, CancellationToken ct) { await svc.ApproveAsync(id, ct); return NoContent(); }
+    [HttpGet("functions")] public Task<List<QualGuardIQ.Infrastructure.Modules.Intelligence.AiFunctionRow>> Functions(CancellationToken ct) => svc.FunctionsAsync(ct);
+    [HttpPut("functions/{function}")] public async Task<IActionResult> SaveFunction(string function, QualGuardIQ.Infrastructure.Modules.Intelligence.AiFunctionInput r, CancellationToken ct) { await svc.SaveFunctionAsync(function, r, ct); return NoContent(); }
+    [HttpGet("availability")] public Task<Dictionary<string, bool>> Availability(CancellationToken ct) => svc.AvailabilityAsync(ct);
+    [HttpPost("generate")] public Task<QualGuardIQ.Infrastructure.Modules.Intelligence.GenerationResult> Generate(QualGuardIQ.Infrastructure.Modules.Intelligence.GenerateRequest r, CancellationToken ct) => svc.GenerateAsync(r, ct);
+    [HttpPost("requests/{id:guid}/review")] public async Task<object> Review(Guid id, ReviewInput r, CancellationToken ct) => new { Review = await svc.ReviewAsync(id, r.Accepted, ct) };
+    [HttpGet("requests")] public Task<List<QualGuardIQ.Infrastructure.Modules.Intelligence.AiLogRow>> Requests([FromQuery] string? function, [FromQuery] QualGuardIQ.Domain.Intelligence.AiOutcome? outcome, CancellationToken ct) => svc.LogsAsync(function, outcome, ct);
+}

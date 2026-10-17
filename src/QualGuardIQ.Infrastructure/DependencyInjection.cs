@@ -307,6 +307,9 @@ public static class DependencyInjection
             s.AddSingleton<Modules.Messaging.IMessagingAdapter>(new Modules.Messaging.VendorSlotMessagingAdapter(k));
         s.AddScoped<Modules.Messaging.MessagingService>();
         s.AddScoped<Jobs.MessagingDeliveryJob>();
+        s.AddSingleton<Modules.Intelligence.AiHttpProvider>();
+        s.AddScoped<Modules.Intelligence.AiBoundaryService>();
+        s.AddScoped<Jobs.AiRetentionJob>();
         s.AddScoped<Services.RunAsContext>();
         s.AddScoped<Jobs.CarrierTrackingJob>();
         s.AddScoped<Modules.Production.ProductionService>();
