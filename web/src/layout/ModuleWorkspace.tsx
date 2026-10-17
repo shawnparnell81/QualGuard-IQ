@@ -43,7 +43,7 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
           <Breadcrumbs sx={{ fontSize: 12.5, mb: 1 }}>
             <Link component={RouterLink} to="/" underline="hover" color="inherit">Home</Link>
             <Link component={RouterLink} to={module.basePath} underline="hover" color="inherit">{module.label}</Link>
-            {crumbs.map((c, i) => c.to ? <Link key={i} component={RouterLink} to={c.to} underline="hover" color="inherit">{c.label}</Link> : <Typography key={i} fontSize={12.5} color="text.primary">{c.label}</Typography>)}
+            {crumbs.filter((c, i) => !(i === 0 && c.label === module.label)).map((c, i) => c.to ? <Link key={i} component={RouterLink} to={c.to} underline="hover" color="inherit">{c.label}</Link> : <Typography key={i} fontSize={12.5} color="text.primary">{c.label}</Typography>)}
           </Breadcrumbs>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pb: tabs ? 0 : 2, flexWrap: 'wrap' }}>
             <Typography variant="h1" sx={{ flex: 1 }}>{title}</Typography>
