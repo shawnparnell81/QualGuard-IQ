@@ -85,6 +85,11 @@ public sealed class SpcController(SpcService svc, MsaService msa) : ControllerBa
         return new { Study = s, Measurements = await msa.MeasurementsAsync(id, ct), Result = s.Result is null ? preview : System.Text.Json.JsonDocument.Parse(s.Result).RootElement, Verdict = verdict, ComputeError = error };
     }
     [HttpPut("msa/{id:guid}/measurements")] public async Task<IActionResult> Measurements(Guid id, List<MsaMeasurementInput> r, CancellationToken ct) { await msa.SaveMeasurementsAsync(id, r, ct); return NoContent(); }
+    [HttpGet("msa/{id:guid}/results")]
+    public async Task<object> ResultVersions(Guid id, CancellationToken ct) =>
+        (await msa.ResultVersionsAsync(id, ct)).Select(v => new { v.Id, v.CalculationVersion, v.Verdict, v.Reason, v.IsOfRecord, v.CreatedAt, Result = System.Text.Json.JsonDocument.Parse(v.Result).RootElement });
+    [HttpPost("msa/{id:guid}/recalculate")]
+    public async Task<object> Recalculate(Guid id, CancellationToken ct) { var v = await msa.RecalculateAsync(id, ct); return new { v.Id, v.CalculationVersion, v.Verdict, Result = System.Text.Json.JsonDocument.Parse(v.Result).RootElement }; }
     [HttpPost("msa/{id:guid}/submit")] public async Task<IActionResult> SubmitStudy(Guid id, CancellationToken ct) { await msa.SubmitAsync(id, ct); return NoContent(); }
     [HttpPost("msa/{id:guid}/review-cycle")] public async Task<object> Review(Guid id, CancellationToken ct) { var s = await msa.ReviewCycleAsync(id, ct); return new { s.Id, s.Number }; }
 }

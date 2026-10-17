@@ -18,7 +18,7 @@ public sealed record SpcSampleInput(List<decimal>? Values, int? Count, int? Unit
 public sealed record SpcSampleOutcome(SpcSample Sample, List<string> Violations, Guid? NcrId, string? NcrNumber, string? NcrSkippedReason);
 
 public sealed record MsaStudyInput(string Title, MsaStudyType StudyType, Guid EquipmentId, string? InspectionMethod, string? Characteristic, decimal? Tolerance, decimal? ReferenceValue,
-    int ReviewIntervalMonths, Guid SiteId, Guid? DepartmentId, Guid? OwnerId);
+    int ReviewIntervalMonths, Guid SiteId, Guid? DepartmentId, Guid? OwnerId, decimal? ConfidenceLevel = null);
 public sealed record MsaMeasurementInput(string? Operator, int Part, int Trial, decimal? Value, string? Attribute, decimal? Reference, string? AttributeReference);
 
 /// <summary>SPC charts: samples are evaluated against all chart data; rule violations notify SPC users and can raise an NCR.</summary>
@@ -200,13 +200,14 @@ public sealed class MsaService(AppDbContext db, ModuleSupport m, INumberingServi
         if (!await db.Equipment.AnyAsync(x => x.Id == r.EquipmentId, ct)) throw new AppException("Select the gage (equipment) under study.");
         if (r.StudyType == MsaStudyType.Bias && r.ReferenceValue is null) throw new AppException("A bias study needs the reference value.");
         if (r.Tolerance is <= 0) throw new AppException("Tolerance must be positive.");
+        if (r.ConfidenceLevel is < 0.80m or > 0.999m) throw new AppException("Confidence must be between 80% and 99.9% (for example 0.95).");
         if (r.ReviewIntervalMonths is < 1 or > 60) throw new AppException("Review interval must be 1 to 60 months.");
         if (r.OwnerId is { } o) await m.RequireActiveUserAsync(o, "owner", ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var s = new MsaStudy
         {
             Number = await numbers.NextAsync(RecordType, r.SiteId, ct), Title = r.Title.Trim(), StudyType = r.StudyType, EquipmentId = r.EquipmentId, InspectionMethod = r.InspectionMethod,
-            Characteristic = r.Characteristic, Tolerance = r.Tolerance, ReferenceValue = r.ReferenceValue, ReviewIntervalMonths = r.ReviewIntervalMonths, Status = MsaStatus.Draft,
+            Characteristic = r.Characteristic, Tolerance = r.Tolerance, ReferenceValue = r.ReferenceValue, ReviewIntervalMonths = r.ReviewIntervalMonths, Status = MsaStatus.Draft, ConfidenceLevel = r.ConfidenceLevel ?? 0.95m,
             SiteId = r.SiteId, DepartmentId = r.DepartmentId, OwnerId = r.OwnerId ?? m.UserId
         };
         db.MsaStudies.Add(s);
@@ -258,7 +259,8 @@ public sealed class MsaService(AppDbContext db, ModuleSupport m, INumberingServi
                     var a = MsaMath.Attribute(rows.Select(r => new AttributeMeasurement(r.Operator, r.Part, r.Trial, r.Attribute!, r.AttributeReference)).ToList());
                     return (a, a.Verdict);
                 case MsaStudyType.Bias:
-                    var b = MsaMath.Bias(rows.Select(r => r.Value!.Value).ToList(), s.ReferenceValue!.Value, s.Tolerance);
+                    if (rows.Any(r => r.Value is null)) throw new ArgumentException("Every bias reading needs a numeric value.");
+                    var b = MsaMath.Bias(rows.Select(r => r.Value!.Value).ToList(), s.ReferenceValue!.Value, s.Tolerance, s.ConfidenceLevel);
                     var bv = b.Significant ? (b.PctTolerance is { } pt && pt <= 10 ? "Marginal" : "Unacceptable") : "Acceptable";
                     return (b, bv);
                 case MsaStudyType.Linearity:
@@ -283,10 +285,37 @@ public sealed class MsaService(AppDbContext db, ModuleSupport m, INumberingServi
         var s = await LoadAsync(id, true, ct);
         var (result, verdict) = await ComputeAsync(id, ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        s.Result = JsonSerializer.Serialize(result, result.GetType(), Json); s.Verdict = verdict; s.Status = MsaStatus.PendingApproval;
+        s.Result = JsonSerializer.Serialize(result, result.GetType(), Json); s.Verdict = verdict; s.Status = MsaStatus.PendingApproval; s.CalculationVersion = VersionOf(s.StudyType);
+        db.MsaResultVersions.Add(new MsaResultVersion { StudyId = s.Id, CalculationVersion = s.CalculationVersion, Result = s.Result, Verdict = verdict, Reason = "Submitted", IsOfRecord = true });
         await db.SaveChangesAsync(ct);
         await workflow.SubmitAsync(RecordType, id, ct);
         await tx.CommitAsync(ct);
+    }
+
+    /// <summary>Calculation version for a study type (only the bias test has changed so far).</summary>
+    public static string VersionOf(MsaStudyType t) => t == MsaStudyType.Bias ? MsaMath.BiasCalculationVersion : "msa/1";
+
+    /// <summary>
+    /// Recomputes a frozen result with the current calculation and records it as a new version beside the original.
+    /// The study's result of record (what was approved) is not changed.
+    /// </summary>
+    public async Task<MsaResultVersion> RecalculateAsync(Guid id, CancellationToken ct)
+    {
+        var s = await db.MsaStudies.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("MSA study");
+        await m.ViewAsync(RecordType, id, ct);
+        await m.RequireAsync(Permissions.SpcEdit, s.SiteId, s.DepartmentId, ct);
+        if (s.Result is null) throw new AppException("Only submitted studies have a frozen result to recalculate; drafts always show the current calculation.");
+        var (result, verdict) = await ComputeAsync(id, ct);
+        var v = new MsaResultVersion { StudyId = id, CalculationVersion = VersionOf(s.StudyType), Result = JsonSerializer.Serialize(result, result.GetType(), Json), Verdict = verdict, Reason = "Recalculated", IsOfRecord = false };
+        db.MsaResultVersions.Add(v);
+        await db.SaveChangesAsync(ct);
+        return v;
+    }
+
+    public async Task<List<MsaResultVersion>> ResultVersionsAsync(Guid id, CancellationToken ct)
+    {
+        await m.ViewAsync(RecordType, id, ct);
+        return await db.MsaResultVersions.AsNoTracking().Where(x => x.StudyId == id).OrderBy(x => x.CreatedAt).ToListAsync(ct);
     }
 
     public async Task OnApprovedAsync(Guid id, CancellationToken ct)
@@ -326,7 +355,7 @@ public sealed class MsaService(AppDbContext db, ModuleSupport m, INumberingServi
     {
         var s = await GetAsync(id, ct);
         if (s.Status != MsaStatus.Approved) throw new ConflictException("Only an approved study starts a review cycle.");
-        var n = await CreateAsync(new MsaStudyInput(s.Title, s.StudyType, s.EquipmentId, s.InspectionMethod, s.Characteristic, s.Tolerance, s.ReferenceValue, s.ReviewIntervalMonths, s.SiteId, s.DepartmentId, null), ct);
+        var n = await CreateAsync(new MsaStudyInput(s.Title, s.StudyType, s.EquipmentId, s.InspectionMethod, s.Characteristic, s.Tolerance, s.ReferenceValue, s.ReviewIntervalMonths, s.SiteId, s.DepartmentId, null, s.ConfidenceLevel), ct);
         db.RecordLinks.Add(new RecordLink { FromType = RecordType, FromId = id, ToType = RecordType, ToId = n.Id, LinkType = "Review cycle" });
         await db.SaveChangesAsync(ct);
         return n;

@@ -288,14 +288,14 @@ export function MsaNew() {
   const nav = useNavigate();
   const eq = useQuery({ queryKey: ['equipment-lite'], queryFn: () => get<{ id: string; number: string; assetNumber: string | null; name: string }[]>('/api/calibration/equipment') });
   const schema = z.object({ title: z.string().trim().min(1, 'Required'), studyType: z.coerce.number().int(), equipmentId: z.string().uuid('Choose equipment'), characteristic: z.string().optional(), inspectionMethod: z.string().optional(),
-    tolerance: z.union([z.literal(''), z.coerce.number().positive()]).optional(), referenceValue: z.union([z.literal(''), z.coerce.number()]).optional(), reviewIntervalMonths: z.coerce.number().int().min(1).max(60), siteId: z.string().uuid('Choose a site'), departmentId: z.string().optional() });
+    tolerance: z.union([z.literal(''), z.coerce.number().positive()]).optional(), referenceValue: z.union([z.literal(''), z.coerce.number()]).optional(), reviewIntervalMonths: z.coerce.number().int().min(1).max(60), siteId: z.string().uuid('Choose a site'), departmentId: z.string().optional(), confidenceLevel: z.coerce.number().min(0.8, '0.80 to 0.999').max(0.999, '0.80 to 0.999') });
   return (
     <ModuleWorkspace module={mod('spc')} crumbs={[{ label: 'Measurement systems', to: '/spc/msa' }, { label: 'New' }]} title="New MSA study">
       <SchemaForm schema={schema} submitLabel="Create study" onCancel={() => nav('/spc/msa')}
-        defaults={{ title: '', studyType: 0, equipmentId: '', characteristic: '', inspectionMethod: '', tolerance: '', referenceValue: '', reviewIntervalMonths: 12, siteId: '', departmentId: '' }}
+        defaults={{ title: '', studyType: 0, equipmentId: '', characteristic: '', inspectionMethod: '', tolerance: '', referenceValue: '', reviewIntervalMonths: 12, siteId: '', departmentId: '', confidenceLevel: 0.95 }}
         fields={[{ name: 'title', label: 'Title', full: true }, { name: 'studyType', label: 'Study type', type: 'select', options: msaTypes.map((t, i) => [i, t] as [number, string]) },
           { name: 'equipmentId', label: 'Gage / equipment', type: 'select', options: (eq.data ?? []).map((e) => [e.id, `${e.number} ${e.name}`] as [string, string]) },
-          { name: 'characteristic', label: 'Characteristic' }, { name: 'inspectionMethod', label: 'Inspection method' }, { name: 'tolerance', label: 'Tolerance (USL − LSL)', type: 'number' }, { name: 'referenceValue', label: 'Reference value', type: 'number' },
+          { name: 'characteristic', label: 'Characteristic' }, { name: 'inspectionMethod', label: 'Inspection method' }, { name: 'tolerance', label: 'Tolerance (USL − LSL)', type: 'number' }, { name: 'referenceValue', label: 'Reference value', type: 'number' }, { name: 'confidenceLevel', label: 'Confidence for the bias t-test', type: 'number', helper: '0.95 = 95% two-sided' },
           { name: 'reviewIntervalMonths', label: 'Review every (months)', type: 'number' }, { name: 'siteId', label: 'Site', type: 'site' }, { name: 'departmentId', label: 'Department', type: 'department' }]}
         onSubmit={async (v) => { const r = await post<{ id: string }>('/api/spc/msa', { ...clean(v), tolerance: v.tolerance === '' ? null : v.tolerance, referenceValue: v.referenceValue === '' ? null : v.referenceValue }); nav(`/spc/msa/${r.id}`); }} />
     </ModuleWorkspace>
@@ -319,7 +319,8 @@ export function MsaDetail() {
   return (
     <ModuleWorkspace module={mod('spc')} crumbs={[{ label: 'Measurement systems', to: '/spc/msa' }, { label: s.number }]} title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{s.number}</span><span>{s.title}</span><StatusChip status={msaStatus[s.status]} /></Stack>}
       actions={<Stack direction="row" gap={1}>{s.status === 0 && can('spc.edit') && <Button variant="contained" disabled={busy || !!q.data?.computeError} onClick={() => run(() => post(`/api/spc/msa/${id}/submit`))}>Submit for approval</Button>}
-        {s.status === 2 && can('spc.edit') && <Button onClick={() => run(() => post(`/api/spc/msa/${id}/review-cycle`))}>Start review study</Button>}</Stack>}>
+        {s.status === 2 && can('spc.edit') && <Button onClick={() => run(() => post(`/api/spc/msa/${id}/review-cycle`))}>Start review study</Button>}
+        {s.status !== 0 && can('spc.edit') && <Button onClick={() => run(async () => { await post(`/api/spc/msa/${id}/recalculate`); qc.invalidateQueries({ queryKey: ['msa-results', id] }); })}>Recalculate (keeps the original)</Button>}</Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Facts items={[['Type', msaTypes[s.studyType]], ['Tolerance', String(s.tolerance ?? '—')], ['Reference', String(s.referenceValue ?? '—')], ['Verdict', q.data?.verdict ?? '—'], ['Next review', fmtDate(s.nextReviewOn)]]} />
       <Section title="Result">
@@ -329,6 +330,7 @@ export function MsaDetail() {
             <Box key={k}><Typography variant="caption" color="text.secondary">{k.replace(/([A-Z])/g, ' $1').toLowerCase()}</Typography><Typography sx={{ fontFamily: mono }}>{typeof v === 'number' ? +v.toFixed(4) : String(v)}</Typography></Box>)}
         </Box></Paper>}
       </Section>
+      {s.status !== 0 && <MsaResultVersions id={id!} />}
       <Section title="Measurements" action={s.status === 0 && can('spc.edit') ? (text === null ? <Button size="small" onClick={() => setText(asText)}>Edit</Button>
         : <Stack direction="row" gap={1}><Button size="small" onClick={() => setText(null)}>Cancel</Button><Button size="small" variant="contained" disabled={busy} onClick={() => run(() => put(`/api/spc/msa/${id}/measurements`, parse(text)))}>Save</Button></Stack>) : undefined}>
         {text !== null ? <TextField multiline minRows={10} fullWidth value={text} onChange={(e) => setText(e.target.value)} helperText={`One reading per line: operator, part, trial, ${attr ? 'result, reference result' : 'value, reference (bias/linearity)'}`} InputProps={{ sx: { fontFamily: mono, fontSize: 13 } }} />
@@ -337,6 +339,17 @@ export function MsaDetail() {
       </Section>
     </ModuleWorkspace>
   );
+}
+
+/** Every frozen and recalculated result with its calculation version; the result of record is never rewritten. */
+function MsaResultVersions({ id }: { id: string }) {
+  const q = useQuery({ queryKey: ['msa-results', id], queryFn: () => get<{ id: string; calculationVersion: string; verdict?: string; reason: string; isOfRecord: boolean; createdAt: string; result: Record<string, unknown> }[]>(`/api/spc/msa/${id}/results`) });
+  if (!q.data?.length) return null;
+  return <Section title="Result versions">
+    <DataTable data={q.data} columns={[{ header: 'Recorded', accessorKey: 'createdAt', cell: (x) => fmtDate(x.getValue()) }, { header: 'Why', accessorKey: 'reason' }, { header: 'Calculation', accessorKey: 'calculationVersion' },
+      { header: 'Verdict', accessorKey: 'verdict' }, { header: 't / critical / p', id: 'tp', cell: (x) => { const r = x.row.original.result as Record<string, number | null>; return r.t !== undefined ? `${r.t ?? '—'} / ${r.criticalT ?? '—'} / ${r.pValue ?? '—'}` : '—'; } },
+      { header: 'Of record', accessorKey: 'isOfRecord', cell: (x) => (x.getValue() ? 'Yes (approved basis)' : '') }]} />
+  </Section>;
 }
 
 // ---------------------------------------------------------------- LPA

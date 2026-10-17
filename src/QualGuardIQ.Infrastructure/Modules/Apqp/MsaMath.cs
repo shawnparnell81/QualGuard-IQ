@@ -6,7 +6,13 @@ public sealed record GrrResult(int Operators, int Parts, int Trials, decimal Rep
 public sealed record AttributeMeasurement(string Operator, int Part, int Trial, string Value, string? Reference);
 public sealed record AttributeResult(decimal WithinAppraiserPct, decimal VsReferencePct, decimal Kappa, List<AppraiserAgreement> Appraisers, string Verdict);
 public sealed record AppraiserAgreement(string Operator, decimal WithinPct, decimal VsReferencePct);
-public sealed record BiasResult(int N, decimal Mean, decimal Reference, decimal Bias, decimal StdDev, decimal T, decimal? PctTolerance, bool Significant);
+/// <summary>
+/// Bias study result (one-sample Student t-test of the readings against the reference value, two-sided).
+/// T is null when the readings have no spread (the statistic is undefined); Significant then means "any non-zero bias".
+/// </summary>
+public sealed record BiasResult(int N, decimal Mean, decimal Reference, decimal Bias, decimal StdDev, decimal? T, decimal? PctTolerance, bool Significant,
+    int DegreesOfFreedom = 0, decimal Confidence = 0.95m, decimal? StdError = null, decimal? CriticalT = null, decimal? PValue = null, decimal? BiasLow = null, decimal? BiasHigh = null,
+    string? Note = null, string CalculationVersion = MsaMath.BiasCalculationVersion);
 public sealed record LinearityResult(decimal Slope, decimal Intercept, decimal RSquared, decimal PctLinearity, List<(decimal Reference, decimal MeanBias)> Points);
 
 /// <summary>
@@ -72,14 +78,33 @@ public static class MsaMath
         return new(R(app.Average(a => a.WithinPct), 2), R(vsRefAll, 2), kappa, app, kappa >= 0.9m ? "Acceptable" : kappa >= 0.75m ? "Marginal" : "Unacceptable");
     }
 
-    public static BiasResult Bias(IReadOnlyList<decimal> values, decimal reference, decimal? tolerance)
+    /// <summary>Current bias calculation: exact Student t quantile and p-value (MathNet.Numerics), n − 1 degrees of freedom, configurable confidence.</summary>
+    public const string BiasCalculationVersion = "bias-t/2 (Student t, MathNet.Numerics)";
+    /// <summary>Label for results computed before version 2 (critical t taken from a five-step approximation, not the study's degrees of freedom).</summary>
+    public const string LegacyCalculationVersion = "msa/1 (approximate critical t)";
+
+    public static BiasResult Bias(IReadOnlyList<decimal> values, decimal reference, decimal? tolerance, decimal confidence = 0.95m)
     {
+        if (confidence is < 0.80m or > 0.999m) throw new ArgumentException("Confidence must be between 80% and 99.9%.");
         if (values.Count < 2) throw new ArgumentException("A bias study needs at least 2 readings (10+ recommended).");
-        var mean = values.Average(); var sd = Sqrt(values.Sum(x => (x - mean) * (x - mean)) / (values.Count - 1));
-        var bias = mean - reference; var t = sd == 0 ? 0 : bias / (sd / Sqrt(values.Count));
-        // two-sided 95% critical t approximated with 2.262 (n=10) .. 1.96 (large n)
-        var crit = values.Count switch { <= 5 => 2.776m, <= 10 => 2.262m, <= 20 => 2.093m, <= 30 => 2.045m, _ => 1.96m };
-        return new(values.Count, R(mean), reference, R(bias), R(sd), R(t, 3), tolerance is > 0 ? Pct(Math.Abs(bias), tolerance.Value) : null, Math.Abs(t) > crit);
+        var n = values.Count; var dof = n - 1;
+        var mean = values.Average(); var sd = Sqrt(values.Sum(x => (x - mean) * (x - mean)) / dof);
+        var bias = mean - reference;
+        decimal? pct = tolerance is > 0 ? Pct(Math.Abs(bias), tolerance.Value) : null;
+        var tDist = new MathNet.Numerics.Distributions.StudentT(0, 1, dof);
+        var crit = tDist.InverseCumulativeDistribution(1 - (1 - (double)confidence) / 2);
+        if (sd == 0)
+        {
+            // No spread: the t statistic is undefined. Any difference from the reference is then a real bias; none means none.
+            return new(n, R(mean), reference, R(bias), 0, null, pct, bias != 0, dof, confidence, 0, R((decimal)crit, 4), bias == 0 ? 1m : 0m, R(bias), R(bias),
+                bias == 0 ? "All readings equal the reference value." : "All readings are identical, so the t statistic is undefined; the non-zero bias is treated as significant.");
+        }
+        var se = sd / Sqrt(n);
+        var t = (double)(bias / se);
+        var p = 2 * (1 - tDist.CumulativeDistribution(Math.Abs(t)));
+        var half = (decimal)crit * se;
+        return new(n, R(mean), reference, R(bias), R(sd), R((decimal)t, 4), pct, Math.Abs(t) > crit, dof, confidence, R(se), R((decimal)crit, 4), R((decimal)p, 6), R(bias - half), R(bias + half),
+            n < 10 ? "Fewer than 10 readings; AIAG MSA recommends at least 10." : null);
     }
 
     /// <summary>Least-squares line of bias against reference value; %linearity = 100·|slope|.</summary>

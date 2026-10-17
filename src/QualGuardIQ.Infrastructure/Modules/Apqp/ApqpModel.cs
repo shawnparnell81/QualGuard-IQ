@@ -18,6 +18,7 @@ public partial class AppDbContext
     public DbSet<SpcSample> SpcSamples => Set<SpcSample>();
     public DbSet<MsaStudy> MsaStudies => Set<MsaStudy>();
     public DbSet<MsaMeasurement> MsaMeasurements => Set<MsaMeasurement>();
+    public DbSet<MsaResultVersion> MsaResultVersions => Set<MsaResultVersion>();
     public DbSet<LpaTemplate> LpaTemplates => Set<LpaTemplate>();
     public DbSet<LpaSchedule> LpaSchedules => Set<LpaSchedule>();
     public DbSet<LpaAudit> LpaAudits => Set<LpaAudit>();
@@ -130,8 +131,17 @@ public partial class AppDbContext
             e.Property(x => x.InspectionMethod).HasMaxLength(300); e.Property(x => x.Characteristic).HasMaxLength(300);
             e.Property(x => x.Tolerance).HasPrecision(20, 8); e.Property(x => x.ReferenceValue).HasPrecision(20, 8);
             e.Property(x => x.Result).HasColumnType("jsonb"); e.Property(x => x.Verdict).HasMaxLength(30);
+            e.Property(x => x.ConfidenceLevel).HasPrecision(5, 4).HasDefaultValue(0.95m); e.Property(x => x.CalculationVersion).HasMaxLength(80);
+            e.ToTable(t => t.HasCheckConstraint("ck_msa_confidence", "\"ConfidenceLevel\" BETWEEN 0.80 AND 0.999"));
             e.HasOne<Equipment>().WithMany().HasForeignKey(x => x.EquipmentId).OnDelete(R);
             UserReq(e, x => x.OwnerId); SiteRefs(e);
+        });
+        b.Entity<MsaResultVersion>(e =>
+        {
+            e.ToTable("msa_result_versions");
+            e.HasIndex(x => new { x.StudyId, x.CreatedAt });
+            e.Property(x => x.CalculationVersion).HasMaxLength(80); e.Property(x => x.Result).HasColumnType("jsonb"); e.Property(x => x.Verdict).HasMaxLength(30); e.Property(x => x.Reason).HasMaxLength(200);
+            e.HasOne<MsaStudy>().WithMany().HasForeignKey(x => x.StudyId).OnDelete(C);
         });
         b.Entity<MsaMeasurement>(e =>
         {
