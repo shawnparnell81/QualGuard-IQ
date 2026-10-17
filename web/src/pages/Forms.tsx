@@ -12,7 +12,7 @@ import { StatusChip, formStatus, fmtDateTime } from '../components/Status';
 import { ApprovalsPanel, AttachmentsAndHistory } from '../components/RecordTabs';
 import { Facts, useRunner, useSites } from '../components/Kit';
 import { SignDialog } from '../components/SignDialog';
-import { useWork } from './Home';
+import { useWork } from '../work';
 import { FormRenderer, type FieldDef } from './FormBuilder';
 import { mono } from '../theme';
 

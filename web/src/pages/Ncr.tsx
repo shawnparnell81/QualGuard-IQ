@@ -14,7 +14,7 @@ import { ActionsPanel, ApprovalsPanel, AttachmentsAndHistory } from '../componen
 import { CustomFieldsPanel } from '../components/RecordPanels';
 import { Facts, Prose, SchemaForm, Section, StepDialog, useRunner } from '../components/Kit';
 import { SignDialog } from '../components/SignDialog';
-import { useWork } from './Home';
+import { useWork } from '../work';
 import { mono } from '../theme';
 
 const mod = () => modules.find((m) => m.key === 'quality')!;

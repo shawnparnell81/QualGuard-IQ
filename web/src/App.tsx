@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material';
 import { useAuth, useBranding } from './auth';
@@ -6,16 +6,44 @@ import { makeTheme } from './theme';
 import { TopBar } from './layout/TopBar';
 import { CommandPalette } from './layout/CommandPalette';
 import { Login } from './pages/Login';
-import { Home } from './pages/Home';
-import { MyWork } from './pages/MyWork';
-import { Search } from './pages/Search';
-import { DocumentDetail, DocumentList, DocumentNew } from './pages/Documents';
-import { FormRecordDetail, FormRecordList, FormRecordNew } from './pages/Forms';
-import { CapaDetail, CapaList, CapaNew, NcrDetail, NcrList, NcrNew } from './pages/Ncr';
-import { AuditDetail, AuditList, AuditNew, FindingDetail, FindingList } from './pages/Audits';
-import { CourseDetail, CourseList, CourseNew, MyTraining, TrainingMatrix } from './pages/Training';
-import { EquipmentDetail, EquipmentList, EquipmentNew, ImpactDetail } from './pages/Calibration';
-import { AdminHome, AuditPage, OrganizationPage, RolesPage, RoutesPage, SecurityPage, SitesPage, UsersPage } from './pages/Admin';
+
+const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
+const MyWork = lazy(() => import('./pages/MyWork').then((m) => ({ default: m.MyWork })));
+const Search = lazy(() => import('./pages/Search').then((m) => ({ default: m.Search })));
+const DocumentDetail = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentDetail })));
+const DocumentList = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentList })));
+const DocumentNew = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentNew })));
+const FormRecordDetail = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordDetail })));
+const FormRecordList = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordList })));
+const FormRecordNew = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordNew })));
+const CapaDetail = lazy(() => import('./pages/Ncr').then((m) => ({ default: m.CapaDetail })));
+const CapaList = lazy(() => import('./pages/Ncr').then((m) => ({ default: m.CapaList })));
+const CapaNew = lazy(() => import('./pages/Ncr').then((m) => ({ default: m.CapaNew })));
+const NcrDetail = lazy(() => import('./pages/Ncr').then((m) => ({ default: m.NcrDetail })));
+const NcrList = lazy(() => import('./pages/Ncr').then((m) => ({ default: m.NcrList })));
+const NcrNew = lazy(() => import('./pages/Ncr').then((m) => ({ default: m.NcrNew })));
+const AuditDetail = lazy(() => import('./pages/Audits').then((m) => ({ default: m.AuditDetail })));
+const AuditList = lazy(() => import('./pages/Audits').then((m) => ({ default: m.AuditList })));
+const AuditNew = lazy(() => import('./pages/Audits').then((m) => ({ default: m.AuditNew })));
+const FindingDetail = lazy(() => import('./pages/Audits').then((m) => ({ default: m.FindingDetail })));
+const FindingList = lazy(() => import('./pages/Audits').then((m) => ({ default: m.FindingList })));
+const CourseDetail = lazy(() => import('./pages/Training').then((m) => ({ default: m.CourseDetail })));
+const CourseList = lazy(() => import('./pages/Training').then((m) => ({ default: m.CourseList })));
+const CourseNew = lazy(() => import('./pages/Training').then((m) => ({ default: m.CourseNew })));
+const MyTraining = lazy(() => import('./pages/Training').then((m) => ({ default: m.MyTraining })));
+const TrainingMatrix = lazy(() => import('./pages/Training').then((m) => ({ default: m.TrainingMatrix })));
+const EquipmentDetail = lazy(() => import('./pages/Calibration').then((m) => ({ default: m.EquipmentDetail })));
+const EquipmentList = lazy(() => import('./pages/Calibration').then((m) => ({ default: m.EquipmentList })));
+const EquipmentNew = lazy(() => import('./pages/Calibration').then((m) => ({ default: m.EquipmentNew })));
+const ImpactDetail = lazy(() => import('./pages/Calibration').then((m) => ({ default: m.ImpactDetail })));
+const AdminHome = lazy(() => import('./pages/Admin').then((m) => ({ default: m.AdminHome })));
+const AuditPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.AuditPage })));
+const OrganizationPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.OrganizationPage })));
+const RolesPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.RolesPage })));
+const RoutesPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.RoutesPage })));
+const SecurityPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.SecurityPage })));
+const SitesPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.SitesPage })));
+const UsersPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.UsersPage })));
 
 export function App() {
   const { me, loading } = useAuth();
@@ -36,6 +64,7 @@ export function App() {
           <>
             <TopBar onOpenPalette={() => setPalette(true)} />
             <CommandPalette open={palette} onClose={() => setPalette(false)} />
+            <Suspense fallback={<Box sx={{ display: 'grid', placeItems: 'center', height: '60vh' }}><CircularProgress /></Box>}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/my-work" element={<MyWork />} />
@@ -82,6 +111,7 @@ export function App() {
               <Route path="/admin/security" element={<SecurityPage />} />
               <Route path="*" element={<Box sx={{ p: 6 }}>Page not found.</Box>} />
             </Routes>
+            </Suspense>
           </>
         )}
     </ThemeProvider>

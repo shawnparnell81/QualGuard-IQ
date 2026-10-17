@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Box, Button, Paper, Stack, Tab, Tabs, TextField, Typography, Alert } from '@mui/material';
 import type { ColumnDef } from '@tanstack/react-table';
 import { useQueryClient } from '@tanstack/react-query';
-import { useWork, type WorkAction } from './Home';
+import { useWork, type WorkAction } from '../work';
 import { DataTable } from '../components/DataTable';
 import { SignDialog } from '../components/SignDialog';
 import { fmtDate } from '../components/Status';

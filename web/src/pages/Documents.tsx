@@ -13,7 +13,7 @@ import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
 import { StatusChip, docStatus, revStatus, fmtDate } from '../components/Status';
 import { ActionsPanel, ApprovalsPanel, CommentsPanel, CustomFieldsPanel, FilesPanel, HistoryPanel, LinksPanel } from '../components/RecordPanels';
-import { useWork } from './Home';
+import { useWork } from '../work';
 import { SignDialog } from '../components/SignDialog';
 import { mono } from '../theme';
 import { FieldBuilder, SchemaPreview, parseFields, serializeFields, type FieldDef } from './FormBuilder';
