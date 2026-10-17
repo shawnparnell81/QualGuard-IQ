@@ -52,5 +52,12 @@ REPORTING
 Create dashboards for: Open FAIs; Overdue FAIs; Approved FAIs; Failed FAIs; First Pass Yield; Characteristic Pass Rate; Supplier AQL Performance; Lot Acceptance Rate; Lot Rejection Rate; Defect Trends; Defect Categories; Supplier Defect Trends.
 
 WORKFLOW RULES
-Do not allow: FAI approval with missing characteristics; FAI approval with unresolved failures; AQL acceptance when rejection criteria are met; Closure
-[Message ended at "Closure". Interpreted, pending Shawn's confirmation: no closure until all characteristics pass, all required approvals are complete, and linked NCRs are resolved.]
+Do not allow: FAI approval with missing characteristics; FAI approval with unresolved failures; AQL acceptance when rejection criteria are met; Closure without approvals; Closure without audit history.
+
+AUDIT REQUIREMENTS
+Audit: Characteristic Changes; Measured Values; Approvals; Rejections; Sampling Decisions; Acceptance Decisions; Drawing Revisions; Inspector Changes; Review Actions. All actions must be fully traceable.
+
+TESTING
+Validate: 1. New Part FAI 2. Drawing Revision FAI 3. Ballooned Drawing Characteristic Mapping 4. Complete Characteristic Inspection 5. Failed Characteristic Workflow 6. AQL Pass Scenario 7. AQL Reject Scenario 8. Supplier Receiving Inspection 9. FAI to NCR Workflow 10. Supplier AQL Trending
+
+The FAI and AQL module must be fully integrated into the existing Quality Management System and use the shared workflow, approval, audit, notification, reporting, attachment, and permission engines.
