@@ -30,6 +30,7 @@ test.describe('E2E 3: NCR to CAPA with independent effectiveness verification', 
     await button(author, 'Propose disposition').click();
     await choose(author, 'Disposition', 'Rework');
     await dialog(author).getByLabel('Justification').fill('Bores can be honed to size; re-inspect 100%.');
+    await dialog(author).getByLabel(/^Instructions/).fill('Hone to 25.00 +0.03 per WI-112; re-inspect every bore.');
     await choose(author, 'CAPA required', 'Yes');
     await dialog(author).getByRole('button', { name: 'Submit for approval' }).click();
     await expect(button(author, 'Propose disposition')).toHaveCount(0);
@@ -89,6 +90,11 @@ test.describe('E2E 3: NCR to CAPA with independent effectiveness verification', 
     await expect(approver.getByRole('heading').getByText('Closed')).toBeVisible();
 
     await author.goto(ncrUrl);
+    await expect(button(author, 'Close NCR')).toHaveCount(0); // disposition must be verified first
+    await button(author, 'Verify disposition').click();
+    await dialog(author).getByLabel('Verification evidence').fill('All affected units honed and re-inspected; records attached.');
+    await dialog(author).getByRole('button', { name: 'Record verification' }).click();
+    await expect(dialog(author)).toHaveCount(0);
     await button(author, 'Close NCR').click();
     await dialog(author).getByLabel('Closure notes and evidence').fill('Reworked lot accepted; CAPA closed effective.');
     await dialog(author).getByRole('button', { name: 'Close NCR' }).click();

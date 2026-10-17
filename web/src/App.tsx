@@ -37,6 +37,19 @@ const EquipmentDetail = lazy(() => import('./pages/Calibration').then((m) => ({ 
 const EquipmentList = lazy(() => import('./pages/Calibration').then((m) => ({ default: m.EquipmentList })));
 const EquipmentNew = lazy(() => import('./pages/Calibration').then((m) => ({ default: m.EquipmentNew })));
 const ImpactDetail = lazy(() => import('./pages/Calibration').then((m) => ({ default: m.ImpactDetail })));
+const EngineeringHome = lazy(() => import('./pages/Products').then((m) => ({ default: m.EngineeringHome })));
+const ProductList = lazy(() => import('./pages/Products').then((m) => ({ default: m.ProductList })));
+const ProductNew = lazy(() => import('./pages/Products').then((m) => ({ default: m.ProductNew })));
+const ProductDetail = lazy(() => import('./pages/Products').then((m) => ({ default: m.ProductDetail })));
+const PartList = lazy(() => import('./pages/Products').then((m) => ({ default: m.PartList })));
+const PartNew = lazy(() => import('./pages/Products').then((m) => ({ default: m.PartNew })));
+const PartDetail = lazy(() => import('./pages/Products').then((m) => ({ default: m.PartDetail })));
+const CustomerList = lazy(() => import('./pages/Products').then((m) => ({ default: m.CustomerList })));
+const CustomerNew = lazy(() => import('./pages/Products').then((m) => ({ default: m.CustomerNew })));
+const CustomerDetail = lazy(() => import('./pages/Products').then((m) => ({ default: m.CustomerDetail })));
+const SupplierList = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierList })));
+const SupplierNew = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierNew })));
+const SupplierDetail = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierDetail })));
 const AdminHome = lazy(() => import('./pages/Admin').then((m) => ({ default: m.AdminHome })));
 const AuditPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.AuditPage })));
 const OrganizationPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.OrganizationPage })));
@@ -103,6 +116,19 @@ export function App() {
               <Route path="/calibration/equipment/new" element={<EquipmentNew />} />
               <Route path="/calibration/equipment/:id" element={<EquipmentDetail />} />
               <Route path="/calibration/impact/:id" element={<ImpactDetail />} />
+              <Route path="/products" element={<EngineeringHome />} />
+              <Route path="/products/items" element={<ProductList />} />
+              <Route path="/products/items/new" element={<ProductNew />} />
+              <Route path="/products/items/:id" element={<ProductDetail />} />
+              <Route path="/products/parts" element={<PartList />} />
+              <Route path="/products/parts/new" element={<PartNew />} />
+              <Route path="/products/parts/:id" element={<PartDetail />} />
+              <Route path="/products/customers" element={<CustomerList />} />
+              <Route path="/products/customers/new" element={<CustomerNew />} />
+              <Route path="/products/customers/:id" element={<CustomerDetail />} />
+              <Route path="/suppliers" element={<SupplierList />} />
+              <Route path="/suppliers/new" element={<SupplierNew />} />
+              <Route path="/suppliers/:id" element={<SupplierDetail />} />
               <Route path="/admin" element={<AdminHome />} />
               <Route path="/admin/users" element={<UsersPage />} />
               <Route path="/admin/roles" element={<RolesPage />} />

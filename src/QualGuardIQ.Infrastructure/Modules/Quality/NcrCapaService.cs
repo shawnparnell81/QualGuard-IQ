@@ -77,7 +77,7 @@ public sealed class NcrService(AppDbContext db, ModuleSupport m, INumberingServi
         if (d.SupplierId is { } s && !await db.Suppliers.AnyAsync(x => x.Id == s, ct)) throw new AppException("The supplier does not exist.");
         if (d.CustomerId is { } c && !await db.Customers.AnyAsync(x => x.Id == c, ct)) throw new AppException("The customer does not exist.");
         if (d.CostOfPoorQuality < 0) throw new AppException("Cost cannot be negative.");
-        n.ProductId = d.ProductId; n.PartId = d.PartId; if (!string.IsNullOrWhiteSpace(d.PartRevision)) n.PartRevision = Opt(d.PartRevision, "Revision", 10);
+        n.ProductId = d.ProductId ?? (d.PartId is { } pp ? await db.Parts.Where(x => x.Id == pp).Select(x => x.ProductId).FirstAsync(ct) : null); n.PartId = d.PartId; if (!string.IsNullOrWhiteSpace(d.PartRevision)) n.PartRevision = Opt(d.PartRevision, "Revision", 10);
         n.SupplierId = d.SupplierId; n.CustomerId = d.CustomerId;
         n.Process = Opt(d.Process, "Process", 100); n.Operation = Opt(d.Operation, "Operation", 100); n.WorkOrder = Opt(d.WorkOrder, "Work order", 100);
         n.PurchaseOrder = Opt(d.PurchaseOrder, "Purchase order", 100); n.BatchNumber = Opt(d.BatchNumber, "Batch", 100); n.SerialNumber = Opt(d.SerialNumber, "Serial number", 100);
