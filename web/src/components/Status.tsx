@@ -5,9 +5,10 @@ const colors: Record<string, 'default' | 'success' | 'warning' | 'error' | 'info
   Open: 'warning', Contained: 'info', DispositionPending: 'warning', DispositionApproved: 'info', Closed: 'success', Investigation: 'info', Implementation: 'info', EffectivenessCheck: 'warning',
   Planned: 'default', Reporting: 'warning', ActionPlanned: 'info', Submitted: 'warning', Assigned: 'warning', Quarantined: 'error', OutOfService: 'error', Retired: 'default',
   Pass: 'success', PassAfterAdjustment: 'success', OutOfTolerance: 'error', Fail: 'error', Minor: 'default', Major: 'warning', Critical: 'error', InProgress: 'info', Completed: 'primary', Verified: 'success', Cancelled: 'default', Pending: 'warning', Rejected: 'error', Succeeded: 'success', Failed: 'error',
+  Prospective: 'default', PendingApproval: 'warning', Conditional: 'warning', Suspended: 'error', Disqualified: 'error', Inactive: 'default',
 };
 const labels: Record<string, string> = { InReview: 'In review', InProgress: 'In progress', DispositionPending: 'Disposition pending', DispositionApproved: 'Disposition approved',
-  EffectivenessCheck: 'Effectiveness check', ActionPlanned: 'Action planned', OutOfService: 'Out of service', PassAfterAdjustment: 'Pass after adjustment', OutOfTolerance: 'Out of tolerance' };
+  EffectivenessCheck: 'Effectiveness check', ActionPlanned: 'Action planned', OutOfService: 'Out of service', PassAfterAdjustment: 'Pass after adjustment', OutOfTolerance: 'Out of tolerance', PendingApproval: 'Pending approval' };
 
 export const StatusChip = ({ status }: { status: string }) => (
   <Chip size="small" variant={status === 'Effective' || status === 'Active' ? 'filled' : 'outlined'} color={colors[status] ?? 'default'} label={labels[status] ?? status} />
@@ -22,7 +23,13 @@ export const fmtDateTime = (d?: string | null) => (d ? new Date(d).toLocaleStrin
 export const formStatus = ['Draft', 'Submitted', 'Approved', 'Rejected'];
 export const ncrStatus = ['Open', 'Contained', 'DispositionPending', 'DispositionApproved', 'Closed', 'Cancelled'];
 export const severity = ['Minor', 'Major', 'Critical'];
-export const dispositions = ['None', 'Use as is', 'Rework', 'Repair', 'Scrap', 'Return to supplier', 'Regrade'];
+export const dispositions = ['None', 'Use as is', 'Rework', 'Repair', 'Scrap', 'Return to supplier', 'Regrade', 'Sort', 'Re-inspect', 'Re-test', 'Deviation', 'Concession', 'Other'];
+/** Dispositions that need written instructions (rework/repair method, deviation terms, sort criteria). */
+export const dispositionNeedsInstructions = [2, 3, 7, 10, 11, 12];
+export const supplierStatus = ['Prospective', 'PendingApproval', 'Approved', 'Conditional', 'Suspended', 'Disqualified'];
+export const masterStatus = ['Active', 'Inactive', 'Obsolete'];
+export const partTypes: [number, string][] = [[0, 'Component'], [1, 'Assembly'], [2, 'Material'], [3, 'Subassembly'], [4, 'Consumable'], [5, 'Packaging'], [9, 'Other']];
+export const criticality = ['Low', 'Medium', 'High', 'Critical'];
 export const capaStatus = ['Open', 'Investigation', 'Implementation', 'EffectivenessCheck', 'Closed', 'Cancelled'];
 export const auditStatus = ['Planned', 'InProgress', 'Reporting', 'Closed', 'Cancelled'];
 export const checklistResult = ['Not assessed', 'Conforming', 'Nonconforming', 'Observation', 'Not applicable'];

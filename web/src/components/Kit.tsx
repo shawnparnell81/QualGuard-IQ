@@ -51,7 +51,24 @@ export function useRunner(after: () => void) {
   return { error, busy, run, setError };
 }
 
-export interface FieldSpec<T> { name: Path<T>; label: string; type?: 'text' | 'multiline' | 'number' | 'date' | 'select' | 'site' | 'department' | 'user'; options?: [string | number, string][]; full?: boolean; helper?: string }
+export interface FieldSpec<T> { name: Path<T>; label: string; type?: 'text' | 'multiline' | 'number' | 'date' | 'select' | 'site' | 'department' | 'user' | 'lookup' | 'heading'; options?: [string | number, string][]; full?: boolean; helper?: string; lookup?: LookupKind }
+
+/** Master-record pickers. Lists come from the API and are filtered by the user's permissions there. */
+export type LookupKind = 'product' | 'part' | 'supplier' | 'customer';
+const lookupUrl: Record<LookupKind, string> = { product: '/api/master/products', part: '/api/master/parts', supplier: '/api/suppliers', customer: '/api/master/customers' };
+type LookupRow = { id: string; number?: string; partNumber?: string; code?: string; name?: string; legalName?: string; revision?: string };
+export const lookupLabel = (r: LookupRow) => `${r.number ?? r.partNumber ?? r.code ?? ''} — ${r.name ?? r.legalName ?? ''}${r.revision ? ` (rev ${r.revision})` : ''}`;
+export function useLookup(kind: LookupKind | undefined, enabled = true) {
+  return useQuery({
+    queryKey: ['lookup', kind], enabled: !!kind && enabled, retry: false,
+    queryFn: async () => { try { return (await get<{ items: LookupRow[] }>(`${lookupUrl[kind!]}?pageSize=200`)).items; } catch { return [] as LookupRow[]; } },
+  });
+}
+function LookupField(props: Record<string, unknown> & { kind: LookupKind }) {
+  const { kind, ...p } = props;
+  const rows = useLookup(kind);
+  return <TextField {...(p as object)} select><MenuItem value="">None</MenuItem>{(rows.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>)}</TextField>;
+}
 
 /** Create form driven by a Zod schema (validated with React Hook Form) and a field list. */
 export function SchemaForm<S extends z.ZodType<FieldValues, FieldValues>>({ schema, fields, defaults, submitLabel, onSubmit, onCancel }: {
@@ -67,7 +84,9 @@ export function SchemaForm<S extends z.ZodType<FieldValues, FieldValues>>({ sche
   return (
     <Paper component="form" onSubmit={submit} sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
       {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
-      {fields.map((f) => (
+      {fields.map((f) => f.type === 'heading'
+        ? <Typography key={'h-' + f.label} variant="overline" color="text.secondary" sx={{ gridColumn: '1 / -1', mt: 1 }}>{f.label}</Typography>
+        : (
         <Controller key={f.name} name={f.name} control={control} render={({ field }) => {
           const err = (errors as Record<string, { message?: string }>)[f.name as string];
           const p = { ...field, value: field.value ?? '', label: f.label, error: !!err, helperText: err?.message ?? f.helper, sx: f.full || f.type === 'multiline' ? { gridColumn: '1 / -1' } : undefined };
@@ -78,6 +97,7 @@ export function SchemaForm<S extends z.ZodType<FieldValues, FieldValues>>({ sche
             case 'select': return <TextField {...p} select>{(f.options ?? []).map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}</TextField>;
             case 'site': return <TextField {...p} select>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
             case 'department': return <TextField {...p} select disabled={!site}><MenuItem value="">None</MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.code} — {d.name}</MenuItem>)}</TextField>;
+            case 'lookup': return <LookupField {...p} kind={f.lookup!} />;
             case 'user': return <TextField {...p} select><MenuItem value="">Me</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>;
             default: return <TextField {...p} />;
           }
@@ -94,11 +114,12 @@ export function SchemaForm<S extends z.ZodType<FieldValues, FieldValues>>({ sche
 /** Small dialog with free-form inputs for a state transition. */
 export function StepDialog({ open, title, intro, inputs, confirm, onClose, onConfirm, danger }: {
   open: boolean; title: string; intro?: string; confirm: string; danger?: boolean;
-  inputs: { name: string; label: string; type?: 'text' | 'multiline' | 'date' | 'select' | 'password' | 'checkbox'; options?: [string | number, string][]; initial?: string }[];
+  inputs: { name: string; label: string; type?: 'text' | 'multiline' | 'date' | 'select' | 'password' | 'checkbox' | 'users'; options?: [string | number, string][]; initial?: string; helper?: string }[];
   onClose: () => void; onConfirm: (v: Record<string, string>) => Promise<void>;
 }) {
   const [v, setV] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+  const users = useUsers();
   const val = (n: string, i?: string) => v[n] ?? i ?? '';
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" TransitionProps={{ onEnter: () => { setV({}); setError(null); } }}>
@@ -107,11 +128,15 @@ export function StepDialog({ open, title, intro, inputs, confirm, onClose, onCon
         {intro && <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{intro}</Typography>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Stack gap={2} sx={{ pt: 1 }}>
-          {inputs.map((i) => i.type === 'select'
+          {inputs.map((i) => i.type === 'users'
+            ? <TextField key={i.name} select label={i.label} helperText={i.helper} value={val(i.name, i.initial).split(',').filter(Boolean)} slotProps={{ select: { multiple: true } }}
+                onChange={(e) => setV({ ...v, [i.name]: ([] as string[]).concat(e.target.value as unknown as string[]).join(',') })}>
+                {(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+            : i.type === 'select'
             ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial)} onChange={(e) => setV({ ...v, [i.name]: e.target.value })}>{(i.options ?? []).map(([o, l]) => <MenuItem key={o} value={String(o)}>{l}</MenuItem>)}</TextField>
             : i.type === 'checkbox'
               ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial ?? 'false')} onChange={(e) => setV({ ...v, [i.name]: e.target.value })}><MenuItem value="true">Yes</MenuItem><MenuItem value="false">No</MenuItem></TextField>
-              : <TextField key={i.name} label={i.label} type={i.type === 'date' ? 'date' : i.type === 'password' ? 'password' : 'text'} multiline={i.type === 'multiline'} minRows={i.type === 'multiline' ? 3 : undefined}
+              : <TextField key={i.name} label={i.label} helperText={i.helper} type={i.type === 'date' ? 'date' : i.type === 'password' ? 'password' : 'text'} multiline={i.type === 'multiline'} minRows={i.type === 'multiline' ? 3 : undefined}
                   value={val(i.name, i.initial)} onChange={(e) => setV({ ...v, [i.name]: e.target.value })} slotProps={i.type === 'date' ? { inputLabel: { shrink: true } } : undefined} />)}
         </Stack>
       </DialogContent>
