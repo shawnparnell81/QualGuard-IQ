@@ -56,6 +56,15 @@ const ChangeNew = lazy(() => import('./pages/Changes').then((m) => ({ default: m
 const ChangeDetail = lazy(() => import('./pages/Changes').then((m) => ({ default: m.ChangeDetail })));
 const InspectionList = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.InspectionList })));
 const InspectionDetail = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.InspectionDetail })));
+const FaiList = lazy(() => import('./pages/FaiAql').then((m) => ({ default: m.FaiList })));
+const FaiNew = lazy(() => import('./pages/FaiAql').then((m) => ({ default: m.FaiNew })));
+const FaiDetail = lazy(() => import('./pages/FaiAql').then((m) => ({ default: m.FaiDetail })));
+const AqlList = lazy(() => import('./pages/FaiAql').then((m) => ({ default: m.AqlList })));
+const AqlNew = lazy(() => import('./pages/FaiAql').then((m) => ({ default: m.AqlNew })));
+const AqlDetail = lazy(() => import('./pages/FaiAql').then((m) => ({ default: m.AqlDetail })));
+const AqlPlans = lazy(() => import('./pages/FaiAql').then((m) => ({ default: m.AqlPlans })));
+const FaiAqlDashboard = lazy(() => import('./pages/FaiAql').then((m) => ({ default: m.FaiAqlDashboard })));
+const SupplierAql = lazy(() => import('./pages/FaiAql').then((m) => ({ default: m.SupplierAql })));
 const PlanList = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.PlanList })));
 const PlanNew = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.PlanNew })));
 const PlanDetail = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.PlanDetail })));
@@ -117,6 +126,15 @@ export function App() {
               <Route path="/documents" element={<DocumentList kind={0} />} />
               <Route path="/documents/new" element={<DocumentNew kind={0} />} />
               <Route path="/documents/:id" element={<DocumentDetail kind={0} />} />
+              <Route path="/fai" element={<FaiList />} />
+              <Route path="/fai/new" element={<FaiNew />} />
+              <Route path="/fai/dashboard" element={<FaiAqlDashboard />} />
+              <Route path="/fai/:id" element={<FaiDetail />} />
+              <Route path="/aql" element={<AqlList />} />
+              <Route path="/aql/new" element={<AqlNew />} />
+              <Route path="/aql/plans" element={<AqlPlans />} />
+              <Route path="/aql/suppliers" element={<SupplierAql />} />
+              <Route path="/aql/:id" element={<AqlDetail />} />
               <Route path="/drawings" element={<DocumentList kind={1} />} />
               <Route path="/drawings/new" element={<DocumentNew kind={1} />} />
               <Route path="/drawings/:id" element={<DocumentDetail kind={1} />} />

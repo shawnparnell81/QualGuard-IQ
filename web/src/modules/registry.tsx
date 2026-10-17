@@ -13,6 +13,7 @@ import GridViewOutlined from '@mui/icons-material/GridViewOutlined';
 import FlagOutlined from '@mui/icons-material/FlagOutlined';
 import RuleOutlined from '@mui/icons-material/RuleOutlined';
 import ChangeCircleOutlined from '@mui/icons-material/ChangeCircleOutlined';
+import StraightenOutlined from '@mui/icons-material/StraightenOutlined';
 
 export interface NavItem { label: string; path: string; permission?: string; children?: NavItem[] }
 export interface ModuleDef {
@@ -263,6 +264,30 @@ export const modules: ModuleDef[] = [
       ] },
       { label: 'Heat map', path: '/risks/matrix' },
       { label: 'Matrix settings', path: '/risks/settings', permission: 'admin.organization' },
+    ],
+  },
+  {
+    key: 'faiaql',
+    label: 'First Article & AQL',
+    description: 'First article inspections with ballooned characteristics and signatures; AQL lot sampling, dispositions and supplier trends',
+    icon: <StraightenOutlined fontSize="small" />,
+    basePath: '/fai',
+    permissions: ['fai.view', 'inspection.view'],
+    sidebar: [
+      { label: 'First articles', path: '/fai', permission: 'fai.view', children: [
+        { label: 'Active', path: '/fai', permission: 'fai.view' },
+        { label: 'Awaiting signatures', path: '/fai?view=pending', permission: 'fai.view' },
+        { label: 'Overdue', path: '/fai?view=overdue', permission: 'fai.view' },
+        { label: 'Start a first article', path: '/fai/new', permission: 'fai.edit' },
+      ] },
+      { label: 'AQL sampling', path: '/aql', permission: 'inspection.view', children: [
+        { label: 'Open lots', path: '/aql', permission: 'inspection.view' },
+        { label: 'Rejected lots', path: '/aql?view=rejected', permission: 'inspection.view' },
+        { label: 'Sample a lot', path: '/aql/new', permission: 'inspection.edit' },
+        { label: 'Sampling plans', path: '/aql/plans', permission: 'inspection.view' },
+        { label: 'Supplier trends', path: '/aql/suppliers', permission: 'inspection.view' },
+      ] },
+      { label: 'Dashboard', path: '/fai/dashboard', permission: 'reports.view' },
     ],
   },
   {
