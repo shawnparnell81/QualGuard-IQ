@@ -16,12 +16,14 @@ namespace QualGuardIQ.Infrastructure.Services;
 /// </summary>
 public sealed class WorkflowService(
     AppDbContext db, IRecordRegistry records, IAccessService access, ICurrentUser current, INotifier notifier,
-    UserManager<ApplicationUser> users, IEnumerable<IApprovalHandler> handlers, IClock clock, ISecurityEventLogger security)
+    UserManager<ApplicationUser> users, IEnumerable<IApprovalHandler> handlers, IClock clock, ISecurityEventLogger security, QualGuardIQ.Infrastructure.Modules.Enterprise.QualificationService qualifications)
 {
     public async Task<ApprovalRequest> SubmitAsync(string recordType, Guid recordId, CancellationToken ct)
     {
         var record = await records.RequireEditAsync(recordType, recordId, ct);
-        var route = await db.ApprovalRoutes.Include(r => r.Steps).FirstOrDefaultAsync(r => r.RecordType == record.Type && r.IsActive, ct)
+        // A site-specific route wins over the shared corporate route.
+        var route = await db.ApprovalRoutes.Include(r => r.Steps).Where(r => r.RecordType == record.Type && r.IsActive && (r.SiteId == record.SiteId || r.SiteId == null))
+            .OrderBy(r => r.SiteId == null).FirstOrDefaultAsync(ct)
             ?? throw new AppException($"No approval route is configured for {record.Type}. An administrator must set one up.");
         if (route.Steps.Count == 0) throw new AppException("The approval route has no steps.");
         if (await db.ApprovalRequests.AnyAsync(a => a.RecordType == record.Type && a.RecordId == record.Id && a.Status == ApprovalStatus.Pending, ct))
@@ -38,7 +40,9 @@ public sealed class WorkflowService(
         return req;
     }
 
-    public async Task<ApprovalRequest> DecideAsync(Guid requestId, bool approve, string password, string? comment, CancellationToken ct)
+    public Task<ApprovalRequest> DecideAsync(Guid requestId, bool approve, string password, string? comment, CancellationToken ct) => DecideAsync(requestId, approve, password, comment, null, ct);
+
+    public async Task<ApprovalRequest> DecideAsync(Guid requestId, bool approve, string password, string? comment, string? mfaCode, CancellationToken ct)
     {
         var req = await db.ApprovalRequests.Include(r => r.Decisions).FirstOrDefaultAsync(r => r.Id == requestId, ct) ?? throw new NotFoundException("Approval request");
         var record = await records.RequireViewAsync(req.RecordType, req.RecordId, ct);
@@ -63,14 +67,33 @@ public sealed class WorkflowService(
             await security.LogAsync("SignatureFailed", false, uid, user.Email, $"Approval {req.RecordNumber}");
             throw new AppException("Password is incorrect. The signature was not applied.", 401);
         }
+        var verification = "password";
+        if (user.TwoFactorEnabled || step.RequireMfa)
+        {
+            if (!user.TwoFactorEnabled) throw new AppException("This step needs an MFA-verified signature. Set up an authenticator app first.", 400);
+            var code = (mfaCode ?? "").Replace(" ", "").Replace("-", "");
+            if (code.Length == 0 || !await users.VerifyTwoFactorTokenAsync(user, users.Options.Tokens.AuthenticatorTokenProvider, code))
+            {
+                await security.LogAsync("SignatureFailed", false, uid, user.Email, $"Approval {req.RecordNumber}: MFA code");
+                throw new AppException("The authenticator code is incorrect. The signature was not applied.", 401);
+            }
+            verification = "password+mfa";
+        }
         await users.ResetAccessFailedCountAsync(user);
+        if (approve && step.RequiredSkillId is { } skillId)
+        {
+            var q = await qualifications.CheckAsync(uid, skillId, ct);
+            if (!q.Qualified) throw new ForbiddenException($"You cannot sign this step: {q.Reason}");
+        }
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         req.Decisions.Add(new ApprovalDecision
         {
             RequestId = req.Id, StepOrder = step.Order, StepName = step.Name, SignerId = uid, SignerName = user.DisplayName,
-            Approved = approve, Meaning = approve ? step.SignatureMeaning : "Rejected", Comment = comment, SignedAt = clock.UtcNow
+            Approved = approve, Meaning = approve ? step.SignatureMeaning : "Rejected", Comment = comment, SignedAt = clock.UtcNow, Verification = verification
         });
+        var signed = req.Decisions[^1];
+        signed.SignatureHash = SignatureHash(signed, req.RecordNumber);
         var handler = handlers.FirstOrDefault(h => h.RecordType == req.RecordType);
         if (!approve)
         {
@@ -146,4 +169,9 @@ public sealed class WorkflowService(
             .Where(u => !(route.PreventSelfApproval && u == req.SubmittedById));
         await notifier.NotifyAsync(approvers, $"Approval needed: {record.Number}", $"{step.Name} - {record.Title}", record, ct: ct);
     }
+
+    /// <summary>Binds the signature to its record: any later change to signer, meaning, time or record number breaks the hash.</summary>
+    public static string SignatureHash(ApprovalDecision d, string recordNumber) =>
+        Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+            $"{d.RequestId}|{d.StepOrder}|{d.SignerId}|{d.SignerName}|{d.Approved}|{d.Meaning}|{d.SignedAt.UtcTicks / 10}|{recordNumber}|{d.Comment}"))).ToLowerInvariant();
 }

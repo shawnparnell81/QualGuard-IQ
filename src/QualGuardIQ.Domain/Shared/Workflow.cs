@@ -11,6 +11,8 @@ public class ApprovalRoute : Entity, IAudited
     /// <summary>Routes are versioned: a change creates a new active route, and requests in progress keep the version they started on.</summary>
     public bool IsActive { get; set; } = true;
     public int Version { get; set; } = 1;
+    /// <summary>Site-specific route. Null is the shared (corporate) route used by every site without its own.</summary>
+    public Guid? SiteId { get; set; }
     public List<ApprovalRouteStep> Steps { get; set; } = [];
     public string AuditLabel => $"approval route {RecordType}";
 }
@@ -24,6 +26,10 @@ public class ApprovalRouteStep
     /// <summary>Approver must hold this permission for the record's site.</summary>
     public string RequiredPermission { get; set; } = "";
     public string SignatureMeaning { get; set; } = "Approved";
+    /// <summary>Optional skill or qualification the signer must currently hold (checked before the signature is applied).</summary>
+    public Guid? RequiredSkillId { get; set; }
+    /// <summary>Signer must also enter an authenticator code when they have MFA set up; with this flag, signers without MFA are refused.</summary>
+    public bool RequireMfa { get; set; }
 }
 
 public enum ApprovalStatus { Pending = 0, Approved = 1, Rejected = 2, Cancelled = 3 }
@@ -60,4 +66,8 @@ public class ApprovalDecision
     public string Meaning { get; set; } = "";
     public string? Comment { get; set; }
     public DateTimeOffset SignedAt { get; set; }
+    /// <summary>How the signer was verified: "password" or "password+mfa".</summary>
+    public string Verification { get; set; } = "password";
+    /// <summary>SHA-256 over request, step, signer, meaning, time and record number; recomputed by the integrity check.</summary>
+    public string? SignatureHash { get; set; }
 }

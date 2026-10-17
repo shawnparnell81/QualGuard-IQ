@@ -49,7 +49,7 @@ public sealed class ActionsController(ActionService actions) : ControllerBase
 [Route("api/my")]
 public sealed class MyWorkController(AppDbContext db, ICurrentUser current, WorkflowService workflow) : ControllerBase
 {
-    public sealed record SignRequest(bool Approve, string Password, string? Comment);
+    public sealed record SignRequest(bool Approve, string Password, string? Comment, string? MfaCode = null);
 
     private ISiteCalendar Cal => HttpContext.RequestServices.GetRequiredService<ISiteCalendar>();
 
@@ -76,7 +76,7 @@ public sealed class MyWorkController(AppDbContext db, ICurrentUser current, Work
     [HttpPost("approvals/{id:guid}/sign")]
     public async Task<IActionResult> Sign(Guid id, SignRequest req, CancellationToken ct)
     {
-        var r = await workflow.DecideAsync(id, req.Approve, req.Password, req.Comment, ct);
+        var r = await workflow.DecideAsync(id, req.Approve, req.Password, req.Comment, req.MfaCode, ct);
         return Ok(new { r.Status, r.CurrentStep });
     }
 

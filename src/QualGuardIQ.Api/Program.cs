@@ -47,8 +47,10 @@ builder.Services.AddIdentityCore<ApplicationUser>(o =>
 // issued by POST /api/auth/token. A policy scheme picks one per request, so the cookie flow is unchanged.
 const string AuthSelector = "qms.auth";
 builder.Services.AddAuthentication(AuthSelector)
-    .AddPolicyScheme(AuthSelector, "Cookie or bearer", o => o.ForwardDefaultSelector = ctx =>
-        ctx.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? IdentityConstants.BearerScheme : IdentityConstants.ApplicationScheme)
+    .AddPolicyScheme(AuthSelector, "Cookie, bearer or API key", o => o.ForwardDefaultSelector = ctx =>
+        ctx.Request.Headers.ContainsKey(ApiKeyHandler.Header) ? ApiKeyHandler.Scheme
+        : ctx.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? IdentityConstants.BearerScheme : IdentityConstants.ApplicationScheme)
+    .AddScheme<Microsoft.AspNetCore.Authentication.AuthenticationSchemeOptions, ApiKeyHandler>(ApiKeyHandler.Scheme, null)
     .AddBearerToken(IdentityConstants.BearerScheme, o =>
     {
         o.BearerTokenExpiration = TimeSpan.FromMinutes(builder.Configuration.GetValue("Auth:BearerTokenMinutes", 30));
@@ -85,7 +87,11 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy("login", ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimits:LoginPerMinute", 10), Window = TimeSpan.FromMinutes(1) }));
-    o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx => RateLimitPartition.GetFixedWindowLimiter(
+    // Public API clients get their own per-client limit (set on the client); everyone else shares the per-user limit.
+    o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx => ctx.User.FindFirst(ApiKeyHandler.ClientClaim)?.Value is { } client
+        ? RateLimitPartition.GetFixedWindowLimiter("api:" + client + ":" + ctx.User.FindFirst(ApiKeyHandler.RateClaim)?.Value,
+            _ => new FixedWindowRateLimiterOptions { PermitLimit = int.TryParse(ctx.User.FindFirst(ApiKeyHandler.RateClaim)?.Value, out var n) ? n : 120, Window = TimeSpan.FromMinutes(1) })
+        : RateLimitPartition.GetFixedWindowLimiter(
         ctx.User.Identity?.Name ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimits:RequestsPerMinute", 600), Window = TimeSpan.FromMinutes(1) }));
 });
@@ -116,6 +122,17 @@ app.Use(async (ctx, next) =>
     ctx.Response.Headers["X-Content-Type-Options"] = "nosniff";
     ctx.Response.Headers["X-Frame-Options"] = "DENY";
     ctx.Response.Headers["Referrer-Policy"] = "no-referrer";
+    // API versioning: version 1 is current. Clients may pin it with the Api-Version header; unknown versions are refused.
+    if (ctx.Request.Path.StartsWithSegments("/api"))
+    {
+        ctx.Response.Headers["Api-Supported-Versions"] = "1";
+        if (ctx.Request.Headers.TryGetValue("Api-Version", out var v) && v.ToString().Trim() is { Length: > 0 } ver && ver != "1" && ver != "1.0")
+        {
+            ctx.Response.StatusCode = 400;
+            await ctx.Response.WriteAsJsonAsync(new { title = $"API version '{ver}' is not supported. Supported: 1." });
+            return;
+        }
+    }
     await next();
 });
 app.UseAuthentication();
@@ -128,7 +145,8 @@ app.Use(async (ctx, next) =>
 {
     // Bearer requests carry no ambient credentials, so CSRF does not apply to them (or to obtaining a token).
     var bearer = ctx.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
-        || ctx.Request.Path.StartsWithSegments("/api/auth/token");
+        || ctx.Request.Headers.ContainsKey(ApiKeyHandler.Header)
+        || ctx.Request.Path.StartsWithSegments("/api/auth/token") || ctx.Request.Path.StartsWithSegments("/api/oauth/token");
     if (!bearer && ctx.Request.Path.StartsWithSegments("/api") && !HttpMethods.IsGet(ctx.Request.Method) && !HttpMethods.IsHead(ctx.Request.Method) && !HttpMethods.IsOptions(ctx.Request.Method))
     {
         var af = ctx.RequestServices.GetRequiredService<IAntiforgery>();

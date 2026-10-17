@@ -22,4 +22,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Modules/Enterprise/compliance-packs.json" LogicalName="compliance-packs.json" />
+  </ItemGroup>
 </Project>

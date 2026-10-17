@@ -140,6 +140,23 @@ public static class Permissions
     public const string ShippingView = "shipping.view";
     public const string ShippingEdit = "shipping.edit";
 
+    /// <summary>Organization tree, corporate standards and plant rollout, war room and governance dashboards.</summary>
+    public const string EnterpriseView = "enterprise.view";
+    public const string EnterpriseEdit = "enterprise.edit";
+    /// <summary>Compliance obligations, packs and requirement mapping.</summary>
+    public const string ComplianceView = "compliance.view";
+    public const string ComplianceEdit = "compliance.edit";
+    /// <summary>Process, equipment, software and test method validation.</summary>
+    public const string ValidationView = "validation.view";
+    public const string ValidationEdit = "validation.edit";
+    /// <summary>Approve validation protocols and release validated items.</summary>
+    public const string ValidationApprove = "validation.approve";
+    /// <summary>Retention policies and decisions, business continuity exercises.</summary>
+    public const string GovernanceView = "governance.view";
+    public const string GovernanceEdit = "governance.edit";
+    /// <summary>Public API clients (keys and OAuth client credentials) and notification channels.</summary>
+    public const string ApiAdmin = "api.admin";
+
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
         .Where(f => f.IsLiteral && f.FieldType == typeof(string))
@@ -149,6 +166,6 @@ public static class Permissions
     /// <summary>Permissions that only make sense organization-wide (never site-scoped).</summary>
     public static readonly IReadOnlySet<string> GlobalOnly = new HashSet<string>
     {
-        AdminUsers, AdminRoles, AdminOrganization, SecurityLogView
+        AdminUsers, AdminRoles, AdminOrganization, SecurityLogView, ApiAdmin
     };
 }
