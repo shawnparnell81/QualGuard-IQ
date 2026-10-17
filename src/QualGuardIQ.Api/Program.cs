@@ -93,7 +93,7 @@ builder.Services.AddRateLimiter(o =>
 builder.Services.AddControllers();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<ErrorHandler>();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(o => QualGuardIQ.Api.OpenApi.OpenApiSetup.Configure(o, builder.Configuration));
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.Configure<ForwardedHeadersOptions>(o => o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
 
@@ -142,7 +142,11 @@ app.Use(async (ctx, next) =>
 
 app.UseAuthorization();
 
-if (!app.Environment.IsProduction()) app.MapOpenApi().AllowAnonymous();
+if (!app.Environment.IsProduction())
+{
+    app.MapOpenApi().AllowAnonymous();                                  // /openapi/v1.json
+    app.MapOpenApi("/openapi/{documentName}.yaml").AllowAnonymous();   // /openapi/v1.yaml
+}
 app.MapHealthChecks("/health/live", new() { Predicate = _ => false }).AllowAnonymous();
 app.MapHealthChecks("/health/ready").AllowAnonymous();
 app.MapControllers();
