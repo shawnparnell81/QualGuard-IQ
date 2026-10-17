@@ -399,6 +399,23 @@ public class Shipment : Entity, IAudited, ISiteScoped
     /// <summary>When the release conditions (inventory, holds, revision, customer requirements, status) were last confirmed online.</summary>
     public DateTimeOffset? ValidatedAt { get; set; }
     public Guid? ValidatedById { get; set; }
+    // structured delivery address (carrier address validation, rating and labels); ShipTo stays the free-text address for documents
+    public string? ShipToName { get; set; }
+    public string? ShipToLine1 { get; set; }
+    public string? ShipToLine2 { get; set; }
+    public string? ShipToCity { get; set; }
+    public string? ShipToRegion { get; set; }
+    public string? ShipToPostalCode { get; set; }
+    public string? ShipToCountry { get; set; }
+    public string? ShipToPhone { get; set; }
+    public bool ShipToResidential { get; set; }
+    public DateTimeOffset? AddressValidatedAt { get; set; }
+    public string? AddressValidationNote { get; set; }
+    /// <summary>Carrier connection and service chosen from a rate quote (or entered by hand).</summary>
+    public Guid? CarrierConnectionId { get; set; }
+    public string? CarrierServiceCode { get; set; }
+    public decimal? QuotedCharge { get; set; }
+    public string? QuotedCurrency { get; set; }
     public Guid SiteId { get; set; }
     public Guid? DepartmentId { get; set; }
     public string AuditLabel => $"shipment {Number}";
@@ -500,6 +517,9 @@ public class ShipmentContainer : Entity, IAudited
     public ContainerKind Kind { get; set; }
     public Guid? ParentId { get; set; }
     public decimal? Weight { get; set; }
+    public decimal? LengthCm { get; set; }
+    public decimal? WidthCm { get; set; }
+    public decimal? HeightCm { get; set; }
     public bool Verified { get; set; }
     public string AuditLabel => $"{Kind} {Number}";
 }

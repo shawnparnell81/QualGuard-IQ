@@ -290,6 +290,15 @@ public static class DependencyInjection
         s.AddSingleton<Modules.Logistics.IPrintTransport, Modules.Logistics.HttpRelayPrintTransport>();
         s.AddScoped<Modules.Logistics.LabelPrintService>();
         s.AddScoped<Jobs.LabelPrintQueueJob>();
+        s.AddSingleton<Modules.Logistics.CarrierHttpHandlerProvider>();
+        s.AddSingleton<Modules.Logistics.ICarrierAdapter, Modules.Logistics.FixtureCarrierAdapter>();
+        s.AddSingleton<Modules.Logistics.ICarrierAdapter>(new Modules.Logistics.RestCarrierAdapter(Domain.Quality.CarrierProvider.GenericRest));
+        s.AddSingleton<Modules.Logistics.ICarrierAdapter>(new Modules.Logistics.RestCarrierAdapter(Domain.Quality.CarrierProvider.Ltl));
+        s.AddSingleton<Modules.Logistics.ICarrierAdapter>(new Modules.Logistics.CarrierApiSlotAdapter(Domain.Quality.CarrierProvider.Ups));
+        s.AddSingleton<Modules.Logistics.ICarrierAdapter>(new Modules.Logistics.CarrierApiSlotAdapter(Domain.Quality.CarrierProvider.FedEx));
+        s.AddSingleton<Modules.Logistics.ICarrierAdapter>(new Modules.Logistics.CarrierApiSlotAdapter(Domain.Quality.CarrierProvider.Dhl));
+        s.AddScoped<Modules.Logistics.CarrierIntegrationService>();
+        s.AddScoped<Jobs.CarrierTrackingJob>();
         s.AddScoped<Modules.Production.ProductionService>();
         s.AddScoped<Modules.Analytics.KpiEngine>();
         s.AddScoped<Modules.Analytics.CopilotService>();

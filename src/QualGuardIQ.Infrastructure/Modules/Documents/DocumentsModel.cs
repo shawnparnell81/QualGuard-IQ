@@ -77,6 +77,6 @@ public partial class AppDbContext
         ConfigureEngineering(b);
         ConfigurePlatform(b);
         ConfigureStudio(b);
-        ConfigureLabels(b);
+        ConfigureLabels(b); ConfigureCarrierIntegration(b);
     }
 }

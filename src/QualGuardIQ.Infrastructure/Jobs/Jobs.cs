@@ -120,3 +120,10 @@ public sealed class LabelPrintQueueJob(QualGuardIQ.Infrastructure.Modules.Logist
     [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 120)]
     public Task RunAsync(CancellationToken ct) => labels.ProcessDueAsync(ct);
 }
+
+/// <summary>Every 30 minutes: refreshes carrier tracking for shipped shipments with active carrier labels and marks delivered shipments.</summary>
+public sealed class CarrierTrackingJob(QualGuardIQ.Infrastructure.Modules.Logistics.CarrierIntegrationService carriers)
+{
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 600)]
+    public Task RunAsync(CancellationToken ct) => carriers.RefreshTrackingAsync(ct);
+}

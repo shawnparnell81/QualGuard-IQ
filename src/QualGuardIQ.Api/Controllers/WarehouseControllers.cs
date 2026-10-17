@@ -129,7 +129,7 @@ public sealed class ReceivingController(ReceivingService svc, InventoryService i
 
 /// <summary>Shipments: pick, pack, verify, ship; carriers; packing list and bill of lading.</summary>
 [ApiController, Authorize, Route("api/shipping")]
-public sealed class ShippingController(ShippingService svc, InventoryService inv, LabelPrintService labels) : ControllerBase
+public sealed class ShippingController(ShippingService svc, InventoryService inv, LabelPrintService labels, CarrierIntegrationService carriers) : ControllerBase
 {
     [HttpGet("carriers")] [RequirePermission(Permissions.ShippingView)] public Task<List<Carrier>> Carriers(CancellationToken ct) => svc.CarriersAsync(ct);
     [HttpPost("carriers")] [RequirePermission(Permissions.ShippingEdit)] public Task<Carrier> CreateCarrier(CarrierInput r, CancellationToken ct) => svc.SaveCarrierAsync(null, r, ct);
@@ -154,7 +154,7 @@ public sealed class ShippingController(ShippingService svc, InventoryService inv
     [HttpPost("shipments/{id:guid}/ship")] public async Task<IActionResult> Ship(Guid id, ShipInput r, CancellationToken ct) { await svc.ShipAsync(id, r, ct); await this.AutoAsync(labels, LabelType.Shipping, ShippingService.ShipmentType, id, ct); return NoContent(); }
     [HttpPost("shipments/{id:guid}/delivered")] public async Task<IActionResult> Delivered(Guid id, DeliveredInput r, CancellationToken ct) { await svc.DeliveredAsync(id, r, ct); return NoContent(); }
     /// <summary>Cancels before shipping; staged (picked) stock needs returnLocationId and is moved back as available stock.</summary>
-    [HttpPost("shipments/{id:guid}/cancel")] public async Task<IActionResult> Cancel(Guid id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] CancelShipmentInput? r, CancellationToken ct) { await svc.CancelAsync(id, r, ct); return NoContent(); }
+    [HttpPost("shipments/{id:guid}/cancel")] public async Task<IActionResult> Cancel(Guid id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] CancelShipmentInput? r, CancellationToken ct) { await svc.CancelAsync(id, r, ct); await carriers.VoidOnCancelAsync(id, r?.Reason, ct); return NoContent(); }
     [HttpPut("shipments/{id:guid}/verifier")] public async Task<object> AssignVerifier(Guid id, AssignVerifierInput r, CancellationToken ct) { var s = await svc.AssignVerifierAsync(id, r, ct); return new { s.Id, s.AssignedVerifierId }; }
     /// <summary>The caller's assigned shipments awaiting verification, for download to a scan device.</summary>
     [HttpGet("my-verifications")] [RequirePermission(Permissions.ShippingEdit)] public Task<MyVerifications> MyVerifications(CancellationToken ct) => svc.MyVerificationsAsync(ct);
@@ -168,4 +168,34 @@ public sealed class ShippingController(ShippingService svc, InventoryService inv
     [HttpGet("shipments/{id:guid}/packing-list")] public async Task<FileContentResult> PackingList(Guid id, CancellationToken ct) => File(await svc.PackingListAsync(id, ct), "application/pdf", "packing-list.pdf");
     [HttpGet("shipments/{id:guid}/bill-of-lading")] public async Task<FileContentResult> Bol(Guid id, CancellationToken ct) => File(await svc.BillOfLadingAsync(id, ct), "application/pdf", "bill-of-lading.pdf");
     [HttpGet("shipments/{id:guid}/custody")] public Task<List<CustodyRow>> Custody(Guid id, CancellationToken ct) => inv.CustodyAsync(ShippingService.ShipmentType, id, ct);
+}
+
+/// <summary>Carrier connections (sandbox by default, disabled by default) and the carrier operations on a shipment: address validation, rates, service selection, labels, void and tracking.</summary>
+[ApiController, Authorize, Route("api/shipping")]
+public sealed class CarrierIntegrationController(CarrierIntegrationService svc) : ControllerBase
+{
+    /// <summary>Adapters with their capability metadata and unverified assumptions.</summary>
+    [HttpGet("carrier-adapters")] [RequirePermission(Permissions.ShippingView)] public List<CarrierCapabilities> Adapters() => svc.Catalog();
+    [HttpGet("carrier-connections")] public Task<List<CarrierConnectionRow>> Connections([FromQuery] Guid? siteId, CancellationToken ct) => svc.ConnectionsAsync(siteId, ct);
+    [HttpGet("carrier-connections/{id:guid}")] public Task<CarrierConnectionRow> Connection(Guid id, CancellationToken ct) => svc.ConnectionAsync(id, ct);
+    [HttpPost("carrier-connections")] [RequirePermission(Permissions.IntegrationsEdit)] public async Task<CarrierConnectionRow> Create(CarrierConnectionInput r, CancellationToken ct) => await svc.ConnectionAsync((await svc.SaveConnectionAsync(null, r, ct)).Id, ct);
+    [HttpPut("carrier-connections/{id:guid}")] [RequirePermission(Permissions.IntegrationsEdit)] public async Task<CarrierConnectionRow> Update(Guid id, CarrierConnectionInput r, CancellationToken ct) { await svc.SaveConnectionAsync(id, r, ct); return await svc.ConnectionAsync(id, ct); }
+    /// <summary>Connection test for the current configuration; the result is recorded and a failure switches the connection off.</summary>
+    [HttpPost("carrier-connections/{id:guid}/test")] [RequirePermission(Permissions.IntegrationsEdit)] public Task<CarrierConnectionRow> Test(Guid id, CancellationToken ct) => svc.TestAsync(id, ct);
+    /// <summary>Production approval by a second person (integrations.approve, not the tester) for the tested configuration.</summary>
+    [HttpPost("carrier-connections/{id:guid}/production-approval")] [RequirePermission(Permissions.IntegrationsApprove)] public Task<CarrierConnectionRow> Approve(Guid id, CarrierApprovalInput r, CancellationToken ct) => svc.ApproveProductionAsync(id, r, ct);
+    [HttpPut("carrier-connections/{id:guid}/enabled")] [RequirePermission(Permissions.IntegrationsEdit)] public Task<CarrierConnectionRow> Enable(Guid id, CarrierEnableInput r, CancellationToken ct) => svc.SetEnabledAsync(id, r.Enabled, ct);
+    [HttpGet("carrier-connections/{id:guid}/requests")] public Task<List<RequestLogRow>> Requests(Guid id, [FromQuery] int take = 100, CancellationToken ct = default) => svc.ConnectionLogAsync(id, take, ct);
+
+    [HttpGet("shipments/{id:guid}/carrier")] public Task<ShipmentCarrierView> View(Guid id, CancellationToken ct) => svc.ViewAsync(id, ct);
+    [HttpPut("shipments/{id:guid}/carrier/ship-to")] public async Task<IActionResult> ShipTo(Guid id, ShipToInput r, CancellationToken ct) { await svc.SaveShipToAsync(id, r, ct); return NoContent(); }
+    [HttpPost("shipments/{id:guid}/carrier/validate-address")] public Task<AddressResult> ValidateAddress(Guid id, CarrierChoice r, CancellationToken ct) => svc.ValidateAddressAsync(id, r, ct);
+    [HttpPost("shipments/{id:guid}/carrier/rates")] public Task<List<RateQuote>> Rates(Guid id, CarrierChoice r, CancellationToken ct) => svc.RatesAsync(id, r, ct);
+    /// <summary>Selects a service; the charge is taken from a fresh carrier quote.</summary>
+    [HttpPost("shipments/{id:guid}/carrier/service")] public Task<RateQuote> Service(Guid id, ServiceChoice r, CancellationToken ct) => svc.SelectServiceAsync(id, r, ct);
+    /// <summary>Creates the carrier shipment and labels (idempotent: existing active labels are returned).</summary>
+    [HttpPost("shipments/{id:guid}/carrier/labels")] public Task<List<LabelRow>> Labels(Guid id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] CreateLabelsInput? r, CancellationToken ct) => svc.CreateLabelsAsync(id, r, ct);
+    [HttpPost("shipments/{id:guid}/carrier/void")] public Task<VoidResult> Void(Guid id, VoidLabelsInput r, CancellationToken ct) => svc.VoidLabelsAsync(id, r, ct);
+    [HttpPost("shipments/{id:guid}/carrier/track")] public Task<TrackResult> Track(Guid id, CancellationToken ct) => svc.TrackAsync(id, ct);
+    [HttpGet("carrier-labels/{labelId:guid}")] public async Task<FileContentResult> Label(Guid labelId, CancellationToken ct) { var (d, type, name) = await svc.LabelFileAsync(labelId, ct); return File(d, type, name); }
 }
