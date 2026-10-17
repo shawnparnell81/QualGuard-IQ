@@ -23786,6 +23786,2194 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/warehouse/locations:
+    get:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LocationRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LocationRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LocationRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/LocationInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/LocationInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/locations/{id}':
+    get:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/WarehouseLocation'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseLocation'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseLocation'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LocationUpdate'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/LocationUpdate'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/LocationUpdate'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/stock:
+    get:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: partId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: lotId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: serialId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: locationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/StockStatus'
+        - name: workOrderId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: includeChildren
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/summary:
+    get:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartSummary'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartSummary'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PartSummary'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/ledger:
+    get:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: partId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: lotId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: serialId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: locationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: kind
+          in: query
+          schema:
+            $ref: '#/components/schemas/InventoryTxKind'
+        - name: workOrderId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: refType
+          in: query
+          schema:
+            type: string
+        - name: refId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date-time
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TxRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TxRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TxRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/sites/{siteId}/mode':
+    get:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: siteId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SiteMode'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SiteMode'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SiteMode'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/mirror:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `integrations.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MirrorInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/MirrorInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/MirrorInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/MirrorResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MirrorResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/MirrorResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/moves:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MoveInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/MoveInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/MoveInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/moves/scan:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanMoveInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ScanMoveInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ScanMoveInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/adjustments:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.approve` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AdjustInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AdjustInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AdjustInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/scrap:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScrapInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ScrapInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ScrapInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/reservations:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReserveInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReserveInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReserveInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/holds:
+    get:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/HoldStatus'
+        - name: lotId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryHold'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryHold'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/InventoryHold'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/HoldInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/HoldInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/HoldInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/holds/{id}':
+    get:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/InventoryHold'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InventoryHold'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/InventoryHold'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/holds/{id}/request-release':
+    post:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotesInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/NotesInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/NotesInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/issues:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IssueInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/IssueInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/IssueInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/issues/scan:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanIssueInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ScanIssueInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ScanIssueInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/consumptions:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsumeInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ConsumeInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ConsumeInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/completions:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CompleteInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CompleteInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CompleteInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/lots/split:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SplitInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SplitInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SplitInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/LotResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LotResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/LotResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/lots/merge:
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MergeInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/MergeInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/MergeInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/LotResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LotResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/LotResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/wip:
+    get:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: workOrderId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WipRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WipRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WipRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/transfers:
+    get:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TransferStatus'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockTransfer'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockTransfer'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StockTransfer'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TransferInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TransferInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/transfers/{id}':
+    get:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/StockTransfer'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StockTransfer'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/StockTransfer'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/transfers/{id}/ship':
+    post:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TransferShipInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TransferShipInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TransferShipInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/transfers/{id}/receive':
+    post:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/NotesInput'
+          text/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/NotesInput'
+          application/*+json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/NotesInput'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/transfers/{id}/custody':
+    get:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustodyRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustodyRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustodyRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/transfers/{id}/document':
+    get:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/counts:
+    get:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CycleCount'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CycleCount'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CycleCount'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CountInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CountInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CountInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/counts/{id}':
+    get:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CountDetail'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CountDetail'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CountDetail'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/counts/{id}/entries':
+    post:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CountEntries'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CountEntries'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CountEntries'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/counts/{id}/submit':
+    post:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/counts/{id}/cancel':
+    post:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/dashboard:
+    get:
+      tags:
+        - Warehouse
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/WarehouseDashboard'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseDashboard'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/WarehouseDashboard'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/scan:
+    post:
+      tags:
+        - Warehouse
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ScanContext'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanContext'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ScanContext'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/receipts:
+    get:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReceiptStatus'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Receipt'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Receipt'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Receipt'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReceiptInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReceiptInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReceiptInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/receipts/{id}':
+    get:
+      tags:
+        - Receiving
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ReceiptDetail'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptDetail'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ReceiptDetail'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/receipts/{id}/lines/{lineId}/inspection':
+    post:
+      tags:
+        - Receiving
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: lineId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkInspectionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/LinkInspectionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/LinkInspectionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/receipts/{id}/lines/{lineId}/decision':
+    post:
+      tags:
+        - Receiving
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: lineId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineDecisionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/LineDecisionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/LineDecisionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/returns/receive:
+    post:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnStockInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReturnStockInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReturnStockInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/mrb:
+    get:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/MrbStatus'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MrbCase'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MrbCase'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MrbCase'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MrbInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/MrbInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/MrbInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/mrb/{id}':
+    get:
+      tags:
+        - Receiving
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/MrbCase'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MrbCase'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/MrbCase'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/mrb/{id}/propose':
+    post:
+      tags:
+        - Receiving
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MrbProposal'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/MrbProposal'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/MrbProposal'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warehouse/supplier-returns:
+    get:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupplierReturn'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupplierReturn'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupplierReturn'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/supplier-returns/{id}':
+    get:
+      tags:
+        - Receiving
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SupplierReturn'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierReturn'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SupplierReturn'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/supplier-returns/{id}/ship':
+    post:
+      tags:
+        - Receiving
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RtvShipInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RtvShipInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RtvShipInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/supplier-returns/{id}/credit':
+    post:
+      tags:
+        - Receiving
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RtvCreditInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RtvCreditInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RtvCreditInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/supplier-returns/{id}/close':
+    post:
+      tags:
+        - Receiving
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warehouse/supplier-returns/{id}/custody':
+    get:
+      tags:
+        - Receiving
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustodyRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustodyRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustodyRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/shipping/carriers:
+    get:
+      tags:
+        - Shipping
+      description: 'Requires permission: `shipping.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Carrier'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Carrier'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Carrier'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Shipping
+      description: 'Requires permission: `shipping.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarrierInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CarrierInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CarrierInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Carrier'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Carrier'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/Carrier'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/carriers/{id}':
+    put:
+      tags:
+        - Shipping
+      description: 'Requires permission: `shipping.edit` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarrierInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CarrierInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CarrierInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Carrier'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Carrier'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/Carrier'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/shipping/shipments:
+    get:
+      tags:
+        - Shipping
+      description: 'Requires permission: `shipping.view` (site/department scoped).'
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ShipmentStatus'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shipment'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shipment'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Shipment'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Shipping
+      description: 'Requires permission: `shipping.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShipmentInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ShipmentInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ShipmentInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}':
+    get:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ShipmentDetail'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentDetail'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentDetail'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/pick-list':
+    post:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PickTask'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PickTask'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PickTask'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/picks/{taskId}':
+    post:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: taskId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PickConfirmInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PickConfirmInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PickConfirmInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/containers':
+    post:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PackInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PackInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PackInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/verify':
+    post:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/VerifyInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/VerifyInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/VerifyResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/VerifyResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/ship':
+    post:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShipInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ShipInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ShipInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/delivered':
+    post:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeliveredInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DeliveredInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DeliveredInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/cancel':
+    post:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/packing-list':
+    get:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/bill-of-lading':
+    get:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/custody':
+    get:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustodyRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustodyRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustodyRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
 components:
   schemas:
     Accountability:
@@ -23946,6 +26134,48 @@ components:
       properties:
         name:
           type: string
+    AdjustInput:
+      required:
+        - partId
+        - lotId
+        - serialId
+        - locationId
+        - status
+        - quantityChange
+        - reason
+        - clientRequestId
+      type: object
+      properties:
+        partId:
+          type: string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/StockStatus'
+        quantityChange:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        reason:
+          type: string
+        clientRequestId:
+          type:
+            - 'null'
+            - string
     AlertEvent:
       type: object
       properties:
@@ -25648,6 +27878,129 @@ components:
           format: uint32
     CapaStatus:
       type: integer
+    Carrier:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/CarrierKind'
+        trackingUrl:
+          type:
+            - 'null'
+            - string
+        scac:
+          type:
+            - 'null'
+            - string
+        active:
+          type: boolean
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    CarrierInput:
+      required:
+        - code
+        - name
+        - kind
+        - trackingUrl
+        - scac
+        - active
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/CarrierKind'
+        trackingUrl:
+          type:
+            - 'null'
+            - string
+        scac:
+          type:
+            - 'null'
+            - string
+        active:
+          type: boolean
+    CarrierKind:
+      type: integer
+    CarrierRow:
+      required:
+        - carrierId
+        - name
+        - shipments
+        - delivered
+        - onTime
+        - withPromise
+        - onTimePct
+      type: object
+      properties:
+        carrierId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        shipments:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        delivered:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        onTime:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        withPromise:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        onTimePct:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
     ChangeItemInput:
       required:
         - category
@@ -26288,6 +28641,42 @@ components:
           type: string
         decision:
           type: string
+    CompleteInput:
+      required:
+        - workOrderId
+        - lotNumber
+        - serialNumbers
+        - quantity
+        - toLocationId
+        - clientRequestId
+      type: object
+      properties:
+        workOrderId:
+          type: string
+          format: uuid
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        serialNumbers:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        toLocationId:
+          type: string
+          format: uuid
+        clientRequestId:
+          type:
+            - 'null'
+            - string
     CompleteItemInput:
       required:
         - notes
@@ -26394,6 +28783,80 @@ components:
             - 'null'
             - string
           format: uuid
+    ConsumeInput:
+      required:
+        - workOrderId
+        - operationSequence
+        - partId
+        - lotId
+        - serialId
+        - wipLocationId
+        - quantity
+        - toLotId
+        - toSerialId
+        - clientRequestId
+      type: object
+      properties:
+        workOrderId:
+          type: string
+          format: uuid
+        operationSequence:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        partId:
+          type: string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        wipLocationId:
+          type: string
+          format: uuid
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        toLotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        toSerialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        clientRequestId:
+          type:
+            - 'null'
+            - string
+    ContainerKind:
+      type: integer
+    ContainerRow:
+      required:
+        - container
+        - items
+      type: object
+      properties:
+        container:
+          $ref: '#/components/schemas/ShipmentContainer'
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackedRow'
     ControlPlanLineInput:
       required:
         - stepSequence
@@ -26748,6 +29211,130 @@ components:
             - 'null'
             - string
           format: uuid
+    CountDetail:
+      required:
+        - count
+        - locationCode
+        - lines
+        - counted
+        - withVariance
+        - netVariance
+      type: object
+      properties:
+        count:
+          $ref: '#/components/schemas/CycleCount'
+        locationCode:
+          type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/VarianceRow'
+        counted:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        withVariance:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        netVariance:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+    CountEntries:
+      required:
+        - entries
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/CountEntry'
+    CountEntry:
+      required:
+        - lineId
+        - partId
+        - lotId
+        - serialId
+        - locationId
+        - countedQuantity
+        - notes
+      type: object
+      properties:
+        lineId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        locationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        countedQuantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        notes:
+          type:
+            - 'null'
+            - string
+    CountFrequency:
+      type: integer
+    CountInput:
+      required:
+        - frequency
+        - locationId
+        - partId
+        - freeze
+        - scheduledOn
+        - notes
+      type: object
+      properties:
+        frequency:
+          $ref: '#/components/schemas/CountFrequency'
+        locationId:
+          type: string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        freeze:
+          type: boolean
+        scheduledOn:
+          type: string
+          format: date
+        notes:
+          type:
+            - 'null'
+            - string
+    CountStatus:
+      type: integer
     CreateActionRequest:
       required:
         - title
@@ -27334,6 +29921,30 @@ components:
       properties:
         content:
           type: string
+    CustodyRow:
+      required:
+        - action
+        - by
+        - at
+        - location
+        - notes
+      type: object
+      properties:
+        action:
+          type: string
+        by:
+          type: string
+        at:
+          type: string
+          format: date-time
+        location:
+          type:
+            - 'null'
+            - string
+        notes:
+          type:
+            - 'null'
+            - string
     CustomerAcceptanceRequest:
       required:
         - accepted
@@ -27495,6 +30106,82 @@ components:
           format: uint32
     CustomFieldType:
       type: integer
+    CycleCount:
+      type: object
+      properties:
+        number:
+          type: string
+        frequency:
+          $ref: '#/components/schemas/CountFrequency'
+        status:
+          $ref: '#/components/schemas/CountStatus'
+        locationId:
+          type: string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        freeze:
+          type: boolean
+        scheduledOn:
+          type: string
+          format: date
+        submittedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        postedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        notes:
+          type:
+            - 'null'
+            - string
+        ownerId:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     DatasetPage:
       required:
         - dataset
@@ -27630,6 +30317,14 @@ components:
         - Major
         - Minor
         - null
+    DeliveredInput:
+      required:
+        - deliveredOn
+      type: object
+      properties:
+        deliveredOn:
+          type: string
+          format: date
     DepartmentDto:
       required:
         - id
@@ -29128,6 +31823,72 @@ components:
           type:
             - 'null'
             - string
+    HoldInput:
+      required:
+        - kind
+        - reason
+        - partId
+        - lotId
+        - serialId
+        - locationId
+        - ncrId
+        - customerId
+        - supplierId
+        - siteId
+        - departmentId
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/HoldKind'
+        reason:
+          type: string
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        locationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ncrId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    HoldKind:
+      type: integer
+    HoldStatus:
+      type: integer
     IdsRequest:
       required:
         - ids
@@ -29257,6 +32018,115 @@ components:
             format: uuid
     InspectionStatus:
       type: integer
+    InventoryCategory:
+      type: integer
+    InventoryHold:
+      type: object
+      properties:
+        number:
+          type: string
+        kind:
+          $ref: '#/components/schemas/HoldKind'
+        status:
+          $ref: '#/components/schemas/HoldStatus'
+        reason:
+          type: string
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        locationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        receiptLineId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ncrId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        releaseNotes:
+          type:
+            - 'null'
+            - string
+        releasedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        releasedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    InventoryTxKind:
+      type: integer
     Investigation:
       required:
         - subject
@@ -29303,6 +32173,60 @@ components:
           type: string
         correctiveAction:
           type: string
+    IssueInput:
+      required:
+        - workOrderId
+        - operationSequence
+        - partId
+        - lotId
+        - serialId
+        - fromLocationId
+        - wipLocationId
+        - quantity
+        - clientRequestId
+      type: object
+      properties:
+        workOrderId:
+          type: string
+          format: uuid
+        operationSequence:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        partId:
+          type: string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        fromLocationId:
+          type: string
+          format: uuid
+        wipLocationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        clientRequestId:
+          type:
+            - 'null'
+            - string
     IssueScarRequest:
       required:
         - supplierId
@@ -29435,6 +32359,45 @@ components:
         isActive:
           type: boolean
           default: true
+    LineDecision:
+      type: integer
+    LineDecisionInput:
+      required:
+        - decision
+        - quantityAccepted
+        - notes
+        - putAwayLocationId
+        - quarantineLocationId
+        - holdKind
+      type: object
+      properties:
+        decision:
+          $ref: '#/components/schemas/LineDecision'
+        quantityAccepted:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        notes:
+          type:
+            - 'null'
+            - string
+        putAwayLocationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        quarantineLocationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        holdKind:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/HoldKind'
     LinkDto:
       required:
         - id
@@ -29527,6 +32490,22 @@ components:
         - Complaint
         - Audit
         - Other
+    LinkInspectionInput:
+      required:
+        - inspectionId
+        - aqlInspectionId
+      type: object
+      properties:
+        inspectionId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        aqlInspectionId:
+          type:
+            - 'null'
+            - string
+          format: uuid
     LiveMetric:
       required:
         - key
@@ -29599,6 +32578,132 @@ components:
             - integer
             - string
           format: int32
+    LocationInput:
+      required:
+        - code
+        - name
+        - kind
+        - purpose
+        - parentId
+        - capacity
+        - siteId
+        - departmentId
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/LocationKind'
+        purpose:
+          $ref: '#/components/schemas/LocationPurpose'
+        parentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        capacity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    LocationKind:
+      type: integer
+    LocationPurpose:
+      type: integer
+    LocationRow:
+      required:
+        - id
+        - code
+        - name
+        - kind
+        - purpose
+        - parentId
+        - path
+        - capacity
+        - active
+        - frozen
+        - onHand
+        - items
+        - siteId
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/LocationKind'
+        purpose:
+          $ref: '#/components/schemas/LocationPurpose'
+        parentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        path:
+          type: string
+        capacity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        active:
+          type: boolean
+        frozen:
+          type: boolean
+        onHand:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        items:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        siteId:
+          type: string
+          format: uuid
+    LocationUpdate:
+      required:
+        - name
+        - purpose
+        - capacity
+        - active
+      type: object
+      properties:
+        name:
+          type: string
+        purpose:
+          $ref: '#/components/schemas/LocationPurpose'
+        capacity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        active:
+          type: boolean
     LoginRequest:
       required:
         - email
@@ -29831,6 +32936,29 @@ components:
           format: uuid
     LotKind:
       type: integer
+    LotResult:
+      required:
+        - lotId
+        - lotNumber
+        - quantity
+        - transactions
+      type: object
+      properties:
+        lotId:
+          type: string
+          format: uuid
+        lotNumber:
+          type: string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        transactions:
+          type: array
+          items:
+            type: string
     LotStatus:
       type: integer
     LpaAnswer:
@@ -30225,6 +33353,52 @@ components:
           type:
             - 'null'
             - string
+    MergeInput:
+      required:
+        - sources
+        - targetLotId
+        - newLotNumber
+        - toLocationId
+        - reason
+      type: object
+      properties:
+        sources:
+          type: array
+          items:
+            $ref: '#/components/schemas/MergeSource'
+        targetLotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        newLotNumber:
+          type:
+            - 'null'
+            - string
+        toLocationId:
+          type: string
+          format: uuid
+        reason:
+          type:
+            - 'null'
+            - string
+    MergeSource:
+      required:
+        - lotId
+        - locationId
+        - status
+      type: object
+      properties:
+        lotId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        status:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/StockStatus'
     MesEventInput:
       required:
         - source
@@ -30322,6 +33496,299 @@ components:
           type:
             - 'null'
             - string
+    MirrorInput:
+      required:
+        - siteId
+        - rows
+      type: object
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/MirrorRow'
+    MirrorResult:
+      required:
+        - rows
+        - postings
+        - netChange
+      type: object
+      properties:
+        rows:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        postings:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        netChange:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+    MirrorRow:
+      required:
+        - partNumber
+        - lotNumber
+        - locationCode
+        - quantity
+        - status
+      type: object
+      properties:
+        partNumber:
+          type: string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        locationCode:
+          type: string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        status:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/StockStatus'
+    MoveInput:
+      required:
+        - partId
+        - lotId
+        - serialId
+        - fromLocationId
+        - toLocationId
+        - quantity
+        - status
+        - reason
+        - clientRequestId
+      type: object
+      properties:
+        partId:
+          type: string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        fromLocationId:
+          type: string
+          format: uuid
+        toLocationId:
+          type: string
+          format: uuid
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        status:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/StockStatus'
+        reason:
+          type:
+            - 'null'
+            - string
+        clientRequestId:
+          type:
+            - 'null'
+            - string
+    MrbCase:
+      type: object
+      properties:
+        number:
+          type: string
+        status:
+          $ref: '#/components/schemas/MrbStatus'
+        partId:
+          type: string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        stockStatus:
+          $ref: '#/components/schemas/StockStatus'
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        ncrId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        holdId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        disposition:
+          $ref: '#/components/schemas/MrbDisposition'
+        justification:
+          type:
+            - 'null'
+            - string
+        targetLocationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierReturnId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        executedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        ownerId:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    MrbDisposition:
+      type: integer
+    MrbInput:
+      required:
+        - partId
+        - lotId
+        - serialId
+        - locationId
+        - stockStatus
+        - quantity
+        - ncrId
+        - holdId
+        - notes
+      type: object
+      properties:
+        partId:
+          type: string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        stockStatus:
+          $ref: '#/components/schemas/StockStatus'
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        ncrId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        holdId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        notes:
+          type:
+            - 'null'
+            - string
+    MrbProposal:
+      required:
+        - disposition
+        - justification
+        - targetLocationId
+      type: object
+      properties:
+        disposition:
+          $ref: '#/components/schemas/MrbDisposition'
+        justification:
+          type: string
+        targetLocationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    MrbStatus:
+      type: integer
     MsaMeasurementInput:
       required:
         - operator
@@ -30649,6 +34116,13 @@ components:
             - number
             - string
           format: double
+    NotesInput:
+      required:
+        - notes
+      type: object
+      properties:
+        notes:
+          type: string
     ObjectiveInput:
       required:
         - title
@@ -30791,6 +34265,91 @@ components:
       properties:
         achieved:
           type: boolean
+    PackedRow:
+      required:
+        - id
+        - lineId
+        - partNumber
+        - lotNumber
+        - serialNumber
+        - quantity
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        lineId:
+          type: string
+          format: uuid
+        partNumber:
+          type: string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+    PackInput:
+      required:
+        - kind
+        - parentId
+        - weight
+        - items
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/ContainerKind'
+        parentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        weight:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackItemInput'
+    PackItemInput:
+      required:
+        - lineId
+        - lotId
+        - serialId
+        - quantity
+      type: object
+      properties:
+        lineId:
+          type: string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
     PagedAQLInspections:
       required:
         - items
@@ -30985,6 +34544,104 @@ components:
             - integer
             - string
           format: int32
+    PartSummary:
+      required:
+        - partId
+        - partNumber
+        - partName
+        - unitOfMeasure
+        - onHand
+        - available
+        - reserved
+        - allocated
+        - awaitingInspection
+        - quarantined
+        - mrb
+        - damaged
+        - inTransit
+        - wip
+        - byCategory
+      type: object
+      properties:
+        partId:
+          type: string
+          format: uuid
+        partNumber:
+          type: string
+        partName:
+          type:
+            - 'null'
+            - string
+        unitOfMeasure:
+          type: string
+        onHand:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        available:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        reserved:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        allocated:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        awaitingInspection:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        quarantined:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        mrb:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        damaged:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        inTransit:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        wip:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        byCategory:
+          type: object
+          additionalProperties:
+            pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+            type:
+              - number
+              - string
+            format: double
     PartType:
       type: integer
     PartyRow:
@@ -31207,6 +34864,130 @@ components:
             - integer
             - string
           format: int32
+    PickConfirmInput:
+      required:
+        - locationCode
+        - itemCode
+        - quantity
+      type: object
+      properties:
+        locationCode:
+          type:
+            - 'null'
+            - string
+        itemCode:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+    PickRow:
+      required:
+        - task
+        - partNumber
+        - lotNumber
+        - serialNumber
+        - locationCode
+      type: object
+      properties:
+        task:
+          $ref: '#/components/schemas/PickTask'
+        partNumber:
+          type: string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        locationCode:
+          type: string
+    PickStatus:
+      type: integer
+    PickTask:
+      type: object
+      properties:
+        shipmentId:
+          type: string
+          format: uuid
+        lineId:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        quantityPicked:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        status:
+          $ref: '#/components/schemas/PickStatus'
+        pickedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        pickedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     PlanStatusCode:
       enum:
         - Draft
@@ -32136,6 +35917,461 @@ components:
       properties:
         notes:
           type: string
+    Receipt:
+      type: object
+      properties:
+        number:
+          type: string
+        kind:
+          $ref: '#/components/schemas/ReceiptKind'
+        status:
+          $ref: '#/components/schemas/ReceiptStatus'
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        purchaseOrderId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        purchaseOrderNumber:
+          type:
+            - 'null'
+            - string
+        asnNumber:
+          type:
+            - 'null'
+            - string
+        packingSlip:
+          type:
+            - 'null'
+            - string
+        carrierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        trackingNumber:
+          type:
+            - 'null'
+            - string
+        receiverId:
+          type: string
+          format: uuid
+        receivedOn:
+          type: string
+          format: date
+        receivingLocationId:
+          type: string
+          format: uuid
+        notes:
+          type:
+            - 'null'
+            - string
+        source:
+          $ref: '#/components/schemas/RecordSource'
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ReceiptDetail:
+      required:
+        - receipt
+        - lines
+      type: object
+      properties:
+        receipt:
+          $ref: '#/components/schemas/Receipt'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceiptLineRow'
+    ReceiptInput:
+      required:
+        - kind
+        - supplierId
+        - purchaseOrderId
+        - asnNumber
+        - packingSlip
+        - carrierId
+        - trackingNumber
+        - receivedOn
+        - receivingLocationId
+        - notes
+        - supplierOverrideReason
+        - siteId
+        - departmentId
+        - lines
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/ReceiptKind'
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        purchaseOrderId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        asnNumber:
+          type:
+            - 'null'
+            - string
+        packingSlip:
+          type:
+            - 'null'
+            - string
+        carrierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        trackingNumber:
+          type:
+            - 'null'
+            - string
+        receivedOn:
+          type: string
+          format: date
+        receivingLocationId:
+          type: string
+          format: uuid
+        notes:
+          type:
+            - 'null'
+            - string
+        supplierOverrideReason:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReceiptLineInput'
+    ReceiptKind:
+      type: integer
+    ReceiptLine:
+      type: object
+      properties:
+        receiptId:
+          type: string
+          format: uuid
+        lineNumber:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        partId:
+          type: string
+          format: uuid
+        revision:
+          type:
+            - 'null'
+            - string
+        purchaseOrderLineId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        quantityExpected:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        quantityReceived:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        quantityAccepted:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        quantityRejected:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        supplierLotNumber:
+          type:
+            - 'null'
+            - string
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialNumbers:
+          type:
+            - 'null'
+            - string
+        inspectionRequired:
+          type: boolean
+        inspectionId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        aqlInspectionId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ncrId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        holdId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        putAwayLocationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ReceiptLineStatus'
+        decisionNotes:
+          type:
+            - 'null'
+            - string
+        category:
+          $ref: '#/components/schemas/InventoryCategory'
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ReceiptLineInput:
+      required:
+        - partId
+        - revision
+        - purchaseOrderLineId
+        - quantityExpected
+        - quantityReceived
+        - supplierLotNumber
+        - lotNumber
+        - serialNumbers
+        - inspectionRequired
+        - inspectionPlanId
+        - aqlPlanId
+        - aqlInspectionLevel
+        - aqlLevel
+        - putAwayLocationId
+        - clientRequestId
+      type: object
+      properties:
+        partId:
+          type: string
+          format: uuid
+        revision:
+          type:
+            - 'null'
+            - string
+        purchaseOrderLineId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        quantityExpected:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        quantityReceived:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        supplierLotNumber:
+          type:
+            - 'null'
+            - string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        serialNumbers:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        inspectionRequired:
+          type:
+            - 'null'
+            - boolean
+        inspectionPlanId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        aqlPlanId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        aqlInspectionLevel:
+          type:
+            - 'null'
+            - string
+        aqlLevel:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        putAwayLocationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        clientRequestId:
+          type:
+            - 'null'
+            - string
+    ReceiptLineRow:
+      required:
+        - line
+        - partNumber
+        - partName
+        - lotNumber
+        - inspectionNumber
+        - inspectionStatus
+        - aqlNumber
+        - aqlResult
+        - ncrNumber
+        - holdNumber
+        - poLine
+      type: object
+      properties:
+        line:
+          $ref: '#/components/schemas/ReceiptLine'
+        partNumber:
+          type: string
+        partName:
+          type:
+            - 'null'
+            - string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        inspectionNumber:
+          type:
+            - 'null'
+            - string
+        inspectionStatus:
+          type:
+            - 'null'
+            - string
+        aqlNumber:
+          type:
+            - 'null'
+            - string
+        aqlResult:
+          type:
+            - 'null'
+            - string
+        ncrNumber:
+          type:
+            - 'null'
+            - string
+        holdNumber:
+          type:
+            - 'null'
+            - string
+        poLine:
+          type:
+            - 'null'
+            - string
+    ReceiptLineStatus:
+      type: integer
+    ReceiptStatus:
+      type: integer
     RecordCalibrationRequest:
       required:
         - performedOn
@@ -32398,6 +36634,21 @@ components:
           oneOf:
             - type: 'null'
             - $ref: '#/components/schemas/ReportChart'
+    ReserveInput:
+      required:
+        - balanceId
+        - quantity
+      type: object
+      properties:
+        balanceId:
+          type: string
+          format: uuid
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
     ResidualInput:
       required:
         - probability
@@ -32640,6 +36891,22 @@ components:
             - string
     ReturnStatus:
       type: integer
+    ReturnStockInput:
+      required:
+        - returnId
+        - locationId
+        - partId
+      type: object
+      properties:
+        returnId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
     ReviewInput:
       required:
         - review
@@ -33347,6 +37614,48 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/StepDto'
+    RtvCreditInput:
+      required:
+        - creditAmount
+        - creditReference
+        - creditedOn
+      type: object
+      properties:
+        creditAmount:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        creditReference:
+          type: string
+        creditedOn:
+          type: string
+          format: date
+    RtvShipInput:
+      required:
+        - carrierId
+        - trackingNumber
+        - shippedOn
+        - supplierRma
+      type: object
+      properties:
+        carrierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        trackingNumber:
+          type:
+            - 'null'
+            - string
+        shippedOn:
+          type: string
+          format: date
+        supplierRma:
+          type:
+            - 'null'
+            - string
     SamplingMode:
       type: integer
     SamplingTypeCode:
@@ -33744,6 +38053,114 @@ components:
             - integer
             - string
           format: uint32
+    ScanContext:
+      required:
+        - match
+        - stock
+        - holds
+        - related
+        - actions
+      type: object
+      properties:
+        match:
+          $ref: '#/components/schemas/ScanResult'
+        stock:
+          type: array
+          items:
+            $ref: '#/components/schemas/StockRow'
+        holds:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScanLink'
+        related:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScanLink'
+        actions:
+          type: array
+          items:
+            type: string
+    ScanIssueInput:
+      required:
+        - workOrder
+        - material
+        - from
+        - quantity
+        - operationSequence
+        - clientRequestId
+      type: object
+      properties:
+        workOrder:
+          type: string
+        material:
+          type: string
+        from:
+          type: string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        operationSequence:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        clientRequestId:
+          type:
+            - 'null'
+            - string
+    ScanLink:
+      required:
+        - type
+        - id
+        - number
+        - title
+        - status
+        - url
+      type: object
+      properties:
+        type:
+          type: string
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        url:
+          type: string
+    ScanMoveInput:
+      required:
+        - item
+        - from
+        - to
+        - quantity
+        - clientRequestId
+      type: object
+      properties:
+        item:
+          type: string
+        from:
+          type: string
+        to:
+          type: string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        clientRequestId:
+          type:
+            - 'null'
+            - string
     ScanRequest:
       required:
         - code
@@ -34307,6 +38724,437 @@ components:
         - Normal
         - Reduced
         - Tightened
+    ShipInput:
+      required:
+        - carrierId
+        - trackingNumber
+        - serviceLevel
+        - grossWeight
+      type: object
+      properties:
+        carrierId:
+          type: string
+          format: uuid
+        trackingNumber:
+          type:
+            - 'null'
+            - string
+        serviceLevel:
+          type:
+            - 'null'
+            - string
+        grossWeight:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+    Shipment:
+      type: object
+      properties:
+        number:
+          type: string
+        kind:
+          $ref: '#/components/schemas/ShipmentKind'
+        status:
+          $ref: '#/components/schemas/ShipmentStatus'
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        toSiteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        shipTo:
+          type:
+            - 'null'
+            - string
+        customerPo:
+          type:
+            - 'null'
+            - string
+        promisedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        stagingLocationId:
+          type: string
+          format: uuid
+        carrierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serviceLevel:
+          type:
+            - 'null'
+            - string
+        trackingNumber:
+          type:
+            - 'null'
+            - string
+        bolNumber:
+          type:
+            - 'null'
+            - string
+        grossWeight:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        shippedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        deliveredOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        notes:
+          type:
+            - 'null'
+            - string
+        ownerId:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ShipmentContainer:
+      type: object
+      properties:
+        shipmentId:
+          type: string
+          format: uuid
+        number:
+          type: string
+        kind:
+          $ref: '#/components/schemas/ContainerKind'
+        parentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        weight:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        verified:
+          type: boolean
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ShipmentDetail:
+      required:
+        - shipment
+        - lines
+        - picks
+        - containers
+        - customer
+        - carrier
+        - trackingUrl
+      type: object
+      properties:
+        shipment:
+          $ref: '#/components/schemas/Shipment'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShipmentLineRow'
+        picks:
+          type: array
+          items:
+            $ref: '#/components/schemas/PickRow'
+        containers:
+          type: array
+          items:
+            $ref: '#/components/schemas/ContainerRow'
+        customer:
+          type:
+            - 'null'
+            - string
+        carrier:
+          type:
+            - 'null'
+            - string
+        trackingUrl:
+          type:
+            - 'null'
+            - string
+    ShipmentInput:
+      required:
+        - kind
+        - customerId
+        - supplierId
+        - toSiteId
+        - shipTo
+        - customerPo
+        - promisedOn
+        - stagingLocationId
+        - carrierId
+        - serviceLevel
+        - notes
+        - siteId
+        - departmentId
+        - lines
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/ShipmentKind'
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        toSiteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        shipTo:
+          type:
+            - 'null'
+            - string
+        customerPo:
+          type:
+            - 'null'
+            - string
+        promisedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        stagingLocationId:
+          type: string
+          format: uuid
+        carrierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serviceLevel:
+          type:
+            - 'null'
+            - string
+        notes:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/ShipmentLineInput'
+    ShipmentKind:
+      type: integer
+    ShipmentLine:
+      type: object
+      properties:
+        shipmentId:
+          type: string
+          format: uuid
+        lineNumber:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        partId:
+          type: string
+          format: uuid
+        revision:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        quantityPicked:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        quantityVerified:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ShipmentLineInput:
+      required:
+        - partId
+        - revision
+        - quantity
+        - lotId
+      type: object
+      properties:
+        partId:
+          type: string
+          format: uuid
+        revision:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    ShipmentLineRow:
+      required:
+        - line
+        - partNumber
+        - partName
+        - lotNumber
+      type: object
+      properties:
+        line:
+          $ref: '#/components/schemas/ShipmentLine'
+        partNumber:
+          type: string
+        partName:
+          type:
+            - 'null'
+            - string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+    ShipmentStatus:
+      type: integer
     SignInDto:
       required:
         - occurredAt
@@ -34412,6 +39260,22 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DepartmentDto'
+    SiteMode:
+      required:
+        - siteId
+        - mirror
+        - connection
+      type: object
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        mirror:
+          type: boolean
+        connection:
+          type:
+            - 'null'
+            - string
     SpcChart:
       type: object
       properties:
@@ -34756,6 +39620,51 @@ components:
           type:
             - 'null'
             - string
+    SplitInput:
+      required:
+        - lotId
+        - locationId
+        - status
+        - quantity
+        - newLotNumber
+        - toLocationId
+        - reason
+        - clientRequestId
+      type: object
+      properties:
+        lotId:
+          type: string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        status:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/StockStatus'
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        newLotNumber:
+          type:
+            - 'null'
+            - string
+        toLocationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        reason:
+          type:
+            - 'null'
+            - string
+        clientRequestId:
+          type:
+            - 'null'
+            - string
     StartFormRequest:
       required:
         - templateId
@@ -34799,6 +39708,228 @@ components:
           type: string
         signatureMeaning:
           type: string
+    StockRow:
+      required:
+        - id
+        - partId
+        - partNumber
+        - partName
+        - revision
+        - lotId
+        - lotNumber
+        - serialId
+        - serialNumber
+        - locationId
+        - locationCode
+        - locationPurpose
+        - status
+        - category
+        - onHand
+        - reserved
+        - allocated
+        - available
+        - unitOfMeasure
+        - workOrderId
+        - workOrderNumber
+        - held
+        - lastMovedAt
+        - siteId
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        partNumber:
+          type: string
+        partName:
+          type:
+            - 'null'
+            - string
+        revision:
+          type:
+            - 'null'
+            - string
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        locationId:
+          type: string
+          format: uuid
+        locationCode:
+          type: string
+        locationPurpose:
+          $ref: '#/components/schemas/LocationPurpose'
+        status:
+          $ref: '#/components/schemas/StockStatus'
+        category:
+          $ref: '#/components/schemas/InventoryCategory'
+        onHand:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        reserved:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        allocated:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        available:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        unitOfMeasure:
+          type: string
+        workOrderId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        workOrderNumber:
+          type:
+            - 'null'
+            - string
+        held:
+          type: boolean
+        lastMovedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        siteId:
+          type: string
+          format: uuid
+    StockStatus:
+      type: integer
+    StockTransfer:
+      type: object
+      properties:
+        number:
+          type: string
+        kind:
+          $ref: '#/components/schemas/TransferKind'
+        status:
+          $ref: '#/components/schemas/TransferStatus'
+        fromLocationId:
+          type: string
+          format: uuid
+        toLocationId:
+          type: string
+          format: uuid
+        toSiteId:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        carrierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        trackingNumber:
+          type:
+            - 'null'
+            - string
+        shippedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        receivedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        receivedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        notes:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     Stream:
       type: string
       format: binary
@@ -35055,6 +40186,120 @@ components:
     SupplierProgramStatus:
       type: integer
     SupplierRestriction:
+      type: integer
+    SupplierReturn:
+      type: object
+      properties:
+        number:
+          type: string
+        supplierId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/SupplierReturnStatus'
+        partId:
+          type: string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        locationId:
+          type: string
+          format: uuid
+        stockStatus:
+          $ref: '#/components/schemas/StockStatus'
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        reason:
+          type: string
+        ncrId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        mrbCaseId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierRma:
+          type:
+            - 'null'
+            - string
+        carrierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        trackingNumber:
+          type:
+            - 'null'
+            - string
+        shippedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        creditAmount:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        creditReference:
+          type:
+            - 'null'
+            - string
+        creditedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    SupplierReturnStatus:
       type: integer
     SupplierReviewRequest:
       required:
@@ -35321,6 +40566,50 @@ components:
       properties:
         text:
           type: string
+    Tile:
+      required:
+        - key
+        - label
+        - value
+        - unit
+        - numerator
+        - denominator
+        - url
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        value:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        unit:
+          type: string
+        numerator:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        denominator:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        url:
+          type: string
+        note:
+          type:
+            - 'null'
+            - string
     TraceEventInput:
       required:
         - kind
@@ -35511,6 +40800,73 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TraceHit'
+    TransferInput:
+      required:
+        - kind
+        - partId
+        - lotId
+        - serialId
+        - fromLocationId
+        - toLocationId
+        - quantity
+        - notes
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/TransferKind'
+        partId:
+          type: string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        fromLocationId:
+          type: string
+          format: uuid
+        toLocationId:
+          type: string
+          format: uuid
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        notes:
+          type:
+            - 'null'
+            - string
+    TransferKind:
+      type: integer
+    TransferShipInput:
+      required:
+        - carrierId
+        - trackingNumber
+        - notes
+      type: object
+      properties:
+        carrierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        trackingNumber:
+          type:
+            - 'null'
+            - string
+        notes:
+          type:
+            - 'null'
+            - string
+    TransferStatus:
+      type: integer
     TrendRow:
       required:
         - label
@@ -35539,6 +40895,104 @@ components:
             - number
             - string
           format: double
+    TxRow:
+      required:
+        - id
+        - number
+        - kind
+        - occurredAt
+        - partNumber
+        - revision
+        - lotNumber
+        - serialNumber
+        - fromLocation
+        - fromStatus
+        - toLocation
+        - toStatus
+        - quantity
+        - unitOfMeasure
+        - workOrder
+        - refType
+        - refId
+        - refNumber
+        - reason
+        - source
+        - performedBy
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        kind:
+          $ref: '#/components/schemas/InventoryTxKind'
+        occurredAt:
+          type: string
+          format: date-time
+        partNumber:
+          type: string
+        revision:
+          type:
+            - 'null'
+            - string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        fromLocation:
+          type:
+            - 'null'
+            - string
+        fromStatus:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/StockStatus'
+        toLocation:
+          type:
+            - 'null'
+            - string
+        toStatus:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/StockStatus'
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        unitOfMeasure:
+          type: string
+        workOrder:
+          type:
+            - 'null'
+            - string
+        refType:
+          type:
+            - 'null'
+            - string
+        refId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        refNumber:
+          type:
+            - 'null'
+            - string
+        reason:
+          type:
+            - 'null'
+            - string
+        source:
+          $ref: '#/components/schemas/RecordSource'
+        performedBy:
+          type: string
     UpdateDocumentRequest:
       required:
         - title
@@ -35718,6 +41172,115 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AssignmentDto'
+    UtilizationRow:
+      required:
+        - warehouseId
+        - code
+        - name
+        - locations
+        - occupied
+        - onHand
+        - capacity
+        - utilization
+      type: object
+      properties:
+        warehouseId:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        locations:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        occupied:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        onHand:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        capacity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        utilization:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+    VarianceRow:
+      required:
+        - lineId
+        - partNumber
+        - lotNumber
+        - serialNumber
+        - locationCode
+        - status
+        - system
+        - counted
+        - variance
+        - variancePct
+      type: object
+      properties:
+        lineId:
+          type: string
+          format: uuid
+        partNumber:
+          type: string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        locationCode:
+          type: string
+        status:
+          $ref: '#/components/schemas/StockStatus'
+        system:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        counted:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        variance:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        variancePct:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
     VerifyInput:
       required:
         - accepted
@@ -35728,6 +41291,43 @@ components:
           type: boolean
         notes:
           type: string
+    VerifyLine:
+      required:
+        - lineId
+        - lineNumber
+        - partNumber
+        - revision
+        - expected
+        - verified
+      type: object
+      properties:
+        lineId:
+          type: string
+          format: uuid
+        lineNumber:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        partNumber:
+          type: string
+        revision:
+          type:
+            - 'null'
+            - string
+        expected:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        verified:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
     VerifyRequest:
       required:
         - effective
@@ -35738,6 +41338,129 @@ components:
           type: boolean
         notes:
           type: string
+    VerifyResult:
+      required:
+        - verified
+        - issues
+        - lines
+      type: object
+      properties:
+        verified:
+          type: boolean
+        issues:
+          type: array
+          items:
+            type: string
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerifyLine'
+    WarehouseDashboard:
+      required:
+        - tiles
+        - utilization
+        - carriers
+        - inboundByDay
+        - outboundByDay
+      type: object
+      properties:
+        tiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Tile'
+        utilization:
+          type: array
+          items:
+            $ref: '#/components/schemas/UtilizationRow'
+        carriers:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarrierRow'
+        inboundByDay:
+          type: object
+          additionalProperties:
+            pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+            type:
+              - number
+              - string
+            format: double
+        outboundByDay:
+          type: object
+          additionalProperties:
+            pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+            type:
+              - number
+              - string
+            format: double
+    WarehouseLocation:
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/LocationKind'
+        purpose:
+          $ref: '#/components/schemas/LocationPurpose'
+        parentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        path:
+          type: string
+        capacity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        active:
+          type: boolean
+        frozenByCountId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     WarrantyClaim:
       type: object
       properties:
@@ -36166,6 +41889,85 @@ components:
             - number
             - string
           format: double
+    WipRow:
+      required:
+        - workOrderId
+        - workOrderNumber
+        - workOrderStatus
+        - itemNumber
+        - partId
+        - partNumber
+        - lotId
+        - lotNumber
+        - serialNumber
+        - locationId
+        - locationCode
+        - status
+        - quantity
+        - unitOfMeasure
+        - operationSequence
+        - operationName
+        - lastMovedAt
+      type: object
+      properties:
+        workOrderId:
+          type: string
+          format: uuid
+        workOrderNumber:
+          type: string
+        workOrderStatus:
+          $ref: '#/components/schemas/WorkOrderStatus'
+        itemNumber:
+          type: string
+        partId:
+          type: string
+          format: uuid
+        partNumber:
+          type: string
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        locationId:
+          type: string
+          format: uuid
+        locationCode:
+          type: string
+        status:
+          $ref: '#/components/schemas/StockStatus'
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        unitOfMeasure:
+          type: string
+        operationSequence:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        operationName:
+          type:
+            - 'null'
+            - string
+        lastMovedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
     WorkflowAction:
       required:
         - comment
@@ -36428,3 +42230,6 @@ tags:
   - name: Risks
   - name: Roles
   - name: Users
+  - name: Warehouse
+  - name: Receiving
+  - name: Shipping
