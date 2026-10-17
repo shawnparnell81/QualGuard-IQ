@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
-import { Alert, Autocomplete, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Link, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Link, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import UploadFileOutlined from '@mui/icons-material/UploadFileOutlined';
 import LockOutlined from '@mui/icons-material/LockOutlined';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
@@ -284,5 +284,27 @@ export function CustomFieldsPanel({ type, id, canEdit }: { type: string; id: str
         catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
       }}>Save fields</Button>}
     </Paper>
+  );
+}
+
+/** Free-form tags on any record; anyone who can view sees them, editors add and remove. */
+export function TagsPanel({ type, id, canEdit }: { type: string; id: string; canEdit: boolean }) {
+  const qc = useQueryClient();
+  const [name, setName] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const tags = useQuery({ queryKey: ['tags', type, id], queryFn: () => get<string[]>(`${base(type, id)}/tags`) });
+  const change = async (f: () => Promise<unknown>) => { setError(null); try { await f(); qc.invalidateQueries({ queryKey: ['tags', type, id] }); } catch (e) { setError((e as Error).message); } };
+  return (
+    <Stack gap={1}>
+      <Typography variant="subtitle2">Tags</Typography>
+      {error && <Alert severity="error">{error}</Alert>}
+      <Stack direction="row" gap={0.75} flexWrap="wrap" alignItems="center">
+        {(tags.data ?? []).map((t) => <Chip key={t} size="small" label={t} onDelete={canEdit ? () => change(() => del(`${base(type, id)}/tags/${encodeURIComponent(t)}`)) : undefined} />)}
+        {!tags.data?.length && <Typography variant="body2" color="text.secondary">No tags.</Typography>}
+        {canEdit && <Box component="form" onSubmit={(e) => { e.preventDefault(); if (name.trim()) change(async () => { await post(`${base(type, id)}/tags`, { name: name.trim() }); setName(''); }); }}>
+          <TextField size="small" placeholder="Add tag" value={name} onChange={(e) => setName(e.target.value)} slotProps={{ htmlInput: { maxLength: 50, 'aria-label': 'Add tag' } }} sx={{ width: 160 }} />
+        </Box>}
+      </Stack>
+    </Stack>
   );
 }

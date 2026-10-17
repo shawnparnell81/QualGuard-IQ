@@ -111,6 +111,45 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
         return NoContent();
     }
 
+    public sealed record AddTagRequest(string Name);
+
+    [HttpGet("tags")]
+    public async Task<IEnumerable<string>> Tags(string type, Guid id, CancellationToken ct)
+    {
+        var r = await records.RequireViewAsync(type, id, ct);
+        return await (from rt in db.RecordTags.AsNoTracking() join t in db.Tags on rt.TagId equals t.Id
+                      where rt.OwnerType == r.Type && rt.OwnerId == r.Id orderby t.Name select t.Name).ToListAsync(ct);
+    }
+
+    /// <summary>Adds a tag (created on first use, case-insensitive match on existing names). Needs edit rights on the record.</summary>
+    [HttpPost("tags")]
+    public async Task<IActionResult> AddTag(string type, Guid id, AddTagRequest req, CancellationToken ct)
+    {
+        var r = await records.RequireEditAsync(type, id, ct);
+        var name = (req.Name ?? "").Trim();
+        if (name.Length is 0 or > 50) throw new AppException("A tag of 1 to 50 characters is required.");
+        var lower = name.ToLowerInvariant();
+        var tag = await db.Tags.FirstOrDefaultAsync(t => t.Name.ToLower() == lower, ct);
+        if (tag is null) { tag = new Tag { Name = name }; db.Tags.Add(tag); }
+        if (!await db.RecordTags.AnyAsync(x => x.OwnerType == r.Type && x.OwnerId == r.Id && x.TagId == tag.Id, ct))
+            db.RecordTags.Add(new RecordTag { OwnerType = r.Type, OwnerId = r.Id, TagId = tag.Id });
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
+    [HttpDelete("tags/{name}")]
+    public async Task<IActionResult> RemoveTag(string type, Guid id, string name, CancellationToken ct)
+    {
+        var r = await records.RequireEditAsync(type, id, ct);
+        var lower = name.Trim().ToLowerInvariant();
+        var rt = await (from x in db.RecordTags join t in db.Tags on x.TagId equals t.Id
+                        where x.OwnerType == r.Type && x.OwnerId == r.Id && t.Name.ToLower() == lower select x).FirstOrDefaultAsync(ct)
+            ?? throw new NotFoundException("Tag");
+        db.RecordTags.Remove(rt);
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     [HttpGet("actions")]
     public async Task<IEnumerable<ActionDto>> Actions(string type, Guid id, CancellationToken ct) =>
         await ActionsController.ToDtos(db, await actions.ForRecordAsync(type, id, ct), HttpContext.RequestServices.GetRequiredService<QualGuardIQ.Infrastructure.Services.ISiteCalendar>(), ct);

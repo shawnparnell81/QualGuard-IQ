@@ -12,7 +12,7 @@ import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
 import { StatusChip, docStatus, revStatus, fmtDate } from '../components/Status';
-import { ActionsPanel, ApprovalsPanel, CommentsPanel, CustomFieldsPanel, FilesPanel, HistoryPanel, LinksPanel } from '../components/RecordPanels';
+import { ActionsPanel, ApprovalsPanel, CommentsPanel, CustomFieldsPanel, FilesPanel, HistoryPanel, LinksPanel, TagsPanel } from '../components/RecordPanels';
 import { useWork } from '../work';
 import { SignDialog } from '../components/SignDialog';
 import { mono } from '../theme';
@@ -195,6 +195,7 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
               <Typography variant="caption" color="text.secondary">{k}</Typography><Typography variant="body2">{v}</Typography>
             </Box>
           ))}
+          <Box sx={{ mt: 2 }}><TagsPanel type={c.docType} id={d.id} canEdit={d.canEdit && d.status !== 2} /></Box>
           <Box sx={{ mt: 2 }}><CustomFieldsPanel type={c.docType} id={d.id} canEdit={d.canEdit && d.status !== 2} /></Box>
         </Paper>
         <Box sx={{ minWidth: 0 }}>
