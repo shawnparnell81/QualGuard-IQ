@@ -69,6 +69,9 @@ public sealed class PdfCanvas
         return this;
     }
 
+    /// <summary>Draws the QualGuard IQ logo (vector) with its top-left corner at (x, top), the given height in points; returns the width used.</summary>
+    public double Logo(double x, double top, double height) { _p.Append(BrandLogo.PdfOps(x, _h - top - height, height)); return BrandLogo.WidthForHeight(height); }
+
     /// <summary>Places a baseline JPEG (validated by its SOF marker) into the box, keeping its aspect ratio.</summary>
     public PdfCanvas Jpeg(double x, double top, double maxW, double maxH, byte[] jpeg)
     {

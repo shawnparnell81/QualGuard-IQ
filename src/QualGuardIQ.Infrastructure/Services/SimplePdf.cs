@@ -5,19 +5,20 @@ namespace QualGuardIQ.Infrastructure.Services;
 
 /// <summary>
 /// Dependency-free PDF writer for record reports (Letter, Helvetica, text and simple rules). Shared by every module's
-/// "print / PDF" output so there is one implementation. Text is limited to WinAnsi (Latin-1) characters.
+/// "print / PDF" output so there is one implementation. Text is limited to WinAnsi (Latin-1) characters. Every page starts with
+/// the QualGuard IQ logo (vector) in the header band.
 /// </summary>
 public sealed class SimplePdf
 {
     private readonly List<StringBuilder> _pages = [];
     private StringBuilder _page = null!;
     private double _y;
-    private const double Top = 750, Bottom = 50, Left = 50, Width = 512;
+    private const double Top = 732, Bottom = 50, Left = 50, Width = 512, LogoHeight = 20, LogoBottom = 752;
     private readonly string _footer;
 
     public SimplePdf(string footer) { _footer = footer; NewPage(); }
 
-    private void NewPage() { _page = new StringBuilder(); _pages.Add(_page); _y = Top; }
+    private void NewPage() { _page = new StringBuilder(); _pages.Add(_page); _page.Append(BrandLogo.PdfOps(Left, LogoBottom, LogoHeight)); _y = Top; }
 
     private void Ensure(double h) { if (_y - h < Bottom) NewPage(); }
 
