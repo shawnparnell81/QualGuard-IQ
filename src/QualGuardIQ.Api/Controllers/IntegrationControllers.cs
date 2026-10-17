@@ -171,7 +171,7 @@ public sealed class AlertsController(AlertService svc) : ControllerBase
     [HttpPut("rules/{id:guid}")] [RequirePermission(Permissions.AlertsAdmin)] public async Task<IActionResult> Update(Guid id, AlertRuleInput r, CancellationToken ct) { await svc.SaveRuleAsync(id, r, ct); return NoContent(); }
     [HttpGet("events")] [RequirePermission(Permissions.AlertsAdmin)] public Task<List<AlertEvent>> Events(CancellationToken ct) => svc.EventsAsync(ct);
     /// <summary>Evaluates rules now (the worker also runs this every 15 minutes).</summary>
-    [HttpPost("evaluate")] [RequirePermission(Permissions.AlertsAdmin)] public async Task<object> Evaluate(CancellationToken ct) => new { Raised = await svc.EvaluateAsync(ct) };
+    [HttpPost("evaluate")] [RequirePermission(Permissions.AlertsAdmin)] public async Task<object> Evaluate(CancellationToken ct) => new { Raised = await svc.EvaluateAsync(ct, callerScope: true) };
     [HttpGet("endpoints")] [RequirePermission(Permissions.AlertsAdmin)]
     public async Task<object> Endpoints(CancellationToken ct) => (await svc.EndpointsAsync(ct)).Select(e => new { e.Id, e.Name, e.Kind, e.Url, e.Enabled, HasSecret = e.EncryptedSecret != null }).ToList();
     [HttpPost("endpoints")] [RequirePermission(Permissions.AlertsAdmin)] public async Task<object> CreateEndpoint(EndpointInput r, CancellationToken ct) => new { (await svc.SaveEndpointAsync(null, r, ct)).Id };

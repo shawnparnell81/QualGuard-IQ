@@ -68,11 +68,12 @@ public sealed class AlertService(AppDbContext db, ModuleSupport m, INotifier not
         foreach (var s in sites) if (!await m.CanAsync(Permissions.AlertsAdmin, s, null, ct)) throw new ForbiddenException();
     }
 
-    /// <summary>Evaluates every active rule (system identity, called by the worker).</summary>
-    public async Task<int> EvaluateAsync(CancellationToken ct)
+    /// <summary>Evaluates every active rule (system identity, called by the worker), or only the caller's rules when callerScope is set.</summary>
+    public async Task<int> EvaluateAsync(CancellationToken ct, bool callerScope = false)
     {
         var raised = 0;
-        foreach (var rule in await db.AlertRules.Where(r => r.Active).ToListAsync(ct))
+        var rules = callerScope ? await m.ScopeAsync(db.AlertRules, Permissions.AlertsAdmin, ct) : db.AlertRules;
+        foreach (var rule in await rules.Where(r => r.Active).ToListAsync(ct))
         {
             var hits = await HitsAsync(rule, ct);
             var keys = hits.Select(h => h.Key).ToHashSet();
