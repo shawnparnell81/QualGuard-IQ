@@ -44,6 +44,7 @@ services:
       Seed__ApplicationName: ${APP_NAME:-QualGuard IQ}
       Seed__AdminEmail: ${ADMIN_EMAIL}
       Seed__AdminPassword: ${ADMIN_PASSWORD}
+      Video__FfmpegPath: /usr/bin/ffmpeg
     depends_on:
       postgres: { condition: service_healthy }
       minio: { condition: service_healthy }
@@ -59,6 +60,7 @@ services:
       Storage__ServiceUrl: http://minio:9000
       Storage__AccessKey: ${MINIO_ROOT_USER}
       Storage__SecretKey: ${MINIO_ROOT_PASSWORD}
+      Video__FfmpegPath: /usr/bin/ffmpeg
     depends_on:
       api: { condition: service_healthy }
 
