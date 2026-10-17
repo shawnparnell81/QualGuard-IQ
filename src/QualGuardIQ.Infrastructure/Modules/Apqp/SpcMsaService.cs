@@ -139,7 +139,7 @@ public sealed class SpcService(AppDbContext db, ModuleSupport m, INumberingServi
         try { hits = Compute(c, all).Points[all.IndexOf(s)].Violations; }
         catch (ArgumentException) { hits = []; }
         s.Violations = hits.Count == 0 ? null : string.Join("; ", hits);
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null; // joins the caller's transaction (shop-floor entries)
         db.SpcSamples.Add(s);
         await db.SaveChangesAsync(ct);
         Guid? ncrId = null; string? ncrNumber = null, skipped = null;
@@ -162,7 +162,7 @@ public sealed class SpcService(AppDbContext db, ModuleSupport m, INumberingServi
             var recipients = (await access.UsersWithPermissionAsync(Permissions.SpcEdit, c.SiteId, c.DepartmentId, ct)).Append(c.OwnerId).Distinct().ToList();
             await notifier.NotifyAsync(recipients, $"SPC {c.Number} out of control", $"{c.Characteristic}: {s.Violations}" + (ncrNumber is null ? "" : $" NCR {ncrNumber} raised."), await m.RecordAsync(RecordType, c.Id, ct), ct: ct);
         }
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         return new(s, hits, ncrId, ncrNumber, skipped);
     }
 

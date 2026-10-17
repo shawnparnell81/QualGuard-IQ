@@ -227,7 +227,7 @@ public sealed class ReturnService(AppDbContext db, ModuleSupport m, INumberingSe
         }
         // serial history: returned
         if (r.SerialNumber is { } sn && await db.SerialUnits.FirstOrDefaultAsync(x => x.SerialNumber == sn && (r.PartId == null || x.PartId == r.PartId), ct) is { } s)
-            await trace.RecordAsync(new TraceEventInput(TraceEventKind.Return, s.Id, null, null, null, 1, null, null, null, r.CustomerId, ReturnType, r.Id, r.Number, i.Condition, null), ct, checkAccess: false);
+            await trace.RecordAsync(new TraceEventInput(TraceEventKind.Return, null, s.Id, null, null, 1, null, null, null, r.CustomerId, ReturnType, r.Id, r.Number, i.Condition, null), ct, checkAccess: false);
         await db.SaveChangesAsync(ct);
     }
 
