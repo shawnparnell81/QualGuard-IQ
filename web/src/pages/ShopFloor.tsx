@@ -35,7 +35,7 @@ function Gauge({ m }: { m: Metric }) {
   const pct = m.unit === '%';
   const bad = (m.key === 'fpy24h' && m.denominator && m.value < 95) || (m.key !== 'fpy24h' && m.value > 0 && ['openNcrs', 'spcViolations', 'scrap24h', 'supplierRejectRate'].includes(m.key));
   return (
-    <Paper onClick={() => nav(m.url)} sx={{ p: 1.75, cursor: 'pointer', borderLeft: 4, borderLeftColor: bad ? 'secondary.main' : 'primary.main', '&:hover': { bgcolor: '#FAF8F3' } }}>
+    <Paper onClick={() => nav(m.url)} sx={{ p: 1.75, cursor: 'pointer', borderLeft: 4, borderLeftColor: bad ? 'secondary.main' : 'primary.main', '&:hover': { bgcolor: 'action.hover' } }}>
       <Typography variant="caption" color="text.secondary">{m.label}</Typography>
       <Typography sx={{ fontFamily: mono, fontSize: 30, lineHeight: 1.2 }}>{n(m.value, 1)}{m.unit && <Typography component="span" sx={{ fontSize: 14, ml: 0.5 }} color="text.secondary">{m.unit}</Typography>}</Typography>
       {pct && m.denominator != null && <><LinearProgress variant="determinate" value={Math.min(100, m.value)} sx={{ my: 0.75, height: 4 }} /><Typography variant="caption" color="text.secondary" sx={{ fontFamily: mono }}>{n(m.numerator, 1)} / {n(m.denominator, 1)}</Typography></>}

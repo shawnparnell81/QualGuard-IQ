@@ -11,7 +11,7 @@ import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDate, fmtDateTime, localDate } from '../components/Status';
 import { Facts, SchemaForm, Section, StepDialog, useRunner, useUsers } from '../components/Kit';
-import { mono } from '../theme';
+import { mono, useChartColors } from '../theme';
 import { ImportHistory, LineImportDialog } from '../components/LineImport';
 
 const mod = (k: string) => modules.find((m) => m.key === k)!;
@@ -215,6 +215,7 @@ export function SpcNew() {
 /** Plain SVG control chart: centre line, limits, spec lines, flagged points. */
 export function ControlChart({ r, lsl, usl }: { r: SpcResult; lsl?: number; usl?: number }) {
   const W = 760, H = 240, P = 36;
+  const cc = useChartColors();
   const vals = r.points.flatMap((p) => [p.value, p.ucl, p.lcl]).concat([lsl, usl].filter((x): x is number => x != null));
   const lo = Math.min(...vals), hi = Math.max(...vals), span = hi - lo || 1;
   const x = (i: number) => P + (i * (W - 2 * P)) / Math.max(1, r.points.length - 1);
@@ -224,8 +225,8 @@ export function ControlChart({ r, lsl, usl }: { r: SpcResult; lsl?: number; usl?
     <svg viewBox={`0 0 ${W + 40} ${H}`} width="100%" role="img" aria-label="Control chart">
       {line(r.center, '#3E5C76', '', `CL ${r.center.toFixed(3)}`)}{line(r.ucl, '#A4473B', '6 4', `UCL ${r.ucl.toFixed(3)}`)}{line(r.lcl, '#A4473B', '6 4', `LCL ${r.lcl.toFixed(3)}`)}
       {usl != null && line(usl, '#8A6D3B', '2 3', `USL ${usl}`)}{lsl != null && line(lsl, '#8A6D3B', '2 3', `LSL ${lsl}`)}
-      <polyline fill="none" stroke="#2F3B45" strokeWidth={1.5} points={r.points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')} />
-      {r.points.map((p, i) => <circle key={i} cx={x(i)} cy={y(p.value)} r={p.violations.length ? 5 : 3} fill={p.violations.length ? '#A4473B' : '#2F3B45'}><title>{`#${p.index + 1}: ${p.value}${p.violations.length ? ' — ' + p.violations.join('; ') : ''}`}</title></circle>)}
+      <polyline fill="none" stroke={cc.ink} strokeWidth={1.5} points={r.points.map((p, i) => `${x(i)},${y(p.value)}`).join(' ')} />
+      {r.points.map((p, i) => <circle key={i} cx={x(i)} cy={y(p.value)} r={p.violations.length ? 5 : 3} fill={p.violations.length ? '#A4473B' : cc.ink}><title>{`#${p.index + 1}: ${p.value}${p.violations.length ? ' — ' + p.violations.join('; ') : ''}`}</title></circle>)}
     </svg>
   );
 }
@@ -431,7 +432,7 @@ function StackBars({ rows }: { rows: CoqGroup[] }) {
   const max = Math.max(1, ...rows.map((r) => r.total));
   return <Stack gap={0.75}>{rows.map((r) => <Stack key={r.key} direction="row" gap={1} alignItems="center">
     <Typography sx={{ width: 150, fontSize: 13 }} noWrap title={r.label}>{r.label}</Typography>
-    <Box sx={{ flex: 1, display: 'flex', height: 18, bgcolor: '#F1EFEA', borderRadius: 0.5, overflow: 'hidden' }}>
+    <Box sx={{ flex: 1, display: 'flex', height: 18, bgcolor: 'action.hover', borderRadius: 0.5, overflow: 'hidden' }}>
       {[r.prevention, r.appraisal, r.internalFailure, r.externalFailure].map((v, i) => <Box key={i} title={`${coqCats[i]}: ${money(v)}`} sx={{ width: `${(v / max) * 100}%`, bgcolor: coqTone[i] }} />)}
     </Box>
     <Typography sx={{ width: 90, textAlign: 'right', fontFamily: mono, fontSize: 13 }}>{money(r.total)}</Typography>
@@ -517,7 +518,7 @@ const fmtMetric = (m: Metric) => (m.value == null ? '—' : m.unit === '%' ? pct
 function Tile({ m }: { m: Metric }) {
   const nav = useNavigate();
   return <Paper variant="outlined" onClick={() => m.drillUrl && nav(m.drillUrl)} title={m.definition}
-    sx={{ p: 2, cursor: m.drillUrl ? 'pointer' : 'default', borderLeft: 4, borderLeftColor: '#3E5C76', '&:hover': m.drillUrl ? { bgcolor: '#F7F5F0' } : undefined }}>
+    sx={{ p: 2, cursor: m.drillUrl ? 'pointer' : 'default', borderLeft: 4, borderLeftColor: '#3E5C76', '&:hover': m.drillUrl ? { bgcolor: 'action.hover' } : undefined }}>
     <Typography variant="caption" color="text.secondary">{m.label}</Typography>
     <Typography variant="h5" sx={{ fontFamily: mono }}>{fmtMetric(m)}</Typography>
     {m.denominator != null && m.numerator != null && <Typography variant="caption" color="text.secondary" sx={{ fontFamily: mono }}>{m.numerator} / {m.denominator}</Typography>}
@@ -604,7 +605,7 @@ export function RelationshipGraph() {
       {!type ? <Alert severity="info">Open a record and choose “Relationships” to see what it is linked to.</Alert> : q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> :
         <Paper variant="outlined" sx={{ p: 1 }}>
           <svg viewBox="0 0 900 600" width="100%" role="img" aria-label="Relationship diagram">
-            {(q.data?.edges ?? []).map((e, i) => { const a = layout.get(e.fromId), b = layout.get(e.toId); return a && b ? <g key={i}><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#B9B3A6" /><text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 3} fontSize={9} fill="#7D776B" textAnchor="middle">{e.label}</text></g> : null; })}
+            {(q.data?.edges ?? []).map((e, i) => { const a = layout.get(e.fromId), b = layout.get(e.toId); return a && b ? <g key={i}><line x1={a.x} y1={a.y} x2={b.x} y2={b.y} stroke="#9AA5B1" /><text x={(a.x + b.x) / 2} y={(a.y + b.y) / 2 - 3} fontSize={9} fill="#7D776B" textAnchor="middle">{e.label}</text></g> : null; })}
             {(q.data?.nodes ?? []).map((n) => { const c = layout.get(n.id)!; return <g key={n.id} style={{ cursor: 'pointer' }} onClick={() => nav(n.url)}>
               <rect x={c.x - 66} y={c.y - 20} width={132} height={40} rx={4} fill="#fff" stroke={typeTone[n.type] ?? '#666'} strokeWidth={n.depth === 0 ? 3 : 1.5} />
               <rect x={c.x - 66} y={c.y - 20} width={6} height={40} fill={typeTone[n.type] ?? '#666'} />

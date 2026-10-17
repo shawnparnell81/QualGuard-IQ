@@ -120,10 +120,10 @@ const limits = (c: Char) => c.dataType === 'Numeric' ? `${c.lowerSpecificationLi
 
 /** Balloon grid: one tile per characteristic, colored by result, so open and failed balloons stand out at a glance. */
 function BalloonBoard({ chars, onPick }: { chars: Char[]; onPick?: (c: Char) => void }) {
-  const tone: Record<string, string> = { Pass: '#2E7D5B', Fail: '#B3261E', NotApplicable: '#6B6F76', NotInspected: '#FFFFFF' };
+  const tone: Record<string, string> = { Pass: '#2E7D5B', Fail: '#B3261E', NotApplicable: '#6B6F76', NotInspected: 'background.paper' };
   return <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
     {chars.map((c) => <Box key={c.id} role={onPick ? 'button' : undefined} onClick={() => onPick?.(c)} title={`${c.description} · ${words(c.status)}`}
-      sx={{ width: 44, height: 44, borderRadius: '50%', border: 2, borderColor: c.characteristicType === 'Critical' ? '#B3261E' : 'divider', bgcolor: tone[c.status] ?? '#fff', color: c.status === 'NotInspected' ? 'text.primary' : '#fff',
+      sx={{ width: 44, height: 44, borderRadius: '50%', border: 2, borderColor: c.characteristicType === 'Critical' ? '#B3261E' : 'divider', bgcolor: tone[c.status] ?? 'background.paper', color: c.status === 'NotInspected' ? 'text.primary' : '#fff',
         display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: mono, fontWeight: 700, cursor: onPick ? 'pointer' : 'default' }}>{c.balloonNumber}</Box>)}
   </Box>;
 }
@@ -407,7 +407,7 @@ function Bars({ s }: { s?: Series }) {
   if (!s) return <LinearProgress />;
   const max = Math.max(1, ...s.points.map((p) => p.value));
   return <Section title={s.name}>{s.points.length === 0 ? <Typography color="text.secondary" fontSize={14}>No data yet.</Typography> : s.points.map((p) => <Box key={p.label} sx={{ display: 'grid', gridTemplateColumns: '120px 1fr 70px', alignItems: 'center', gap: 1, mb: 0.75 }}>
-    <Typography fontSize={13} color="text.secondary" noWrap>{words(p.label)}</Typography><Box sx={{ height: 10, borderRadius: 5, bgcolor: '#E4E1D9' }}><Box sx={{ width: `${(p.value / max) * 100}%`, height: '100%', borderRadius: 5, bgcolor: 'primary.main' }} /></Box>
+    <Typography fontSize={13} color="text.secondary" noWrap>{words(p.label)}</Typography><Box sx={{ height: 10, borderRadius: 5, bgcolor: 'divider' }}><Box sx={{ width: `${(p.value / max) * 100}%`, height: '100%', borderRadius: 5, bgcolor: 'primary.main' }} /></Box>
     <Typography fontSize={13} sx={{ fontFamily: mono, textAlign: 'right' }}>{Math.round(p.value * 100) / 100}{s.unit === '%' ? '%' : ''}</Typography></Box>)}</Section>;
 }
 

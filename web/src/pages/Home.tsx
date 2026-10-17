@@ -4,7 +4,7 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 import { useAuth } from '../auth';
 import { visibleModules } from '../modules/registry';
 import { fmtDate } from '../components/Status';
-import { mono } from '../theme';
+import { mono, useChartColors } from '../theme';
 
 import { useWork, type WorkAction } from '../work';
 
@@ -21,6 +21,7 @@ function dueBuckets(items: WorkAction[]) {
 }
 
 export function Home() {
+  const cc = useChartColors();
   const { me, can } = useAuth();
   const nav = useNavigate();
   const work = useWork();
@@ -66,11 +67,11 @@ export function Home() {
           <Box sx={{ height: 180 }}>
             <ResponsiveContainer>
               <BarChart data={dueBuckets(w?.assigned ?? [])}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2DED5" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={cc.grid} />
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 12 }} width={28} />
                 <Tooltip />
-                <Bar dataKey="count" fill="#1F4E4A" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="count" fill={cc.primary} radius={[4, 4, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </Box>

@@ -126,7 +126,7 @@ export function ReportDesigner() {
           {list.data?.length === 0 && <Typography color="text.secondary">No saved reports yet.</Typography>}</Stack>
         <Box sx={{ flex: 1 }}>{x && <Section title={`${x.name} — ${x.title}`} action={<Button size="small" onClick={() => setSched(true)}>Schedule</Button>}>
           {x.matrix ? <Box sx={{ overflowX: 'auto' }}><table style={{ borderCollapse: 'collapse', width: '100%' }}><thead><tr><th style={{ textAlign: 'left' }}>{x.matrix.rowField} \ {x.matrix.columnField}</th>{x.matrix.columns.map((c: string) => <th key={c}>{c}</th>)}<th>Total</th></tr></thead>
-            <tbody>{x.matrix.rows.map((rw: string, i: number) => <tr key={rw}><td>{rw}</td>{x.matrix.cells[i].map((v: number, j: number) => <td key={j} style={{ textAlign: 'center', background: v ? 'rgba(0,128,128,.12)' : undefined }}>{v}</td>)}<td style={{ textAlign: 'center', fontWeight: 600 }}>{x.matrix.rowTotals[i]}</td></tr>)}</tbody></table></Box>
+            <tbody>{x.matrix.rows.map((rw: string, i: number) => <tr key={rw}><td>{rw}</td>{x.matrix.cells[i].map((v: number, j: number) => <td key={j} style={{ textAlign: 'center', background: v ? 'rgba(18,87,196,.14)' : undefined }}>{v}</td>)}<td style={{ textAlign: 'center', fontWeight: 600 }}>{x.matrix.rowTotals[i]}</td></tr>)}</tbody></table></Box>
             : <DataTable data={x.rows} columns={x.columns.map((c: any) => ({ header: c.label, accessorKey: c.key }))} />}
         </Section>}</Box>
       </Stack>

@@ -9,7 +9,7 @@ import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDateTime, localDate } from '../components/Status';
 import { Section, StepDialog, useRunner, useSites } from '../components/Kit';
-import { mono } from '../theme';
+import { mono, useChartColors } from '../theme';
 import { GeneratedDraft } from './Generation';
 
 const insights = modules.find((m) => m.key === 'insights')!;
@@ -30,7 +30,8 @@ interface Exec { period: string; text: string; highlights: string[]; risks: stri
 const fmtVal = (v: number | undefined | null, unit: string) => (v == null ? '—' : unit === '$' ? v.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }) : `${v.toLocaleString(undefined, { maximumFractionDigits: 2 })}${unit && unit !== 'count' ? ` ${unit}` : ''}`);
 
 function Spark({ s }: { s: KpiSeries }) {
-  return <Box sx={{ height: 180 }}><ResponsiveContainer><LineChart data={s.points.map((p) => ({ ...p, value: p.value ?? null }))}><CartesianGrid stroke="#E2DED5" /><XAxis dataKey="period" fontSize={11} /><YAxis fontSize={11} width={48} /><Tooltip /><Line dataKey="value" stroke="#1F4E4A" strokeWidth={2} dot={{ r: 2 }} connectNulls /></LineChart></ResponsiveContainer></Box>;
+  const c = useChartColors();
+  return <Box sx={{ height: 180 }}><ResponsiveContainer><LineChart data={s.points.map((p) => ({ ...p, value: p.value ?? null }))}><CartesianGrid stroke={c.grid} /><XAxis dataKey="period" fontSize={11} /><YAxis fontSize={11} width={48} /><Tooltip /><Line dataKey="value" stroke={c.primary} strokeWidth={2} dot={{ r: 2 }} connectNulls /></LineChart></ResponsiveContainer></Box>;
 }
 
 export function KpiLibrary() {
@@ -50,7 +51,7 @@ export function KpiLibrary() {
         <TextField size="small" type="date" label="To" value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
       </Stack>}>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '260px 1fr' }, gap: 2 }}>
-        <Paper sx={{ p: 1 }}>{(defs.data ?? []).map((d) => <Box key={d.key} onClick={() => setKey(d.key)} sx={{ px: 1.5, py: 1, borderRadius: 1, cursor: 'pointer', bgcolor: d.key === key ? '#EAF1EF' : undefined, borderLeft: 3, borderLeftColor: d.key === key ? 'primary.main' : 'transparent' }}>
+        <Paper sx={{ p: 1 }}>{(defs.data ?? []).map((d) => <Box key={d.key} onClick={() => setKey(d.key)} sx={{ px: 1.5, py: 1, borderRadius: 1, cursor: 'pointer', bgcolor: d.key === key ? 'action.selected' : undefined, borderLeft: 3, borderLeftColor: d.key === key ? 'primary.main' : 'transparent' }}>
           <Typography variant="body2" sx={{ fontWeight: d.key === key ? 600 : 400 }}>{d.label}</Typography><Typography variant="caption" color="text.secondary">{d.unit}</Typography></Box>)}</Paper>
         <Stack gap={2}>
           <ToggleButtonGroup size="small" exclusive value={period} onChange={(_, v) => v != null && setPeriod(v)}>{periods.map((p, i) => <ToggleButton key={p} value={i}>{p}</ToggleButton>)}</ToggleButtonGroup>
@@ -172,7 +173,7 @@ export function RiskPage() {
         <Section title="Ranked by score">
           <Table size="small"><TableHead><TableRow><TableCell>Subject</TableCell><TableCell>Score</TableCell><TableCell>Confidence</TableCell><TableCell>Why</TableCell></TableRow></TableHead>
             <TableBody>{(r.data ?? []).map((x) => <TableRow key={x.id}><TableCell>{x.label}</TableCell>
-              <TableCell sx={{ width: 140 }}><Box sx={{ height: 8, borderRadius: 4, bgcolor: '#E2DED5' }}><Box sx={{ height: 8, borderRadius: 4, width: `${Math.min(100, x.score)}%`, bgcolor: x.score > 66 ? 'error.main' : x.score > 33 ? 'warning.main' : 'success.main' }} /></Box><Typography variant="caption" sx={{ fontFamily: mono }}>{x.score.toFixed(0)}</Typography></TableCell>
+              <TableCell sx={{ width: 140 }}><Box sx={{ height: 8, borderRadius: 4, bgcolor: 'divider' }}><Box sx={{ height: 8, borderRadius: 4, width: `${Math.min(100, x.score)}%`, bgcolor: x.score > 66 ? 'error.main' : x.score > 33 ? 'warning.main' : 'success.main' }} /></Box><Typography variant="caption" sx={{ fontFamily: mono }}>{x.score.toFixed(0)}</Typography></TableCell>
               <TableCell sx={{ fontFamily: mono }}>{(x.confidence * 100).toFixed(0)}% · n={x.observations}</TableCell><TableCell><Typography variant="caption">{x.drivers.join('; ')}</Typography></TableCell></TableRow>)}
               {r.data && r.data.length === 0 && <TableRow><TableCell colSpan={4}><Typography color="text.secondary">Not enough history to score.</Typography></TableCell></TableRow>}</TableBody></Table>
           <Typography variant="caption" color="text.secondary">Scores compare recent event rates with each subject's own history (Poisson rate). Confidence grows with the number of observations.</Typography>

@@ -6,6 +6,7 @@ import { Route, Routes } from 'react-router-dom';
 import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material';
 import { useAuth, useBranding } from './auth';
 import { makeTheme } from './theme';
+import { useColorMode } from './colorMode';
 import { TopBar } from './layout/TopBar';
 import { CommandPalette } from './layout/CommandPalette';
 import { EnterpriseOverview, WarRoom, OrgStructure, StandardList, StandardNew, StandardDetail, SkillsMatrix, CurriculumList, AuditProgramList, AuditProgramDetail } from './pages/Enterprise';
@@ -205,7 +206,12 @@ const UsersPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.U
 export function App() {
   const { me, loading } = useAuth();
   const { data: brand } = useBranding();
-  const theme = useMemo(() => makeTheme(brand?.primaryColor), [brand?.primaryColor]);
+  const { mode } = useColorMode();
+  const theme = useMemo(() => makeTheme(brand?.primaryColor, mode), [brand?.primaryColor, mode]);
+  useEffect(() => { // browser chrome follows the top bar colour
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
+    const meta = document.createElement('meta'); meta.name = 'theme-color'; meta.content = theme.palette.background.bar; document.head.appendChild(meta);
+  }, [theme]);
   const [palette, setPalette] = useState(false);
   useEffect(() => { if (brand) document.title = brand.applicationName; }, [brand]);
   useEffect(() => {

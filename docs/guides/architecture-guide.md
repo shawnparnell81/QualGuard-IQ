@@ -41,7 +41,7 @@ through the access service.
 
 ## Web application
 
-The top teal bar holds the modules from `web/src/modules/registry.tsx`; each module declares its side-menu entries and
+The top bar holds the modules from `web/src/modules/registry.tsx`; each module declares its side-menu entries and
 the permission each needs. Pages are wrapped in `ModuleWorkspace` (breadcrumbs, title, actions), and records use tabs.
 
 ## Tests

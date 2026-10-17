@@ -2,12 +2,13 @@
 
 ## Finding your way
 
-- The **teal bar** across the top lists the modules you have access to (Documents, Quality Events, Audits, Training,
+- The **top bar** (QualGuard IQ logo on the left) lists the modules you have access to (Documents, Quality Events, Audits, Training,
   Equipment, Suppliers, Inspection and so on). Modules you have no permission for are not shown.
 - Inside a module, the **side menu** lists its areas (for example *Nonconformances*, *CAPA*, *Dashboards*), and each
   record opens with **tabs** (details, actions, attachments, links, approvals, history).
 - **My work** (Platform › My workspace) collects everything waiting for you: approvals, actions, training, reviews.
 - Global search finds records by number, title and text across every module you can see.
+- **Appearance**: open the user menu (top right) and choose Light, Dark or Match device. The choice is kept on this device.
 
 Dates such as "due" and "overdue" follow the time zone of the record's site.
 

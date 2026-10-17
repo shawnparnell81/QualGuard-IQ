@@ -46,7 +46,7 @@ export function RequirementList() {
             <tbody>{tr.data.rows.map((r: any) => (
               <tr key={r.id} style={{ cursor: 'pointer' }} onClick={() => nav(`/engineering/requirements/${r.id}`)}>
                 <td><span style={{ fontFamily: mono }}>{r.number}</span> {r.title}</td>
-                {tr.data.columns.map((c: string) => <Box component="td" key={c} sx={{ bgcolor: r.links[c].length ? 'rgba(0,137,123,.12)' : 'rgba(198,40,40,.06)', textAlign: 'center' }}>{r.links[c].join(', ') || '—'}</Box>)}
+                {tr.data.columns.map((c: string) => <Box component="td" key={c} sx={{ bgcolor: r.links[c].length ? 'rgba(46,125,79,.14)' : 'rgba(198,40,40,.08)', textAlign: 'center' }}>{r.links[c].join(', ') || '—'}</Box>)}
                 <td><Chip size="small" color={vColor(r.verification)} label={r.verification} /></td><td><Chip size="small" color={vColor(r.validation)} label={r.validation} /></td>
               </tr>))}</tbody>
           </Box>
