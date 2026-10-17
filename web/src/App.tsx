@@ -13,6 +13,7 @@ import { RequirementList, RequirementDetail, DesignReviewList, DesignReviewDetai
 import { CommandCenter, FactoryCenter, EnterpriseRiskMatrix, KpiFramework, DigitalTwin, BoardReports } from './pages/QualityOs';
 import { KnowledgeLibrary, KnowledgeDetail, Playbooks, ProcessMap, Maturity } from './pages/Knowledge';
 import { AdvisorChat, DocumentAssistant, AuditPrep } from './pages/Advisor';
+import { MyWorkspace, ActivityStream, QualityCalendar, Resources, Genealogy, ReportDesigner, DashboardDesigner, Webhooks, PlatformHealth, SecurityOps, ModuleRegistry } from './pages/Platform';
 import { Login } from './pages/Login';
 
 const LiveMonitor = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.LiveMonitor })));
@@ -338,6 +339,18 @@ export function App() {
               <Route path="/launch/ppap/:id" element={<PpapDetail />} />
               <Route path="/launch/capability" element={<CapabilityStudies />} />
               <Route path="/launch/:id" element={<ProjectDetail />} />
+              <Route path="/platform" element={<MyWorkspace />} />
+              <Route path="/platform/activity" element={<ActivityStream />} />
+              <Route path="/platform/calendar" element={<QualityCalendar />} />
+              <Route path="/platform/resources" element={<Resources />} />
+              <Route path="/platform/genealogy" element={<Genealogy />} />
+              <Route path="/platform/reports" element={<ReportDesigner />} />
+              <Route path="/platform/reports/:id" element={<ReportDesigner />} />
+              <Route path="/platform/dashboards" element={<DashboardDesigner />} />
+              <Route path="/platform/webhooks" element={<Webhooks />} />
+              <Route path="/platform/health" element={<PlatformHealth />} />
+              <Route path="/platform/security" element={<SecurityOps />} />
+              <Route path="/platform/modules" element={<ModuleRegistry />} />
               <Route path="/governance" element={<Part11Readiness />} />
               <Route path="/governance/retention" element={<RetentionPage />} />
               <Route path="/governance/continuity" element={<ContinuityPage />} />
