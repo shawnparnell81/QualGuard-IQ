@@ -152,6 +152,25 @@ public sealed class InsightsController(InsightsService svc) : ControllerBase
     /// <summary>Records linked to a record, up to depth 3, for the relationship diagram. Records you cannot view are left out.</summary>
     [HttpGet("graph/{type}/{id:guid}")]
     public async Task<object> Graph(string type, Guid id, [FromQuery] int depth = 2, CancellationToken ct = default) { var (n, e) = await svc.GraphAsync(type, id, depth, ct); return new { Nodes = n, Edges = e }; }
+    public sealed record DenominatorInput(string Metric, Guid? SiteId, List<string> Sources, bool AllowFallback = true);
+    public sealed record VolumeInput(Guid SiteId, DateOnly PeriodStart, DateOnly PeriodEnd, decimal Quantity, string? Notes);
+
+    /// <summary>Volume sources each rate metric divides by, in order of preference (defaults when nothing is configured).</summary>
+    [HttpGet("denominators")] [RequirePermission(Permissions.AnalyticsView)]
+    public async Task<object> Denominators([FromQuery] Guid? siteId, CancellationToken ct)
+    {
+        var list = new List<object>();
+        foreach (var metric in InsightsService.RateMetrics) { var (src, fb) = await svc.DenominatorConfigAsync(metric, siteId, ct); list.Add(new { Metric = metric, Sources = src.Select(x => x.ToString()), AllowFallback = fb, Labels = src.Select(InsightsService.SourceLabel) }); }
+        return new { Metrics = list, Available = Enum.GetNames<DenominatorSource>() };
+    }
+    [HttpPut("denominators")] [RequirePermission(Permissions.AdminOrganization)]
+    public async Task<IActionResult> SaveDenominator(DenominatorInput r, CancellationToken ct) { await svc.SaveDenominatorAsync(r.Metric, r.SiteId, InsightsService.ParseSources(r.Sources), r.AllowFallback, ct); return NoContent(); }
+    [HttpGet("production-volumes")] [RequirePermission(Permissions.ProductionView)]
+    public Task<List<ProductionVolume>> Volumes(CancellationToken ct) => svc.VolumesAsync(ct);
+    [HttpPost("production-volumes")] [RequirePermission(Permissions.ProductionEdit)]
+    public async Task<object> AddVolume(VolumeInput r, CancellationToken ct) => new { (await svc.AddVolumeAsync(r.SiteId, r.PeriodStart, r.PeriodEnd, r.Quantity, r.Notes, ct)).Id };
+    [HttpPost("production-volumes/{id:guid}/approve")] public async Task<IActionResult> ApproveVolume(Guid id, CancellationToken ct) { await svc.DecideVolumeAsync(id, true, ct); return NoContent(); }
+    [HttpPost("production-volumes/{id:guid}/reject")] public async Task<IActionResult> RejectVolume(Guid id, CancellationToken ct) { await svc.DecideVolumeAsync(id, false, ct); return NoContent(); }
     [HttpPost("snapshots")] [RequirePermission(Permissions.AnalyticsView)]
     public async Task<object> Snapshot([FromQuery] MetricPeriod period = MetricPeriod.Month, [FromQuery] DateOnly? date = null, CancellationToken ct = default) =>
         new { Facts = await svc.SnapshotAsync(period, date ?? DateOnly.FromDateTime(DateTime.UtcNow), ct) };

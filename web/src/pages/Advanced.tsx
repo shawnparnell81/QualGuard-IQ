@@ -502,7 +502,7 @@ export function SupplierScorecard() {
 }
 
 // ---------------------------------------------------------------- Insights
-interface Metric { key: string; label: string; value?: number; unit: string; numerator?: number; denominator?: number; definition: string; drillUrl?: string }
+interface Metric { key: string; label: string; value?: number; unit: string; numerator?: number; denominator?: number; definition: string; drillUrl?: string; denominatorSource?: string; denominatorLabel?: string; isFallback?: boolean; calculationVersion?: string }
 const fmtMetric = (m: Metric) => (m.value == null ? '—' : m.unit === '%' ? pct(m.value) : m.unit === 'USD' ? money(m.value) : `${+m.value.toFixed(2)}${m.unit && m.unit !== 'count' ? ' ' + m.unit : ''}`);
 
 function Tile({ m }: { m: Metric }) {
@@ -512,6 +512,7 @@ function Tile({ m }: { m: Metric }) {
     <Typography variant="caption" color="text.secondary">{m.label}</Typography>
     <Typography variant="h5" sx={{ fontFamily: mono }}>{fmtMetric(m)}</Typography>
     {m.denominator != null && m.numerator != null && <Typography variant="caption" color="text.secondary" sx={{ fontFamily: mono }}>{m.numerator} / {m.denominator}</Typography>}
+    {m.denominatorLabel && <Typography variant="caption" data-testid={`denominator-${m.key}`} sx={{ display: 'block', color: m.isFallback || m.value == null ? '#8A6D3B' : 'text.secondary' }}>{m.denominatorLabel}</Typography>}
   </Paper>;
 }
 
@@ -525,7 +526,7 @@ export function InsightsHome() {
   const nav = useNavigate();
   return (
     <ModuleWorkspace module={mod('insights')} crumbs={[{ label: 'Insights' }]} title={view === 'executive' ? 'Executive overview' : 'Plant quality metrics'}
-      tabs={[{ label: 'Production', value: 'production' }, { label: 'Executive', value: 'executive' }]} tab={view} onTab={(v) => setP(v === 'production' ? {} : { view: v })}
+      tabs={[{ label: 'Production', value: 'production' }, { label: 'Executive', value: 'executive' }, { label: 'Production volumes', value: 'volumes' }]} tab={view} onTab={(v) => setP(v === 'production' ? {} : { view: v })}
       actions={<TextField select size="small" label="Site" value={site} onChange={(e) => setSite(e.target.value)} sx={{ width: 220 }}><MenuItem value="">All my sites</MenuItem>{(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}</TextField>}>
       {view === 'production' && <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 1.5 }}>{(prod.data ?? []).map((m) => <Tile key={m.key} m={m} />)}</Box>}
       {view === 'executive' && exec.data && <>
@@ -537,8 +538,38 @@ export function InsightsHome() {
           {exec.data.auditFindings && <Section title="Open audit findings"><Table size="small"><TableBody>{exec.data.auditFindings.map((r) => <TableRow key={r.type}><TableCell>{r.type}</TableCell><TableCell>{r.open} open</TableCell><TableCell>{r.overdue} overdue</TableCell></TableRow>)}</TableBody></Table></Section>}
         </Box>
       </>}
+      {view === 'volumes' && <ProductionVolumes site={site} />}
     </ModuleWorkspace>
   );
+}
+
+interface PVolume { id: string; siteId: string; periodStart: string; periodEnd: string; quantity: number; notes?: string; status: number; enteredById: string; decidedById?: string }
+const volStatus = ['Pending', 'Approved', 'Rejected'];
+/** Scrap and rework rate denominators: the configured source order per site, and manually entered volumes that need a second person's approval. */
+function ProductionVolumes({ site }: { site: string }) {
+  const qc = useQueryClient();
+  const { run, error } = useRunner(() => { qc.invalidateQueries({ queryKey: ['ins-vols'] }); qc.invalidateQueries({ queryKey: ['ins-prod'] }); });
+  const [add, setAdd] = useState(false);
+  const cfg = useQuery({ queryKey: ['ins-denoms', site], queryFn: () => get<{ metrics: { metric: string; sources: string[]; allowFallback: boolean; labels: string[] }[] }>(`/api/insights/denominators${site ? `?siteId=${site}` : ''}`) });
+  const vols = useQuery({ queryKey: ['ins-vols'], queryFn: () => get<PVolume[]>('/api/insights/production-volumes') });
+  const sites = useQuery({ queryKey: ['sites'], queryFn: () => get<{ id: string; name: string }[]>('/api/organization/sites') });
+  const sName = (id: string) => sites.data?.find((s) => s.id === id)?.name ?? '';
+  const decide = (id: string, ok: boolean) => run(() => post(`/api/insights/production-volumes/${id}/${ok ? 'approve' : 'reject'}`));
+  return <>
+    <Section title="Denominator order">
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Rates use the first source that has volume in the period. A lower source is shown as a fallback; with none, the rate is not calculated. Quantity inspected is used only when configured.</Typography>
+      <Table size="small"><TableBody>{(cfg.data?.metrics ?? []).map((m) => <TableRow key={m.metric}><TableCell>{m.metric === 'scrap_rate' ? 'Scrap rate' : 'Rework rate'}</TableCell><TableCell>{m.labels.map((l, i) => `${i + 1}. ${l}`).join('  ·  ')}</TableCell><TableCell>{m.allowFallback ? 'Fallback allowed' : 'No fallback'}</TableCell></TableRow>)}</TableBody></Table>
+    </Section>
+    {error && <Alert severity="error" sx={{ mt: 1 }}>{error}</Alert>}
+    <Stack direction="row" sx={{ my: 1.5 }}><Button variant="contained" onClick={() => setAdd(true)}>Enter production volume</Button></Stack>
+    <DataTable data={vols.data ?? []} empty="No manually entered volumes."
+      columns={[{ header: 'Site', accessorFn: (r) => sName(r.siteId) }, { header: 'Period', accessorFn: (r) => `${fmtDate(r.periodStart)} – ${fmtDate(r.periodEnd)}` }, { header: 'Quantity', accessorKey: 'quantity', cell: num },
+        { header: 'Notes', accessorKey: 'notes' }, { header: 'Status', accessorKey: 'status', cell: (x) => <StatusChip status={volStatus[x.getValue()]} /> },
+        { header: '', id: 'act', cell: (x) => x.row.original.status === 0 ? <Stack direction="row" spacing={1}><Button size="small" onClick={() => decide(x.row.original.id, true)}>Approve</Button><Button size="small" color="error" onClick={() => decide(x.row.original.id, false)}>Reject</Button></Stack> : null }]} />
+    <StepDialog open={add} title="Enter production volume" confirm="Submit for approval" onClose={() => setAdd(false)}
+      inputs={[{ name: 'siteId', label: 'Site', type: 'site', permission: 'production.edit' }, { name: 'periodStart', label: 'From', type: 'date', initial: localDate() }, { name: 'periodEnd', label: 'To', type: 'date', initial: localDate() }, { name: 'quantity', label: 'Quantity produced' }, { name: 'notes', label: 'Source / notes' }]}
+      onConfirm={async (v) => { if (!v.siteId) throw new Error('Select a site.'); await post('/api/insights/production-volumes', { siteId: v.siteId, periodStart: v.periodStart, periodEnd: v.periodEnd, quantity: Number(v.quantity), notes: v.notes || null }); setAdd(false); qc.invalidateQueries({ queryKey: ['ins-vols'] }); }} />
+  </>;
 }
 
 interface GNode { type: string; id: string; number: string; title: string; status?: string; url: string; depth: number }

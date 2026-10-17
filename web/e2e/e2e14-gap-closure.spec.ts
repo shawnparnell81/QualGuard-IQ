@@ -80,4 +80,24 @@ test.describe('E2E 14: gap closure', () => {
     expect(ty.id).toBeTruthy();
     await admin.dispose();
   });
+
+  test('scrap rate tiles name their denominator and manual volumes need a second approver', async ({ page }) => {
+    await signIn(page, users.admin);
+    await page.goto('/insights');
+    await expect(page.getByTestId('denominator-scrap_rate')).toContainText(/denominator|cannot be calculated/i);
+    await page.getByRole('tab', { name: 'Production volumes' }).click();
+    await expect(page.getByText('Denominator order')).toBeVisible();
+    await expect(page.getByText(/1\. MES production quantity/).first()).toBeVisible();
+    await page.getByRole('button', { name: 'Enter production volume' }).click();
+    const d = dialog(page);
+    await d.getByTestId('site-picker').click();
+    await page.getByRole('option', { name: /Test Plant/ }).click();
+    await d.getByLabel('Quantity produced').fill('480');
+    await d.getByLabel('Source / notes').fill(unique('Shift log'));
+    await d.getByRole('button', { name: 'Submit for approval' }).click();
+    const row = page.getByRole('row', { name: /480/ }).first();
+    await expect(row).toContainText('Pending');
+    await row.getByRole('button', { name: 'Approve' }).click();
+    await expect(page.getByRole('alert')).toContainText(/cannot approve it/);
+  });
 });
