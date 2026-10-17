@@ -79,23 +79,26 @@ const useDrawings = () => useQuery({ queryKey: ['drawings-lookup'], retry: false
 export function FaiNew() {
   const nav = useNavigate();
   const drawings = useDrawings();
+  const parts = useLookup('part');
   const schema = z.object({
-    title: z.string().trim().min(1, 'Required').max(300), faiType: z.string(), reason: z.string(), productId: z.string().uuid('Choose the product'), partId: z.string().uuid('Choose the part'),
+    title: z.string().trim().min(1, 'Required').max(300), faiType: z.string(), reason: z.string(), partId: z.string().uuid('Choose the part'),
     drawingId: z.string().optional(), drawingRevision: z.string().max(20).optional(), supplierId: z.string().optional(), lotNumber: z.string().max(100).optional(), serialNumber: z.string().max(100).optional(),
     dueDate: z.string().optional(), siteId: z.string().uuid('Choose a site'), reviewerId: z.string().optional(), comments: z.string().max(4000).optional(),
   });
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'First articles', to: '/fai' }, { label: 'New' }]} title="Start a first article">
       <SchemaForm schema={schema} submitLabel="Create FAI" onCancel={() => nav('/fai')}
-        defaults={{ title: '', faiType: 'Full', reason: 'NewPart', productId: '', partId: '', drawingId: '', drawingRevision: '', supplierId: '', lotNumber: '', serialNumber: '', dueDate: '', siteId: '', reviewerId: '', comments: '' }}
+        defaults={{ title: '', faiType: 'Full', reason: 'NewPart', partId: '', drawingId: '', drawingRevision: '', supplierId: '', lotNumber: '', serialNumber: '', dueDate: '', siteId: '', reviewerId: '', comments: '' }}
         fields={[{ name: 'title', label: 'Title', full: true }, { name: 'faiType', label: 'FAI type', type: 'select', options: opts(faiTypes) }, { name: 'reason', label: 'Reason', type: 'select', options: opts(faiReasons) },
-          { name: 'what' as never, label: 'Article', type: 'heading' }, { name: 'productId', label: 'Product', type: 'lookup', lookup: 'product' }, { name: 'partId', label: 'Part', type: 'lookup', lookup: 'part' },
+          { name: 'what' as never, label: 'Article', type: 'heading' }, { name: 'partId', label: 'Part (its product is used)', type: 'lookup', lookup: 'part', full: true },
           { name: 'drawingId', label: 'Drawing (balloons map onto the FAI)', type: 'select', options: [['', 'None'], ...(drawings.data ?? []).map((d) => [d.id, `${d.number} — ${d.title}`] as [string, string])] },
           { name: 'drawingRevision', label: 'Drawing revision' }, { name: 'supplierId', label: 'Supplier (optional)', type: 'lookup', lookup: 'supplier' }, { name: 'lotNumber', label: 'Lot' }, { name: 'serialNumber', label: 'Serial' },
           { name: 'who' as never, label: 'Responsibility', type: 'heading' }, { name: 'siteId', label: 'Site', type: 'site' }, { name: 'reviewerId', label: 'Reviewer (optional now, needed to submit)', type: 'user' },
           { name: 'dueDate', label: 'Due', type: 'date' }, { name: 'comments', label: 'Notes', type: 'multiline' }]}
         onSubmit={async (v) => {
-          const r = await post<{ id: string }>('/api/v1/fai', { ...v, drawingId: nul(v.drawingId), drawingRevision: nul(v.drawingRevision), supplierId: nul(v.supplierId), lotNumber: nul(v.lotNumber), serialNumber: nul(v.serialNumber),
+          const productId = (parts.data?.find((x) => x.id === v.partId) as { productId?: string | null } | undefined)?.productId;
+          if (!productId) throw new Error('The part is not assigned to a product. Assign it in Products & Engineering first.');
+          const r = await post<{ id: string }>('/api/v1/fai', { ...v, productId, drawingId: nul(v.drawingId), drawingRevision: nul(v.drawingRevision), supplierId: nul(v.supplierId), lotNumber: nul(v.lotNumber), serialNumber: nul(v.serialNumber),
             dueDate: nul(v.dueDate), reviewerId: nul(v.reviewerId), comments: nul(v.comments) });
           nav(`/fai/${r.id}`);
         }} />
