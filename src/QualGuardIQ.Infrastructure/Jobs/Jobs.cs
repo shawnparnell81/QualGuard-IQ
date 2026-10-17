@@ -88,3 +88,21 @@ public sealed class WorkforceJob(QualGuardIQ.Infrastructure.Modules.Enterprise.W
         if (a + r > 0) log.LogInformation("Assigned {Assigned} curriculum courses and {Refreshers} refresher trainings", a, r);
     }
 }
+
+/// <summary>Every minute: move audit/approval activity onto the platform event bus and deliver due webhooks.</summary>
+public sealed class PlatformEventJob(QualGuardIQ.Infrastructure.Modules.Platform.PlatformService platform, ILogger<PlatformEventJob> log)
+{
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 300)]
+    public async Task RunAsync(CancellationToken ct)
+    {
+        var n = await platform.PumpAsync(ct);
+        var d = await platform.DeliverAsync(ct);
+        if (n + d > 0) log.LogInformation("Platform events: {Events} published, {Deliveries} webhook deliveries attempted", n, d);
+    }
+}
+
+/// <summary>Every 5 minutes: send due scheduled reports.</summary>
+public sealed class ReportScheduleJob(QualGuardIQ.Infrastructure.Modules.Platform.DesignerService designer)
+{
+    public Task RunAsync(CancellationToken ct) => designer.RunSchedulesAsync(ct);
+}

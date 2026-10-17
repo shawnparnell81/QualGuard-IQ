@@ -169,6 +169,10 @@ public static class Permissions
     public const string SecurityReview = "security.review";
     /// <summary>Public API clients (keys and OAuth client credentials) and notification channels.</summary>
     public const string ApiAdmin = "api.admin";
+    /// <summary>Platform operations: webhooks, event bus, health and observability, external events (organization-wide).</summary>
+    public const string PlatformAdmin = "platform.admin";
+    /// <summary>Share saved reports and dashboards with everyone.</summary>
+    public const string ReportsShare = "reports.share";
 
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
@@ -179,6 +183,6 @@ public static class Permissions
     /// <summary>Permissions that only make sense organization-wide (never site-scoped).</summary>
     public static readonly IReadOnlySet<string> GlobalOnly = new HashSet<string>
     {
-        AdminUsers, AdminRoles, AdminOrganization, SecurityLogView, ApiAdmin, SecurityReview
+        AdminUsers, AdminRoles, AdminOrganization, SecurityLogView, ApiAdmin, SecurityReview, PlatformAdmin
     };
 }

@@ -1,0 +1,59 @@
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+using QualGuardIQ.Api.Auth;
+using QualGuardIQ.Domain.Platform;
+using QualGuardIQ.Domain.Security;
+using QualGuardIQ.Infrastructure.Modules.Platform;
+
+namespace QualGuardIQ.Api.Controllers;
+
+public sealed record WebhookEnabledRequest(bool Enabled);
+
+/// <summary>Platform services: event bus, webhooks, activity stream, genealogy, calendar, resources, personal workspace, operations.</summary>
+[ApiController, Authorize, Route("api/platform")]
+public sealed class PlatformController(PlatformService svc) : ControllerBase
+{
+    [HttpGet("events/types")] public string[] EventTypes() => PlatformEvents.Subscribable;
+    [HttpPost("events")] public async Task<object> Publish(ExternalEventInput r, CancellationToken ct) { var e = await svc.PublishExternalAsync(r, ct); return new { e.Id }; }
+    [HttpPost("events/pump")] [RequirePermission(Permissions.PlatformAdmin)] public async Task<object> Pump(CancellationToken ct) => new { Published = await svc.PumpAsync(ct), Delivered = await svc.DeliverAsync(ct) };
+    [HttpGet("activity")] public Task<List<PlatformEvent>> Activity([FromQuery] string? type, [FromQuery] string? recordType, [FromQuery] Guid? userId, [FromQuery] DateTimeOffset? before, [FromQuery] int take = 100, CancellationToken ct = default) => svc.ActivityAsync(type, recordType, userId, before, take, ct);
+
+    [HttpGet("webhooks")] public Task<List<object>> Webhooks(CancellationToken ct) => svc.WebhooksAsync(ct);
+    [HttpPost("webhooks")] public async Task<object> CreateWebhook(WebhookInput r, CancellationToken ct) { var (s, secret) = await svc.CreateWebhookAsync(r, ct); return new { s.Id, Secret = secret }; }
+    [HttpPost("webhooks/{id:guid}/enabled")] public async Task<IActionResult> Enable(Guid id, WebhookEnabledRequest r, CancellationToken ct) { await svc.SetWebhookEnabledAsync(id, r.Enabled, ct); return NoContent(); }
+    [HttpGet("webhooks/{id:guid}/deliveries")] public Task<List<WebhookDelivery>> Deliveries(Guid id, CancellationToken ct) => svc.DeliveriesAsync(id, ct);
+
+    [HttpGet("genealogy/{type}/{id:guid}")] public Task<object> Genealogy(string type, Guid id, [FromQuery] int depth = 4, CancellationToken ct = default) => svc.GenealogyAsync(type, id, depth, ct);
+    [HttpGet("calendar")] public Task<List<CalendarItem>> Calendar([FromQuery] DateOnly from, [FromQuery] DateOnly to, [FromQuery] Guid? siteId, CancellationToken ct) => svc.CalendarAsync(from, to, siteId, ct);
+    [HttpGet("resources")] public Task<object> Resources([FromQuery] Guid siteId, [FromQuery] DateOnly from, [FromQuery] DateOnly to, CancellationToken ct) => svc.ResourcesAsync(siteId, from, to, ct);
+    [HttpPost("resources/absences")] public async Task<object> Absence(AbsenceInput r, CancellationToken ct) => new { (await svc.AddAbsenceAsync(r, ct)).Id };
+    [HttpGet("my")] public Task<object> My(CancellationToken ct) => svc.MyWorkspaceAsync(ct);
+
+    [HttpGet("health")] public Task<object> Health(CancellationToken ct) => svc.HealthAsync(ct);
+    [HttpGet("security")] public Task<object> Security(CancellationToken ct) => svc.SecurityOpsAsync(ct);
+    [HttpGet("modules")] public object Modules() => svc.Modules();
+}
+
+/// <summary>Low-code report and dashboard designers and saved searches.</summary>
+[ApiController, Authorize, Route("api/designer"), RequirePermission(Permissions.ReportsView)]
+public sealed class DesignerController(DesignerService svc) : ControllerBase
+{
+    [HttpGet("reports")] public Task<List<SavedReport>> Reports(CancellationToken ct) => svc.ReportsAsync(ct);
+    [HttpPost("reports")] public async Task<object> CreateReport(SavedReportInput r, CancellationToken ct) => new { (await svc.CreateReportAsync(r, ct)).Id };
+    [HttpPut("reports/{id:guid}")] public async Task<IActionResult> UpdateReport(Guid id, SavedReportInput r, CancellationToken ct) { await svc.UpdateReportAsync(id, r, ct); return NoContent(); }
+    [HttpDelete("reports/{id:guid}")] public async Task<IActionResult> DeleteReport(Guid id, CancellationToken ct) { await svc.DeleteReportAsync(id, ct); return NoContent(); }
+    [HttpGet("reports/{id:guid}/run")] public Task<SavedReportRun> Run(Guid id, CancellationToken ct) => svc.RunReportAsync(id, ct);
+
+    [HttpGet("schedules")] public Task<List<ReportSchedule>> Schedules(CancellationToken ct) => svc.SchedulesAsync(ct);
+    [HttpPost("schedules")] public async Task<object> Schedule(ScheduleInput r, CancellationToken ct) { var s = await svc.CreateScheduleAsync(r, ct); return new { s.Id, s.NextRunAt }; }
+    [HttpDelete("schedules/{id:guid}")] public async Task<IActionResult> Unschedule(Guid id, CancellationToken ct) { await svc.DeleteScheduleAsync(id, ct); return NoContent(); }
+
+    [HttpGet("dashboards")] public Task<List<Dashboard>> Dashboards(CancellationToken ct) => svc.DashboardsAsync(ct);
+    [HttpPost("dashboards")] public async Task<object> CreateDashboard(DashboardInput r, CancellationToken ct) => new { (await svc.SaveDashboardAsync(null, r, ct)).Id };
+    [HttpPut("dashboards/{id:guid}")] public async Task<IActionResult> UpdateDashboard(Guid id, DashboardInput r, CancellationToken ct) { await svc.SaveDashboardAsync(id, r, ct); return NoContent(); }
+    [HttpGet("dashboards/{id:guid}/data")] public Task<object> DashboardData(Guid id, CancellationToken ct) => svc.DashboardDataAsync(id, ct);
+
+    [HttpGet("searches")] public Task<List<SavedSearch>> Searches(CancellationToken ct) => svc.SearchesAsync(ct);
+    [HttpPost("searches")] public async Task<object> SaveSearch(SavedSearchInput r, CancellationToken ct) => new { (await svc.SaveSearchAsync(r, ct)).Id };
+    [HttpDelete("searches/{id:guid}")] public async Task<IActionResult> DeleteSearch(Guid id, CancellationToken ct) { await svc.DeleteSearchAsync(id, ct); return NoContent(); }
+}
