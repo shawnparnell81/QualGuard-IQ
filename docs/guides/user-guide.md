@@ -231,3 +231,45 @@ reason for a refusal; the online confirmation adds a custody entry. Cancelling a
 location to return it to, and the stock goes back there as available.
 
 Device storage: as for picking, the download is per person, expires after 12 hours and is wiped at sign-out.
+
+## Label printing (printers, routing, print queue)
+
+**Warehouse → Label printing** lists the print queue, printers and routing of a site. Configuring printers and routes needs
+`inventory.approve` at the site; printing, retrying, reprinting and cancelling need `inventory.edit` or `shipping.edit`; viewing needs
+`inventory.view` or `shipping.view`.
+
+**Printers.** Each printer belongs to one site and has a connection, a label language, a resolution (152, 203, 300 or 600 dpi) and a
+label size in millimetres:
+
+- *Network printer (raw TCP)*: a ZPL printer on the network, addressed as `host` or `host:port` (port 9100 by default).
+- *Print relay (HTTPS)*: an HTTPS endpoint on the plant network that accepts the label (ZPL or PDF) and passes it to a printer. An optional
+  bearer token is stored encrypted and never shown again; plain HTTP is accepted only for a relay on the same machine.
+- *PDF download only*: nothing is sent; labels are prepared as PDFs to print by hand.
+- *Virtual (test)*: accepts labels without printing; use it to try routing before printers are connected.
+
+**Print test label** sends a label and records the printer status (Online, Offline, Error) and the last error. The printers list shows how
+many jobs are waiting or failed on each printer.
+
+**Routing.** A route sends one label type (receiving, inventory, bin, lot, serial, carton, pallet, shipping, hold, quarantine, scrap) to a
+printer, for the whole site or narrowed to a warehouse, zone or bin, a workstation or a user. The most specific active route wins: a
+user's own route, then a workstation, then the deepest warehouse, zone or bin above the label's location, then the site default.
+*Which printer would be used?* shows the route that applies. Each route sets the copies, whether it prints automatically, and the mode:
+*Print immediately* or *Hold in queue* (automatic labels wait in the queue until someone releases them).
+
+**Workstation.** On **This workstation**, give the device the name used in routes (for example `DOCK-3`). The name stays on that
+device and is sent with every request.
+
+**Automatic labels.** When a route prints automatically, labels are printed after the transaction is saved: receipt, lot and serial
+labels when a receipt is posted, carton and pallet labels when a container is packed, the shipping label when a shipment ships, a hold
+label when a hold is placed, a quarantine label when a receiving line is rejected or quarantined, and a scrap label when stock is scrapped.
+A printer that is offline or fails never undoes or blocks the transaction: the job is marked Failed with the reason and retried in the
+background after 1, 2, 5 and 15 minutes (five attempts). A receipt sent again by the offline queue does not print its labels twice.
+
+**Record pages.** The Labels tab (receipt, hold), the Label tab (location), the Pack tab (each carton and pallet) and the Ship &
+documents tab (shipment) show every label of the record with its status, printer, copies, who asked for it and the last error, plus
+**Preview** and **Print** buttons. Print uses the routed printer unless you pick one; with no printer the label is prepared as a PDF.
+After a scan-station receipt the result shows the label status.
+
+**Print queue actions.** *Retry* sends a failed job again; *Release* sends a held job; *Reprint* prints the label again with exactly the
+original content and needs a reason, which is recorded on the job and in the audit trail; *PDF* downloads the label at the printer's
+label size (4 × 6 in when there is no printer); *Cancel* stops a job that has not printed. A disabled printer is not retried.

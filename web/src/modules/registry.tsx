@@ -456,6 +456,7 @@ export const modules: ModuleDef[] = [
       ] },
       { label: 'Counts', path: '/warehouse/counts' },
       { label: 'Transfers', path: '/warehouse/transfers' },
+      { label: 'Label printing', path: '/warehouse/labels' },
     ],
   },
   {
