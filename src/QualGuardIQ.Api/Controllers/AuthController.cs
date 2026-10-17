@@ -330,7 +330,7 @@ public sealed class AuthController(
         if (t is null) return false;
         Response.Cookies.Append(TrustedCookie, t.Value.Token, new CookieOptions
         {
-            HttpOnly = true, SameSite = SameSiteMode.Strict, Path = "/api/auth", Expires = t.Value.ExpiresAt, IsEssential = true,
+            HttpOnly = true, SameSite = SameSiteMode.Strict, Path = "/api", Expires = t.Value.ExpiresAt, IsEssential = true,
             Secure = !(env.IsDevelopment() || env.IsEnvironment("Testing")) || Request.IsHttps,
         });
         return true;

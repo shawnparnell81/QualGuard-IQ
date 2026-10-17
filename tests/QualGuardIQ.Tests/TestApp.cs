@@ -33,7 +33,12 @@ public sealed class TestApp : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Storage:SecretKey", Environment.GetEnvironmentVariable("QMS_TEST_S3_SECRET") ?? "qgiqminio-local-dev");
         builder.UseSetting("Storage:Bucket", "qms-test");
         builder.UseSetting("Licensing:PublicKeyPem", LicenseSigner.ExportSubjectPublicKeyInfoPem());
+        // sign-in emails (reset links) are captured instead of sent
+        builder.ConfigureServices(s => s.AddSingleton<QualGuardIQ.Infrastructure.Security.IAuthMailer>(Mail));
     }
+
+    /// <summary>Sign-in emails the API queued during the run (password reset links, change notices).</summary>
+    public static readonly CapturedAuthMail Mail = new();
 
     /// <summary>Test-only publisher key used to sign marketplace licenses.</summary>
     public static readonly System.Security.Cryptography.ECDsa LicenseSigner = System.Security.Cryptography.ECDsa.Create(System.Security.Cryptography.ECCurve.NamedCurves.nistP256);
@@ -135,4 +140,11 @@ public sealed class ApiClient(HttpClient http)
     }
 
     private sealed record CsrfResponse(string Token);
+}
+
+public sealed class CapturedAuthMail : QualGuardIQ.Infrastructure.Security.IAuthMailer
+{
+    private readonly List<QualGuardIQ.Infrastructure.Security.AuthMail> _sent = [];
+    public void Enqueue(QualGuardIQ.Infrastructure.Security.AuthMail mail) { lock (_sent) _sent.Add(mail); }
+    public List<QualGuardIQ.Infrastructure.Security.AuthMail> To(string email) { lock (_sent) return _sent.Where(m => string.Equals(m.To, email, StringComparison.OrdinalIgnoreCase)).ToList(); }
 }

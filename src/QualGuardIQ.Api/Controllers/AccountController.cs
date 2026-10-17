@@ -131,7 +131,7 @@ public sealed class AccountController(AppDbContext db, ICurrentUser current, Use
         if (await mfa.VerifySecondFactorAsync(user, req.Code) == SecondFactor.None) return await WrongCode(user);
         await mfa.DisableAsync(user, user.DisplayName, null);
         await signIn.RefreshSignInAsync(user);
-        Response.Cookies.Delete(AuthController.TrustedCookie, new CookieOptions { Path = "/api/auth" });
+        Response.Cookies.Delete(AuthController.TrustedCookie, new CookieOptions { Path = "/api" });
         return NoContent();
     }
 
@@ -146,7 +146,7 @@ public sealed class AccountController(AppDbContext db, ICurrentUser current, Use
     public async Task<IActionResult> RevokeAllDevices()
     {
         var n = await mfa.RevokeAllDevicesAsync(await Me(), "Removed by the user");
-        Response.Cookies.Delete(AuthController.TrustedCookie, new CookieOptions { Path = "/api/auth" });
+        Response.Cookies.Delete(AuthController.TrustedCookie, new CookieOptions { Path = "/api" });
         return Ok(new { revoked = n });
     }
 

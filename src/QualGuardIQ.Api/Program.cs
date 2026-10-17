@@ -51,7 +51,7 @@ builder.Services.AddIdentityCore<ApplicationUser>(o =>
     .AddRoles<IdentityRole<Guid>>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddSignInManager()
-    .AddUserManager<QualGuardIQ.Infrastructure.Security.AppUserManager>()
+    .AddUserStore<QualGuardIQ.Infrastructure.Security.AppUserStore>()
     .AddPasswordValidator<QualGuardIQ.Infrastructure.Security.PolicyPasswordValidator>()
     .AddDefaultTokenProviders()
     .AddClaimsPrincipalFactory<AppClaimsFactory>();

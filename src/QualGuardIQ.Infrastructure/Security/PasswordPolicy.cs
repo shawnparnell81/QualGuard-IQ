@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Domain.Security;
@@ -66,29 +65,27 @@ public sealed class PolicyPasswordValidator(AppDbContext db, IOptions<AuthOption
     }
 }
 
-/// <summary>Identity user manager that records each new password hash (for the reuse rule) and when the password last changed.</summary>
-public sealed class AppUserManager(IUserStore<ApplicationUser> store, IOptions<IdentityOptions> optionsAccessor, IPasswordHasher<ApplicationUser> passwordHasher,
-    IEnumerable<IUserValidator<ApplicationUser>> userValidators, IEnumerable<IPasswordValidator<ApplicationUser>> passwordValidators, ILookupNormalizer keyNormalizer,
-    IdentityErrorDescriber errors, IServiceProvider services, ILogger<UserManager<ApplicationUser>> logger, AppDbContext db, IOptions<AuthOptions> auth, IClock clock)
-    : UserManager<ApplicationUser>(store, optionsAccessor, passwordHasher, userValidators, passwordValidators, keyNormalizer, errors, services, logger)
+/// <summary>
+/// Identity user store that records each new password hash (for the reuse rule) and when the password last changed. Every
+/// path that sets a password (create, change, reset, add) ends in SetPasswordHashAsync, so nothing can bypass the history.
+/// </summary>
+public sealed class AppUserStore(AppDbContext context, IOptions<AuthOptions> auth, IClock clock, IdentityErrorDescriber? describer = null)
+    : Microsoft.AspNetCore.Identity.EntityFrameworkCore.UserStore<ApplicationUser, IdentityRole<Guid>, AppDbContext, Guid>(context, describer)
 {
-    protected override async Task<IdentityResult> UpdatePasswordHash(ApplicationUser user, string? newPassword, bool validatePassword)
+    public override async Task SetPasswordHashAsync(ApplicationUser user, string? passwordHash, CancellationToken cancellationToken = default)
     {
+        await base.SetPasswordHashAsync(user, passwordHash, cancellationToken);
+        if (passwordHash is null) return;
         var isNew = user.Id == Guid.Empty;
         if (isNew) user.Id = Guid.CreateVersion7(); // so the history row can reference the account being created
-        var result = await base.UpdatePasswordHash(user, newPassword, validatePassword);
-        if (result.Succeeded && newPassword is not null && user.PasswordHash is { } hash)
+        var now = clock.UtcNow;
+        user.PasswordChangedAt = now;
+        Context.PasswordHistory.Add(new PasswordHistoryEntry { UserId = user.Id, PasswordHash = passwordHash, CreatedAt = now });
+        if (!isNew)
         {
-            var now = clock.UtcNow;
-            user.PasswordChangedAt = now;
-            db.PasswordHistory.Add(new PasswordHistoryEntry { UserId = user.Id, PasswordHash = hash, CreatedAt = now });
             var keep = Math.Max(1, auth.Value.Password.HistoryCount);
-            if (!isNew)
-            {
-                var old = await db.PasswordHistory.Where(h => h.UserId == user.Id).OrderByDescending(h => h.CreatedAt).ThenByDescending(h => h.Id).Skip(keep - 1).ToListAsync();
-                db.PasswordHistory.RemoveRange(old);
-            }
+            var old = await Context.PasswordHistory.Where(h => h.UserId == user.Id).OrderByDescending(h => h.CreatedAt).ThenByDescending(h => h.Id).Skip(keep - 1).ToListAsync(cancellationToken);
+            Context.PasswordHistory.RemoveRange(old);
         }
-        return result;
     }
 }
