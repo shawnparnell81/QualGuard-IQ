@@ -32,6 +32,15 @@
 | `Licensing:Signing:*` | Offline signing machine only (KeyId, Environment, PrivateKeyRef = env:NAME or file:/path). Not used by the API. See [license-key-custody.md](license-key-custody.md) |
 | `Seed:AdminEmail`, `Seed:AdminPassword` | First administrator, used only when no users exist |
 | `Seed:*` | Organization and application names for a new installation |
+| `Seed:AdminMustChangePassword` | Default true: the seeded administrator chooses a new password at the first sign-in. Set false only for automated test installations |
+| `App:BaseUrl` | Public address of the web app (for example `https://qms.example.com`), used in password reset links. Required in production |
+| `Email:SmtpHost`, `Email:SmtpPort`, `Email:UseTls`, `Email:Username`, `Email:Password`, `Email:From` | Outgoing mail for reset links and password-changed notices. `Email:PickupDirectory` writes `.eml` files instead (test installations) |
+| `Auth:ChallengeMinutes` | Minutes each sign-in step after the password stays open (default 5) |
+| `Auth:TrustedDeviceMaxDays` | Upper limit for the trusted browser period an administrator can choose (default 30) |
+| `Auth:Mfa:RequiredForAll`, `Auth:Mfa:Issuer`, `Auth:Mfa:ClockSkewSteps`, `Auth:Mfa:SetupMinutes`, `Auth:Mfa:RecoveryCodeCount` | Two-step verification: required for every account (default false), name shown in authenticator apps (default the application name), accepted clock drift in 30-second steps (default 1), time to finish set-up (15), recovery codes issued (10) |
+| `Auth:Password:MinLength`, `MaxLength`, `HistoryCount`, `BlockCommon` | Password rules: 12 to 256 characters, last 5 passwords not reused, common and breached passwords refused (offline list) |
+| `Auth:Lockout:MaxFailedAttempts`, `Auth:Lockout:Minutes` | Lockout after wrong passwords or codes (defaults 5 and 15) |
+| `Auth:Reset:TokenMinutes`, `Auth:Reset:MaxPerHour` | Reset link lifetime (default 45, limited to 10 to 120) and reset emails per account per hour (default 3) |
 
 Secrets belong in environment variables or a secret store, never in `appsettings.json`.
 
@@ -61,4 +70,5 @@ The migration history table is `qms.__ef_migrations`.
 - Database and object storage reachable only from the API and worker.
 - ClamAV enabled with `AllowWhenUnavailable=false`.
 - Backups scheduled, copied off the host, and restore-tested (see the recovery guide).
-- Time synchronization on all hosts (signatures and audit entries carry server time).
+- Time synchronization on all hosts (signatures and audit entries carry server time). Authenticator codes also depend on it.
+- `App:BaseUrl` and `Email:SmtpHost` set, so password reset links work; consider `Auth:Mfa:RequiredForAll` or requiring two-step verification for administrator roles.

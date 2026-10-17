@@ -14,8 +14,54 @@ All configuration is data. Nothing in the application depends on a particular ro
   department at a site.
 - Permission checks run on the server for every request; changing a user's roles or disabling them takes effect on
   their next request.
-- Accounts lock after five wrong passwords. Unlock from the user's page. Sessions can be revoked there too.
+- Accounts lock for 15 minutes after five wrong passwords or authentication codes (both set in configuration, see
+  below). Unlock from the Users page. Sessions can be revoked there too (**Sign out everywhere**).
 - Periodic access reviews are run from Governance › Access reviews.
+
+## Sign-in security (Admin › People › Sign-in security, needs *admin.users*)
+
+![Sign-in security](../screenshots/sign-in/sign-in-20-admin-sign-in-security.png)
+
+- **Two-step verification.** Require it for all staff accounts, for customer and supplier portal accounts, or per role
+  (the **2-step required** switch on Admin › Roles, also on this page; it works on built-in roles too). People it
+  applies to are taken through set-up straight after their password at the next sign-in and cannot turn it off.
+  Configuration can require it for every account (`Auth:Mfa:RequiredForAll`). **Coverage** shows how many active
+  staff and portal accounts already use it.
+- **Integrations are not affected.** API keys, OAuth client-credential service clients and shop-floor device clients
+  have their own credentials and never get a code step. A person who asks for a bearer token at `POST /api/auth/token`
+  must send their authenticator code when two-step verification is on for them.
+- **Trusted browsers.** Allow or stop "Trust this browser", and set how many days a browser stays trusted (1 to
+  `Auth:TrustedDeviceMaxDays`, 30 by default). Only a hash of the browser's token is stored.
+- **Password and lockout rules** are shown read only; they come from the `Auth` configuration section (deployment
+  guide). The common-password check uses an offline list bundled with the application; nothing is sent anywhere.
+- Changes to the policy and to roles are in the audit trail with before and after values.
+
+**On the Users page:**
+
+- **Add user** asks for a temporary password. *Ask for a new password at first sign-in* is ticked by default; the
+  person then chooses their own password before anything else opens. Give the temporary password by a separate
+  channel, never in the same message as the address.
+- **Set temporary password** replaces a forgotten password, signs the person out everywhere and (by default) makes
+  them choose a new one at the next sign-in.
+- **Reset 2-step** is for someone who lost both their phone and their recovery codes. Confirm who they are first; the
+  reason is recorded. Their authenticator, recovery codes and trusted browsers are removed and they are signed out. If
+  two-step verification is required for them they set it up again at the next sign-in.
+- Chips show **2-step on** and **Must change password** for each person.
+
+![Reset two-step verification](../screenshots/sign-in/sign-in-21-admin-reset-2-step.png)
+
+**Records.** Every sign-in, failed password or code, step that ran out, recovery code used, two-step change, trusted
+browser added or removed, password change, reset request and reset is written to the security log (Admin › Logs ›
+Security events) with who, what, when, IP address and browser. Changes to an account (two-step on or off, recovery
+codes replaced, temporary password, reset by an administrator) are also in the audit trail. People see their own
+entries under **Sign-in history**.
+
+**Email.** Reset links and "your password was changed" notices are sent through `Email:SmtpHost`. Set `App:BaseUrl` to
+the address people use so the link points to it. Requests are limited per address (3 per hour) and per IP address,
+and the answer is the same whether or not an account exists.
+
+**First administrator.** A new installation's seeded administrator (`Seed:AdminEmail`, `Seed:AdminPassword`) must
+choose a new password at the first sign-in.
 
 ## Workflow designer (Platform › Workflow designer, needs *admin.organization*)
 
