@@ -101,6 +101,13 @@ public static class DependencyInjection
         s.AddScoped<SupplierService>();
         s.AddScoped<SupplierQualityService>();
         s.AddScoped<Modules.Complaints.ComplaintService>();
+        s.AddScoped<Modules.Inspection.InspectionService>();
+        P<InspectionPlan>(Modules.Inspection.InspectionService.PlanType, Permissions.InspectionView, Permissions.InspectionEdit, x => (x.Number, x.Title, x.IsObsolete ? "Obsolete" : "Active", $"/inspection/plans/{x.Id}", false));
+        P<InspectionPlanRevision>(Modules.Inspection.InspectionService.RevisionType, Permissions.InspectionView, Permissions.InspectionEdit, x => (x.PlanNumber + " rev " + x.Revision, "Inspection plan revision " + x.Revision, x.Status.ToString(), $"/inspection/plans/{x.PlanId}", x.Status != PlanRevisionStatus.Draft));
+        P<Inspection>(Modules.Inspection.InspectionService.RecordType, Permissions.InspectionView, Permissions.InspectionEdit, x => (x.Number, $"{x.InspectionType} inspection {x.PartNumber} {x.LotNumber}".Trim(), x.Status.ToString(), $"/inspection/{x.Id}", x.Status is InspectionStatus.Released or InspectionStatus.Rejected or InspectionStatus.Cancelled));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Inspection.InspectionService.RevisionType,
+            (id, ct) => sp.GetRequiredService<Modules.Inspection.InspectionService>().OnRevisionApprovedAsync(id, ct),
+            (id, _, ct) => sp.GetRequiredService<Modules.Inspection.InspectionService>().OnRevisionRejectedAsync(id, ct)));
         P<Complaint>(Modules.Complaints.ComplaintService.RecordType, Permissions.ComplaintsView, Permissions.ComplaintsEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/complaints/{x.Id}", x.Status is ComplaintStatus.Closed or ComplaintStatus.Cancelled));
         P<SupplierCorrectiveAction>(SupplierQualityService.ScarType, Permissions.SuppliersView, Permissions.SuppliersEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/suppliers/scar/{x.Id}", x.Status is ScarStatus.Closed or ScarStatus.Cancelled));
         P<Product>(MasterDataService.ProductType, Permissions.MasterDataView, Permissions.MasterDataEdit, x => (x.Number, x.Name, x.Status.ToString(), $"/products/items/{x.Id}", false));
