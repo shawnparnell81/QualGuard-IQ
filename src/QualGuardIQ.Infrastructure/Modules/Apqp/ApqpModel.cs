@@ -104,6 +104,10 @@ public partial class AppDbContext
             e.HasOne<ControlPlan>().WithMany().HasForeignKey(x => x.PlanId).OnDelete(C);
             e.HasOne<InspectionPlan>().WithMany().HasForeignKey(x => x.InspectionPlanId).OnDelete(R);
             e.HasOne<SpcChart>().WithMany().HasForeignKey(x => x.SpcChartId).OnDelete(R);
+            e.Property(x => x.Operation).HasMaxLength(200); e.Property(x => x.ProcessCharacteristic).HasMaxLength(500);
+            e.Property(x => x.Tolerance).HasMaxLength(200); e.Property(x => x.InspectionEquipment).HasMaxLength(300);
+            e.HasOne<Domain.Documents.ControlledDocument>().WithMany().HasForeignKey(x => x.WorkInstructionId).OnDelete(R);
+            User(e, x => x.OwnerId);
         });
         b.Entity<ApqpLineImport>(e =>
         {
