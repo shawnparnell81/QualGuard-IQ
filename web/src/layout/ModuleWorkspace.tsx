@@ -1,6 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
-import { Box, Breadcrumbs, Collapse, IconButton, Link, List, ListItemButton, ListItemText, Tab, Tabs, Tooltip, Typography } from '@mui/material';
+import { Box, Breadcrumbs, Collapse, IconButton, Link, List, ListItemButton, ListItemText, Tab, Tabs, Tooltip, Typography, useMediaQuery } from '@mui/material';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import ExpandLess from '@mui/icons-material/ExpandLess';
@@ -19,11 +19,19 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
   module: ModuleDef; crumbs: Crumb[]; title: ReactNode; actions?: ReactNode;
   tabs?: WorkspaceTab[]; tab?: string; onTab?: (v: string) => void; children: ReactNode;
 }) {
-  const [collapsed, setCollapsed] = useState(() => localStorage.getItem('ws.collapsed') === '1');
-  const toggle = () => { localStorage.setItem('ws.collapsed', collapsed ? '0' : '1'); setCollapsed(!collapsed); };
+  const [stored, setStored] = useState(() => localStorage.getItem('ws.collapsed') === '1');
+  // On phones and small tablets the menu starts folded and opens over the page, so scan screens get the full width.
+  const narrow = useMediaQuery('(max-width:899.95px)');
+  const [peek, setPeek] = useState(false);
+  const loc = useLocation();
+  useEffect(() => setPeek(false), [loc.pathname, loc.search]);
+  const collapsed = narrow ? !peek : stored;
+  const toggle = () => { if (narrow) { setPeek(!peek); return; } localStorage.setItem('ws.collapsed', stored ? '0' : '1'); setStored(!stored); };
   return (
-    <Box sx={{ display: 'flex', minHeight: 'calc(100vh - 52px)' }}>
-      <Box component="aside" sx={{ width: collapsed ? 48 : 248, flexShrink: 0, borderRight: 1, borderColor: 'divider', bgcolor: '#EFECE5', transition: 'width 150ms' }}>
+    <Box sx={{ display: 'flex', minHeight: 'calc(100vh - 52px)', position: 'relative' }}>
+      {narrow && <Box sx={{ width: 48, flexShrink: 0 }} />}
+      <Box component="aside" sx={{ width: collapsed ? 48 : 248, flexShrink: 0, borderRight: 1, borderColor: 'divider', bgcolor: '#EFECE5', transition: 'width 150ms',
+        ...(narrow ? { position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 20, boxShadow: peek ? 6 : 0 } : {}) }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', px: collapsed ? 0 : 2, py: 1.5 }}>
           {!collapsed && <Typography variant="overline" color="text.secondary" sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>{module.icon}{module.label}</Typography>}
           <Tooltip title={collapsed ? 'Expand menu' : 'Collapse menu'}><IconButton size="small" onClick={toggle}>{collapsed ? <ChevronRight /> : <ChevronLeft />}</IconButton></Tooltip>
@@ -31,13 +39,13 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
         {!collapsed && <SideNav items={module.sidebar} />}
       </Box>
       <Box component="main" sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ px: 4, pt: 2.5, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
+        <Box sx={{ px: { xs: 2, md: 4 }, pt: 2.5, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
           <Breadcrumbs sx={{ fontSize: 12.5, mb: 1 }}>
             <Link component={RouterLink} to="/" underline="hover" color="inherit">Home</Link>
             <Link component={RouterLink} to={module.basePath} underline="hover" color="inherit">{module.label}</Link>
             {crumbs.map((c, i) => c.to ? <Link key={i} component={RouterLink} to={c.to} underline="hover" color="inherit">{c.label}</Link> : <Typography key={i} fontSize={12.5} color="text.primary">{c.label}</Typography>)}
           </Breadcrumbs>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pb: tabs ? 0 : 2 }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pb: tabs ? 0 : 2, flexWrap: 'wrap' }}>
             <Typography variant="h1" sx={{ flex: 1 }}>{title}</Typography>
             {actions}
           </Box>
@@ -47,7 +55,7 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
             </Tabs>
           )}
         </Box>
-        <Box sx={{ p: 4 }}>{children}</Box>
+        <Box sx={{ p: { xs: 1.5, sm: 2.5, md: 4 } }}>{children}</Box>
       </Box>
     </Box>
   );
