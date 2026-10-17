@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, choose, dialog, localDate, signIn, state, users } from './support';
+import { Api, choose, dialog, localDate, signIn, state, users, shot } from './support';
 
 /** Gap 13: carrier connections (disabled and sandbox by default, enabled only after a passing test) and the shipment carrier flow with the fixture carrier. */
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
@@ -103,5 +103,6 @@ test.describe('E2E 20: carrier connections', () => {
     await expect(page.getByText(/8 new tracking event\(s\); delivered\./)).toBeVisible();
     await expect(page.getByText('Delivered', { exact: true }).first()).toBeVisible();
     expect((await api.get<{ shipment: { status: number } }>(`/api/shipping/shipments/${s.id}`)).shipment.status).toBe(6);
+    await shot(page, '13-carrier-connection');
   });
 });

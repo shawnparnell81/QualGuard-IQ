@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { Api, signIn, state, unique, users } from './support';
+import { Api, signIn, state, unique, users, shot } from './support';
 
 /** Gap 23: an uploaded video shows its playback-copy status; without a configured converter it waits with the reason and the original stays playable and downloadable. */
 test.describe('E2E 25: video playback copies', () => {
@@ -22,5 +22,6 @@ test.describe('E2E 25: video playback copies', () => {
     await expect(panel).toContainText('MP4: Queued');
     await expect(panel.getByRole('link', { name: 'Download original' })).toBeVisible();
     if (!status.converterAvailable) await expect(page.getByText(/Playback copies are not being made: .*Video:FfmpegPath/)).toBeVisible();
+    await shot(page, '23-video-conversion-status');
   });
 });

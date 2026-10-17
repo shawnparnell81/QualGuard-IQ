@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, choose, dialog, localDate, signIn, state, users } from './support';
+import { Api, choose, dialog, localDate, signIn, state, users, shot } from './support';
 
 /** Gap 15: a packing list template is designed, previewed and submitted, approved by a second person, and the shipment's issued packing list records the revision and reproduces exactly. */
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
@@ -92,5 +92,6 @@ test.describe('E2E 21: shipping document templates', () => {
     await viewer.getByRole('link', { name: `PL${t}` }).click();
     await expect(button(viewer, 'New revision')).toHaveCount(0);
     await expect(button(viewer, 'Edit details')).toHaveCount(0);
+    await shot(page, '15-shipping-document-template');
   });
 });

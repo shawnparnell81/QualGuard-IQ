@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, localDate, signIn, state, users } from './support';
+import { Api, localDate, signIn, state, users, shot } from './support';
 
 /** Gap 10: assigned picks are downloaded to a phone, picked offline by scan, and synced once; work cancelled meanwhile comes back as a conflict. */
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
@@ -93,6 +93,7 @@ test.describe('E2E 17: offline picking at the scan station', () => {
     await expect(log).toContainText('offline');
     await page.getByRole('tab', { name: 'Custody' }).click();
     await expect(page.getByText(/Picked 5 PK-.* \(offline\)/)).toBeVisible();
+    await shot(page, '10-offline-picking');
   });
 
   test('a lead assigns the pick list at the desk; signing out wipes the downloaded work from the device', async ({ page }) => {

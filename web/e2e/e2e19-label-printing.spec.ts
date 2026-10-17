@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, choose, dialog, signIn, state, users } from './support';
+import { Api, choose, dialog, signIn, state, users, shot } from './support';
 
 /** Gap 14: printers, routing, automatic labels after a transaction, failures that never block it, retry, reprint with a reason and PDF fallback. */
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
@@ -115,5 +115,6 @@ test.describe('E2E 19: label printing', () => {
     await expect(page.getByTestId('queue-job').filter({ hasText: hold.number }).first()).toBeVisible();
     await supApi.dispose();
     await api.dispose();
+    await shot(page, '14-label-printing');
   });
 });

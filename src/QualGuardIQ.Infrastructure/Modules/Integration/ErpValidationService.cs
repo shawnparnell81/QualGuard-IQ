@@ -22,21 +22,25 @@ public sealed record ProductionApprovalInput(string Notes);
 /// </summary>
 public sealed class ErpValidationService(AppDbContext db, ModuleSupport m, ErpAdapterRegistry adapters)
 {
-    /// <summary>Automated fixture tests (recorded vendor responses, no live system) that cover each adapter in this build.</summary>
+    /// <summary>
+    /// What the automated fixture tests (recorded vendor responses, no live system) cover for each adapter in this build, in words an
+    /// administrator can read. The tests are ErpAdapterTests (per vendor), GapClosureBcManufacturingTests, ManufacturingConnectivityTests
+    /// and the EnterpriseTests CSV import.
+    /// </summary>
     public static readonly IReadOnlyDictionary<ErpSystem, string> FixtureTests = new Dictionary<ErpSystem, string>
     {
-        [ErpSystem.Sap] = "ErpAdapterTests.Sap_S4_reads_OData_V2…, Sap_B1_logs_in_with_cookies…",
-        [ErpSystem.Oracle] = "ErpAdapterTests.Oracle_uses_client_credentials_and_limit_offset_paging",
-        [ErpSystem.Epicor] = "ErpAdapterTests.Epicor_sends_api_key_with_Basic_auth_and_skip_paging",
-        [ErpSystem.Infor] = "ErpAdapterTests.Infor_M3_reads_through_ION…, Infor_Mongoose_loads_IDOs…",
-        [ErpSystem.Dynamics] = "ErpAdapterTests.Dynamics_BC_gets_an_Entra_token_and_follows_nextLink",
-        [ErpSystem.NetSuite] = "ErpAdapterTests.NetSuite_signs_a_PS256_assertion…, NetSuite_rejects_RS256…, NetSuite_error_details_are_reported",
-        [ErpSystem.Acumatica] = "ErpAdapterTests.Acumatica_uses_password_grant_with_api_scope_and_unwraps_value_fields",
-        [ErpSystem.Plex] = "ErpAdapterTests.Plex_sends_the_connect_api_key_and_tenant_headers",
-        [ErpSystem.DelmiaWorks] = "ErpAdapterTests.DelmiaWorks_logs_in_and_reads_the_cited_customers_path",
-        [ErpSystem.BcManufacturing] = "GapClosureBcManufacturingTests (extension API and web services fixtures, connection diagnostics, sync of orders, lines, machine centers, serials)",
-        [ErpSystem.CustomRest] = "ManufacturingConnectivityTests (generic REST against a recorded handler)",
-        [ErpSystem.CsvExchange] = "ErpAdapterTests.Csv_parser_handles_quotes_commas_and_newlines; EnterpriseTests CSV import",
+        [ErpSystem.Sap] = "Recorded SAP responses: S/4HANA OData V2 reads with paging; Business One sign-in with session cookies.",
+        [ErpSystem.Oracle] = "Recorded Oracle Fusion responses: client-credentials token and limit/offset paging.",
+        [ErpSystem.Epicor] = "Recorded Epicor Kinetic responses: API key with Basic authentication and skip paging.",
+        [ErpSystem.Infor] = "Recorded Infor responses: M3 reads through ION; Mongoose IDO loads.",
+        [ErpSystem.Dynamics] = "Recorded Dynamics 365 Business Central responses: Entra token and next-link paging.",
+        [ErpSystem.NetSuite] = "Recorded NetSuite responses: PS256 signed assertion (RS256 refused) and error details reported.",
+        [ErpSystem.Acumatica] = "Recorded Acumatica responses: password grant with the api scope and value-wrapped fields.",
+        [ErpSystem.Plex] = "Recorded Plex responses: Connect API key and tenant headers.",
+        [ErpSystem.DelmiaWorks] = "Recorded DELMIAworks responses: sign-in and the documented customers path.",
+        [ErpSystem.BcManufacturing] = "Recorded Business Central manufacturing responses: extension API and web services pages, connection diagnostics, sync of production orders, order lines, machine centers and serials.",
+        [ErpSystem.CustomRest] = "Recorded generic REST responses through the connector framework.",
+        [ErpSystem.CsvExchange] = "CSV parsing with quotes, commas and line breaks; CSV import of master data.",
     };
 
     /// <summary>Assumptions that stay visibly unverified until a person confirms them after a passing live read (Gap 25 list).</summary>

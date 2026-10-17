@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, localDate, signIn, state, users } from './support';
+import { Api, localDate, signIn, state, users, shot } from './support';
 
 /** Gap 12: PO-based receiving at the scan station on a phone; blind receiving is a separate permission. */
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
@@ -76,6 +76,7 @@ test.describe('E2E 16: PO receiving at the scan station', () => {
     await page.getByRole('link', { name: /RCV-/ }).first().click();
     await expect(page.getByText('Scan station')).toBeVisible();
     await expect(page.getByText(/Hold HOLD-/)).toBeVisible();
+    await shot(page, '12-po-receiving');
   });
 
   test('blind receiving is offered only with its own permission and the API refuses it otherwise', async ({ page }) => {

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, choose, signIn, state, users } from './support';
+import { Api, choose, signIn, state, users, shot } from './support';
 
 /** Gap 28: generated drafts are off by default; an administrator enables a tested provider for one function; the draft is labelled, cited and reviewed; the request log records it. */
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
@@ -57,5 +57,6 @@ test.describe('E2E 24: generated content', () => {
     } finally {
       await admin.put('/api/generation/settings', settings(0));
     }
+    await shot(page, '28-generated-draft');
   });
 });

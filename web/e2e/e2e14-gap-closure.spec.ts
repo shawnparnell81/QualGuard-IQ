@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
 import { test, expect, request } from '@playwright/test';
-import { Api, WEB, choose, dialog, localDate, signIn, state, unique, users, type User } from './support';
+import { Api, WEB, choose, dialog, localDate, signIn, state, unique, users, type User, shot } from './support';
 
 /** Gap-closure UI checks: shared site picker (LPA, cost of quality), friendly record type labels, document type library. */
 test.describe('E2E 14: gap closure', () => {
@@ -22,6 +22,7 @@ test.describe('E2E 14: gap closure', () => {
     const picker = d.getByTestId('site-picker');
     await picker.click();
     await expect(page.getByRole('option', { name: /Test Plant/ })).toBeVisible();
+    await shot(page, '01-lpa-site-picker');
     await expect(page.getByRole('option', { name: new RegExp(`Other Plant ${t}`) })).toHaveCount(0);
     await picker.fill('zzz-no-site');
     await expect(page.getByText('No matching site')).toBeVisible();
@@ -43,6 +44,7 @@ test.describe('E2E 14: gap closure', () => {
     await dialog(page).getByLabel('Amount (USD)').fill('125');
     await dialog(page).getByRole('button', { name: 'Record' }).click();
     await expect(dialog(page).getByText('Select a site.')).toBeVisible();
+    await shot(page, '02-coq-site-picker');
     await dialog(page).getByTestId('site-picker').click();
     await expect(page.getByRole('option', { name: new RegExp(`Other Plant ${t}`) })).toHaveCount(0);
     await page.getByRole('option', { name: /Test Plant/ }).click();
@@ -60,6 +62,7 @@ test.describe('E2E 14: gap closure', () => {
     await expect(page.getByRole('tab', { name: 'ChangeRequest', exact: true })).toHaveCount(0);
     await page.goto('/admin/routes');
     await expect(page.getByRole('cell', { name: 'Change Request', exact: true })).toBeVisible();
+    await shot(page, '20-friendly-record-type-labels');
   });
 
   test('document types come from the governed library and retired types are not offered', async ({ page }) => {
@@ -80,6 +83,7 @@ test.describe('E2E 14: gap closure', () => {
     await page.keyboard.press('Escape');
     expect(ty.id).toBeTruthy();
     await admin.dispose();
+    await shot(page, '18-document-type-library');
   });
 
   test('scrap rate tiles name their denominator and manual volumes need a second approver', async ({ page }) => {
@@ -100,6 +104,7 @@ test.describe('E2E 14: gap closure', () => {
     await expect(row).toContainText('Pending');
     await row.getByRole('button', { name: 'Approve' }).click();
     await expect(page.getByRole('alert')).toContainText(/cannot approve it/);
+    await shot(page, '07-denominator-production-volumes');
   });
 
   test('retention policies take filters and priority, and the dry run explains which policy governs each record', async ({ page }) => {
@@ -130,6 +135,7 @@ test.describe('E2E 14: gap closure', () => {
     const rec = page.getByRole('row', { name: new RegExp(number) });
     await expect(rec).toContainText('Retained');
     await expect(rec).toContainText(`Plant NCRs ${t} v1`);
+    await shot(page, '17-retention-dry-run');
   });
 
   test('the content library pages through more than 1,000 files on the server', async ({ page }) => {
@@ -158,6 +164,7 @@ test.describe('E2E 14: gap closure', () => {
     await page.getByRole('option', { name: 'Oldest' }).click();
     await expect(page.getByTestId('library-page')).toHaveText('Page 1 of 22');
     await expect(page.getByText(`${tag}-0001.pdf`)).toBeVisible();
+    await shot(page, '21-content-library-paging');
   });
 
   test('compliance mapping content shows its verification state and unverified packs never read as compliance', async ({ page }) => {
@@ -174,6 +181,7 @@ test.describe('E2E 14: gap closure', () => {
     for (const name of ['IATF 16949', 'AS9100']) await expect(page.getByRole('row').filter({ hasText: name }).first().getByTestId('mapping-state')).toHaveText('Unverified');
     await ppap.getByRole('button', { name: 'History' }).click();
     await expect(page.getByTestId('mapping-history')).toContainText('Verified');
+    await shot(page, '24-compliance-mapping-verification');
   });
 
   test('a connection shows its live-validation gates, checklist and unverified key assumptions, and the gate decides enabling', async ({ page }) => {
@@ -197,6 +205,7 @@ test.describe('E2E 14: gap closure', () => {
     await expect(page.getByTestId('erp-gate').filter({ hasText: 'Connection' })).toContainText('Not applicable');
     await page.getByLabel('Enabled', { exact: true }).click();
     await expect(page.getByText('Enabled', { exact: true })).toBeVisible();
+    await shot(page, '25-erp-live-validation');
   });
 
   test('the marketplace registers publisher public keys only and shows that signing is refused without a production key', async ({ page }) => {
@@ -225,6 +234,7 @@ test.describe('E2E 14: gap closure', () => {
     await row.getByRole('button', { name: 'Retire' }).click();
     await expect(row).toContainText('Retired');
     await expect(page.getByText(priv.split('\n')[1])).toHaveCount(0);
+    await shot(page, '26-licence-verification-keys');
   });
 
   test('an MES device is registered with scopes, sites and expiry, its secret shows once, and rotation and revocation take effect', async ({ page }) => {
@@ -282,6 +292,7 @@ test.describe('E2E 14: gap closure', () => {
     await expect(row.getByRole('button', { name: 'Enable' })).toHaveCount(0);
     expect((await device.post('/api/mes/events', ev('3'))).status()).toBe(401);
     await device.dispose();
+    await shot(page, '08-mes-devices');
   });
 
   test('PFMEA lines import from a spreadsheet with a mapping preview, row errors, recalculated RPN and the rejected rows left out', async ({ page }) => {
@@ -318,6 +329,7 @@ test.describe('E2E 14: gap closure', () => {
     const lines = await admin.get<{ failureMode: string; rpn: number }[]>(`/api/apqp/pfmea/${pf.id}/lines`);
     expect(lines.map((l) => l.rpn).sort()).toEqual([72, 84]);
     await expect(page.getByRole('row').filter({ hasText: 'line-3-pfmea.csv' }).first()).toContainText('2 ok · 1 rejected');
+    await shot(page, '03-pfmea-import');
   });
   test('control plan lines import with PFMEA links, row errors and the new characteristic columns in the editor', async ({ page }) => {
     const admin = await Api.as(users.admin);
@@ -348,5 +360,6 @@ test.describe('E2E 14: gap closure', () => {
     await expect(page.locator('input[value="Spindle speed"]')).toHaveCount(1);
     const lines = await admin.get<{ stepSequence: number; characteristicType: string; pfmeaLineId: string | null }[]>(`/api/apqp/plans/${cp.id}/lines`);
     expect(lines.map((l) => `${l.stepSequence}:${l.characteristicType}:${l.pfmeaLineId ? 'linked' : '-'}`)).toEqual(['20:Product:linked', '30:Process:-']);
+    await shot(page, '04-control-plan-import');
   });
 });

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, choose, dialog, signIn, users } from './support';
+import { Api, choose, dialog, signIn, users, shot } from './support';
 
 /** Gaps 19 and 22: report schedules with time zone and history, pause/resume, board report editions approved by a second person, and the attachment policy kept by administrators. */
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
@@ -73,5 +73,6 @@ test.describe('E2E 22: report schedules', () => {
     await admin.getByRole('checkbox', { name: 'Allow scheduled reports to be attached' }).uncheck();
     await admin.getByRole('button', { name: 'Save policy' }).click();
     await expect(admin.getByText('Policy saved.')).toBeVisible();
+    await shot(page, '19-22-report-schedules');
   });
 });
