@@ -17,6 +17,8 @@ import { useWork } from '../work';
 import { SignDialog } from '../components/SignDialog';
 import { mono } from '../theme';
 import { FieldBuilder, SchemaPreview, parseFields, serializeFields, type FieldDef } from './FormBuilder';
+import { FormView } from '../forms/FormView';
+import { isV2, parseDefinition } from '../forms/definition';
 
 type Kind = 0 | 1 | 2;
 const cfg = (kind: Kind) => kind === 2
@@ -210,7 +212,7 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
             <Stack gap={2}>
               <DataTable data={d.revisions} columns={revCols} onRowClick={(r) => { setRevId(r.id); setTab('files'); }} />
               {draftEditable && <DraftEditor rev={rev} onSaved={refresh} formTemplate={kind === 2} />}
-              {kind === 2 && !draftEditable && rev.fieldSchema && <SchemaPreview schema={rev.fieldSchema} />}
+              {kind === 2 && !draftEditable && rev.fieldSchema && (isV2(rev.fieldSchema) ? <Paper sx={{ p: 3 }}><FormView def={parseDefinition(rev.fieldSchema)} values={{}} onChange={() => {}} readOnly /></Paper> : <SchemaPreview schema={rev.fieldSchema} />)}
             </Stack>
           )}
           {tab === 'files' && <FilesPanel type={c.revType} id={rev.id} canEdit={draftEditable} onChanged={refresh} />}
@@ -240,7 +242,8 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
 }
 
 function DraftEditor({ rev, onSaved, formTemplate }: { rev: Rev; onSaved: () => void; formTemplate?: boolean }) {
-  const [fields, setFields] = useState<FieldDef[]>(() => parseFields(rev.fieldSchema));
+  const v2 = isV2(rev.fieldSchema);
+  const [fields, setFields] = useState<FieldDef[]>(() => (v2 ? [] : parseFields(rev.fieldSchema)));
   const [summary, setSummary] = useState(rev.changeSummary);
   const [eff, setEff] = useState(rev.effectiveDate ?? '');
   const [training, setTraining] = useState(rev.trainingRequired);
@@ -253,9 +256,10 @@ function DraftEditor({ rev, onSaved, formTemplate }: { rev: Rev; onSaved: () => 
         <TextField label="Change summary" multiline minRows={2} value={summary} onChange={(e) => setSummary(e.target.value)} />
         <TextField label="Effective date (blank = on approval)" type="date" value={eff} onChange={(e) => setEff(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 280 }} />
         <FormControlLabel control={<Checkbox checked={training} onChange={(e) => setTraining(e.target.checked)} />} label="Training required when released" />
-        {formTemplate && <FieldBuilder fields={fields} onChange={setFields} />}
+        {formTemplate && !v2 && <FieldBuilder fields={fields} onChange={setFields} />}
+        {formTemplate && v2 && <Paper variant="outlined" sx={{ p: 2 }}><FormView def={parseDefinition(rev.fieldSchema)} values={{}} onChange={() => {}} readOnly /></Paper>}
         <Box><Button variant="outlined" onClick={async () => {
-          try { await put(`/api/documents/revisions/${rev.id}`, { changeSummary: summary, effectiveDate: eff || null, trainingRequired: training, rowVersion: rev.rowVersion, fieldSchema: formTemplate ? serializeFields(fields) : undefined }); setMsg({ ok: true, text: 'Saved.' }); onSaved(); }
+          try { await put(`/api/documents/revisions/${rev.id}`, { changeSummary: summary, effectiveDate: eff || null, trainingRequired: training, rowVersion: rev.rowVersion, fieldSchema: formTemplate && !v2 ? serializeFields(fields) : undefined }); setMsg({ ok: true, text: 'Saved.' }); onSaved(); }
           catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
         }}>Save draft</Button></Box>
       </Stack>

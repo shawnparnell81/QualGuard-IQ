@@ -1,3 +1,4 @@
+import { isV2 } from '../forms/definition';
 import { useMemo, useState } from 'react';
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Paper, Stack, Switch, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -140,7 +141,7 @@ export function FormDesigner() {
   const [tplId, setTplId] = useState(''); const tpl = useQuery({ queryKey: ['doc', tplId], enabled: !!tplId, queryFn: () => get<any>(`/api/documents/${tplId}`) });
   const draftRev = tpl.data?.revisions?.find((r: any) => r.status === 0);
   const [fields, setFields] = useState<FField[]>([]); const [loadedFor, setLoadedFor] = useState('');
-  if (draftRev && loadedFor !== draftRev.id) { setLoadedFor(draftRev.id); try { setFields(draftRev.fieldSchema ? JSON.parse(draftRev.fieldSchema) : []); } catch { setFields([]); } }
+  if (draftRev && loadedFor !== draftRev.id) { setLoadedFor(draftRev.id); try { const j = draftRev.fieldSchema ? JSON.parse(draftRev.fieldSchema) : []; setFields(Array.isArray(j) ? j : []); } catch { setFields([]); } }
   const [sel, setSel] = useState<number | null>(null); const f = sel != null ? fields[sel] : null;
   const set = (patch: Partial<FField>) => setFields(fields.map((x, i) => (i === sel ? { ...x, ...patch } : x)));
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -152,6 +153,7 @@ export function FormDesigner() {
   const runPreview = async () => { setPreview(await post<any>('/api/forms/library/preview', { fieldsJson: clean(fields), values: sample })); };
   const save = async () => {
     setMsg(null);
+    if (draftRev?.fieldSchema && isV2(draftRev.fieldSchema)) { setMsg({ ok: false, text: 'This revision uses sections and tables. Open it in Documents to edit its layout.' }); return; }
     try { await put(`/api/documents/revisions/${draftRev.id}`, { changeSummary: draftRev.changeSummary, effectiveDate: draftRev.effectiveDate, trainingRequired: draftRev.trainingRequired, rowVersion: draftRev.rowVersion, fieldSchema: clean(fields) }); setMsg({ ok: true, text: `Saved to ${tpl.data.number} rev ${draftRev.revision} (draft). Submit it for approval in Documents to publish.` }); qc.invalidateQueries({ queryKey: ['doc', tplId] }); }
     catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
   };

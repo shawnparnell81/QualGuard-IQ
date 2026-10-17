@@ -6,6 +6,8 @@ export interface FieldDef {
   key: string; label: string; type: string; required?: boolean; options?: string[] | null;
   min?: number | null; max?: number | null; unit?: string | null; formula?: string | null; section?: string | null;
   visibleWhen?: { field: string; operator: string; value?: string | null } | null;
+  help?: string | null; placeholder?: string | null; width?: number | null; decimals?: number | null; maxLength?: number | null;
+  nominal?: number | null; resultLabels?: string[] | null; accept?: string[] | null; sourceLocation?: string | null;
 }
 export const fieldTypes = [
   ['text', 'Short text'], ['longtext', 'Long text'], ['number', 'Number'], ['date', 'Date'], ['boolean', 'Yes / no'], ['choice', 'Choice list'], ['calc', 'Calculated'],
