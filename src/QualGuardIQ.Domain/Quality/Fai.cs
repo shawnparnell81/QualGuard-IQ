@@ -5,13 +5,15 @@ namespace QualGuardIQ.Domain.Quality;
 public enum FaiType { Full = 0, Partial = 1, Delta = 2, EngineeringChange = 3, ProcessChange = 4, SupplierChange = 5, ToolingChange = 6, MaterialChange = 7, Requalification = 8 }
 public enum FaiReason { NewProduct = 0, NewPart = 1, NewRevision = 2, DrawingRevision = 3, EngineeringChange = 4, CustomerRequirement = 5, SupplierRequirement = 6 }
 public enum FaiStatus { Draft = 0, InProgress = 1, Review = 2, Returned = 3, PendingApproval = 4, Approved = 5, Rejected = 6, Closed = 7, Cancelled = 8 }
-public enum CharacteristicClass { Standard = 0, Special = 1, Key = 2, Critical = 3, Significant = 4, Major = 5, Minor = 6 }
-public enum CharResult { NotInspected = 0, Pass = 1, Fail = 2 }
+public enum CharacteristicClass { Standard = 0, Special = 1, Key = 2, Critical = 3, Significant = 4, Major = 5, Minor = 6, General = 7 }
+public enum CharResult { NotInspected = 0, Pass = 1, Fail = 2, NotApplicable = 3 }
+/// <summary>How a characteristic is recorded: a number against limits, free text, yes/no, or a visual check.</summary>
+public enum CharDataType { Numeric = 0, Text = 1, Boolean = 2, Visual = 3 }
 public enum SamplingType { Single = 0, Double = 1, Multiple = 2, Continuous = 3 }
 public enum SamplingMode { Normal = 0, Tightened = 1, Reduced = 2 }
 public enum PlanStatus { Draft = 0, Active = 1, Superseded = 2 }
 public enum AqlDecision { Accept = 0, Reject = 1, NextStage = 2 }
-public enum AqlInspectionStatus { Sampling = 0, Decided = 1, Cancelled = 2 }
+public enum AqlInspectionStatus { Sampling = 0, Decided = 1, Cancelled = 2, Submitted = 3, Approved = 4, Closed = 5 }
 
 // ======================= FAI =======================
 
@@ -106,6 +108,7 @@ public class FaiCharacteristic : Entity, IAudited
     public string? DrawingReference { get; set; }
     public CharacteristicClass Class { get; set; }
     public CharacteristicKind Kind { get; set; }
+    public CharDataType DataType { get; set; }
     public string Description { get; set; } = "";
     public decimal? Nominal { get; set; }
     public decimal? LowerTolerance { get; set; }
@@ -129,6 +132,7 @@ public class FaiCharacteristicResult : Entity, IAudited
     public int InspectionSequence { get; set; }
     public decimal? MeasuredValue { get; set; }
     public string? Observation { get; set; }
+    public bool? BooleanValue { get; set; }
     public CharResult PassFail { get; set; }
     public DateTimeOffset InspectionDate { get; set; }
     public Guid? InspectionEquipmentId { get; set; }
@@ -190,6 +194,7 @@ public class AqlSamplingPlan : Entity, IAudited, IContentLock
     public decimal? SamplingFrequency { get; set; }
     public string? Description { get; set; }
     public string? ChangeReason { get; set; }
+    public DateOnly? EffectiveDate { get; set; }
     public DateTimeOffset? ActivatedAt { get; set; }
     public List<AqlPlanDetail> Details { get; set; } = [];
     public string AuditLabel => $"sampling plan {PlanName} ({InspectionSeverity}) rev {Revision}";
@@ -213,6 +218,8 @@ public class AqlPlanDetail : Entity, IAudited
     public int SampleSize { get; set; }
     public int AcceptQuantity { get; set; }
     public int RejectQuantity { get; set; }
+    /// <summary>Defect class the row applies to; null = every class.</summary>
+    public Severity? DefectClass { get; set; }
     public string AuditLabel => $"plan row {LotSizeMin}-{LotSizeMax} {InspectionLevel} AQL {AqlLevel} stage {Stage}";
 }
 
@@ -242,7 +249,8 @@ public class AqlDefectCategory : Entity, IAudited
 /// <summary>aql_inspections. AQL sampling record attached 1:1 to an inspection from the shared inspection engine.</summary>
 public class AqlInspection : Entity, IAudited, ISiteScoped
 {
-    public Guid InspectionId { get; set; }
+    /// <summary>Optional link to an inspection from the shared inspection engine (receiving/in-process/final); standalone lots have none.</summary>
+    public Guid? InspectionId { get; set; }
     public string InspectionNumber { get; set; } = "";
     public Guid PlanId { get; set; }
     public string PlanLabel { get; set; } = "";
@@ -250,11 +258,23 @@ public class AqlInspection : Entity, IAudited, ISiteScoped
     public Guid? CustomerId { get; set; }
     public Guid? ProductId { get; set; }
     public Guid? PartId { get; set; }
+    public string? PartRevision { get; set; }
+    public string? PurchaseOrder { get; set; }
+    public string? WorkOrder { get; set; }
     public string? LotNumber { get; set; }
     public int LotSize { get; set; }
     public int SampleSize { get; set; }
     public string InspectionLevel { get; set; } = "";
+    /// <summary>Single AQL applied to all defects (when no per-class AQLs are set).</summary>
     public decimal AqlLevel { get; set; }
+    public decimal? AqlLevelCritical { get; set; }
+    public decimal? AqlLevelMajor { get; set; }
+    public decimal? AqlLevelMinor { get; set; }
+    /// <summary>JSON {"Critical":[{n,ac,re}],…} per-class stages frozen from the plan revision.</summary>
+    public string? ClassStages { get; set; }
+    public Guid? ApproverId { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
+    public DateTimeOffset? ClosedAt { get; set; }
     public string? CodeLetter { get; set; }
     public SamplingMode Severity { get; set; }
     public DateTimeOffset InspectionDate { get; set; }
@@ -285,7 +305,10 @@ public class AqlInspectionDefect : Entity, IAudited
     public Guid DefectCategoryId { get; set; }
     public int QuantityFound { get; set; }
     public int Stage { get; set; }
+    public int? SampleUnitNumber { get; set; }
     public string? Description { get; set; }
+    /// <summary>JSON array of attachment ids (files on the AQL inspection) that evidence the defect.</summary>
+    public string? AttachmentIds { get; set; }
     public string AuditLabel => $"defect x{QuantityFound}";
 }
 

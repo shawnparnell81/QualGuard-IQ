@@ -167,6 +167,10 @@ public partial class AppDbContext
             e.Property(x => x.AqlLevel).HasPrecision(5, 2);
             e.Property(x => x.LotNumber).HasMaxLength(100);
             e.Property(x => x.Stages).HasColumnType("jsonb");
+            e.Property(x => x.ClassStages).HasColumnType("jsonb");
+            e.Property(x => x.AqlLevelCritical).HasPrecision(5, 2); e.Property(x => x.AqlLevelMajor).HasPrecision(5, 2); e.Property(x => x.AqlLevelMinor).HasPrecision(5, 2);
+            e.Property(x => x.PartRevision).HasMaxLength(25); e.Property(x => x.PurchaseOrder).HasMaxLength(100); e.Property(x => x.WorkOrder).HasMaxLength(100);
+            User(e, x => x.ApproverId);
             e.HasOne<Inspection>().WithMany().HasForeignKey(x => x.InspectionId).OnDelete(R);
             e.HasOne<AqlSamplingPlan>().WithMany().HasForeignKey(x => x.PlanId).OnDelete(R);
             e.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(R);
@@ -181,6 +185,7 @@ public partial class AppDbContext
             e.HasIndex(x => x.InspectionId);
             e.HasOne<AqlInspection>().WithMany().HasForeignKey(x => x.InspectionId).OnDelete(R);
             e.HasOne<AqlDefectCategory>().WithMany().HasForeignKey(x => x.DefectCategoryId).OnDelete(R);
+            e.Property(x => x.AttachmentIds).HasColumnType("jsonb");
             e.ToTable(t => t.HasCheckConstraint("ck_aql_defect_qty", "\"QuantityFound\" >= 0"));
         });
         b.Entity<SupplierReceivingInspection>(e =>
