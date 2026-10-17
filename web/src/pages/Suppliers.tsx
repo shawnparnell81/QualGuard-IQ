@@ -10,7 +10,7 @@ import { useAuth } from '../auth';
 import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
-import { StatusChip, criticality, fmtDate, fmtDateTime, localDate, ncrStatus, supplierStatus } from '../components/Status';
+import { StatusChip, criticality, fmtDate, fmtDateTime, localDate, ncrStatus, reviewOutcome, scarStatus, supplierStatus } from '../components/Status';
 import { ApprovalsPanel, AttachmentsAndHistory } from '../components/RecordTabs';
 import { Facts, Prose, SchemaForm, Section, StepDialog, useRunner } from '../components/Kit';
 import { SignDialog } from '../components/SignDialog';
@@ -85,7 +85,10 @@ interface SupplierDto { id: string; code: string; legalName: string; operatingNa
   certifications: { id: string; standard: string; certificateNumber: string | null; issuer: string | null; issuedOn: string | null; expiresOn: string }[];
   overrides: { id: string; recordType: string; condition: string; reason: string; createdAt: string; userName: string }[];
   check: { blocked: boolean; conditions: { condition: string; restriction: number; message: string }[] };
-  ncrs: { id: string; number: string; title: string; status: number; detectedOn: string }[] | null; canEdit: boolean; canApprove: boolean; allowed: string[] }
+  ncrs: { id: string; number: string; title: string; status: number; detectedOn: string }[] | null;
+  scars: { id: string; number: string; title: string; status: number; responseDueOn: string; responseReceivedOn: string | null }[];
+  performance: { id: string; periodStart: string; periodEnd: string; lotsReceived: number; lotsRejected: number; deliveries: number; onTimeDeliveries: number; ncrCount: number; qualityScore: number; deliveryScore: number; responsivenessScore: number; overallScore: number; comments: string | null }[];
+  reviews: { id: string; reviewedOn: string; outcome: number; summary: string; overallScore: number | null; openScars: number; ncrsLast12Months: number; nextReviewOn: string; reviewerName: string }[]; canEdit: boolean; canApprove: boolean; allowed: string[] }
 
 export function SupplierDetail() {
   const { id } = useParams();
@@ -94,6 +97,7 @@ export function SupplierDetail() {
   const [dlg, setDlg] = useState<string | null>(null);
   const [signing, setSigning] = useState(false);
   const work = useWork();
+  const nav = useNavigate();
   const q = useQuery({ queryKey: ['supplier', id], queryFn: () => get<SupplierDto>(`/api/suppliers/${id}`) });
   const refresh = () => { qc.invalidateQueries({ queryKey: ['supplier', id] }); qc.invalidateQueries({ queryKey: ['work'] }); };
   const { error, run } = useRunner(refresh);
@@ -104,7 +108,7 @@ export function SupplierDetail() {
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Supplier register', to: '/suppliers' }, { label: d.code }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.code}</span><span>{d.legalName}</span><StatusChip status={supplierStatus[d.status]} /></Stack>}
-      tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Contacts', value: 'contacts' }, { label: 'Certifications', value: 'certs' }, { label: 'Quality events', value: 'ncrs' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
+      tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Contacts', value: 'contacts' }, { label: 'Certifications', value: 'certs' }, { label: 'Quality events', value: 'ncrs' }, { label: 'SCARs', value: 'scars' }, { label: 'Performance', value: 'perf' }, { label: 'Reviews', value: 'reviews' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {approval && <Button variant="contained" color="secondary" onClick={() => setSigning(true)}>Sign approval</Button>}
         {d.allowed.includes('edit') && <Button variant="outlined" onClick={() => setDlg('edit')}>Edit</Button>}
@@ -144,6 +148,25 @@ export function SupplierDetail() {
             {d.ncrs === null ? <Alert severity="info">You do not have access to nonconformances.</Alert> : d.ncrs.length === 0 ? <Box sx={{ color: 'text.secondary', fontSize: 14 }}>None recorded.</Box> :
               d.ncrs.map((n) => <Box key={n.id} sx={{ py: 0.5 }}><Link component={RouterLink} to={`/ncr/${n.id}`} sx={{ fontFamily: mono }}>{n.number}</Link> {n.title} · {fmtDate(n.detectedOn)} <StatusChip status={ncrStatus[n.status]} /></Box>)}
           </Section>}
+          {tab === 'scars' && <Section title="Supplier corrective action requests" action={d.allowed.includes('scar') ? <Button size="small" onClick={() => setDlg('scar')}>Issue SCAR</Button> : undefined}>
+            <DataTable data={d.scars} onRowClick={(r) => nav(`/suppliers/scar/${r.id}`)} columns={[{ header: 'Number', accessorKey: 'number', cell: num }, { header: 'Title', accessorKey: 'title' },
+              { header: 'Status', accessorKey: 'status', cell: (x) => <StatusChip status={scarStatus[x.getValue() as number]} /> },
+              { header: 'Response due', accessorKey: 'responseDueOn', cell: (x) => <Box component="span" sx={{ color: (x.getValue() as string) < today && x.row.original.status === 0 ? 'error.main' : undefined }}>{fmtDate(x.getValue() as string)}</Box> },
+              { header: 'Response received', accessorKey: 'responseReceivedOn', cell: (x) => fmtDate(x.getValue() as string) }]} empty="No SCARs issued." />
+          </Section>}
+          {tab === 'perf' && <Section title="Performance scorecards" action={d.allowed.includes('performance') ? <Button size="small" onClick={() => setDlg('perf')}>Record period</Button> : undefined}>
+            <Box sx={{ color: 'text.secondary', fontSize: 13, mb: 1 }}>Overall = quality 50% + delivery 30% + responsiveness 20%. NCR counts and SCAR responsiveness are taken from records.</Box>
+            <DataTable data={d.performance} columns={[{ header: 'Period', id: 'p', accessorFn: (r) => `${fmtDate(r.periodStart)} – ${fmtDate(r.periodEnd)}` },
+              { header: 'Lots (rej.)', id: 'l', accessorFn: (r) => `${r.lotsReceived} (${r.lotsRejected})` }, { header: 'On time', id: 'o', accessorFn: (r) => `${r.onTimeDeliveries}/${r.deliveries}` }, { header: 'NCRs', accessorKey: 'ncrCount' },
+              { header: 'Quality', accessorKey: 'qualityScore' }, { header: 'Delivery', accessorKey: 'deliveryScore' }, { header: 'Responsiveness', accessorKey: 'responsivenessScore' },
+              { header: 'Overall', accessorKey: 'overallScore', cell: (x) => <b style={{ color: (x.getValue() as number) < 80 ? '#c62828' : undefined }}>{String(x.getValue())}</b> }, { header: 'Comments', accessorKey: 'comments' }]} empty="No performance periods recorded." />
+          </Section>}
+          {tab === 'reviews' && <Section title="Periodic reviews" action={d.allowed.includes('review') ? <Button size="small" onClick={() => setDlg('review')}>Record review</Button> : undefined}>
+            <DataTable data={d.reviews} columns={[{ header: 'Reviewed', accessorKey: 'reviewedOn', cell: (x) => fmtDate(x.getValue() as string) }, { header: 'Reviewer', accessorKey: 'reviewerName' },
+              { header: 'Outcome', accessorKey: 'outcome', cell: (x) => reviewOutcome[x.getValue() as number] }, { header: 'Score', accessorKey: 'overallScore', cell: (x) => x.getValue() ?? '—' },
+              { header: 'Open SCARs', accessorKey: 'openScars' }, { header: 'NCRs (12 mo)', accessorKey: 'ncrsLast12Months' }, { header: 'Summary', accessorKey: 'summary' },
+              { header: 'Next review', accessorKey: 'nextReviewOn', cell: (x) => fmtDate(x.getValue() as string) }]} empty="No periodic reviews recorded." />
+          </Section>}
           {tab === 'approvals' && <ApprovalsPanel type="Supplier" id={d.id} />}
           {tab === 'more' && <AttachmentsAndHistory type="Supplier" id={d.id} canEdit={d.canEdit} />}
         </Box>
@@ -169,7 +192,105 @@ export function SupplierDetail() {
           { name: 'suppliedScope', label: 'Supplied scope', type: 'multiline', initial: d.suppliedScope ?? '' }, { name: 'website', label: 'Website', initial: d.website ?? '' }, { name: 'address', label: 'Address', type: 'multiline', initial: d.address ?? '' }]}
         onConfirm={(v) => run(() => put(`/api/suppliers/${d.id}`, { code: d.code, legalName: v.legalName, operatingName: v.operatingName || null, category: v.category, suppliedScope: v.suppliedScope || null, criticality: Number(v.criticality), risk: Number(v.risk),
           address: v.address || null, website: v.website || null, siteId: d.siteId, departmentId: d.departmentId, ownerId: d.ownerId, rowVersion: d.rowVersion }))} />
+      <StepDialog open={dlg === 'scar'} title={`Issue SCAR to ${d.code}`} confirm="Issue" onClose={() => setDlg(null)}
+        inputs={[{ name: 'ncrId', label: 'Related NCR (optional)', type: 'select', initial: '', options: [['', '— none —'], ...(d.ncrs ?? []).map((n) => [n.id, `${n.number} ${n.title}`] as [string, string])] },
+          { name: 'title', label: 'Title' }, { name: 'problem', label: 'Problem statement', type: 'multiline' }, { name: 'responseDueOn', label: 'Response due', type: 'date', initial: localDate(14) }]}
+        onConfirm={(v) => run(async () => { const r = await post<{ id: string }>('/api/suppliers/scars', { supplierId: d.id, ncrId: v.ncrId || null, title: v.title, problem: v.problem, responseDueOn: v.responseDueOn }); nav(`/suppliers/scar/${r.id}`); })} />
+      <StepDialog open={dlg === 'perf'} title="Record performance period" confirm="Record" onClose={() => setDlg(null)}
+        inputs={[{ name: 'periodStart', label: 'Period start', type: 'date', initial: localDate(-90) }, { name: 'periodEnd', label: 'Period end', type: 'date', initial: localDate() },
+          { name: 'lotsReceived', label: 'Lots received', initial: '0' }, { name: 'lotsRejected', label: 'Lots rejected', initial: '0' }, { name: 'deliveries', label: 'Deliveries', initial: '0' }, { name: 'onTimeDeliveries', label: 'On-time deliveries', initial: '0' },
+          { name: 'comments', label: 'Comments', type: 'multiline' }]}
+        onConfirm={(v) => run(() => post(`/api/suppliers/${d.id}/performance`, { periodStart: v.periodStart, periodEnd: v.periodEnd, lotsReceived: Number(v.lotsReceived), lotsRejected: Number(v.lotsRejected), deliveries: Number(v.deliveries), onTimeDeliveries: Number(v.onTimeDeliveries), comments: v.comments || null }))} />
+      <StepDialog open={dlg === 'review'} title={`Periodic review — ${d.code}`} intro="The latest scorecard, open SCARs and NCRs from the last 12 months are captured with the review. Suspend or disqualify outcomes change the supplier status." confirm="Record review" onClose={() => setDlg(null)}
+        inputs={[{ name: 'outcome', label: 'Outcome', type: 'select', initial: '0', options: reviewOutcome.map((o, i) => [i, o] as [number, string]) }, { name: 'summary', label: 'Summary and rationale', type: 'multiline' }, { name: 'nextReviewOn', label: 'Next review', type: 'date', initial: localDate(365) }]}
+        onConfirm={(v) => run(() => post(`/api/suppliers/${d.id}/reviews`, { outcome: Number(v.outcome), summary: v.summary, nextReviewOn: v.nextReviewOn }))} />
       {signing && approval && <SignDialog approvalId={approval.id} recordNumber={approval.recordNumber} stepName={approval.stepName} onClose={() => { setSigning(false); refresh(); }} />}
+    </ModuleWorkspace>
+  );
+}
+
+interface ScarRow { id: string; number: string; title: string; status: number; issuedOn: string; responseDueOn: string; responseReceivedOn: string | null; responseRejections: number; supplier: string; ownerName: string }
+
+export function ScarList() {
+  const nav = useNavigate();
+  const [p, setP] = useSearchParams();
+  const all = p.get('all') === '1';
+  const list = useQuery({ queryKey: ['scars', all], queryFn: () => get<{ items: ScarRow[] }>(`/api/suppliers/scars?pageSize=200${all ? '' : '&openOnly=true'}`) });
+  const today = localDate();
+  return (
+    <ModuleWorkspace module={mod()} crumbs={[{ label: 'Corrective action requests' }]} title="Supplier corrective action requests"
+      tabs={[{ label: 'Open', value: '' }, { label: 'All', value: '1' }]} tab={all ? '1' : ''} onTab={(v) => setP(v ? { all: v } : {})}>
+      <DataTable data={list.data?.items ?? []} onRowClick={(r) => nav(`/suppliers/scar/${r.id}`)} empty="No SCARs in this view." columns={[
+        { header: 'Number', accessorKey: 'number', cell: num }, { header: 'Supplier', accessorKey: 'supplier' }, { header: 'Title', accessorKey: 'title' },
+        { header: 'Status', accessorKey: 'status', cell: (x) => <StatusChip status={scarStatus[x.getValue() as number]} /> }, { header: 'Issued', accessorKey: 'issuedOn', cell: (x) => fmtDate(x.getValue() as string) },
+        { header: 'Response due', accessorKey: 'responseDueOn', cell: (x) => <Box component="span" sx={{ color: (x.getValue() as string) < today && x.row.original.status === 0 ? 'error.main' : undefined }}>{fmtDate(x.getValue() as string)}</Box> },
+        { header: 'Rejected responses', accessorKey: 'responseRejections' }, { header: 'Owner', accessorKey: 'ownerName' }]} />
+    </ModuleWorkspace>
+  );
+}
+
+interface ScarDto { id: string; number: string; title: string; problem: string; issuedOn: string; responseDueOn: string; status: number; supplierContainment: string | null; supplierRootCause: string | null; correctiveActionPlan: string | null;
+  supplierRespondent: string | null; responseReceivedOn: string | null; responseRejections: number; reviewNotes: string | null; effectivenessNotes: string | null; wasEffective: boolean | null; closedAt: string | null;
+  supplier: { id: string; code: string; legalName: string }; ncr: { id: string; number: string; title: string } | null; ownerName: string; verifiedByName: string | null; canEdit: boolean; allowed: string[] }
+
+export function ScarDetail() {
+  const { id } = useParams();
+  const qc = useQueryClient();
+  const [tab, setTab] = useState('response');
+  const [dlg, setDlg] = useState<string | null>(null);
+  const q = useQuery({ queryKey: ['scar', id], queryFn: () => get<ScarDto>(`/api/suppliers/scars/${id}`) });
+  const { error, run } = useRunner(() => qc.invalidateQueries({ queryKey: ['scar', id] }));
+  const d = q.data;
+  if (!d) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'Corrective action requests', to: '/suppliers/scar' }]} title="Loading">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
+  return (
+    <ModuleWorkspace module={mod()} crumbs={[{ label: 'Corrective action requests', to: '/suppliers/scar' }, { label: d.number }]}
+      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={scarStatus[d.status]} /></Stack>}
+      tabs={[{ label: 'Response & review', value: 'response' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
+      actions={<Stack direction="row" gap={1}>
+        {d.allowed.includes('respond') && <Button variant="contained" onClick={() => setDlg('respond')}>Record supplier response</Button>}
+        {d.allowed.includes('review') && <Button variant="contained" onClick={() => setDlg('review')}>Review response</Button>}
+        {d.allowed.includes('verify') && <Button variant="contained" color="secondary" onClick={() => setDlg('verify')}>Verify effectiveness</Button>}
+      </Stack>}>
+      {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+        <Facts items={[['Supplier', <Link component={RouterLink} to={`/suppliers/${d.supplier.id}`}>{d.supplier.code} {d.supplier.legalName}</Link>],
+          ['NCR', d.ncr ? <Link component={RouterLink} to={`/ncr/${d.ncr.id}`} sx={{ fontFamily: mono }}>{d.ncr.number}</Link> : '—'], ['Owner', d.ownerName], ['Issued', fmtDate(d.issuedOn)], ['Response due', fmtDate(d.responseDueOn)],
+          ['Response received', fmtDate(d.responseReceivedOn)], ['Rejected responses', String(d.responseRejections)], ['Verified by', d.verifiedByName ?? '—'], ['Closed', fmtDateTime(d.closedAt)]]} />
+        <Box sx={{ minWidth: 0 }}>
+          {tab === 'response' && <Stack gap={2}>
+            <Section title="Problem"><Prose label="Problem statement" text={d.problem} /></Section>
+            <Section title="Supplier response">{d.supplierRootCause ? <>
+              <Prose label="Respondent" text={d.supplierRespondent} /><Prose label="Containment" text={d.supplierContainment} /><Prose label="Root cause" text={d.supplierRootCause} /><Prose label="Corrective action plan" text={d.correctiveActionPlan} /></>
+              : <Alert severity="info">Waiting for the supplier's response.</Alert>}</Section>
+            {d.reviewNotes && <Section title="Review"><Prose label="Review notes" text={d.reviewNotes} /></Section>}
+            {d.wasEffective !== null && <Section title="Effectiveness"><Alert severity={d.wasEffective ? 'success' : 'warning'} sx={{ mb: 1 }}>{d.wasEffective ? 'Verified effective' : 'Not effective'}</Alert><Prose label="Evidence" text={d.effectivenessNotes} /></Section>}
+          </Stack>}
+          {tab === 'more' && <AttachmentsAndHistory type="SupplierCorrectiveAction" id={d.id} canEdit={d.canEdit} />}
+        </Box>
+      </Box>
+      <StepDialog open={dlg === 'respond'} title="Record supplier response" confirm="Record" onClose={() => setDlg(null)}
+        inputs={[{ name: 'respondent', label: 'Respondent (supplier contact)' }, { name: 'receivedOn', label: 'Received on', type: 'date', initial: localDate() },
+          { name: 'containment', label: 'Containment', type: 'multiline' }, { name: 'rootCause', label: 'Root cause', type: 'multiline' }, { name: 'correctiveActionPlan', label: 'Corrective action plan', type: 'multiline' }]}
+        onConfirm={(v) => run(() => post(`/api/suppliers/scars/${d.id}/response`, v))} />
+      <StepDialog open={dlg === 'review'} title="Review supplier response" intro="Rejecting returns the SCAR to the supplier for a new response." confirm="Save review" onClose={() => setDlg(null)}
+        inputs={[{ name: 'accept', label: 'Decision', type: 'select', initial: 'true', options: [['true', 'Accept response'], ['false', 'Reject — request new response']] }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
+        onConfirm={(v) => run(() => post(`/api/suppliers/scars/${d.id}/review`, { accept: v.accept === 'true', notes: v.notes }))} />
+      <StepDialog open={dlg === 'verify'} title="Verify effectiveness" intro="Verification must be done by someone other than the SCAR owner." confirm="Verify and close" onClose={() => setDlg(null)}
+        inputs={[{ name: 'effective', label: 'Result', type: 'select', initial: 'true', options: [['true', 'Effective'], ['false', 'Not effective']] }, { name: 'notes', label: 'Objective evidence', type: 'multiline' }]}
+        onConfirm={(v) => run(() => post(`/api/suppliers/scars/${d.id}/verify`, { effective: v.effective === 'true', notes: v.notes }))} />
+    </ModuleWorkspace>
+  );
+}
+
+export function ReviewsDue() {
+  const nav = useNavigate();
+  const list = useQuery({ queryKey: ['reviews-due'], queryFn: () => get<{ id: string; code: string; legalName: string; status: number; nextReviewOn: string }[]>('/api/suppliers/reviews-due?days=60') });
+  const today = localDate();
+  return (
+    <ModuleWorkspace module={mod()} crumbs={[{ label: 'Periodic reviews due' }]} title="Periodic reviews due (next 60 days)">
+      <DataTable data={list.data ?? []} onRowClick={(r) => nav(`/suppliers/${r.id}`)} empty="No reviews due." columns={[
+        { header: 'Code', accessorKey: 'code', cell: num }, { header: 'Supplier', accessorKey: 'legalName' }, { header: 'Status', accessorKey: 'status', cell: (x) => <StatusChip status={supplierStatus[x.getValue() as number]} /> },
+        { header: 'Review due', accessorKey: 'nextReviewOn', cell: (x) => <Box component="span" sx={{ color: (x.getValue() as string) < today ? 'error.main' : undefined }}>{fmtDate(x.getValue() as string)}</Box> }]} />
     </ModuleWorkspace>
   );
 }
