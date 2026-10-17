@@ -422,6 +422,7 @@ public sealed partial class ReportService(AppDbContext db, ModuleSupport m, IAcc
             return ([C("month", "Month"), C("supplier", "Supplier"), C("units", "Units sampled", "number"), C("defects", "Defects", "number"), C("ppm", "PPM", "number")], g, null);
         });
         AddAdvanced((k, t, c, pm, d, u, run) => Add(k, t, c, pm, d, u, run), C, R, Months);
+        AddLogistics((k, t, c, pm, d, u, run) => Add(k, t, c, pm, d, u, run), C, R);
         return r;
     }
 }

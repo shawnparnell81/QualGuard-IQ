@@ -17,7 +17,7 @@ public sealed record Move(InventoryTxKind Kind, Guid PartId, decimal Quantity, G
     Guid? FromLocationId = null, StockStatus? FromStatus = null, Guid? FromWorkOrderId = null, bool FromAllocated = false,
     Guid? ToLocationId = null, StockStatus? ToStatus = null, Guid? ToWorkOrderId = null, bool ToAllocated = false,
     InventoryCategory? Category = null, int? OperationSequence = null, string? RefType = null, Guid? RefId = null, string? RefNumber = null,
-    string? Reason = null, string? ClientRequestId = null, RecordSource Source = RecordSource.Local, bool AllowFrozen = false, bool AllowHeld = false);
+    string? Reason = null, string? ClientRequestId = null, RecordSource Source = RecordSource.Local, bool AllowFrozen = false, bool AllowHeld = false, Guid? WorkOrderId = null);
 
 public sealed record LocationInput(string Code, string Name, LocationKind Kind, LocationPurpose Purpose, Guid? ParentId, decimal? Capacity, Guid SiteId, Guid? DepartmentId);
 public sealed record LocationUpdate(string Name, LocationPurpose Purpose, decimal? Capacity, bool Active);
@@ -49,6 +49,12 @@ public sealed record MirrorRow(string PartNumber, string? LotNumber, string Loca
 public sealed record MirrorInput(Guid SiteId, List<MirrorRow> Rows);
 public sealed record MirrorResult(int Rows, int Postings, decimal NetChange);
 public sealed record SiteMode(Guid SiteId, bool Mirror, string? Connection);
+public sealed record SplitInput(Guid LotId, Guid LocationId, StockStatus? Status, decimal Quantity, string? NewLotNumber, Guid? ToLocationId, string? Reason, string? ClientRequestId);
+public sealed record MergeSource(Guid LotId, Guid LocationId, StockStatus? Status);
+public sealed record MergeInput(List<MergeSource> Sources, Guid? TargetLotId, string? NewLotNumber, Guid ToLocationId, string? Reason);
+public sealed record LotResult(Guid LotId, string LotNumber, decimal Quantity, List<string> Transactions);
+public sealed record WipRow(Guid WorkOrderId, string WorkOrderNumber, WorkOrderStatus WorkOrderStatus, string ItemNumber, Guid PartId, string PartNumber, Guid? LotId, string? LotNumber, string? SerialNumber,
+    Guid LocationId, string LocationCode, StockStatus Status, decimal Quantity, string UnitOfMeasure, int? OperationSequence, string? OperationName, DateTimeOffset? LastMovedAt);
 
 /// <summary>
 /// Inventory ledger and warehouse operations. Every movement is an immutable InventoryTransaction; balances are derived in the
@@ -125,7 +131,7 @@ public sealed class InventoryService(AppDbContext db, ModuleSupport m, INumberin
         {
             Number = await numbers.NextAsync(TxType, site.SiteId, ct), Kind = mv.Kind, PartId = part.Id, Revision = revision, LotId = lot?.Id, SerialId = ser?.Id, Category = category,
             FromLocationId = from?.Id, FromStatus = from is null ? null : fromStatus, ToLocationId = to?.Id, ToStatus = to is null ? null : toStatus, Quantity = mv.Quantity, UnitOfMeasure = part.UnitOfMeasure,
-            WorkOrderId = mv.ToWorkOrderId ?? mv.FromWorkOrderId, OperationSequence = mv.OperationSequence, RefType = mv.RefType, RefId = mv.RefId, RefNumber = mv.RefNumber, Reason = mv.Reason?.Trim(),
+            WorkOrderId = mv.WorkOrderId ?? mv.ToWorkOrderId ?? mv.FromWorkOrderId, OperationSequence = mv.OperationSequence, RefType = mv.RefType, RefId = mv.RefId, RefNumber = mv.RefNumber, Reason = mv.Reason?.Trim(),
             Source = mv.Source, ClientRequestId = string.IsNullOrWhiteSpace(mv.ClientRequestId) ? null : mv.ClientRequestId, OccurredAt = m.Now, PerformedById = m.UserId, SiteId = site.SiteId, DepartmentId = site.DepartmentId
         };
         db.InventoryTransactions.Add(e);
@@ -539,10 +545,10 @@ public sealed class InventoryService(AppDbContext db, ModuleSupport m, INumberin
             {
                 var s = await trace.CreateSerialAsync(new SerialInput(sn, partId, wo.Revision, null, lot.Id, null, wo.Id, null, wo.SiteId, wo.DepartmentId), ct);
                 s.Status = SerialStatus.InStock;
-                await PostAsync(new Move(InventoryTxKind.ProductionReceipt, partId, 1, lot.Id, s.Id, ToLocationId: to.Id, Category: InventoryCategory.FinishedGoods, RefType: "WorkOrder", RefId: wo.Id, RefNumber: wo.Number), ct);
+                await PostAsync(new Move(InventoryTxKind.ProductionReceipt, partId, 1, lot.Id, s.Id, ToLocationId: to.Id, Category: InventoryCategory.FinishedGoods, RefType: "WorkOrder", RefId: wo.Id, RefNumber: wo.Number, WorkOrderId: wo.Id), ct);
             }
         else await PostAsync(new Move(InventoryTxKind.ProductionReceipt, partId, r.Quantity, lot.Id, ToLocationId: to.Id, Category: InventoryCategory.FinishedGoods, RefType: "WorkOrder", RefId: wo.Id, RefNumber: wo.Number,
-            ClientRequestId: r.ClientRequestId), ct);
+            ClientRequestId: r.ClientRequestId, WorkOrderId: wo.Id), ct);
         if (tx is not null) await tx.CommitAsync(ct);
         return lot;
     }
@@ -671,6 +677,114 @@ public sealed class InventoryService(AppDbContext db, ModuleSupport m, INumberin
         }
         await tx.CommitAsync(ct);
         return new MirrorResult(r.Rows.Count, posts, net);
+    }
+
+    // ---------------------------------------------------------------- lot split / merge
+    /// <summary>Splits part of a lot into a new child lot at the same (or another) location. Ledger out of the parent, into the child, plus the Split genealogy edge.</summary>
+    public async Task<LotResult> SplitLotAsync(SplitInput r, CancellationToken ct)
+    {
+        if (r.Quantity <= 0) throw new AppException("Quantity must be positive.");
+        var from = await EditLocationAsync(r.LocationId, ct);
+        var to = r.ToLocationId is { } tl ? await EditLocationAsync(tl, ct) : from;
+        if (to.SiteId != from.SiteId) throw new AppException("Split within one site; transfer the new lot afterwards.");
+        var parent = await db.Lots.AsNoTracking().FirstOrDefaultAsync(x => x.Id == r.LotId, ct) ?? throw new AppException("Unknown lot.");
+        if (parent.Status is LotStatus.Merged or LotStatus.Consumed or LotStatus.Scrapped or LotStatus.Shipped) throw new ConflictException($"Lot {parent.Number} is {parent.Status}.");
+        var status = r.Status ?? StockStatus.Available;
+        if (await db.InventoryBalances.AnyAsync(b => b.LotId == parent.Id && b.SerialId != null && b.LocationId == from.Id && b.OnHand > 0, ct))
+            throw new AppException("Serialized stock is tracked by unit; reassign serials instead of splitting the lot.");
+        if (r.ClientRequestId is { Length: > 0 } cr && await db.InventoryTransactions.AsNoTracking().FirstOrDefaultAsync(x => x.ClientRequestId == cr, ct) is { RefId: { } prior }
+            && await db.Lots.AsNoTracking().FirstOrDefaultAsync(x => x.Id == prior, ct) is { } done)
+            return new LotResult(done.Id, done.Number, r.Quantity, []);
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
+        var child = await trace.CreateLotAsync(new LotInput(string.IsNullOrWhiteSpace(r.NewLotNumber) ? null : r.NewLotNumber, parent.Kind, parent.PartId, parent.Revision, parent.SupplierId, parent.SupplierLotNumber,
+            parent.CustomerId, parent.CustomerLotNumber, r.Quantity, parent.UnitOfMeasure, parent.ManufacturedOn, parent.ExpiresOn, parent.WorkOrderId, parent.PurchaseOrder, parent.SiteId, parent.DepartmentId), ct);
+        var outE = await PostAsync(new Move(InventoryTxKind.LotSplit, parent.PartId, r.Quantity, parent.Id, FromLocationId: from.Id, FromStatus: status, RefType: "Lot", RefId: child.Id, RefNumber: child.Number,
+            Reason: r.Reason ?? $"Split to {child.Number}", ClientRequestId: r.ClientRequestId, AllowHeld: true), ct);
+        var inE = await PostAsync(new Move(InventoryTxKind.LotSplit, parent.PartId, r.Quantity, child.Id, ToLocationId: to.Id, ToStatus: status, RefType: "Lot", RefId: parent.Id, RefNumber: parent.Number,
+            Reason: r.Reason ?? $"Split from {parent.Number}"), ct);
+        await trace.RecordAsync(new TraceEventInput(TraceEventKind.Split, parent.Id, null, child.Id, null, r.Quantity, null, null, null, null, TxType, outE.Id, outE.Number, r.Reason, null), ct, checkAccess: false);
+        // holds and quality status follow the material: a held parent makes a held child
+        var pl = await db.Lots.FirstAsync(x => x.Id == parent.Id, ct); pl.Quantity = Math.Max(0, pl.Quantity - r.Quantity);
+        if (parent.Status is LotStatus.OnHold or LotStatus.Quarantined) { var c = await db.Lots.FirstAsync(x => x.Id == child.Id, ct); c.Status = parent.Status; }
+        foreach (var h in await ActiveHolds().AsNoTracking().Where(x => x.LotId == parent.Id).ToListAsync(ct))
+            await CreateHoldAsync(new HoldInput(h.Kind, $"{h.Reason} (split from {parent.Number}, hold {h.Number})", h.PartId, child.Id, null, null, h.NcrId, h.CustomerId, h.SupplierId, h.SiteId, h.DepartmentId), ct, checkAccess: false);
+        await db.SaveChangesAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
+        return new LotResult(child.Id, child.Number, r.Quantity, [outE.Number, inE.Number]);
+    }
+
+    /// <summary>Merges whole lots (all stock of each source at the given location) into one target lot. Every source keeps its genealogy edge to the target.</summary>
+    public async Task<LotResult> MergeLotsAsync(MergeInput r, CancellationToken ct)
+    {
+        if (r.Sources is not { Count: > 0 }) throw new AppException("Choose the lots to merge.");
+        var to = await EditLocationAsync(r.ToLocationId, ct);
+        var srcLots = new List<(Lot Lot, WarehouseLocation Loc, StockStatus Status, decimal Qty)>();
+        foreach (var s in r.Sources)
+        {
+            var lot = await db.Lots.AsNoTracking().FirstOrDefaultAsync(x => x.Id == s.LotId, ct) ?? throw new AppException("Unknown lot.");
+            var loc = await EditLocationAsync(s.LocationId, ct);
+            if (loc.SiteId != to.SiteId) throw new AppException("Merge lots within one site.");
+            var status = s.Status ?? StockStatus.Available;
+            var bals = await db.InventoryBalances.AsNoTracking().Where(b => b.LotId == lot.Id && b.OnHand > 0).ToListAsync(ct);
+            if (bals.Any(b => b.SerialId != null)) throw new AppException($"Lot {lot.Number} is serialized; serialized lots are not merged.");
+            if (bals.Any(b => b.LocationId != loc.Id || b.Status != status || b.WorkOrderId != null)) throw new ConflictException($"Lot {lot.Number} has stock elsewhere or in another status; consolidate it at {loc.Code} first.");
+            var q = bals.Sum(b => b.OnHand);
+            if (q <= 0) throw new ConflictException($"Lot {lot.Number} has no stock at {loc.Code}.");
+            if (bals.Any(b => b.Reserved + b.Allocated > 0)) throw new ConflictException($"Lot {lot.Number} has reserved or allocated stock.");
+            srcLots.Add((lot, loc, status, q));
+        }
+        if (srcLots.Select(x => x.Lot.Id).Distinct().Count() != srcLots.Count) throw new AppException("A lot is listed twice.");
+        var first = srcLots[0].Lot;
+        if (srcLots.Any(x => x.Lot.PartId != first.PartId)) throw new AppException("Only lots of the same part can be merged.");
+        if (srcLots.Select(x => x.Lot.Revision).Distinct().Count() > 1) throw new ConflictException("Lots of different revisions cannot be merged.");
+        if (srcLots.Select(x => x.Status).Distinct().Count() > 1) throw new ConflictException("Lots in different quality statuses cannot be merged.");
+        var status0 = srcLots[0].Status;
+        foreach (var (lot, loc, _, _) in srcLots) await EnsureNotHeldAsync(await db.Parts.AsNoTracking().FirstAsync(x => x.Id == lot.PartId, ct), lot, null, null, ct);
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
+        Lot target;
+        if (r.TargetLotId is { } tid)
+        {
+            target = await db.Lots.AsNoTracking().FirstOrDefaultAsync(x => x.Id == tid, ct) ?? throw new AppException("Unknown target lot.");
+            if (target.PartId != first.PartId || target.Revision != first.Revision) throw new AppException("The target lot must be the same part and revision.");
+            if (srcLots.Any(x => x.Lot.Id == target.Id)) throw new AppException("The target lot cannot also be a source.");
+        }
+        else target = await trace.CreateLotAsync(new LotInput(string.IsNullOrWhiteSpace(r.NewLotNumber) ? null : r.NewLotNumber, first.Kind, first.PartId, first.Revision,
+            srcLots.Select(x => x.Lot.SupplierId).Distinct().Count() == 1 ? first.SupplierId : null, null, null, null, 0, first.UnitOfMeasure, null,
+            srcLots.Where(x => x.Lot.ExpiresOn != null).Select(x => x.Lot.ExpiresOn).Min(), null, null, to.SiteId, to.DepartmentId), ct);
+        var numbersOut = new List<string>(); decimal total = 0;
+        foreach (var (lot, loc, st, q) in srcLots)
+        {
+            var o = await PostAsync(new Move(InventoryTxKind.LotMerge, lot.PartId, q, lot.Id, FromLocationId: loc.Id, FromStatus: st, RefType: "Lot", RefId: target.Id, RefNumber: target.Number, Reason: r.Reason ?? $"Merged into {target.Number}"), ct);
+            var i = await PostAsync(new Move(InventoryTxKind.LotMerge, lot.PartId, q, target.Id, ToLocationId: to.Id, ToStatus: status0, RefType: "Lot", RefId: lot.Id, RefNumber: lot.Number, Reason: r.Reason ?? $"Merged from {lot.Number}"), ct);
+            await trace.RecordAsync(new TraceEventInput(TraceEventKind.Merge, lot.Id, null, target.Id, null, q, null, null, lot.SupplierId, null, TxType, o.Id, o.Number, r.Reason, null), ct, checkAccess: false);
+            numbersOut.Add(o.Number); numbersOut.Add(i.Number); total += q;
+        }
+        var t = await db.Lots.FirstAsync(x => x.Id == target.Id, ct); t.Quantity += total;
+        await db.SaveChangesAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
+        return new LotResult(target.Id, target.Number, total, numbersOut);
+    }
+
+    // ---------------------------------------------------------------- WIP
+    /// <summary>Work in process: material issued to open work orders, by order, operation, location and status.</summary>
+    public async Task<List<WipRow>> WipAsync(Guid? siteId, Guid? workOrderId, CancellationToken ct)
+    {
+        var src = (await m.ScopeAsync(db.InventoryBalances.AsNoTracking(), Permissions.InventoryView, ct)).Where(x => x.OnHand > 0 && (x.WorkOrderId != null || x.Category == InventoryCategory.Wip));
+        if (siteId is { } s) src = src.Where(x => x.SiteId == s);
+        if (workOrderId is { } w) src = src.Where(x => x.WorkOrderId == w);
+        var rows = await RowsAsync(await src.Take(2000).ToListAsync(ct), ct);
+        var woIds = rows.Where(x => x.WorkOrderId != null).Select(x => x.WorkOrderId!.Value).Distinct().ToList();
+        var wos = await db.WorkOrders.AsNoTracking().Where(x => woIds.Contains(x.Id)).ToDictionaryAsync(x => x.Id, ct);
+        var lastOps = await db.InventoryTransactions.AsNoTracking().Where(x => x.WorkOrderId != null && woIds.Contains(x.WorkOrderId!.Value) && x.Kind == InventoryTxKind.Issue && x.OperationSequence != null)
+            .Select(x => new { x.WorkOrderId, x.PartId, x.LotId, x.OperationSequence, x.OccurredAt }).ToListAsync(ct);
+        var opNames = await db.WorkOrderOperations.AsNoTracking().Where(o => woIds.Contains(o.WorkOrderId)).Select(o => new { o.WorkOrderId, o.Sequence, o.Name }).ToListAsync(ct);
+        return rows.Where(x => x.WorkOrderId is { } id && wos.ContainsKey(id)).Select(x =>
+        {
+            var wo = wos[x.WorkOrderId!.Value];
+            var op = lastOps.Where(o => o.WorkOrderId == wo.Id && o.PartId == x.PartId && o.LotId == x.LotId).OrderByDescending(o => o.OccurredAt).FirstOrDefault()?.OperationSequence;
+            return new WipRow(wo.Id, wo.Number, wo.Status, wo.ItemNumber, x.PartId, x.PartNumber, x.LotId, x.LotNumber, x.SerialNumber, x.LocationId, x.LocationCode, x.Status, x.OnHand, x.UnitOfMeasure,
+                op, op is { } sq ? opNames.FirstOrDefault(o => o.WorkOrderId == wo.Id && o.Sequence == sq)?.Name : null, x.LastMovedAt);
+        }).OrderBy(x => x.WorkOrderNumber).ThenBy(x => x.OperationSequence).ThenBy(x => x.PartNumber).ToList();
     }
 
     // ---------------------------------------------------------------- scanning helpers
