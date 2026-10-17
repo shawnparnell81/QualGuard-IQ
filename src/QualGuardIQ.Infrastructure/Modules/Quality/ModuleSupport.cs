@@ -45,6 +45,13 @@ public sealed class ModuleSupport(AppDbContext db, IAccessService access, ICurre
         return q.Where(x => sites.Contains(x.SiteId) || (x.DepartmentId != null && pairs.Contains(x.SiteId.ToString() + "|" + x.DepartmentId.ToString())));
     }
 
+    /// <summary>Like ScopeAsync, but returns null instead of throwing when the user lacks the permission (for related-record panels).</summary>
+    public async Task<IQueryable<T>?> TryScopeAsync<T>(IQueryable<T> q, string permission, CancellationToken ct) where T : class, ISiteScoped
+    {
+        var scope = await access.GetScopeAsync(UserId, permission, ct);
+        return scope.IsEmpty ? null : await ScopeAsync(q, permission, ct);
+    }
+
     public async Task IndexAsync(string type, Guid id, string? summary, CancellationToken ct) =>
         await search.IndexAsync(await records.GetAsync(type, id, ct), summary, ct);
 

@@ -14,6 +14,8 @@ using QualGuardIQ.Domain.Documents;
 using QualGuardIQ.Domain.Quality;
 using QualGuardIQ.Domain.Security;
 using QualGuardIQ.Infrastructure.Modules.Quality;
+using QualGuardIQ.Infrastructure.Modules.MasterData;
+using QualGuardIQ.Domain.MasterData;
 
 namespace QualGuardIQ.Infrastructure;
 
@@ -94,6 +96,14 @@ public static class DependencyInjection
 
         s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(FormService.RecordType,
             (id, ct) => sp.GetRequiredService<FormService>().OnApprovedAsync(id, ct), (id, _, ct) => sp.GetRequiredService<FormService>().OnRejectedAsync(id, ct)));
+        s.AddScoped<MasterDataService>();
+        s.AddScoped<SupplierService>();
+        P<Product>(MasterDataService.ProductType, Permissions.MasterDataView, Permissions.MasterDataEdit, x => (x.Number, x.Name, x.Status.ToString(), $"/products/items/{x.Id}", false));
+        P<Part>(MasterDataService.PartRecordType, Permissions.MasterDataView, Permissions.MasterDataEdit, x => (x.PartNumber, x.Name, x.Status.ToString(), $"/products/parts/{x.Id}", false));
+        P<Customer>(MasterDataService.CustomerType, Permissions.MasterDataView, Permissions.MasterDataEdit, x => (x.Code, x.Name, x.Status.ToString(), $"/products/customers/{x.Id}", false));
+        P<Supplier>(SupplierService.RecordType, Permissions.SuppliersView, Permissions.SuppliersEdit, x => (x.Code, x.LegalName, x.Status.ToString(), $"/suppliers/{x.Id}", false));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(SupplierService.RecordType,
+            (id, ct) => sp.GetRequiredService<SupplierService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<SupplierService>().OnRejectedAsync(id, c, ct)));
         s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(NcrService.RecordType,
             (id, ct) => sp.GetRequiredService<NcrService>().OnApprovedAsync(id, ct), (id, _, ct) => sp.GetRequiredService<NcrService>().OnRejectedAsync(id, ct)));
     }
