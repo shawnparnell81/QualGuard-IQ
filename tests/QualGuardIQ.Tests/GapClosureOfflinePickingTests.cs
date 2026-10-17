@@ -184,6 +184,32 @@ public sealed class GapClosureOfflinePickingTests(TestApp app)
         Assert.Equal(7m, (await w.Lead.GetElAsync($"/api/warehouse/stock?locationId={w.Loc["A1"]}")).EnumerateArray().Sum(r => r.GetProperty("onHand").GetDecimal()));
     }
 
+    /// <summary>An offline receipt replayed by two tabs at once books one receipt and receives the stock once.</summary>
+    [Fact]
+    public async Task Concurrent_replays_of_an_offline_receipt_book_one_receipt()
+    {
+        var w = await SetupAsync();
+        var part = await PartAsync(w, "VQ-");
+        var lot = "LQ-" + w.Tag;
+        var rid = Guid.NewGuid().ToString();
+        var line = new { partId = part, revision = (string?)null, purchaseOrderLineId = (Guid?)null, quantityExpected = (decimal?)null, quantityReceived = 9m, supplierLotNumber = (string?)null, lotNumber = lot, serialNumbers = (string[]?)null,
+            inspectionRequired = (bool?)false, inspectionPlanId = (Guid?)null, aqlPlanId = (Guid?)null, aqlInspectionLevel = (string?)null, aqlLevel = (decimal?)null, putAwayLocationId = (Guid?)w.Loc["A1"], clientRequestId = (string?)rid };
+        var body = new { kind = 3, supplierId = (Guid?)null, purchaseOrderId = (Guid?)null, asnNumber = (string?)null, packingSlip = "PS-" + w.Tag, carrierId = (Guid?)null, trackingNumber = (string?)null, receivedOn = Today,
+            receivingLocationId = w.Loc["RECV"], notes = (string?)null, supplierOverrideReason = (string?)null, siteId = w.Site, departmentId = (Guid?)null, channel = "ScanStation", lines = new[] { line } };
+        var replies = await Task.WhenAll(Enumerable.Range(0, 6).Select(_ => w.A.PostAsync("/api/warehouse/receipts", body)));
+        var ids = new HashSet<Guid>();
+        foreach (var r in replies)
+        {
+            var text = await r.Content.ReadAsStringAsync();
+            Assert.True(r.IsSuccessStatusCode, $"replay returned {(int)r.StatusCode}: {text}");
+            ids.Add(JsonDocument.Parse(text).RootElement.GetProperty("id").GetGuid());
+        }
+        Assert.Single(ids);
+        Assert.Equal(9m, (await w.Lead.GetElAsync($"/api/warehouse/stock?locationId={w.Loc["A1"]}")).EnumerateArray().Sum(r => r.GetProperty("onHand").GetDecimal()));
+        var receipts = (await w.Lead.GetElAsync($"/api/warehouse/receipts?siteId={w.Site}")).ToString();
+        Assert.Single(System.Text.RegularExpressions.Regex.Matches(receipts, "\"packingSlip\":\"PS-" + w.Tag + "\""));
+    }
+
     [Fact]
     public async Task Work_changed_while_offline_is_refused_with_a_conflict()
     {
