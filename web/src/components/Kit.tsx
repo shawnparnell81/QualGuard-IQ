@@ -5,9 +5,24 @@ import { useForm, Controller, type FieldValues, type Path, type DefaultValues } 
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { get } from '../api';
+import { SitePicker } from './SitePicker';
 
 export interface Site { id: string; code: string; name: string; isArchived: boolean; departments: { id: string; code: string; name: string }[] }
 export const useSites = () => useQuery({ queryKey: ['sites'], queryFn: () => get<Site[]>('/api/organization/sites') });
+/* Record type display labels: identifiers stay unchanged; the server supplies labels (configurable) and this fallback mirrors its rules. */
+const typeDefaults: Record<string, string> = { ChangeRequest: 'Change Request', Fai: 'First Article Inspection', AqlInspection: 'AQL Inspection', SupplierCorrectiveAction: 'Supplier Corrective Action', ManagementReview: 'Management Review', Ncr: 'Nonconformance Report', Capa: 'Corrective and Preventive Action', FormRecord: 'Form Record' };
+const acronyms = new Set(['aql', 'fai', 'ncr', 'capa', 'ppap', 'apqp', 'fmea', 'pfmea', 'dfmea', 'spc', 'msa', 'lpa', 'scar', 'rma', 'mrb', 'ecr', 'ecn', 'eco', 'bol', 'po', 'erp', 'mes', 'coq', 'sop', 'kpi', 'dcr', 'id', 'qr', '8d']);
+export const humanizeType = (t?: string | null) => {
+  if (!t) return 'Record';
+  if (typeDefaults[t]) return typeDefaults[t];
+  const words = t.match(/[A-Z]{2,}(?=[A-Z][a-z]|\d|$)|[A-Z]?[a-z]+|[A-Z]+|\d+[A-Za-z]?/g) ?? [t];
+  return words.map((w) => (acronyms.has(w.toLowerCase()) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1))).join(' ');
+};
+export function useTypeLabel() {
+  const q = useQuery({ queryKey: ['record-types'], staleTime: 3_600_000, queryFn: () => get<{ type: string; label: string }[]>('/api/record-types') });
+  const map = new Map((q.data ?? []).map((x) => [x.type.toLowerCase(), x.label]));
+  return (t?: string | null) => (t && map.get(t.toLowerCase())) || humanizeType(t);
+}
 export const useUsers = () => useQuery({ queryKey: ['userlookup'], queryFn: () => get<{ id: string; displayName: string }[]>('/api/users/lookup') });
 
 /** Label/value list used in record side panels. */
@@ -114,7 +129,7 @@ export function SchemaForm<S extends z.ZodType<FieldValues, FieldValues>>({ sche
 /** Small dialog with free-form inputs for a state transition. */
 export function StepDialog({ open, title, intro, inputs, confirm, onClose, onConfirm, danger }: {
   open: boolean; title: string; intro?: string; confirm: string; danger?: boolean;
-  inputs: { name: string; label: string; type?: 'text' | 'multiline' | 'date' | 'select' | 'password' | 'checkbox' | 'users'; options?: [string | number, string][]; initial?: string; helper?: string }[];
+  inputs: { name: string; label: string; type?: 'text' | 'multiline' | 'date' | 'select' | 'password' | 'checkbox' | 'users' | 'site'; options?: [string | number, string][]; initial?: string; helper?: string; permission?: string }[];
   onClose: () => void; onConfirm: (v: Record<string, string>) => Promise<void>;
 }) {
   const [v, setV] = useState<Record<string, string>>({});
@@ -128,7 +143,9 @@ export function StepDialog({ open, title, intro, inputs, confirm, onClose, onCon
         {intro && <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{intro}</Typography>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Stack gap={2} sx={{ pt: 1 }}>
-          {inputs.map((i) => i.type === 'users'
+          {inputs.map((i) => i.type === 'site'
+            ? <SitePicker key={i.name} label={i.label} helperText={i.helper} permission={i.permission ?? ''} value={val(i.name, i.initial)} onChange={(id) => setV({ ...v, [i.name]: id ?? '' })} />
+            : i.type === 'users'
             ? <TextField key={i.name} select label={i.label} helperText={i.helper} value={val(i.name, i.initial).split(',').filter(Boolean)} slotProps={{ select: { multiple: true } }}
                 onChange={(e) => setV({ ...v, [i.name]: ([] as string[]).concat(e.target.value as unknown as string[]).join(',') })}>
                 {(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>

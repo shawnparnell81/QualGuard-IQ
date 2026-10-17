@@ -43,7 +43,7 @@ public sealed record UpdateRevisionRequest(string ChangeSummary, DateOnly? Effec
 
 public sealed class DocumentService(
     AppDbContext db, IAccessService access, ICurrentUser current, INumberingService numbers, IRecordRegistry records,
-    WorkflowService workflow, ISearchIndexer search, INotifier notifier, IClock clock, IEnumerable<IRevisionReleasedHandler> released, ISiteCalendar calendar)
+    WorkflowService workflow, ISearchIndexer search, INotifier notifier, IClock clock, IEnumerable<IRevisionReleasedHandler> released, ISiteCalendar calendar, DocumentTypeService types)
 {
     private Task<DateOnly> TodayAsync(Guid siteId, CancellationToken ct) => calendar.TodayAsync(siteId, ct);
 
@@ -54,6 +54,7 @@ public sealed class DocumentService(
         Validate(req.Title, req.DocumentType, req.ReviewIntervalMonths, req.SheetCount);
         if (!await db.Sites.AnyAsync(s => s.Id == req.SiteId && !s.IsArchived, ct)) throw new AppException("Select an active site.");
         if (req.DepartmentId is { } d && !await db.Departments.AnyAsync(x => x.Id == d && x.SiteId == req.SiteId, ct)) throw new AppException("The department does not belong to the site.");
+        var docType = await types.RequireActiveAsync(req.Kind, req.DocumentType, null, ct);
         var rev = string.IsNullOrWhiteSpace(req.InitialRevision) ? "A" : req.InitialRevision.Trim().ToUpperInvariant();
         if (rev.Length > 10) throw new AppException("Revision labels are limited to 10 characters.");
 
@@ -61,7 +62,7 @@ public sealed class DocumentService(
         var doc = new ControlledDocument
         {
             Kind = req.Kind, Number = await numbers.NextAsync(DocumentRecordTypes.ForDocument(req.Kind), req.SiteId, ct),
-            Title = req.Title.Trim(), DocumentType = req.DocumentType.Trim(), SiteId = req.SiteId, DepartmentId = req.DepartmentId,
+            Title = req.Title.Trim(), DocumentType = docType, SiteId = req.SiteId, DepartmentId = req.DepartmentId,
             OwnerId = req.OwnerId ?? current.UserId!.Value, Status = DocumentStatus.Draft, ReviewIntervalMonths = req.ReviewIntervalMonths,
             PartNumber = req.PartNumber?.Trim(), DrawingSize = req.DrawingSize?.Trim(), SheetCount = req.SheetCount
         };
@@ -79,9 +80,10 @@ public sealed class DocumentService(
         if (doc.Status == DocumentStatus.Obsolete) throw new AppException("Obsolete documents cannot be changed.");
         Validate(req.Title, req.DocumentType, req.ReviewIntervalMonths, req.SheetCount);
         if (req.DepartmentId is { } d && !await db.Departments.AnyAsync(x => x.Id == d && x.SiteId == doc.SiteId, ct)) throw new AppException("The department does not belong to the site.");
+        var docType = await types.RequireActiveAsync(doc.Kind, req.DocumentType, doc.DocumentType, ct);
         db.Entry(doc).Property(x => x.RowVersion).OriginalValue = req.RowVersion;
         doc.Title = req.Title.Trim();
-        doc.DocumentType = req.DocumentType.Trim();
+        doc.DocumentType = docType;
         doc.DepartmentId = req.DepartmentId;
         doc.OwnerId = req.OwnerId;
         doc.ReviewIntervalMonths = req.ReviewIntervalMonths;

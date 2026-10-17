@@ -6,7 +6,7 @@ import { get, post } from '../api';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
 import { fmtDate, fmtDateTime } from '../components/Status';
-import { Section, StepDialog, useRunner, useUsers } from '../components/Kit';
+import { Section, StepDialog, useRunner, useTypeLabel, useUsers } from '../components/Kit';
 import { useAuth } from '../auth';
 import { mono } from '../theme';
 import { mod, num, Tile, SiteSelect, useSite } from './Enterprise';
@@ -220,13 +220,14 @@ export function SecurityOps() {
 }
 
 export function ModuleRegistry() {
+  const typeLabel = useTypeLabel();
   const q = useQuery({ queryKey: ['platform-modules'], queryFn: () => get<any[]>('/api/platform/modules') });
   return (
     <ModuleWorkspace module={P()} crumbs={crumbs('Modules')} title="Module registry">
       <Grid container spacing={1.5}>{(q.data ?? []).map((m) => <Grid key={m.module} size={{ xs: 12, sm: 6, md: 4 }}><Paper sx={{ p: 1.5 }}>
         <Stack direction="row" justifyContent="space-between"><Typography sx={{ fontWeight: 600 }}>{m.module}</Typography><Chip size="small" color="success" label={`v${m.version}`} /></Stack>
         <Typography variant="caption" color="text.secondary">Depends on {m.dependsOn.join(', ')}</Typography>
-        <Box sx={{ mt: 1 }}>{m.recordTypes.map((t: string) => <Chip key={t} size="small" variant="outlined" label={t} sx={{ mr: .5, mb: .5 }} />)}</Box></Paper></Grid>)}</Grid>
+        <Box sx={{ mt: 1 }}>{m.recordTypes.map((t: string) => <Chip key={t} size="small" variant="outlined" label={typeLabel(t)} sx={{ mr: .5, mb: .5 }} />)}</Box></Paper></Grid>)}</Grid>
     </ModuleWorkspace>
   );
 }

@@ -52,3 +52,19 @@ public class DocumentRevision : Entity, IAudited, IContentLock
     public IReadOnlyCollection<string> MutableWhenLocked { get; } =
         [nameof(Status), nameof(SupersededOn), nameof(ObsoletedAt), nameof(ObsoleteReason)];
 }
+
+/// <summary>
+/// Governed document type library (one row per kind + name). Seeded types carry a SeedKey so re-seeding never duplicates
+/// them or undoes a rename or deactivation; customer-added types have no SeedKey. Inactive types cannot be chosen for new documents.
+/// </summary>
+public class DocumentTypeDefinition : Entity, IAudited
+{
+    public DocumentKind Kind { get; set; }
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    public string? SeedKey { get; set; }
+    public bool IsSystem { get; set; }
+    public bool IsActive { get; set; } = true;
+    public int SortOrder { get; set; }
+    public string AuditLabel => $"Document type {Name}";
+}

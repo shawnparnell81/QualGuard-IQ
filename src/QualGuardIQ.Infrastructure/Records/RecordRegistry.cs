@@ -9,10 +9,11 @@ public sealed class RecordRegistry(IEnumerable<IRecordTypeProvider> providers, I
     private readonly Dictionary<string, IRecordTypeProvider> _providers = providers.ToDictionary(p => p.Type, StringComparer.OrdinalIgnoreCase);
 
     public bool IsKnownType(string type) => _providers.ContainsKey(type);
+    public IReadOnlyCollection<string> KnownTypes => _providers.Keys;
 
     public async Task<RecordInfo> GetAsync(string type, Guid id, CancellationToken ct = default)
     {
-        if (!_providers.TryGetValue(type, out var p)) throw new NotFoundException($"Record type '{type}'");
+        if (!_providers.TryGetValue(type, out var p)) throw new NotFoundException("Record type");
         return await p.FindAsync(id, ct) ?? throw new NotFoundException("Record");
     }
 
