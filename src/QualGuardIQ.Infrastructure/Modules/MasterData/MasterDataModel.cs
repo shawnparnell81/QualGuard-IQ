@@ -26,6 +26,7 @@ public partial class AppDbContext
             e.ToTable("product_families");
             e.Property(x => x.Code).HasMaxLength(40).IsRequired();
             e.Property(x => x.Name).HasMaxLength(200).IsRequired();
+            e.Property(x => x.RegulatoryCategory).HasMaxLength(100);
             e.HasIndex(x => x.Code).IsUnique();
         });
         b.Entity<Product>(e =>

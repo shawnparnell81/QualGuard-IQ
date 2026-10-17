@@ -358,16 +358,53 @@ public class CapabilityStudy : Entity, IAudited, ISiteScoped
 // ---------- governance ----------
 public enum RetentionAction { Archive = 0, Dispose = 1, Review = 2 }
 
+/// <summary>Retention rule. Every filter left empty matches any record; filled filters must all match (combined conditions).
+/// When several active policies match a record, the lowest Priority number wins, then the most specific policy; a tie between
+/// policies that disagree is a conflict, resolved conservatively (longest retention, review instead of disposal) and flagged.</summary>
 public class RetentionPolicy : Entity, IAudited
 {
     public string Name { get; set; } = "";
-    public string RecordType { get; set; } = "";
+    /// <summary>Record type identifier, or null for every type (optionally narrowed by Module).</summary>
+    public string? RecordType { get; set; }
+    public string? Module { get; set; }
+    /// <summary>Matches the product family code or name of the record's product (directly or through its part).</summary>
     public string? ProductFamily { get; set; }
+    /// <summary>Matches the regulatory category of the record's product family.</summary>
     public string? RegulatoryCategory { get; set; }
+    public Guid? SiteId { get; set; }
+    public Guid? DepartmentId { get; set; }
+    public Guid? CustomerId { get; set; }
+    public Guid? SupplierId { get; set; }
+    public QualGuardIQ.Domain.Platform.DataClassification? Confidentiality { get; set; }
+    /// <summary>1 is the highest priority.</summary>
+    public int Priority { get; set; } = 100;
     public int RetainYears { get; set; }
     public RetentionAction Action { get; set; }
     public bool IsActive { get; set; } = true;
+    /// <summary>Incremented on every saved change; each version's criteria are kept in retention_policy_versions.</summary>
+    public int Version { get; set; } = 1;
     public string AuditLabel => $"retention policy {Name}";
+}
+
+/// <summary>Frozen copy of a retention policy's criteria at one version, so an earlier evaluation can be reproduced.</summary>
+public class RetentionPolicyVersion : Entity, IAudited, IAppendOnly
+{
+    public Guid PolicyId { get; set; }
+    public int Version { get; set; }
+    public string Criteria { get; set; } = "{}";
+    public Guid SavedById { get; set; }
+    public DateTimeOffset SavedAt { get; set; }
+    public string AuditLabel => $"retention policy version {Version}";
+}
+
+/// <summary>Confidentiality classification of a quality record, used by retention filters (records without a row are Internal).</summary>
+public class RecordConfidentiality : Entity, IAudited
+{
+    public string RecordType { get; set; } = "";
+    public Guid RecordId { get; set; }
+    public QualGuardIQ.Domain.Platform.DataClassification Classification { get; set; } = QualGuardIQ.Domain.Platform.DataClassification.Internal;
+    public string Reason { get; set; } = "";
+    public string AuditLabel => $"{RecordType} classification {Classification}";
 }
 
 public enum RetentionDecisionKind { Archived = 0, DisposalApproved = 1, Extended = 2, LegalHold = 3 }
@@ -380,6 +417,8 @@ public class RetentionDecision : Entity, IAudited, IAppendOnly
     public Guid RecordId { get; set; }
     public string RecordNumber { get; set; } = "";
     public RetentionDecisionKind Decision { get; set; }
+    /// <summary>Version of the policy the decision was taken under.</summary>
+    public int PolicyVersion { get; set; } = 1;
     public string Reason { get; set; } = "";
     public Guid DecidedById { get; set; }
     public DateTimeOffset DecidedAt { get; set; }

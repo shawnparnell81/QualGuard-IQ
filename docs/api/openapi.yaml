@@ -14198,6 +14198,144 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/governance/retention/modules:
+    get:
+      tags:
+        - Governance
+      description: 'Requires permission: `governance.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/governance/retention/policies/{id}/versions':
+    get:
+      tags:
+        - Governance
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RetentionPolicyVersion'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RetentionPolicyVersion'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RetentionPolicyVersion'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/governance/retention/evaluate:
+    get:
+      tags:
+        - Governance
+      description: Requires an authenticated user.
+      parameters:
+        - name: recordType
+          in: query
+          schema:
+            type: string
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: policyId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: version
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/RetentionStatus'
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/RetentionEvaluation'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RetentionEvaluation'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/RetentionEvaluation'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/governance/retention/classification:
+    put:
+      tags:
+        - Governance
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecordClassificationInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RecordClassificationInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RecordClassificationInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/governance/continuity:
     get:
       tags:
@@ -23634,6 +23772,37 @@ paths:
       tags:
         - MasterData
       description: 'Requires permission: `masterdata.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FamilyRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/FamilyRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/FamilyRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/master/families/{id}':
+    put:
+      tags:
+        - MasterData
+      description: 'Requires permission: `masterdata.edit` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
       requestBody:
         content:
           application/json:
@@ -40568,6 +40737,10 @@ components:
           type: string
         name:
           type: string
+        regulatoryCategory:
+          type:
+            - 'null'
+            - string
     FieldCheck:
       type: object
       properties:
@@ -47233,6 +47406,23 @@ components:
           type:
             - 'null'
             - string
+    RecordClassificationInput:
+      required:
+        - recordType
+        - recordId
+        - classification
+        - reason
+      type: object
+      properties:
+        recordType:
+          type: string
+        recordId:
+          type: string
+          format: uuid
+        classification:
+          $ref: '#/components/schemas/DataClassification'
+        reason:
+          type: string
     RecordInfo:
       required:
         - type
@@ -47800,6 +47990,96 @@ components:
             $ref: '#/components/schemas/ResultInput'
     RetentionAction:
       type: integer
+    RetentionCandidate:
+      required:
+        - recordType
+        - recordId
+        - number
+        - createdAt
+        - siteId
+        - module
+        - productFamily
+        - regulatoryCategory
+        - confidentiality
+        - status
+        - policyId
+        - policyName
+        - policyVersion
+        - retainYears
+        - action
+        - retainUntil
+        - conflict
+        - explanation
+        - matches
+      type: object
+      properties:
+        recordType:
+          type: string
+        recordId:
+          type: string
+          format: uuid
+        number:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        siteId:
+          type: string
+          format: uuid
+        module:
+          type: string
+        productFamily:
+          type:
+            - 'null'
+            - string
+        regulatoryCategory:
+          type:
+            - 'null'
+            - string
+        confidentiality:
+          $ref: '#/components/schemas/DataClassification'
+        status:
+          $ref: '#/components/schemas/RetentionStatus'
+        policyId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        policyName:
+          type:
+            - 'null'
+            - string
+        policyVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        retainYears:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        action:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/RetentionAction'
+        retainUntil:
+          type:
+            - 'null'
+            - string
+          format: date
+        conflict:
+          type: boolean
+        explanation:
+          type: string
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/RetentionMatch'
     RetentionDecision:
       type: object
       properties:
@@ -47815,6 +48095,12 @@ components:
           type: string
         decision:
           $ref: '#/components/schemas/RetentionDecisionKind'
+        policyVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
         reason:
           type: string
         decidedById:
@@ -47893,13 +48179,115 @@ components:
         siteId:
           type: string
           format: uuid
+    RetentionEvaluation:
+      required:
+        - evaluatedAt
+        - dryRun
+        - evaluated
+        - truncated
+        - due
+        - onHold
+        - conflicts
+        - noPolicy
+        - candidates
+      type: object
+      properties:
+        evaluatedAt:
+          type: string
+          format: date-time
+        dryRun:
+          type: boolean
+        evaluated:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        truncated:
+          type: boolean
+        due:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        onHold:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        conflicts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        noPolicy:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        candidates:
+          type: array
+          items:
+            $ref: '#/components/schemas/RetentionCandidate'
+    RetentionMatch:
+      required:
+        - policyId
+        - name
+        - version
+        - priority
+        - specificity
+        - retainYears
+        - action
+      type: object
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        version:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        priority:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        specificity:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        retainYears:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        action:
+          $ref: '#/components/schemas/RetentionAction'
     RetentionPolicy:
       type: object
       properties:
         name:
           type: string
         recordType:
-          type: string
+          type:
+            - 'null'
+            - string
+        module:
+          type:
+            - 'null'
+            - string
         productFamily:
           type:
             - 'null'
@@ -47908,6 +48296,36 @@ components:
           type:
             - 'null'
             - string
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        confidentiality:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/DataClassification'
+        priority:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
         retainYears:
           pattern: '^-?(?:0|[1-9]\d*)$'
           type:
@@ -47918,6 +48336,12 @@ components:
           $ref: '#/components/schemas/RetentionAction'
         isActive:
           type: boolean
+        version:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
         auditLabel:
           type:
             - 'null'
@@ -47960,7 +48384,9 @@ components:
         name:
           type: string
         recordType:
-          type: string
+          type:
+            - 'null'
+            - string
         productFamily:
           type:
             - 'null'
@@ -47980,6 +48406,90 @@ components:
         isActive:
           type: boolean
           default: true
+        module:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        confidentiality:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/DataClassification'
+        priority:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+          default: 100
+    RetentionPolicyVersion:
+      type: object
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        version:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        criteria:
+          type: string
+        savedById:
+          type: string
+          format: uuid
+        savedAt:
+          type: string
+          format: date-time
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     RetentionRequest:
       required:
         - retainUntil
@@ -47991,6 +48501,8 @@ components:
           format: date
         reason:
           type: string
+    RetentionStatus:
+      type: integer
     ReturnDisposition:
       type: integer
     ReturnDispositionInput:

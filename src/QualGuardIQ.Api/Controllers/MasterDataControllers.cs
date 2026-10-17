@@ -14,16 +14,21 @@ namespace QualGuardIQ.Api.Controllers;
 [ApiController, Authorize, Route("api/master")]
 public sealed class MasterDataController(AppDbContext db, MasterDataService svc, ModuleSupport m) : ControllerBase
 {
-    public sealed record FamilyRequest(string Code, string Name);
+    public sealed record FamilyRequest(string Code, string Name, string? RegulatoryCategory = null);
 
     [HttpGet("families")]
     [RequirePermission(Permissions.MasterDataView)]
     public async Task<object> Families(CancellationToken ct) =>
-        await db.ProductFamilies.AsNoTracking().Where(f => !f.IsArchived).OrderBy(f => f.Code).Select(f => new { f.Id, f.Code, f.Name }).ToListAsync(ct);
+        await db.ProductFamilies.AsNoTracking().Where(f => !f.IsArchived).OrderBy(f => f.Code).Select(f => new { f.Id, f.Code, f.Name, f.RegulatoryCategory }).ToListAsync(ct);
 
     [HttpPost("families")]
     [RequirePermission(Permissions.MasterDataEdit)]
-    public async Task<object> CreateFamily(FamilyRequest r, CancellationToken ct) => new { (await svc.CreateFamilyAsync(r.Code, r.Name, ct)).Id };
+    public async Task<object> CreateFamily(FamilyRequest r, CancellationToken ct) => new { (await svc.CreateFamilyAsync(r.Code, r.Name, ct, r.RegulatoryCategory)).Id };
+
+    /// <summary>Renames a family or sets its regulatory category (used by retention policies).</summary>
+    [HttpPut("families/{id:guid}")]
+    [RequirePermission(Permissions.MasterDataEdit)]
+    public async Task<IActionResult> UpdateFamily(Guid id, FamilyRequest r, CancellationToken ct) { await svc.UpdateFamilyAsync(id, r.Name, r.RegulatoryCategory, ct); return NoContent(); }
 
     [HttpGet("products")]
     [RequirePermission(Permissions.MasterDataView)]

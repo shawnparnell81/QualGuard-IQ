@@ -84,8 +84,8 @@ export function ProductNew() {
           { name: 'description', label: 'Description', type: 'multiline' },
         ]}
         onSubmit={async (v) => { const r = await post<{ id: string }>('/api/master/products', { ...v, familyId: v.familyId || null, departmentId: v.departmentId || null, ownerId: v.ownerId || null }); nav(`/products/items/${r.id}`); }} />
-      <StepDialog open={dlg} title="Add product family" confirm="Add" onClose={() => setDlg(false)} inputs={[{ name: 'code', label: 'Code' }, { name: 'name', label: 'Name' }]}
-        onConfirm={async (v) => { await post('/api/master/families', v); qc.invalidateQueries({ queryKey: ['families'] }); }} />
+      <StepDialog open={dlg} title="Add product family" confirm="Add" onClose={() => setDlg(false)} inputs={[{ name: 'code', label: 'Code' }, { name: 'name', label: 'Name' }, { name: 'regulatoryCategory', label: 'Regulatory category (optional)', helper: 'Used by retention policies, e.g. FDA Class II or IATF safety' }]}
+        onConfirm={async (v) => { await post('/api/master/families', { ...v, regulatoryCategory: v.regulatoryCategory || null }); qc.invalidateQueries({ queryKey: ['families'] }); }} />
     </ModuleWorkspace>
   );
 }

@@ -156,6 +156,14 @@ public sealed class GovernanceController(GovernanceService svc) : ControllerBase
     [HttpPost("retention/policies/{id:guid}/decisions")] public async Task<IActionResult> Decide(Guid id, RetentionDecisionInput r, CancellationToken ct) { await svc.DecideAsync(id, r, ct); return NoContent(); }
     [HttpGet("retention/decisions")] public Task<List<RetentionDecision>> Decisions(CancellationToken ct) => svc.DecisionsAsync(ct);
     [HttpGet("retention/record-types")] [RequirePermission(Permissions.GovernanceView)] public string[] RecordTypes() => GovernanceService.RetentionTypes;
+    [HttpGet("retention/modules")] [RequirePermission(Permissions.GovernanceView)] public object RetentionModules() => RetentionEngine.ModuleOf.Select(x => new { RecordType = x.Key, Module = x.Value });
+    [HttpGet("retention/policies/{id:guid}/versions")] public Task<List<RetentionPolicyVersion>> PolicyVersions(Guid id, CancellationToken ct) => svc.PolicyVersionsAsync(id, ct);
+    /// <summary>Dry run: evaluates records against the active policies (or one frozen policy version) and explains the outcome. Never disposes of anything.</summary>
+    [HttpGet("retention/evaluate")]
+    public Task<RetentionEvaluation> Evaluate([FromQuery] string? recordType, [FromQuery] Guid? siteId, [FromQuery] Guid? policyId, [FromQuery] int? version, [FromQuery] RetentionStatus? status,
+        [FromQuery] int page = 1, [FromQuery] int pageSize = 100, CancellationToken ct = default) =>
+        svc.EvaluateAsync(new RetentionEngine.Options(recordType, siteId, policyId, version, status, page, pageSize), ct);
+    [HttpPut("retention/classification")] public async Task<IActionResult> Classify(RecordClassificationInput r, CancellationToken ct) { await svc.ClassifyAsync(r, ct); return NoContent(); }
 
     [HttpGet("continuity")] [RequirePermission(Permissions.GovernanceView)] public Task<List<ContinuityExercise>> Exercises(CancellationToken ct) => svc.ExercisesAsync(ct);
     [HttpPost("continuity")] [RequirePermission(Permissions.GovernanceEdit)] public async Task<object> Plan(ContinuityInput r, CancellationToken ct) { var e = await svc.PlanExerciseAsync(r, ct); return new { e.Id, e.Number }; }
