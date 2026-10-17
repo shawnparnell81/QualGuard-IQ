@@ -13,7 +13,12 @@ jobs:
         image: bitnami/minio:latest
         env: { MINIO_ROOT_USER: ci_minio, MINIO_ROOT_PASSWORD: ci_minio_secret }
         ports: ["9000:9000"]
+      clamav:
+        image: clamav/clamav:stable
+        ports: ["3310:3310"]
+        options: --health-cmd clamdcheck.sh --health-interval 15s --health-retries 30 --health-start-period 120s
     env:
+      QGIQ_CLAMAV: "1"
       QMS_TEST_S3: http://localhost:9000
       QMS_TEST_S3_KEY: ci_minio
       QMS_TEST_S3_SECRET: ci_minio_secret

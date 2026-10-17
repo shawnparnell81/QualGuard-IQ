@@ -39,7 +39,10 @@ public static class DependencyInjection
         services.AddScoped<SearchService>();
         services.AddScoped<INotifier, Notifier>();
         services.AddSingleton<IFileStorage, S3FileStorage>();
-        services.AddSingleton<IMalwareScanner, NoMalwareScanner>();
+        if (string.Equals(config["MalwareScanning:Provider"], "ClamAV", StringComparison.OrdinalIgnoreCase))
+            services.AddSingleton<IMalwareScanner, ClamAvScanner>();
+        else
+            services.AddSingleton<IMalwareScanner, NoMalwareScanner>();
         services.AddScoped<AttachmentService>();
         services.AddScoped<WorkflowService>();
         services.AddScoped<ActionService>();

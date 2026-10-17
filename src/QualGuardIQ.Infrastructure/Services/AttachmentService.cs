@@ -43,7 +43,10 @@ public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMa
         if (total == 0) throw new AppException("The file is empty.");
         buffer.Position = 0;
         var scan = await scanner.ScanAsync(buffer, name, ct);
+        buffer.Position = 0;
         if (scan == ScanStatus.Infected) throw new AppException("The file was rejected by the malware scanner.");
+        if (scan == ScanStatus.Failed && !config.GetValue("MalwareScanning:AllowWhenUnavailable", false))
+            throw new AppException("The malware scanner is unavailable, so the file was not accepted. Try again later.", 503);
 
         var a = new Attachment
         {
