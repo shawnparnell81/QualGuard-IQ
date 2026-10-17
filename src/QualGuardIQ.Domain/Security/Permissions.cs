@@ -42,6 +42,10 @@ public static class Permissions
     public const string SuppliersApprove = "suppliers.approve";
     /// <summary>Use a restricted (suspended, disqualified, unapproved, expired) supplier with a recorded reason.</summary>
     public const string SuppliersOverride = "suppliers.override";
+    public const string ComplaintsView = "complaints.view";
+    public const string ComplaintsEdit = "complaints.edit";
+    /// <summary>Verify complaint corrective action and reopen closed complaints.</summary>
+    public const string ComplaintsApprove = "complaints.approve";
 
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)

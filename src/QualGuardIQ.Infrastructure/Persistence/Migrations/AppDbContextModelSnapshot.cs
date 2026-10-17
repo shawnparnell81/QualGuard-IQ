@@ -1912,6 +1912,222 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("capas", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.Complaint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly?>("AcceptedOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("BatchNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("ClosedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ClosureNotes")
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("ComplaintDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTimeOffset?>("ContainedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Containment")
+                        .HasColumnType("text");
+
+                    b.Property<string>("CorrectiveAction")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool?>("CustomerAccepted")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("CustomerContact")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CustomerFeedback")
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CustomerReference")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CustomerResponse")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)");
+
+                    b.Property<bool?>("FailureConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("FailureMode")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Investigation")
+                        .HasColumnType("text");
+
+                    b.Property<string>("LotNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("PartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PartNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("PartRevision")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<Guid?>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal?>("Quantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<int>("ReopenCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ReopenReason")
+                        .HasColumnType("text");
+
+                    b.Property<DateOnly>("ReportedOn")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("ResponseDueOn")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ResponseSentOn")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ReturnAuthorization")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("ReturnCondition")
+                        .HasColumnType("text");
+
+                    b.Property<string>("ReturnEvaluation")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("ReturnExpected")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal?>("ReturnQuantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<DateOnly?>("ReturnReceivedOn")
+                        .HasColumnType("date");
+
+                    b.Property<int>("Risk")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RootCause")
+                        .HasColumnType("text");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TestResults")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("VerificationNotes")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("VerifiedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("VerifiedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Warranty")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CustomerId");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("PartId");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("SiteId", "Status");
+
+                    b.ToTable("Complaints", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_complaint_qty", "\"Quantity\" IS NULL OR \"Quantity\" >= 0");
+                        });
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.Equipment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3967,6 +4183,36 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasForeignKey("SiteId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.Complaint", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Part", null)
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.Equipment", b =>
