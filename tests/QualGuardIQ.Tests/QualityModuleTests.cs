@@ -88,6 +88,7 @@ public sealed class QualityModuleTests(TestApp app)
         Assert.Equal(HttpStatusCode.OK, (await mrb.SignAsync(await mrb.PendingApprovalIdAsync(ncr.Str("number")))).StatusCode);
         Assert.Equal(3, (await owner.GetElAsync($"/api/ncrs/{ncrId}")).Int("status"));
         Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostAsync($"/api/ncrs/{ncrId}/close", new { text = "Reworked" })).StatusCode); // CAPA required
+        Assert.DoesNotContain("close", (await owner.GetElAsync($"/api/ncrs/{ncrId}")).GetProperty("allowed").ToString());
 
         var capa = await (await owner.PostOkAsync($"/api/ncrs/{ncrId}/capa", new { title = (string?)null, problemStatement = (string?)null, ownerId = (Guid?)null })).JsonAsync();
         var capaId = capa.Id();
@@ -213,10 +214,13 @@ public sealed class QualityModuleTests(TestApp app)
         // events are immutable: no edit endpoint, and the entity rejects changes (covered by the lock interceptor)
         Assert.Equal(HttpStatusCode.Forbidden, (await tech.PostAsync($"/api/calibration/equipment/{eqId}/return-to-service")).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await quality.PostAsync($"/api/calibration/equipment/{eqId}/return-to-service")).StatusCode); // IA open
+        Assert.DoesNotContain("returnToService", (await quality.GetElAsync($"/api/calibration/equipment/{eqId}")).GetProperty("allowed").ToString());
         Assert.Equal(HttpStatusCode.Forbidden, (await tech.PostAsync($"/api/calibration/impact/{iaId}/complete", new { affectedProduct = "x", assessment = "x", decision = "x" })).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await quality.PostAsync($"/api/calibration/impact/{iaId}/complete", new { affectedProduct = "Lots 4400-4471", assessment = "Error +0.006 against ±0.010 part tolerance; 3 features at risk re-measured", decision = "Product acceptable except lot 4471 (see NCR)" })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await quality.PostAsync($"/api/calibration/equipment/{eqId}/return-to-service")).StatusCode); // no passing cal after OOT
         await tech.PostOkAsync($"/api/calibration/equipment/{eqId}/events", new { performedOn = Today, performedBy = "Metrology lab", result = 1, asFound = "+0.006", asLeft = "+0.000", standardsUsed = "GB-2", certificateNumber = "C-1003" });
+        Assert.Contains("returnToService", (await quality.GetElAsync($"/api/calibration/equipment/{eqId}")).GetProperty("allowed").ToString());
+        Assert.DoesNotContain("returnToService", (await tech.GetElAsync($"/api/calibration/equipment/{eqId}")).GetProperty("allowed").ToString());
         Assert.Equal(HttpStatusCode.NoContent, (await quality.PostAsync($"/api/calibration/equipment/{eqId}/return-to-service")).StatusCode);
         Assert.Equal(0, (await tech.GetElAsync($"/api/calibration/equipment/{eqId}")).Int("status"));
     }

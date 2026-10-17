@@ -23,7 +23,7 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
     public sealed record AddLinkRequest(string ToType, Guid ToId, string? LinkType);
     public sealed record AddCommentRequest(string Body);
     public sealed record ActionDto(Guid Id, string Number, string Title, string? Description, string ActionType, Guid AssigneeId, string AssigneeName,
-        DateOnly DueDate, ActionStatus Status, bool RequiresVerification, string? CompletionNotes, string? VerificationNotes, bool IsOverdue);
+        DateOnly DueDate, ActionStatus Status, bool RequiresVerification, string? CompletionNotes, string? VerificationNotes, bool IsOverdue, Guid? CompletedById = null);
     public sealed record ApprovalDto(Guid Id, ApprovalStatus Status, int CurrentStep, DateTimeOffset SubmittedAt, IReadOnlyList<DecisionDto> Decisions);
     public sealed record DecisionDto(int StepOrder, string StepName, string SignerName, bool Approved, string Meaning, string? Comment, DateTimeOffset SignedAt);
 

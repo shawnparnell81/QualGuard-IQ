@@ -81,7 +81,7 @@ export function NcrNew() {
   );
 }
 
-interface NcrDetailDto { id: string; number: string; title: string; description: string; source: string; partNumber: string | null; lotNumber: string | null; quantityAffected: number | null; detectedOn: string; severity: number; status: number; containmentSummary: string | null; disposition: number; dispositionJustification: string | null; capaRequired: boolean; closureNotes: string | null; closedAt: string | null; ownerName: string; siteCode: string; capas: { id: string; number: string; status: number }[]; canEdit: boolean }
+interface NcrDetailDto { id: string; number: string; title: string; description: string; source: string; partNumber: string | null; lotNumber: string | null; quantityAffected: number | null; detectedOn: string; severity: number; status: number; containmentSummary: string | null; disposition: number; dispositionJustification: string | null; capaRequired: boolean; closureNotes: string | null; closedAt: string | null; ownerName: string; siteCode: string; capas: { id: string; number: string; status: number }[]; canEdit: boolean; allowed: string[] }
 
 export function NcrDetail() {
   const { id } = useParams();
@@ -104,10 +104,10 @@ export function NcrDetail() {
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Actions', value: 'actions' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {approval && <Button variant="contained" color="secondary" onClick={() => setSigning(true)}>Sign disposition</Button>}
-        {d.canEdit && s <= 1 && <Button variant="outlined" onClick={() => setDlg('contain')}>Record containment</Button>}
-        {d.canEdit && s === 1 && <Button variant="contained" onClick={() => setDlg('disposition')}>Propose disposition</Button>}
-        {d.canEdit && s >= 1 && s <= 3 && <Button variant="outlined" onClick={() => setDlg('capa')}>Create CAPA</Button>}
-        {d.canEdit && s === 3 && <Button variant="contained" onClick={() => setDlg('close')}>Close NCR</Button>}
+        {d.allowed.includes('contain') && <Button variant="outlined" onClick={() => setDlg('contain')}>Record containment</Button>}
+        {d.allowed.includes('dispose') && <Button variant="contained" onClick={() => setDlg('disposition')}>Propose disposition</Button>}
+        {d.allowed.includes('capa') && <Button variant="outlined" onClick={() => setDlg('capa')}>Create CAPA</Button>}
+        {d.allowed.includes('close') && <Button variant="contained" onClick={() => setDlg('close')}>Close NCR</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
@@ -123,7 +123,7 @@ export function NcrDetail() {
             <Section title="Corrective action">{d.capas.length ? d.capas.map((c) => <Stack key={c.id} direction="row" gap={1} alignItems="center"><Link component={RouterLink} to={`/capa/${c.id}`} sx={{ fontFamily: mono }}>{c.number}</Link><StatusChip status={capaStatus[c.status]} /></Stack>) : 'No CAPA linked.'}</Section>
             {d.closureNotes && <Section title="Closure"><Prose label="Notes" text={d.closureNotes} /></Section>}
           </Stack>}
-          {tab === 'actions' && <ActionsPanel type="Ncr" id={d.id} canEdit={d.canEdit && s < 4} />}
+          {tab === 'actions' && <ActionsPanel type="Ncr" id={d.id} canEdit={d.allowed.includes('actions')} canVerifyAs={d.canEdit} onChanged={refresh} />}
           {tab === 'approvals' && <ApprovalsPanel type="Ncr" id={d.id} />}
           {tab === 'more' && <AttachmentsAndHistory type="Ncr" id={d.id} canEdit={d.canEdit && s < 4} />}
         </Box>
@@ -185,7 +185,7 @@ export function CapaNew() {
   );
 }
 
-interface CapaDetailDto { id: string; number: string; title: string; problemStatement: string; capaType: string; source: string; status: number; rootCauseMethod: string | null; rootCause: string | null; effectivenessCriteria: string | null; effectivenessDueOn: string | null; effectivenessResult: string | null; wasEffective: boolean | null; closedAt: string | null; ownerName: string; verifiedByName: string | null; siteCode: string; canEdit: boolean; canVerify: boolean }
+interface CapaDetailDto { id: string; number: string; title: string; problemStatement: string; capaType: string; source: string; status: number; rootCauseMethod: string | null; rootCause: string | null; effectivenessCriteria: string | null; effectivenessDueOn: string | null; effectivenessResult: string | null; wasEffective: boolean | null; closedAt: string | null; ownerName: string; verifiedByName: string | null; siteCode: string; canEdit: boolean; canVerify: boolean; allowed: string[] }
 
 export function CapaDetail() {
   const { id } = useParams();
@@ -202,9 +202,9 @@ export function CapaDetail() {
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={capaStatus[s]} /></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Actions', value: 'actions' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
-        {d.canEdit && s <= 2 && <Button variant="outlined" onClick={() => setDlg('rca')}>{d.rootCause ? 'Edit root cause' : 'Record root cause'}</Button>}
-        {d.canEdit && s === 2 && <Button variant="contained" onClick={() => run(() => post(`/api/capas/${d.id}/effectiveness-check`))}>Ready for effectiveness check</Button>}
-        {d.canVerify && s === 3 && <Button variant="contained" color="secondary" onClick={() => setDlg('verify')}>Verify effectiveness</Button>}
+        {d.allowed.includes('rootCause') && <Button variant="outlined" onClick={() => setDlg('rca')}>{d.rootCause ? 'Edit root cause' : 'Record root cause'}</Button>}
+        {d.allowed.includes('check') && <Button variant="contained" onClick={() => run(() => post(`/api/capas/${d.id}/effectiveness-check`))}>Ready for effectiveness check</Button>}
+        {d.allowed.includes('verify') && <Button variant="contained" color="secondary" onClick={() => setDlg('verify')}>Verify effectiveness</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
@@ -217,7 +217,7 @@ export function CapaDetail() {
             <Section title="Root cause">{d.rootCause ? <><Prose label="Method" text={d.rootCauseMethod} /><Prose label="Root cause" text={d.rootCause} /></> : <Alert severity="warning">Root cause not yet determined.</Alert>}</Section>
             <Section title="Effectiveness"><Prose label="Criteria" text={d.effectivenessCriteria} />{d.effectivenessResult ? <><Prose label="Result" text={d.effectivenessResult} /><StatusChip status={d.wasEffective ? 'Verified' : 'Rejected'} /></> : <Box sx={{ color: 'text.secondary', fontSize: 14 }}>Verified by someone other than the owner once all actions are closed.</Box>}</Section>
           </Stack>}
-          {tab === 'actions' && <ActionsPanel type="Capa" id={d.id} canEdit={d.canEdit && s < 3} />}
+          {tab === 'actions' && <ActionsPanel type="Capa" id={d.id} canEdit={d.allowed.includes('actions')} canVerifyAs={d.canEdit} onChanged={() => qc.invalidateQueries({ queryKey: ['capa', id] })} />}
           {tab === 'more' && <AttachmentsAndHistory type="Capa" id={d.id} canEdit={d.canEdit && s < 4} />}
         </Box>
       </Box>

@@ -114,7 +114,7 @@ export function AuditNew() {
 
 interface ChecklistItem { id: string; sequence: number; clause: string | null; question: string; result: number; evidence: string | null }
 interface AuditDetailDto { id: string; number: string; title: string; auditType: string; scope: string; criteria: string | null; leadName: string; plannedStart: string; plannedEnd: string; status: number; summary: string | null; checklist: ChecklistItem[];
-  findings: { id: string; number: string; findingType: number; clause: string | null; statement: string; status: number; responseDueOn: string; responsibleName: string }[]; siteCode: string; canEdit: boolean; canClose: boolean }
+  findings: { id: string; number: string; findingType: number; clause: string | null; statement: string; status: number; responseDueOn: string; responsibleName: string }[]; siteCode: string; canEdit: boolean; canClose: boolean; allowed: string[] }
 
 export function AuditDetail() {
   const { id } = useParams();
@@ -130,17 +130,18 @@ export function AuditDetail() {
   const d = q.data;
   if (!d) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'Audit program', to: '/audits' }]} title="Loading">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   const s = d.status;
-  const editing = d.canEdit && s === 1;
+  const editing = d.allowed.includes('checklist');
+  const allAssessed = rows.every((r) => r.result !== 0);
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Audit program', to: '/audits' }, { label: d.number }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={auditStatus[s]} /></Stack>}
       tabs={[{ label: 'Checklist', value: 'checklist' }, { label: `Findings (${d.findings.length})`, value: 'findings' }, { label: 'Report', value: 'report' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
-        {d.canEdit && s === 0 && <Button variant="contained" onClick={() => run(() => post(`/api/audits/${d.id}/start`))}>Start audit</Button>}
+        {d.allowed.includes('start') && <Button variant="contained" onClick={() => run(() => post(`/api/audits/${d.id}/start`))}>Start audit</Button>}
         {editing && <Button variant="outlined" onClick={() => run(() => put(`/api/audits/${d.id}/checklist`, rows.map((r) => ({ itemId: r.id, result: r.result, evidence: r.evidence }))))}>Save checklist</Button>}
-        {d.canEdit && (s === 1 || s === 2) && <Button variant="outlined" onClick={() => setDlg('finding')}>Raise finding</Button>}
-        {editing && <Button variant="contained" onClick={() => setDlg('report')}>Move to reporting</Button>}
-        {d.canClose && s === 2 && <Button variant="contained" color="secondary" onClick={() => run(() => post(`/api/audits/${d.id}/close`))}>Close audit</Button>}
+        {d.allowed.includes('finding') && <Button variant="outlined" onClick={() => setDlg('finding')}>Raise finding</Button>}
+        {editing && allAssessed && <Button variant="contained" onClick={() => setDlg('report')}>Move to reporting</Button>}
+        {d.allowed.includes('close') && <Button variant="contained" color="secondary" onClick={() => run(() => post(`/api/audits/${d.id}/close`))}>Close audit</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
@@ -180,7 +181,7 @@ export function AuditDetail() {
   );
 }
 
-interface FindingDto { id: string; number: string; auditId: string; auditNumber: string; findingType: number; clause: string | null; statement: string; evidence: string | null; status: number; responseDueOn: string; verificationNotes: string | null; responsibleName: string; canEdit: boolean }
+interface FindingDto { id: string; number: string; auditId: string; auditNumber: string; findingType: number; clause: string | null; statement: string; evidence: string | null; status: number; responseDueOn: string; verificationNotes: string | null; responsibleName: string; canEdit: boolean; allowed: string[] }
 export function FindingDetail() {
   const { id } = useParams();
   const qc = useQueryClient();
@@ -194,13 +195,13 @@ export function FindingDetail() {
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Findings', to: '/audits/findings' }, { label: f.number }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{f.number}</span><span>{findingType[f.findingType]}</span><StatusChip status={findingStatus[f.status]} /></Stack>}
       tabs={[{ label: 'Corrective actions', value: 'actions' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
-      actions={f.canEdit && f.status < 2 ? <Button variant="contained" onClick={() => setDlg(true)}>Verify finding</Button> : undefined}>
+      actions={f.allowed.includes('verify') ? <Button variant="contained" onClick={() => setDlg(true)}>Verify finding</Button> : undefined}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 3 }}>
         <Facts items={[['Audit', <Link component={RouterLink} to={`/audits/${f.auditId}`} sx={{ fontFamily: mono }}>{f.auditNumber}</Link>], ['Clause', f.clause ?? '—'], ['Statement', f.statement], ['Evidence', f.evidence ?? '—'],
           ['Responsible', f.responsibleName], ['Response due', fmtDate(f.responseDueOn)], ['Verification', f.verificationNotes ?? '—']]} />
         <Box sx={{ minWidth: 0 }}>
-          {tab === 'actions' && <ActionsPanel type="AuditFinding" id={f.id} canEdit={f.canEdit && f.status < 2} />}
+          {tab === 'actions' && <ActionsPanel type="AuditFinding" id={f.id} canEdit={f.allowed.includes('actions')} canVerifyAs={f.canEdit} onChanged={() => qc.invalidateQueries({ queryKey: ['finding', id] })} />}
           {tab === 'more' && <AttachmentsAndHistory type="AuditFinding" id={f.id} canEdit={f.canEdit && f.status < 3} />}
         </Box>
       </Box>

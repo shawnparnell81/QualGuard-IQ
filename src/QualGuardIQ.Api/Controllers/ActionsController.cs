@@ -25,7 +25,7 @@ public sealed class ActionsController(ActionService actions) : ControllerBase
         foreach (var site in items.Select(a => a.SiteId).Distinct()) today[site] = await calendar.TodayAsync(site, ct);
         return items.Select(a => new RecordsController.ActionDto(a.Id, a.Number, a.Title, a.Description, a.ActionType, a.AssigneeId,
             names.GetValueOrDefault(a.AssigneeId, ""), a.DueDate, a.Status, a.RequiresVerification, a.CompletionNotes, a.VerificationNotes,
-            a.Status is ActionStatus.Open or ActionStatus.InProgress && a.DueDate < today[a.SiteId])).ToList();
+            a.Status is ActionStatus.Open or ActionStatus.InProgress && a.DueDate < today[a.SiteId], a.CompletedById)).ToList();
     }
 
     [HttpPost("{id:guid}/complete")]

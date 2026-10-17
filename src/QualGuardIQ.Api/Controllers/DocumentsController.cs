@@ -17,7 +17,7 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
     public sealed record DocumentListItem(Guid Id, DocumentKind Kind, string Number, string Title, string DocumentType, DocumentStatus Status,
         string? CurrentRevision, DateOnly? EffectiveDate, string SiteCode, string? PartNumber, DateOnly? NextReviewDue, string OwnerName);
     public sealed record RevisionDto(Guid Id, string Revision, int Sequence, RevisionStatus Status, string ChangeSummary, DateOnly? EffectiveDate,
-        DateOnly? SupersededOn, DateTimeOffset? ApprovedAt, bool TrainingRequired, string? ObsoleteReason, uint RowVersion, string? FieldSchema = null);
+        DateOnly? SupersededOn, DateTimeOffset? ApprovedAt, bool TrainingRequired, string? ObsoleteReason, uint RowVersion, string? FieldSchema = null, bool ReadyToSubmit = false);
     public sealed record DocumentDetail(Guid Id, DocumentKind Kind, string Number, string Title, string DocumentType, DocumentStatus Status, Guid SiteId,
         Guid? DepartmentId, Guid OwnerId, string OwnerName, int ReviewIntervalMonths, DateOnly? NextReviewDue, string? PartNumber, string? DrawingSize,
         int? SheetCount, uint RowVersion, IReadOnlyList<RevisionDto> Revisions, bool CanEdit, bool CanApprove);
@@ -67,10 +67,14 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
         var uid = current.UserId!.Value;
         if (!await access.CanAccessAsync(uid, view, d.SiteId, d.DepartmentId, ct)) throw new NotFoundException("Document");
         var owner = await db.Users.Where(u => u.Id == d.OwnerId).Select(u => u.DisplayName).FirstAsync(ct);
+        var revType = DocumentRecordTypes.ForRevision(d.Kind);
+        var revIds = d.Revisions.Select(r => r.Id).ToList();
+        var withFiles = (await db.Attachments.Where(a => a.OwnerType == revType && revIds.Contains(a.OwnerId) && !a.IsArchived).Select(a => a.OwnerId).Distinct().ToListAsync(ct)).ToHashSet();
+        bool Ready(DocumentRevision r) => r.Status == RevisionStatus.Draft && (d.Kind == DocumentKind.FormTemplate ? !string.IsNullOrWhiteSpace(r.FieldSchema) : withFiles.Contains(r.Id));
         return new DocumentDetail(d.Id, d.Kind, d.Number, d.Title, d.DocumentType, d.Status, d.SiteId, d.DepartmentId, d.OwnerId, owner, d.ReviewIntervalMonths,
             d.NextReviewDue, d.PartNumber, d.DrawingSize, d.SheetCount, d.RowVersion,
             d.Revisions.OrderByDescending(r => r.Sequence).Select(r => new RevisionDto(r.Id, r.Revision, r.Sequence, r.Status, r.ChangeSummary, r.EffectiveDate,
-                r.SupersededOn, r.ApprovedAt, r.TrainingRequired, r.ObsoleteReason, r.RowVersion, r.FieldSchema)).ToList(),
+                r.SupersededOn, r.ApprovedAt, r.TrainingRequired, r.ObsoleteReason, r.RowVersion, r.FieldSchema, Ready(r))).ToList(),
             await access.CanAccessAsync(uid, edit, d.SiteId, d.DepartmentId, ct), await access.CanAccessAsync(uid, approve, d.SiteId, d.DepartmentId, ct));
     }
 

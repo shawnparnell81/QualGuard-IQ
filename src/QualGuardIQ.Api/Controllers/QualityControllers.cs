@@ -13,6 +13,20 @@ namespace QualGuardIQ.Api.Controllers;
 public sealed record PagedResult<T>(IReadOnlyList<T> Items, int Total);
 public sealed record TextRequest(string Text);
 
+internal static class Allowed
+{
+    /// <summary>Names of the state transitions the current user can perform now; the UI shows only these buttons.</summary>
+    public static List<string> Of(params (string Name, bool Ok)[] items) => items.Where(i => i.Ok).Select(i => i.Name).ToList();
+
+    public static async Task<bool> ActionsClosedAsync(AppDbContext db, string type, Guid id, bool requireOne, CancellationToken ct)
+    {
+        var open = await db.ActionItems.AnyAsync(a => a.SourceType == type && a.SourceId == id && a.Status != QualGuardIQ.Domain.Shared.ActionStatus.Cancelled && a.Status != QualGuardIQ.Domain.Shared.ActionStatus.Verified
+            && !(a.Status == QualGuardIQ.Domain.Shared.ActionStatus.Completed && !a.RequiresVerification), ct);
+        if (open) return false;
+        return !requireOne || await db.ActionItems.AnyAsync(a => a.SourceType == type && a.SourceId == id && a.Status != QualGuardIQ.Domain.Shared.ActionStatus.Cancelled, ct);
+    }
+}
+
 internal static class Paging
 {
     public static async Task<PagedResult<T>> PageAsync<T>(IQueryable<T> q, int page, int size, CancellationToken ct)
@@ -101,13 +115,20 @@ public sealed class NcrsController(AppDbContext db, NcrService ncrs, CapaService
         var n = await db.Ncrs.AsNoTracking().FirstAsync(x => x.Id == id, ct);
         var capaIds = await db.RecordLinks.Where(l => l.FromType == NcrService.RecordType && l.FromId == id && l.ToType == CapaService.RecordType).Select(l => l.ToId).ToListAsync(ct);
         var linkedCapas = await db.Capas.Where(c => capaIds.Contains(c.Id)).Select(c => new { c.Id, c.Number, c.Status }).ToListAsync(ct);
+        var canEdit = await m.CanAsync(Permissions.NcrEdit, n.SiteId, n.DepartmentId, ct);
+        var anyCapa = linkedCapas.Count > 0 || await db.RecordLinks.AnyAsync(l => l.ToType == NcrService.RecordType && l.ToId == id && l.FromType == CapaService.RecordType, ct);
+        var s = n.Status;
+        var allowed = Allowed.Of(("contain", canEdit && s <= NcrStatus.Contained), ("dispose", canEdit && s == NcrStatus.Contained),
+            ("capa", canEdit && s is >= NcrStatus.Contained and <= NcrStatus.DispositionApproved),
+            ("close", canEdit && s == NcrStatus.DispositionApproved && (!n.CapaRequired || anyCapa) && await Allowed.ActionsClosedAsync(db, NcrService.RecordType, id, false, ct)),
+            ("actions", canEdit && s < NcrStatus.Closed));
         return new
         {
             n.Id, n.Number, n.Title, n.Description, n.Source, n.SiteId, n.DepartmentId, n.OwnerId, n.PartNumber, n.LotNumber, n.QuantityAffected, n.DetectedOn, n.Severity,
             n.Status, n.ContainmentSummary, n.Disposition, n.DispositionJustification, n.CapaRequired, n.ClosureNotes, n.ClosedAt, n.CreatedAt,
             OwnerName = await db.Users.Where(u => u.Id == n.OwnerId).Select(u => u.DisplayName).FirstAsync(ct),
             SiteCode = await db.Sites.Where(s => s.Id == n.SiteId).Select(s => s.Code).FirstAsync(ct),
-            Capas = linkedCapas, CanEdit = await m.CanAsync(Permissions.NcrEdit, n.SiteId, n.DepartmentId, ct)
+            Capas = linkedCapas, CanEdit = canEdit, Allowed = allowed
         };
     }
 
@@ -160,6 +181,11 @@ public sealed class CapasController(AppDbContext db, CapaService capas, ModuleSu
     {
         await m.ViewAsync(CapaService.RecordType, id, ct);
         var c = await db.Capas.AsNoTracking().FirstAsync(x => x.Id == id, ct);
+        var canEdit = await m.CanAsync(Permissions.CapaEdit, c.SiteId, c.DepartmentId, ct);
+        var canVerify = c.OwnerId != m.UserId && await m.CanAsync(Permissions.CapaApprove, c.SiteId, c.DepartmentId, ct);
+        var allowed = Allowed.Of(("rootCause", canEdit && c.Status <= CapaStatus.Implementation),
+            ("check", canEdit && c.Status == CapaStatus.Implementation && await Allowed.ActionsClosedAsync(db, CapaService.RecordType, id, true, ct)),
+            ("verify", canVerify && c.Status == CapaStatus.EffectivenessCheck), ("actions", canEdit && c.Status < CapaStatus.EffectivenessCheck));
         return new
         {
             c.Id, c.Number, c.Title, c.ProblemStatement, c.CapaType, c.Source, c.SiteId, c.DepartmentId, c.OwnerId, c.Status, c.RootCauseMethod, c.RootCause,
@@ -167,8 +193,7 @@ public sealed class CapasController(AppDbContext db, CapaService capas, ModuleSu
             OwnerName = await db.Users.Where(u => u.Id == c.OwnerId).Select(u => u.DisplayName).FirstAsync(ct),
             VerifiedByName = c.EffectivenessVerifiedById == null ? null : await db.Users.Where(u => u.Id == c.EffectivenessVerifiedById).Select(u => u.DisplayName).FirstAsync(ct),
             SiteCode = await db.Sites.Where(s => s.Id == c.SiteId).Select(s => s.Code).FirstAsync(ct),
-            CanEdit = await m.CanAsync(Permissions.CapaEdit, c.SiteId, c.DepartmentId, ct),
-            CanVerify = c.OwnerId != m.UserId && await m.CanAsync(Permissions.CapaApprove, c.SiteId, c.DepartmentId, ct)
+            CanEdit = canEdit, CanVerify = canVerify, Allowed = allowed
         };
     }
 
@@ -224,14 +249,19 @@ public sealed class AuditsController(AppDbContext db, AuditService audits, Modul
         var (a, findings) = await audits.GetAsync(id, ct);
         var users = findings.Select(f => f.ResponsibleId).Append(a.LeadAuditorId).Distinct().ToList();
         var names = await db.Users.Where(u => users.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, ct);
+        var canEdit = await m.CanAsync(Permissions.AuditsEdit, a.SiteId, a.DepartmentId, ct);
+        var canClose = await m.CanAsync(Permissions.AuditsApprove, a.SiteId, a.DepartmentId, ct);
+        var allowed = Allowed.Of(("start", canEdit && a.Status == AuditStatus.Planned), ("checklist", canEdit && a.Status == AuditStatus.InProgress),
+            ("finding", canEdit && a.Status is AuditStatus.InProgress or AuditStatus.Reporting),
+            ("report", canEdit && a.Status == AuditStatus.InProgress && a.Checklist.All(c => c.Result != ChecklistResult.NotAssessed)),
+            ("close", canClose && a.Status == AuditStatus.Reporting && findings.All(f => f.Status is FindingStatus.Verified or FindingStatus.Closed)));
         return new
         {
             a.Id, a.Number, a.Title, a.AuditType, a.Scope, a.Criteria, a.SiteId, a.DepartmentId, a.LeadAuditorId, LeadName = names[a.LeadAuditorId], a.PlannedStart, a.PlannedEnd,
             a.Status, a.Summary, a.ClosedAt, Checklist = a.Checklist.OrderBy(c => c.Sequence),
             Findings = findings.Select(f => new { f.Id, f.Number, f.FindingType, f.Clause, f.Statement, f.Evidence, f.Status, f.ResponseDueOn, f.ChecklistItemId, ResponsibleName = names[f.ResponsibleId], f.VerificationNotes }),
             SiteCode = await db.Sites.Where(s => s.Id == a.SiteId).Select(s => s.Code).FirstAsync(ct),
-            CanEdit = await m.CanAsync(Permissions.AuditsEdit, a.SiteId, a.DepartmentId, ct),
-            CanClose = await m.CanAsync(Permissions.AuditsApprove, a.SiteId, a.DepartmentId, ct)
+            CanEdit = canEdit, CanClose = canClose, Allowed = allowed
         };
     }
 
@@ -240,11 +270,15 @@ public sealed class AuditsController(AppDbContext db, AuditService audits, Modul
     {
         await m.ViewAsync(AuditService.FindingType, id, ct);
         var f = await db.AuditFindings.AsNoTracking().FirstAsync(x => x.Id == id, ct);
+        var canEdit = await m.CanAsync(Permissions.AuditsEdit, f.SiteId, f.DepartmentId, ct);
+        var isNc = f.FindingType is FindingType.MajorNonconformity or FindingType.MinorNonconformity;
+        var open = f.Status is FindingStatus.Open or FindingStatus.ActionPlanned;
+        var allowed = Allowed.Of(("verify", canEdit && open && await Allowed.ActionsClosedAsync(db, AuditService.FindingType, id, isNc, ct)), ("actions", canEdit && open));
         return new
         {
             f.Id, f.Number, f.AuditId, AuditNumber = await db.Audits.Where(a => a.Id == f.AuditId).Select(a => a.Number).FirstAsync(ct), f.FindingType, f.Clause, f.Statement, f.Evidence,
             f.Status, f.ResponseDueOn, f.VerificationNotes, ResponsibleName = await db.Users.Where(u => u.Id == f.ResponsibleId).Select(u => u.DisplayName).FirstAsync(ct),
-            CanEdit = await m.CanAsync(Permissions.AuditsEdit, f.SiteId, f.DepartmentId, ct)
+            CanEdit = canEdit, Allowed = allowed
         };
     }
 
@@ -378,14 +412,19 @@ public sealed class CalibrationController(AppDbContext db, CalibrationService ca
     {
         await m.ViewAsync(CalibrationService.EquipmentType, id, ct);
         var e = await db.Equipment.AsNoTracking().FirstAsync(x => x.Id == id, ct);
+        var canEdit = await m.CanAsync(Permissions.CalibrationEdit, e.SiteId, e.DepartmentId, ct);
+        var canApprove = await m.CanAsync(Permissions.CalibrationApprove, e.SiteId, e.DepartmentId, ct);
+        var latest = await db.CalibrationEvents.AsNoTracking().Where(x => x.EquipmentId == id).OrderByDescending(x => x.PerformedOn).ThenByDescending(x => x.CreatedAt).Select(x => (CalibrationResult?)x.Result).FirstOrDefaultAsync(ct);
+        var openIa = await db.ImpactAssessments.AnyAsync(x => x.EquipmentId == id && x.Status == ImpactStatus.Open, ct);
+        var allowed = Allowed.Of(("record", canEdit && e.Status != EquipmentStatus.Retired),
+            ("returnToService", canApprove && e.Status is EquipmentStatus.Quarantined or EquipmentStatus.OutOfService && !openIa && latest is CalibrationResult.Pass or CalibrationResult.PassAfterAdjustment));
         return new
         {
             e.Id, e.Number, e.Name, e.Manufacturer, e.Model, e.SerialNumber, e.Location, e.MeasurementRange, e.Tolerance, e.SiteId, e.DepartmentId, e.Status,
             e.CalibrationIntervalDays, e.LastCalibratedOn, e.NextDueOn, OwnerName = await db.Users.Where(u => u.Id == e.OwnerId).Select(u => u.DisplayName).FirstAsync(ct),
             Events = await db.CalibrationEvents.AsNoTracking().Where(x => x.EquipmentId == id).OrderByDescending(x => x.PerformedOn).ThenByDescending(x => x.CreatedAt).ToListAsync(ct),
             Impacts = await db.ImpactAssessments.AsNoTracking().Where(x => x.EquipmentId == id).OrderByDescending(x => x.CreatedAt).ToListAsync(ct),
-            CanEdit = await m.CanAsync(Permissions.CalibrationEdit, e.SiteId, e.DepartmentId, ct),
-            CanApprove = await m.CanAsync(Permissions.CalibrationApprove, e.SiteId, e.DepartmentId, ct)
+            CanEdit = canEdit, CanApprove = canApprove, Allowed = allowed
         };
     }
 
@@ -412,7 +451,9 @@ public sealed class CalibrationController(AppDbContext db, CalibrationService ca
             ia.Id, ia.Number, ia.Status, ia.LastKnownGoodOn, ia.AffectedUntil, ia.AffectedProduct, ia.Assessment, ia.Decision, ia.CompletedAt,
             Equipment = new { e.Id, e.Number, e.Name }, Event = new { ev.Id, ev.Number, ev.PerformedOn, ev.Result, ev.AsFound },
             Ncrs = await db.Ncrs.Where(n => ncrIds.Contains(n.Id)).Select(n => new { n.Id, n.Number, n.Status }).ToListAsync(ct),
-            CanApprove = await m.CanAsync(Permissions.CalibrationApprove, ia.SiteId, ia.DepartmentId, ct)
+            CanApprove = await m.CanAsync(Permissions.CalibrationApprove, ia.SiteId, ia.DepartmentId, ct),
+            Allowed = Allowed.Of(("complete", ia.Status == ImpactStatus.Open && await m.CanAsync(Permissions.CalibrationApprove, ia.SiteId, ia.DepartmentId, ct)),
+                ("ncr", await m.CanAsync(Permissions.NcrEdit, ia.SiteId, ia.DepartmentId, ct)))
         };
     }
 

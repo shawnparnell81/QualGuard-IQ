@@ -7,6 +7,7 @@ import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useAuth } from '../auth';
 import { z } from 'zod';
 import type { ColumnDef } from '@tanstack/react-table';
 import { api, del, get, post, put } from '../api';
@@ -126,7 +127,7 @@ export function LinksPanel({ type, id, canEdit }: { type: string; id: string; ca
   );
 }
 
-interface ActionRow { id: string; number: string; title: string; actionType: string; assigneeName: string; dueDate: string; status: number; isOverdue: boolean; requiresVerification: boolean; completionNotes: string | null }
+interface ActionRow { id: string; number: string; title: string; actionType: string; assigneeName: string; dueDate: string; status: number; isOverdue: boolean; requiresVerification: boolean; completionNotes: string | null; assigneeId: string; completedById: string | null }
 const actionSchema = z.object({
   title: z.string().trim().min(1, 'Required').max(300),
   description: z.string().max(4000).optional(),
@@ -137,8 +138,18 @@ const actionSchema = z.object({
 });
 type ActionForm = z.infer<typeof actionSchema>;
 
-export function ActionsPanel({ type, id, canEdit }: { type: string; id: string; canEdit: boolean }) {
+/**
+ * canEdit: may add actions now (record still open). canVerifyAs: may verify completed actions (edit rights on the source,
+ * even after new actions are no longer allowed). Defaults to canEdit.
+ */
+export function ActionsPanel({ type, id, canEdit, canVerifyAs, onChanged }: { type: string; id: string; canEdit: boolean; canVerifyAs?: boolean; onChanged?: () => void }) {
   const qc = useQueryClient();
+  const { me } = useAuth();
+  const canEditSource = canVerifyAs ?? canEdit;
+  const [step, setStep] = useState<{ row: ActionRow; kind: 'complete' | 'verify' } | null>(null);
+  const [stepNotes, setStepNotes] = useState('');
+  const [stepEffective, setStepEffective] = useState(true);
+  const [stepError, setStepError] = useState<string | null>(null);
   const [open, setOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const actions = useQuery({ queryKey: ['actions', type, id], queryFn: () => get<ActionRow[]>(`${base(type, id)}/actions`) });
@@ -158,10 +169,35 @@ export function ActionsPanel({ type, id, canEdit }: { type: string; id: string; 
     { header: 'Assignee', accessorKey: 'assigneeName' },
     { header: 'Due', accessorKey: 'dueDate', cell: (c) => <Typography color={c.row.original.isOverdue ? 'error' : undefined} fontSize="inherit">{fmtDate(c.getValue())}</Typography> },
     { header: 'Status', accessorKey: 'status', cell: (c) => <StatusChip status={actionStatus[c.getValue()]} /> },
+    { header: '', id: 'do', cell: (c) => {
+      const a = c.row.original;
+      if (a.status <= 1 && (a.assigneeId === me?.id || canEdit)) return <Button size="small" onClick={() => setStep({ row: a, kind: 'complete' })}>Complete</Button>;
+      if (a.status === 2 && a.requiresVerification && canEditSource && a.completedById !== me?.id) return <Button size="small" color="secondary" onClick={() => setStep({ row: a, kind: 'verify' })}>Verify</Button>;
+      return null;
+    } },
   ];
+  const finish = async () => {
+    if (!step) return;
+    setStepError(null);
+    try {
+      if (step.kind === 'complete') await post(`/api/actions/${step.row.id}/complete`, { notes: stepNotes });
+      else await post(`/api/actions/${step.row.id}/verify`, { effective: stepEffective, notes: stepNotes });
+      setStep(null); setStepNotes(''); qc.invalidateQueries({ queryKey: ['actions', type, id] }); qc.invalidateQueries({ queryKey: ['work'] }); onChanged?.();
+    } catch (e) { setStepError((e as Error).message); }
+  };
   return (
     <Stack gap={1.5}>
       {canEdit && <Box><Button variant="outlined" onClick={() => setOpen(true)}>Add action</Button></Box>}
+      <Dialog open={!!step} onClose={() => setStep(null)} maxWidth="sm" fullWidth>
+        <DialogTitle>{step?.kind === 'complete' ? `Complete ${step?.row.number}` : `Verify ${step?.row.number}`}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          {stepError && <Alert severity="error">{stepError}</Alert>}
+          {step?.kind === 'verify' && <><Typography variant="body2">Completion notes: {step.row.completionNotes}</Typography>
+            <TextField select label="Effective?" value={stepEffective ? 'yes' : 'no'} onChange={(e) => setStepEffective(e.target.value === 'yes')}><MenuItem value="yes">Yes, verified</MenuItem><MenuItem value="no">No, reopen</MenuItem></TextField></>}
+          <TextField label={step?.kind === 'complete' ? 'Completion notes' : 'Verification notes'} multiline minRows={3} value={stepNotes} onChange={(e) => setStepNotes(e.target.value)} />
+        </DialogContent>
+        <DialogActions><Button onClick={() => setStep(null)}>Cancel</Button><Button variant="contained" disabled={!stepNotes.trim()} onClick={finish}>{step?.kind === 'complete' ? 'Mark complete' : 'Record verification'}</Button></DialogActions>
+      </Dialog>
       <DataTable data={actions.data ?? []} columns={cols} empty="No actions." />
       <Dialog open={open} onClose={() => setOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>New action</DialogTitle>

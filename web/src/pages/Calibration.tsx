@@ -67,7 +67,7 @@ export function EquipmentNew() {
 
 interface Ev { id: string; number: string; performedOn: string; performedBy: string; result: number; asFound: string | null; asLeft: string | null; standardsUsed: string | null; certificateNumber: string | null; nextDueOn: string | null }
 interface Ia { id: string; number: string; status: number; lastKnownGoodOn: string | null; affectedUntil: string; createdAt: string }
-interface EqDto { id: string; number: string; name: string; manufacturer: string | null; model: string | null; serialNumber: string | null; location: string | null; measurementRange: string | null; tolerance: string | null; status: number; calibrationIntervalDays: number; lastCalibratedOn: string | null; nextDueOn: string | null; ownerName: string; events: Ev[]; impacts: Ia[]; canEdit: boolean; canApprove: boolean }
+interface EqDto { id: string; number: string; name: string; manufacturer: string | null; model: string | null; serialNumber: string | null; location: string | null; measurementRange: string | null; tolerance: string | null; status: number; calibrationIntervalDays: number; lastCalibratedOn: string | null; nextDueOn: string | null; ownerName: string; events: Ev[]; impacts: Ia[]; canEdit: boolean; canApprove: boolean; allowed: string[] }
 
 export function EquipmentDetail() {
   const { id } = useParams();
@@ -85,8 +85,8 @@ export function EquipmentDetail() {
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{e.number}</span><span>{e.name}</span><StatusChip status={equipmentStatus[e.status]} /></Stack>}
       tabs={[{ label: 'Calibration history', value: 'history' }, { label: `Impact assessments (${e.impacts.length})`, value: 'impacts' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
-        {e.canEdit && e.status !== 3 && <Button variant="contained" onClick={() => setDlg(true)}>Record calibration</Button>}
-        {e.canApprove && e.status === 1 && <Button variant="outlined" color="secondary" onClick={() => run(() => post(`/api/calibration/equipment/${e.id}/return-to-service`))}>Return to service</Button>}
+        {e.allowed.includes('record') && <Button variant="contained" onClick={() => setDlg(true)}>Record calibration</Button>}
+        {e.allowed.includes('returnToService') && <Button variant="outlined" color="secondary" onClick={() => run(() => post(`/api/calibration/equipment/${e.id}/return-to-service`))}>Return to service</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {e.status === 1 && <Alert severity="error" sx={{ mb: 2 }} action={openIa && <Button color="inherit" size="small" onClick={() => nav(`/calibration/impact/${openIa.id}`)}>Open {openIa.number}</Button>}>
@@ -120,12 +120,11 @@ export function EquipmentDetail() {
 }
 
 interface IaDto { id: string; number: string; status: number; lastKnownGoodOn: string | null; affectedUntil: string; affectedProduct: string | null; assessment: string | null; decision: string | null; completedAt: string | null;
-  equipment: { id: string; number: string; name: string }; event: { id: string; number: string; performedOn: string; result: number; asFound: string | null }; ncrs: { id: string; number: string; status: number }[]; canApprove: boolean }
+  equipment: { id: string; number: string; name: string }; event: { id: string; number: string; performedOn: string; result: number; asFound: string | null }; ncrs: { id: string; number: string; status: number }[]; canApprove: boolean; allowed: string[] }
 export function ImpactDetail() {
   const { id } = useParams();
   const nav = useNavigate();
   const qc = useQueryClient();
-  const { can } = useAuth();
   const [dlg, setDlg] = useState<string | null>(null);
   const q = useQuery({ queryKey: ['ia', id], queryFn: () => get<IaDto>(`/api/calibration/impact/${id}`) });
   const { error, run } = useRunner(() => qc.invalidateQueries({ queryKey: ['ia', id] }));
@@ -135,8 +134,8 @@ export function ImpactDetail() {
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Equipment', to: '/calibration/equipment' }, { label: a.equipment.number, to: `/calibration/equipment/${a.equipment.id}` }, { label: a.number }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{a.number}</span><span>Impact assessment</span><StatusChip status={impactStatus[a.status]} /></Stack>}
       actions={<Stack direction="row" gap={1}>
-        {can('ncr.edit') && <Button variant="outlined" onClick={() => setDlg('ncr')}>Raise NCR</Button>}
-        {a.canApprove && a.status === 0 && <Button variant="contained" onClick={() => setDlg('complete')}>Complete assessment</Button>}
+        {a.allowed.includes('ncr') && <Button variant="outlined" onClick={() => setDlg('ncr')}>Raise NCR</Button>}
+        {a.allowed.includes('complete') && <Button variant="contained" onClick={() => setDlg('complete')}>Complete assessment</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 3 }}>

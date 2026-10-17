@@ -29,7 +29,7 @@ const cfg = (kind: Kind) => kind === 2
       types: ['Policy', 'Manual', 'Procedure', 'Work Instruction', 'Specification', 'Form', 'Standard', 'Plan'] };
 
 interface ListItem { id: string; number: string; title: string; documentType: string; status: number; currentRevision: string | null; effectiveDate: string | null; siteCode: string; partNumber: string | null; nextReviewDue: string | null; ownerName: string }
-interface Rev { id: string; revision: string; sequence: number; status: number; changeSummary: string; effectiveDate: string | null; supersededOn: string | null; approvedAt: string | null; trainingRequired: boolean; rowVersion: number; fieldSchema?: string | null }
+interface Rev { id: string; revision: string; sequence: number; status: number; changeSummary: string; effectiveDate: string | null; supersededOn: string | null; approvedAt: string | null; trainingRequired: boolean; rowVersion: number; fieldSchema?: string | null; readyToSubmit: boolean }
 interface Detail { id: string; kind: Kind; number: string; title: string; documentType: string; status: number; siteId: string; ownerName: string; reviewIntervalMonths: number; nextReviewDue: string | null; partNumber: string | null; drawingSize: string | null; sheetCount: number | null; revisions: Rev[]; canEdit: boolean; canApprove: boolean; rowVersion: number }
 
 export function DocumentList({ kind }: { kind: Kind }) {
@@ -177,11 +177,12 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
       actions={
         <Stack direction="row" gap={1}>
           {pendingApproval && <Button variant="contained" color="secondary" onClick={() => setSigning(true)}>Review and sign</Button>}
-          {draftEditable && <Button variant="contained" onClick={() => run(() => post(`/api/documents/revisions/${rev.id}/submit`))}>Submit Rev {rev.revision} for approval</Button>}
+          {draftEditable && rev.readyToSubmit && <Button variant="contained" onClick={() => run(() => post(`/api/documents/revisions/${rev.id}/submit`))}>Submit Rev {rev.revision} for approval</Button>}
           {d.canEdit && d.status === 1 && !d.revisions.some((r) => r.status <= 1) && <Button variant="outlined" onClick={() => { setSummary(''); setRevise(true); }}>Start new revision</Button>}
-          {d.canApprove && d.status === 1 && <Button color="error" onClick={() => { setReason(''); setObsolete(true); }}>Make obsolete</Button>}
+          {d.canApprove && d.status === 1 && !d.revisions.some((r) => r.status <= 1) && <Button color="error" onClick={() => { setReason(''); setObsolete(true); }}>Make obsolete</Button>}
         </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {draftEditable && !rev.readyToSubmit && <Alert severity="info" sx={{ mb: 2 }}>{kind === 2 ? 'Define and save the form fields' : 'Attach the controlled file'} on revision {rev.revision} before submitting it for approval.</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
         <Paper sx={{ p: 2, alignSelf: 'start' }}>
           <Typography variant="overline" color="text.secondary">Details</Typography>
