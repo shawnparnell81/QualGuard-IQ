@@ -12,6 +12,7 @@ import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDate, fmtDateTime, localDate } from '../components/Status';
 import { Facts, Section, StepDialog, lookupLabel, useLookup, useSites } from '../components/Kit';
 import { AttachmentsAndHistory } from '../components/RecordTabs';
+import { LabelPanel } from '../components/LabelPrint';
 import { mono } from '../theme';
 import {
   FillBar, LocationSelect, MetricTile, StockBadge, categories, countFreq, countStatus, holdKinds, holdStatus, lineStatus, locKinds, mrbDisp, mrbStatus, purposes, receiptKinds, receiptStatus,
@@ -253,6 +254,7 @@ export function LocationDetail() {
         <Box sx={{ textAlign: 'center' }}><img alt="QR" src={label('Qr')} style={{ width: 140 }} /><Typography variant="caption" display="block">QR</Typography></Box>
         <Box sx={{ textAlign: 'center' }}><img alt="Data Matrix" src={label('DataMatrix')} style={{ width: 120 }} /><Typography variant="caption" display="block">Data Matrix</Typography></Box>
       </Paper>}
+      {tab === 'label' && <Box sx={{ mt: 2 }}><LabelPanel refType="WarehouseLocation" refId={l.id} siteId={l.siteId} types={[2]} title="Bin labels" /></Box>}
       {tab === 'files' && <AttachmentsAndHistory type="WarehouseLocation" id={id!} canEdit={false} />}
       <StepDialog open={edit} title={`Edit ${l.code}`} confirm="Save" onClose={() => setEdit(false)}
         inputs={[{ name: 'name', label: 'Name', initial: l.name }, { name: 'purpose', label: 'Used for', type: 'select', initial: String(l.purpose), options: purposes.map((k, i) => [i, k]) },
@@ -374,7 +376,7 @@ export function ReceiptDetailPage() {
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Receiving', to: '/warehouse/receipts' }, { label: r.number }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{r.number}</span><StatusChip status={receiptStatus[r.status]} /></Stack>}
-      tabs={[{ label: 'Lines & inspection', value: 'lines' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}>
+      tabs={[{ label: 'Lines & inspection', value: 'lines' }, { label: 'Labels', value: 'labels' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 280px' }, gap: 2 }}>
         <Box>
           {tab === 'lines' && <Stack gap={1.5}>{d.data!.lines.map((x) => (
@@ -396,6 +398,7 @@ export function ReceiptDetailPage() {
               </Stack>
               {x.line.decisionNotes && <Typography variant="caption" color="text.secondary">{x.line.decisionNotes}</Typography>}
             </Paper>))}</Stack>}
+          {tab === 'labels' && <LabelPanel refType="Receipt" refId={r.id} siteId={r.siteId} types={[0]} title="Receipt, lot and serial labels" />}
           {tab === 'ledger' && <RefLedger refType="Receipt" refId={r.id} />}
           {tab === 'files' && <AttachmentsAndHistory type="Receipt" id={id!} canEdit={can('inventory.edit')} />}
         </Box>
@@ -467,13 +470,13 @@ export function HoldDetail() {
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Holds', to: '/warehouse/holds' }, { label: d.number }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><StatusChip status={holdStatus[d.status]} /></Stack>}
-      tabs={[{ label: 'Held stock', value: 'scope' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
+      tabs={[{ label: 'Held stock', value: 'scope' }, { label: 'Labels', value: 'labels' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>{d.ncrId && <Button component={RouterLink} to={`/ncr/${d.ncrId}`}>Open NCR</Button>}
         {can('inventory.edit') && d.status === 0 && <Button variant="outlined" component={RouterLink} to={`/warehouse/mrb/new?hold=${d.id}`}>Send to MRB</Button>}
         {can('inventory.edit') && d.status === 0 && <Button variant="contained" onClick={() => setRel(true)}>Request release</Button>}</Stack>}>
       {d.status === 1 && <Alert severity="info" sx={{ mb: 2 }}>Release is waiting for e-signed approval. Approvers see it in their approvals inbox.</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 280px' }, gap: 2 }}>
-        <Box>{tab === 'scope' ? <DataTable data={stock.data ?? []} empty="No stock currently in scope."
+        <Box>{tab === 'labels' ? <LabelPanel refType="InventoryHold" refId={d.id} siteId={d.siteId} types={[8, 9]} title="Hold and quarantine labels" /> : tab === 'scope' ? <DataTable data={stock.data ?? []} empty="No stock currently in scope."
           columns={[{ header: 'Part', accessorKey: 'partNumber', cell: mnum }, { header: 'Lot / serial', accessorFn: (r) => r.serialNumber ?? r.lotNumber ?? '', cell: mnum }, { header: 'Location', accessorKey: 'locationCode', cell: mnum },
             { header: 'Status', accessorKey: 'status', cell: (x) => <StockBadge status={x.getValue()} held={x.row.original.held} /> }, { header: 'On hand', accessorKey: 'onHand', cell: (x) => qty(x.getValue()) }]} />
           : <AttachmentsAndHistory type="InventoryHold" id={id!} canEdit={can('inventory.edit')} />}</Box>

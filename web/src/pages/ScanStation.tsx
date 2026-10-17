@@ -15,6 +15,7 @@ import { checkPickItem, downloadPickWork, markPicked, normalizeLocation, pickWor
 import { fmtDateTime } from '../components/Status';
 import { checkVerifyScan, downloadVerifyWork, markVerified, progress, readVerifyWork, resetVerified, verifyWorkExpired, VERIFY_WORK_HOURS, type VerifyWork } from '../offlineVerifications';
 import { SyncBanner } from '../components/SyncBanner';
+import { LabelStatus } from '../components/LabelPrint';
 import { ScanField, StockBadge, stockStatusLabel, useLocations, type StockRow } from '../warehouse/common';
 import { qty } from './Warehouse';
 
@@ -249,6 +250,7 @@ function PoReceiveFlow() {
         {r.aqlNumber && <Chip size="small" label={`AQL ${r.aqlNumber}`} />}
         {r.holdNumber && <Chip size="small" color="error" label={`Hold ${r.holdNumber}`} />}
       </Stack>)}
+      {done2.id && <Box sx={{ mt: 1 }}><LabelStatus refType="Receipt" refId={done2.id} /></Box>}
       <Stack direction="row" gap={1} sx={{ mt: 1 }}>
         <Button variant="contained" component={RouterLink} to={`/warehouse/receipts/${done2.id}/labels`}>Labels ({done2.labels.reduce((a, l) => a + l.copies, 0)})</Button>
         <Button component={RouterLink} to={`/warehouse/receipts/${done2.id}`}>Open receipt</Button>

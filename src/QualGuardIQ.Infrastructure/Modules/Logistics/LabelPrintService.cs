@@ -122,20 +122,15 @@ public sealed class LabelPrintService(AppDbContext db, ModuleSupport m, IEnumera
         var printer = await db.LabelPrinters.AsNoTracking().FirstOrDefaultAsync(x => x.Id == r.PrinterId, ct) ?? throw new AppException("Select a printer.");
         if (r.Copies is < 1 or > 50) throw new AppException("Copies must be 1–50.");
         if (r.Workstation?.Trim().Length > 100) throw new AppException("The workstation name is too long.");
-        var site = r.SiteId;
+        // a printer stands at one site, so a route always belongs to its printer's site
+        if (r.SiteId is { } given && given != printer.SiteId) throw new AppException("The printer is at another site.");
+        var site = printer.SiteId;
         if (r.LocationId is { } lid)
         {
             var loc = await db.WarehouseLocations.AsNoTracking().FirstOrDefaultAsync(x => x.Id == lid, ct) ?? throw new AppException("The warehouse or zone was not found.");
-            if (site is not null && site != loc.SiteId) throw new AppException("The warehouse or zone belongs to another site.");
-            site = loc.SiteId;
+            if (loc.SiteId != site) throw new AppException("The warehouse or zone belongs to another site.");
         }
-        if (site is { } s)
-        {
-            if (printer.SiteId != s) throw new AppException("The printer is at another site.");
-            await m.RequireAsync(Permissions.InventoryApprove, s, null, ct);
-        }
-        else if (!await m.HasAllSitesAsync(Permissions.InventoryApprove, ct)) throw new ForbiddenException("Organization-wide routes need inventory approval rights at every site.");
-        await m.RequireAsync(Permissions.InventoryApprove, printer.SiteId, null, ct);
+        await m.RequireAsync(Permissions.InventoryApprove, site, null, ct);
         if (r.UserId is { } u) await m.RequireActiveUserAsync(u, "user", ct);
         LabelPrintRoute route;
         if (id is { } rid)
@@ -143,6 +138,7 @@ public sealed class LabelPrintService(AppDbContext db, ModuleSupport m, IEnumera
             route = await db.LabelPrintRoutes.FirstOrDefaultAsync(x => x.Id == rid, ct) ?? throw new NotFoundException("Route");
             if (route.SiteId is { } old) await m.RequireAsync(Permissions.InventoryApprove, old, null, ct);
             else if (!await m.HasAllSitesAsync(Permissions.InventoryApprove, ct)) throw new ForbiddenException();
+            if (route.SiteId != site) throw new AppException("A route cannot move to another site; add it at the other site.");
         }
         else { route = new LabelPrintRoute(); db.LabelPrintRoutes.Add(route); }
         route.LabelType = r.LabelType; route.SiteId = site; route.LocationId = r.LocationId; route.Workstation = string.IsNullOrWhiteSpace(r.Workstation) ? null : r.Workstation.Trim();
@@ -151,10 +147,10 @@ public sealed class LabelPrintService(AppDbContext db, ModuleSupport m, IEnumera
         return route;
     }
 
-    /// <summary>The most specific active route for a label: user, workstation, deepest warehouse/zone, site, organization.</summary>
+    /// <summary>The most specific active route for a label at a site: user, workstation, deepest warehouse/zone, then the site default.</summary>
     public async Task<RouteResolution> ResolveAsync(LabelType type, Guid siteId, Guid? locationId, string? workstation, Guid? userId, CancellationToken ct)
     {
-        var routes = await db.LabelPrintRoutes.AsNoTracking().Where(x => x.Active && x.LabelType == type && (x.SiteId == null || x.SiteId == siteId)).ToListAsync(ct);
+        var routes = await db.LabelPrintRoutes.AsNoTracking().Where(x => x.Active && x.LabelType == type && x.SiteId == siteId).ToListAsync(ct);
         var ancestors = new Dictionary<Guid, int>();
         if (locationId is { } lid)
         {
@@ -171,7 +167,7 @@ public sealed class LabelPrintService(AppDbContext db, ModuleSupport m, IEnumera
             .OrderByDescending(x => x.Score).ThenBy(x => x.Route.CreatedAt).ThenBy(x => x.Route.Id).FirstOrDefault();
         if (best.Route is null) return new(null, null, $"No active route for {type} labels; print manually or download the PDF.");
         var printer = await db.LabelPrinters.AsNoTracking().FirstOrDefaultAsync(x => x.Id == best.Route.PrinterId, ct);
-        var why = string.Join(", ", new[] { best.Route.UserId is not null ? "user" : null, best.Route.Workstation is not null ? $"workstation {best.Route.Workstation}" : null, best.Route.LocationId is not null ? "warehouse/zone" : null, best.Route.SiteId is not null ? "site" : "organization" }.Where(x => x is not null));
+        var why = string.Join(", ", new[] { best.Route.UserId is not null ? "user" : null, best.Route.Workstation is not null ? $"workstation {best.Route.Workstation}" : null, best.Route.LocationId is not null ? "warehouse/zone" : null, best.Route.LocationId is null && best.Route.UserId is null && best.Route.Workstation is null ? "site default" : null }.Where(x => x is not null));
         return new(best.Route, printer, $"Route for {type} labels matched on {why}: {printer?.Code}.");
     }
 
@@ -378,6 +374,7 @@ public sealed class LabelPrintService(AppDbContext db, ModuleSupport m, IEnumera
         var printer = r.PrinterId is { } pid ? await db.LabelPrinters.AsNoTracking().FirstOrDefaultAsync(x => x.Id == pid && x.SiteId == old.SiteId, ct) ?? throw new AppException("Select a printer at the label's site.")
             : old.PrinterId is { } op ? await db.LabelPrinters.AsNoTracking().FirstOrDefaultAsync(x => x.Id == op, ct) : null;
         var job = NewJob(data, PrintTrigger.Reprint, printer, null, r.Copies ?? old.Copies, old.Id, r.Reason.Trim());
+        job.TriggerKey = old.TriggerKey; // keeps the reprint with the transaction that first produced the label
         await db.SaveChangesAsync(ct);
         return await AttemptAsync(job.Id, ct);
     }
@@ -468,8 +465,14 @@ public sealed class LabelPrintService(AppDbContext db, ModuleSupport m, IEnumera
         if (siteId is { } s) q = q.Where(x => x.SiteId == s);
         if (status is { } st) q = q.Where(x => x.Status == st);
         if (printerId is { } p) q = q.Where(x => x.PrinterId == p);
-        if (!string.IsNullOrEmpty(refType)) q = q.Where(x => x.RefType == refType);
-        if (refId is { } r) q = q.Where(x => x.RefId == r);
+        if (!string.IsNullOrEmpty(refType) && refId is { } r)
+        {
+            // the record's own labels plus the labels its transaction produced (a receipt's lot and serial labels)
+            var prefix = $"{refType}:{r}:";
+            q = q.Where(x => (x.RefType == refType && x.RefId == r) || (x.TriggerKey != null && x.TriggerKey.StartsWith(prefix)));
+        }
+        else if (!string.IsNullOrEmpty(refType)) q = q.Where(x => x.RefType == refType);
+        else if (refId is { } r2) q = q.Where(x => x.RefId == r2);
         pageSize = Math.Clamp(pageSize, 1, 200); page = Math.Max(page, 1);
         var total = await q.CountAsync(ct);
         var items = await (from j in q

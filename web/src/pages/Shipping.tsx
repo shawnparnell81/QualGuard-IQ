@@ -10,6 +10,7 @@ import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDate, fmtDateTime, localDate } from '../components/Status';
 import { Facts, Section, StepDialog, lookupLabel, useLookup, useSites } from '../components/Kit';
 import { AttachmentsAndHistory } from '../components/RecordTabs';
+import { LabelPanel } from '../components/LabelPrint';
 import { mono } from '../theme';
 import { LocationSelect, MetricTile, ScanField, carrierKinds, containerKinds, pickStatus, shipKinds, shipStatus, useCarriers, useLocations, type Carrier } from '../warehouse/common';
 import { Custody, FlowChart, RefLedger, SitePicker, qty, type Dash } from './Warehouse';
@@ -152,7 +153,7 @@ export function ShipmentDetail() {
   const locs = useLocations(s?.siteId);
   if (!s) return <ModuleWorkspace module={mod} crumbs={[{ label: 'Shipments', to: '/shipping/shipments' }]} title="Loading…">{d.error ? <Alert severity="error">{(d.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   const edit = can('shipping.edit');
-  const refresh = () => { qc.invalidateQueries({ queryKey: ['shipment', id] }); qc.invalidateQueries({ queryKey: ['custody'] }); qc.invalidateQueries({ queryKey: ['pick-confirmations', id] }); };
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['shipment', id] }); qc.invalidateQueries({ queryKey: ['custody'] }); qc.invalidateQueries({ queryKey: ['pick-confirmations', id] }); qc.invalidateQueries({ queryKey: ['label-jobs'] }); };
   const run = async (f: () => Promise<unknown>, ok: string) => { setMsg(null); try { await f(); setMsg({ ok: true, text: ok }); refresh(); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } };
   const live = s.status < 5;
   const staged = d.data!.picks.some((p) => p.task.quantityPicked > 0);
@@ -182,6 +183,7 @@ export function ShipmentDetail() {
               {d.data!.trackingUrl && <Button variant="outlined" href={d.data!.trackingUrl} target="_blank" rel="noreferrer">Track with {d.data!.carrier}</Button>}
             </Stack>
             {s.status < 4 && <Typography variant="body2" color="text.secondary">The shipment can be shipped once every line is picked, packed and scan-verified.</Typography>}
+            <LabelPanel refType="Shipment" refId={s.id} siteId={s.siteId} types={[7]} title="Shipping labels" />
           </Stack></Section>}
           {tab === 'custody' && <Custody url={`/api/shipping/shipments/${id}/custody`} />}
           {tab === 'ledger' && <RefLedger refType="Shipment" refId={s.id} />}
@@ -283,6 +285,9 @@ function PackTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
     </Box>));
   return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
     <Section title="Packing tree">{d.containers.length ? tree(undefined) : <Typography color="text.secondary">Nothing packed yet.</Typography>}</Section>
+    {d.containers.length > 0 && <Box sx={{ gridColumn: '1 / -1' }}><Section title="Carton and pallet labels"><Stack gap={1.5}>
+      {d.containers.map((c) => <LabelPanel key={c.container.id} refType="ShipmentContainer" refId={c.container.id} siteId={d.shipment.siteId} types={[containerKinds[c.container.kind] === 'Pallet' ? 6 : 5]} title={`${containerKinds[c.container.kind]} ${c.container.number}`} />)}
+    </Stack></Section></Box>}
     {edit && <Section title="Pack a container"><Stack gap={1.5}>
       <Stack direction="row" gap={1}><TextField select size="small" label="Container" value={kind} onChange={(e) => setKind(e.target.value)} sx={{ flex: 1 }}>{containerKinds.map((k, i) => <MenuItem key={k} value={String(i)}>{k}</MenuItem>)}</TextField>
         <TextField select size="small" label="Inside" value={parent} onChange={(e) => setParent(e.target.value)} sx={{ flex: 1 }}><MenuItem value="">Top level</MenuItem>{d.containers.map((c) => <MenuItem key={c.container.id} value={c.container.id}>{c.container.number}</MenuItem>)}</TextField>

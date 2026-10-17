@@ -13,8 +13,15 @@ async function ensureCsrf(force = false) {
   return csrf!;
 }
 
+const WORKSTATION_KEY = 'qg.workstation';
+/** Name of this device for label print routing (set on the Label printing page; kept on this device only). */
+export const getWorkstation = () => { try { return localStorage.getItem(WORKSTATION_KEY) ?? ''; } catch { return ''; } };
+export const setWorkstation = (name: string) => { const v = name.trim().slice(0, 100); if (v) localStorage.setItem(WORKSTATION_KEY, v); else localStorage.removeItem(WORKSTATION_KEY); };
+
 export async function api<T = unknown>(method: string, url: string, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
+  const ws = getWorkstation();
+  if (ws && /^[\x20-\x7E]+$/.test(ws)) headers['X-Workstation'] = ws;
   const isForm = body instanceof FormData;
   if (method !== 'GET') headers['X-CSRF-TOKEN'] = await ensureCsrf();
   if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json';

@@ -79,7 +79,8 @@ public sealed class GapClosureLabelPrintingTests(TestApp app)
         var lotJobs = await JobsAsync(w.Lead, $"refType=Lot&refId={lotId}");
         var lj = Assert.Single(lotJobs);
         Assert.Equal(2, lj.Int("status")); Assert.Equal(zone, lj.Id("printerId")); Assert.Equal(0, lj.Int("trigger"));
-        Assert.Single(await JobsAsync(w.Lead, $"refType=Receipt&refId={receipt}"));
+        // the receipt shows its own label and the lot label its transaction produced
+        Assert.Equal(2, (await JobsAsync(w.Lead, $"refType=Receipt&refId={receipt}")).Count);
         var zpl = Encoding.UTF8.GetString(VirtualPrintTransport.Received(zone).Last().Payload);
         Assert.StartsWith("^XA^CI28", zpl); Assert.Contains("QG:LOT:LA-" + w.Tag, zpl); Assert.Contains("^PQ1^XZ", zpl);
 
@@ -216,11 +217,13 @@ public sealed class GapClosureLabelPrintingTests(TestApp app)
         // a clerk (no inventory.approve) cannot add printers or routes
         Assert.Equal(HttpStatusCode.Forbidden, (await w.Clerk.PostAsync("/api/labels/printers", new { code = "X" + w.Tag, name = "x", driver = 0, address = "ok", language = 0, dpi = 203, widthMm = 100m, heightMm = 150m, enabled = true, siteId = w.Site })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await w.Clerk.PostAsync("/api/labels/routes", new { labelType = 2, siteId = (Guid?)w.Site, locationId = (Guid?)null, workstation = (string?)null, userId = (Guid?)null, printerId = p, copies = 1, autoPrint = true, mode = 0, active = true })).StatusCode);
-        // a lead at one site cannot route another site's printer, nor create an organization-wide route
+        // a lead at one site cannot route another site's printer; a route always belongs to its printer's site
         var other = await app.CreateSiteAsync();
         var (_, otherLead) = await app.CreateUserAsync([.. Perms, Permissions.InventoryApprove], other);
         Assert.Equal(HttpStatusCode.Forbidden, (await otherLead.PostAsync("/api/labels/routes", new { labelType = 2, siteId = (Guid?)w.Site, locationId = (Guid?)null, workstation = (string?)null, userId = (Guid?)null, printerId = p, copies = 1, autoPrint = true, mode = 0, active = true })).StatusCode);
-        Assert.Equal(HttpStatusCode.Forbidden, (await w.Lead.PostAsync("/api/labels/routes", new { labelType = 2, siteId = (Guid?)null, locationId = (Guid?)null, workstation = (string?)null, userId = (Guid?)null, printerId = p, copies = 1, autoPrint = true, mode = 0, active = true })).StatusCode);
+        var nosite = (await (await w.Lead.PostOkAsync("/api/labels/routes", new { labelType = 2, siteId = (Guid?)null, locationId = (Guid?)null, workstation = (string?)null, userId = (Guid?)null, printerId = p, copies = 1, autoPrint = true, mode = 0, active = true })).JsonAsync()).Id();
+        Assert.Equal(w.Site, (await w.Lead.GetElAsync("/api/labels/routes")).EnumerateArray().Single(x => x.GetProperty("route").Id() == nosite).GetProperty("route").Id("siteId"));
+        Assert.Equal(HttpStatusCode.BadRequest, (await w.Lead.PostAsync("/api/labels/routes", new { labelType = 2, siteId = (Guid?)other, locationId = (Guid?)null, workstation = (string?)null, userId = (Guid?)null, printerId = p, copies = 1, autoPrint = true, mode = 0, active = true })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await w.Lead.PostAsync("/api/labels/printers", new { code = "BAD" + w.Tag, name = "bad", driver = 2, address = "http://print.example.com/agent", language = 1, dpi = 203, widthMm = 100m, heightMm = 150m, enabled = true, siteId = w.Site })).StatusCode);
         // jobs and their PDFs are invisible to another site; printing another site's record is refused
         var job = Assert.Single((await (await w.Clerk.PostOkAsync("/api/labels/print", new { labelType = 2, refType = "WarehouseLocation", refId = w.Loc["A1"], printerId = (Guid?)p, copies = (int?)1 })).JsonAsync()).EnumerateArray());
