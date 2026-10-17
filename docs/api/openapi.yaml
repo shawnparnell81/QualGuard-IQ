@@ -34791,6 +34791,655 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/shipping/carrier-adapters:
+    get:
+      tags:
+        - CarrierIntegration
+      description: 'Requires permission: `shipping.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CarrierCapabilities'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CarrierCapabilities'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CarrierCapabilities'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/shipping/carrier-connections:
+    get:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CarrierConnectionRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CarrierConnectionRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CarrierConnectionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - CarrierIntegration
+      description: 'Requires permission: `integrations.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarrierConnectionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CarrierConnectionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CarrierConnectionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/carrier-connections/{id}':
+    get:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - CarrierIntegration
+      description: 'Requires permission: `integrations.edit` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarrierConnectionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CarrierConnectionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CarrierConnectionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/carrier-connections/{id}/test':
+    post:
+      tags:
+        - CarrierIntegration
+      description: 'Requires permission: `integrations.edit` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/carrier-connections/{id}/production-approval':
+    post:
+      tags:
+        - CarrierIntegration
+      description: 'Requires permission: `integrations.approve` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarrierApprovalInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CarrierApprovalInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CarrierApprovalInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/carrier-connections/{id}/enabled':
+    put:
+      tags:
+        - CarrierIntegration
+      description: 'Requires permission: `integrations.edit` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarrierEnableInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CarrierEnableInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CarrierEnableInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CarrierConnectionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/carrier-connections/{id}/requests':
+    get:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: take
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RequestLogRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RequestLogRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RequestLogRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/carrier':
+    get:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ShipmentCarrierView'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentCarrierView'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ShipmentCarrierView'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/carrier/ship-to':
+    put:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShipToInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ShipToInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ShipToInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/carrier/validate-address':
+    post:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarrierChoice'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CarrierChoice'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CarrierChoice'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/AddressResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AddressResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/AddressResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/carrier/rates':
+    post:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CarrierChoice'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CarrierChoice'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CarrierChoice'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RateQuote'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RateQuote'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RateQuote'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/carrier/service':
+    post:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceChoice'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ServiceChoice'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ServiceChoice'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/RateQuote'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RateQuote'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/RateQuote'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/carrier/labels':
+    post:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/CreateLabelsInput'
+          text/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/CreateLabelsInput'
+          application/*+json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/CreateLabelsInput'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LabelRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LabelRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LabelRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/carrier/void':
+    post:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoidLabelsInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/VoidLabelsInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/VoidLabelsInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/VoidResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VoidResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/VoidResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/carrier/track':
+    post:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/TrackResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TrackResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/TrackResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/carrier-labels/{labelId}':
+    get:
+      tags:
+        - CarrierIntegration
+      description: Requires an authenticated user.
+      parameters:
+        - name: labelId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
 components:
   schemas:
     AbsenceInput:
@@ -35072,6 +35721,26 @@ components:
           type:
             - 'null'
             - string
+    AddressResult:
+      required:
+        - valid
+        - normalized
+        - messages
+        - applied
+      type: object
+      properties:
+        valid:
+          type: boolean
+        normalized:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/CarrierAddress'
+        messages:
+          type: array
+          items:
+            type: string
+        applied:
+          type: boolean
     AddTagRequest:
       required:
         - name
@@ -37912,6 +38581,299 @@ components:
             - integer
             - string
           format: uint32
+    CarrierAddress:
+      required:
+        - name
+        - line1
+        - line2
+        - city
+        - region
+        - postalCode
+        - country
+        - phone
+        - residential
+      type: object
+      properties:
+        name:
+          type:
+            - 'null'
+            - string
+        line1:
+          type:
+            - 'null'
+            - string
+        line2:
+          type:
+            - 'null'
+            - string
+        city:
+          type:
+            - 'null'
+            - string
+        region:
+          type:
+            - 'null'
+            - string
+        postalCode:
+          type:
+            - 'null'
+            - string
+        country:
+          type:
+            - 'null'
+            - string
+        phone:
+          type:
+            - 'null'
+            - string
+        residential:
+          type: boolean
+    CarrierApprovalInput:
+      required:
+        - notes
+      type: object
+      properties:
+        notes:
+          type: string
+    CarrierCallResult:
+      type: integer
+    CarrierCapabilities:
+      required:
+        - provider
+        - description
+        - addressValidation
+        - rating
+        - shipmentCreation
+        - labelRetrieval
+        - cancellation
+        - tracking
+        - sandboxOnly
+        - requiresBaseUrl
+        - requiresSecret
+        - labelFormats
+        - services
+        - unverified
+        - status
+      type: object
+      properties:
+        provider:
+          type: string
+        description:
+          type: string
+        addressValidation:
+          type: boolean
+        rating:
+          type: boolean
+        shipmentCreation:
+          type: boolean
+        labelRetrieval:
+          type: boolean
+        cancellation:
+          type: boolean
+        tracking:
+          type: boolean
+        sandboxOnly:
+          type: boolean
+        requiresBaseUrl:
+          type: boolean
+        requiresSecret:
+          type: boolean
+        labelFormats:
+          type: array
+          items:
+            type: string
+        services:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarrierServiceOption'
+        unverified:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+        anyShipmentOperation:
+          type: boolean
+    CarrierChoice:
+      required:
+        - connectionId
+      type: object
+      properties:
+        connectionId:
+          type: string
+          format: uuid
+    CarrierConnectionInput:
+      required:
+        - carrierId
+        - name
+        - provider
+        - environment
+        - baseUrl
+        - accountNumber
+        - clientId
+        - optionsJson
+        - shipper
+        - siteId
+      type: object
+      properties:
+        carrierId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        provider:
+          $ref: '#/components/schemas/CarrierProvider'
+        environment:
+          $ref: '#/components/schemas/CarrierEnvironment'
+        baseUrl:
+          type:
+            - 'null'
+            - string
+        accountNumber:
+          type:
+            - 'null'
+            - string
+        clientId:
+          type:
+            - 'null'
+            - string
+        optionsJson:
+          type:
+            - 'null'
+            - string
+        shipper:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/CarrierAddress'
+        siteId:
+          type: string
+          format: uuid
+        secret:
+          type:
+            - 'null'
+            - string
+        clearSecret:
+          type: boolean
+          default: false
+    CarrierConnectionRow:
+      required:
+        - id
+        - carrierId
+        - carrier
+        - name
+        - provider
+        - environment
+        - baseUrl
+        - accountNumber
+        - clientId
+        - hasSecret
+        - optionsJson
+        - shipper
+        - enabled
+        - verification
+        - verifiedAt
+        - verifiedBy
+        - lastTestAt
+        - lastTestMessage
+        - productionApproved
+        - approvedAt
+        - approvedBy
+        - approvalNotes
+        - siteId
+        - site
+        - capabilities
+        - blockers
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        carrierId:
+          type: string
+          format: uuid
+        carrier:
+          type: string
+        name:
+          type: string
+        provider:
+          $ref: '#/components/schemas/CarrierProvider'
+        environment:
+          $ref: '#/components/schemas/CarrierEnvironment'
+        baseUrl:
+          type:
+            - 'null'
+            - string
+        accountNumber:
+          type:
+            - 'null'
+            - string
+        clientId:
+          type:
+            - 'null'
+            - string
+        hasSecret:
+          type: boolean
+        optionsJson:
+          type: string
+        shipper:
+          $ref: '#/components/schemas/CarrierAddress'
+        enabled:
+          type: boolean
+        verification:
+          $ref: '#/components/schemas/CarrierVerification'
+        verifiedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        verifiedBy:
+          type:
+            - 'null'
+            - string
+        lastTestAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        lastTestMessage:
+          type:
+            - 'null'
+            - string
+        productionApproved:
+          type: boolean
+        approvedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        approvedBy:
+          type:
+            - 'null'
+            - string
+        approvalNotes:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type: string
+          format: uuid
+        site:
+          type: string
+        capabilities:
+          $ref: '#/components/schemas/CarrierCapabilities'
+        blockers:
+          type: array
+          items:
+            type: string
+    CarrierEnableInput:
+      required:
+        - enabled
+      type: object
+      properties:
+        enabled:
+          type: boolean
+    CarrierEnvironment:
+      type: integer
     CarrierInput:
       required:
         - code
@@ -37939,6 +38901,65 @@ components:
         active:
           type: boolean
     CarrierKind:
+      type: integer
+    CarrierLabelStatus:
+      type: integer
+    CarrierOperation:
+      type: integer
+    CarrierPackage:
+      required:
+        - number
+        - containerId
+        - reference
+        - weightKg
+        - lengthCm
+        - widthCm
+        - heightCm
+      type: object
+      properties:
+        number:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        containerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        reference:
+          type:
+            - 'null'
+            - string
+        weightKg:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        lengthCm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        widthCm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        heightCm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+    CarrierProvider:
       type: integer
     CarrierRow:
       required:
@@ -37987,6 +39008,18 @@ components:
             - number
             - string
           format: double
+    CarrierServiceOption:
+      required:
+        - code
+        - name
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+    CarrierVerification:
+      type: integer
     CertificationInput:
       required:
         - userId
@@ -40211,6 +41244,15 @@ components:
             - 'null'
             - string
           format: uuid
+    CreateLabelsInput:
+      required:
+        - instructions
+      type: object
+      properties:
+        instructions:
+          type:
+            - 'null'
+            - string
     CreateLinkedRecordRequest:
       type: object
       properties:
@@ -44604,6 +45646,82 @@ components:
             - integer
             - string
           format: uint32
+    LabelRow:
+      required:
+        - id
+        - packageNumber
+        - containerId
+        - container
+        - carrierShipmentId
+        - trackingNumber
+        - serviceCode
+        - format
+        - bytes
+        - charge
+        - currency
+        - status
+        - createdOn
+        - voidedAt
+        - voidMessage
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        packageNumber:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        containerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        container:
+          type:
+            - 'null'
+            - string
+        carrierShipmentId:
+          type: string
+        trackingNumber:
+          type: string
+        serviceCode:
+          type: string
+        format:
+          type: string
+        bytes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        charge:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        currency:
+          type:
+            - 'null'
+            - string
+        status:
+          $ref: '#/components/schemas/CarrierLabelStatus'
+        createdOn:
+          type: string
+          format: date-time
+        voidedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        voidMessage:
+          type:
+            - 'null'
+            - string
     LabelType:
       type: integer
     LevelInput:
@@ -47785,6 +48903,27 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PackItemInput'
+        lengthCm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        widthCm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        heightCm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
     PackItemInput:
       required:
         - lineId
@@ -50434,6 +51573,40 @@ components:
           type: string
         description:
           type: string
+    RateQuote:
+      required:
+        - serviceCode
+        - serviceName
+        - charge
+        - currency
+        - transitDays
+        - estimatedDelivery
+      type: object
+      properties:
+        serviceCode:
+          type: string
+        serviceName:
+          type: string
+        charge:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        currency:
+          type: string
+        transitDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        estimatedDelivery:
+          type:
+            - 'null'
+            - string
+          format: date
     RateRequest:
       required:
         - defects
@@ -51963,6 +53136,69 @@ components:
             - integer
             - string
           format: int32
+    RequestLogRow:
+      required:
+        - id
+        - operation
+        - environment
+        - attempt
+        - result
+        - httpStatus
+        - errorCode
+        - message
+        - durationMs
+        - at
+        - by
+        - connection
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        operation:
+          $ref: '#/components/schemas/CarrierOperation'
+        environment:
+          $ref: '#/components/schemas/CarrierEnvironment'
+        attempt:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        result:
+          $ref: '#/components/schemas/CarrierCallResult'
+        httpStatus:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        errorCode:
+          type:
+            - 'null'
+            - string
+        message:
+          type:
+            - 'null'
+            - string
+        durationMs:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        at:
+          type: string
+          format: date-time
+        by:
+          type:
+            - 'null'
+            - string
+        connection:
+          type:
+            - 'null'
+            - string
     RequirementInput:
       required:
         - title
@@ -55099,6 +56335,17 @@ components:
             - integer
             - string
           format: uint32
+    ServiceChoice:
+      required:
+        - connectionId
+        - serviceCode
+      type: object
+      properties:
+        connectionId:
+          type: string
+          format: uuid
+        serviceCode:
+          type: string
     SettingsDto:
       required:
         - applicationName
@@ -55268,6 +56515,69 @@ components:
             - 'null'
             - string
           format: uuid
+        shipToName:
+          type:
+            - 'null'
+            - string
+        shipToLine1:
+          type:
+            - 'null'
+            - string
+        shipToLine2:
+          type:
+            - 'null'
+            - string
+        shipToCity:
+          type:
+            - 'null'
+            - string
+        shipToRegion:
+          type:
+            - 'null'
+            - string
+        shipToPostalCode:
+          type:
+            - 'null'
+            - string
+        shipToCountry:
+          type:
+            - 'null'
+            - string
+        shipToPhone:
+          type:
+            - 'null'
+            - string
+        shipToResidential:
+          type: boolean
+        addressValidatedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        addressValidationNote:
+          type:
+            - 'null'
+            - string
+        carrierConnectionId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        carrierServiceCode:
+          type:
+            - 'null'
+            - string
+        quotedCharge:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        quotedCurrency:
+          type:
+            - 'null'
+            - string
         siteId:
           type: string
           format: uuid
@@ -55305,6 +56615,83 @@ components:
             - integer
             - string
           format: uint32
+    ShipmentCarrierView:
+      required:
+        - address
+        - addressValidatedAt
+        - addressValidationNote
+        - connectionId
+        - connection
+        - environment
+        - serviceCode
+        - serviceLevel
+        - quotedCharge
+        - quotedCurrency
+        - labels
+        - tracking
+        - requests
+        - packages
+      type: object
+      properties:
+        address:
+          $ref: '#/components/schemas/CarrierAddress'
+        addressValidatedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        addressValidationNote:
+          type:
+            - 'null'
+            - string
+        connectionId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        connection:
+          type:
+            - 'null'
+            - string
+        environment:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/CarrierEnvironment'
+        serviceCode:
+          type:
+            - 'null'
+            - string
+        serviceLevel:
+          type:
+            - 'null'
+            - string
+        quotedCharge:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        quotedCurrency:
+          type:
+            - 'null'
+            - string
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/LabelRow'
+        tracking:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackingRow'
+        requests:
+          type: array
+          items:
+            $ref: '#/components/schemas/RequestLogRow'
+        packages:
+          type: array
+          items:
+            $ref: '#/components/schemas/CarrierPackage'
     ShipmentContainer:
       type: object
       properties:
@@ -55321,6 +56708,27 @@ components:
             - string
           format: uuid
         weight:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        lengthCm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        widthCm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        heightCm:
           pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
           type:
             - 'null'
@@ -55685,6 +57093,13 @@ components:
           format: uint32
     ShipmentVerificationState:
       type: integer
+    ShipToInput:
+      required:
+        - address
+      type: object
+      properties:
+        address:
+          $ref: '#/components/schemas/CarrierAddress'
     SignInDto:
       required:
         - occurredAt
@@ -57991,6 +59406,50 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TraceHit'
+    TrackingRow:
+      required:
+        - occurredAt
+        - trackingNumber
+        - code
+        - description
+        - location
+        - delivered
+      type: object
+      properties:
+        occurredAt:
+          type: string
+          format: date-time
+        trackingNumber:
+          type: string
+        code:
+          type: string
+        description:
+          type: string
+        location:
+          type:
+            - 'null'
+            - string
+        delivered:
+          type: boolean
+    TrackResult:
+      required:
+        - newEvents
+        - delivered
+        - events
+      type: object
+      properties:
+        newEvents:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        delivered:
+          type: boolean
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrackingRow'
     TrainingCurriculum:
       type: object
       properties:
@@ -58938,6 +60397,36 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/VerifyLine'
+    VoidLabelsInput:
+      required:
+        - reason
+      type: object
+      properties:
+        reason:
+          type: string
+    VoidResult:
+      required:
+        - voided
+        - failed
+        - messages
+      type: object
+      properties:
+        voided:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        failed:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        messages:
+          type: array
+          items:
+            type: string
     VolumeInput:
       required:
         - siteId
@@ -59953,3 +61442,4 @@ tags:
   - name: Warehouse
   - name: Receiving
   - name: Shipping
+  - name: CarrierIntegration
