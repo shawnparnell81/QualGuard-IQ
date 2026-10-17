@@ -141,9 +141,9 @@ public static class FaiAqlMapper
     public static PlanDetailInput ToInput(AQLPlanDetailInput r) => new(r.LotSizeMin, r.LotSizeMax, r.InspectionLevel, r.AqlLevel, r.Stage ?? 1, r.SampleSize, r.AcceptanceNumber, r.RejectionNumber,
         r.CodeLetter, r.DefectClass is { } c ? Domain(c) : null);
 
-    public static IReadOnlyList<AqlThreshold> Thresholds(SampleCalc c) => c.Thresholds.Count > 0
+    public static IReadOnlyList<AqlThreshold> Thresholds(SampleCalc c, decimal? aql = null) => c.Thresholds.Count > 0
         ? c.Thresholds.Select(t => new AqlThreshold(Code(t.DefectClass), t.Stages[0].Ac, t.Stages[0].Re, t.Aql, Stages(t.Stages))).ToList()
-        : [new AqlThreshold(null, c.Stages[0].Ac, c.Stages[0].Re, 0, Stages(c.Stages))];
+        : [new AqlThreshold(null, c.Stages[0].Ac, c.Stages[0].Re, aql ?? 0, Stages(c.Stages))];
     private static List<AqlStageDto> Stages(IEnumerable<AqlStage> s) => s.Select((x, i) => new AqlStageDto(i + 1, x.N, x.Ac, x.Re)).ToList();
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);

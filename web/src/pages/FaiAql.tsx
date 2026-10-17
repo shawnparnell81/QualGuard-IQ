@@ -133,7 +133,7 @@ export function FaiDetail() {
   const [dlg, setDlg] = useState<string | null>(null);
   const [pick, setPick] = useState<Char | null>(null);
   const q = useQuery({ queryKey: ['fai-detail', id], queryFn: () => get<FaiDetailDto>(`/api/v1/fai/${id}/detail`) });
-  const eq = useQuery({ queryKey: ['eq-lookup'], retry: false, queryFn: async () => { try { return (await get<{ items: { id: string; number: string; name: string; status: number }[] }>('/api/calibration/equipment?pageSize=300')).items; } catch { return []; } } });
+  const eq = useQuery({ queryKey: ['eq-lookup'], retry: false, queryFn: async () => { try { const r = await get<{ items?: { id: string; number: string; name: string; status: number }[] } | { id: string; number: string; name: string; status: number }[]>('/api/calibration/equipment?pageSize=300'); return (Array.isArray(r) ? r : r.items ?? []).filter((e) => e.status === 0); } catch { return []; } } });
   const users = useUsers();
   const refresh = () => qc.invalidateQueries({ queryKey: ['fai-detail', id] });
   const { error, run } = useRunner(refresh);
