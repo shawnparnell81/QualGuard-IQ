@@ -279,7 +279,8 @@ public sealed class AuthController(
     [EnableRateLimiting("login")]
     public async Task<IActionResult> SsoComplete(SsoCompleteRequest req)
     {
-        var (user, provider, amr, error) = await sso.ReadCompletionAsync(req.Challenge);
+        var (user, provider, amr, error) = await sso.ReadCompletionAsync(req.Challenge, Request.Cookies[SsoController.BindingCookie]);
+        Response.Cookies.Delete(SsoController.BindingCookie, new CookieOptions { Path = "/api/auth/sso" });
         if (error is not null) return await ChallengeProblem(error, user);
         var how = $"Single sign-on ({provider!.DisplayName}{(amr.Length > 0 ? ", provider methods: " + amr : "")})";
         if (provider.TrustProviderMfa) return await CompleteAsync(user!, how + "; provider MFA trusted");

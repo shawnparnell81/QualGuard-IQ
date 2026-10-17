@@ -2,6 +2,8 @@ using QualGuardIQ.Domain.Common;
 
 namespace QualGuardIQ.Domain.Security;
 
+/// <summary>Sent and returned as text ("Entra", "Google", "Okta", "Oidc").</summary>
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter<IdentityProviderKind>))]
 public enum IdentityProviderKind { Entra = 0, Google = 1, Okta = 2, Oidc = 3 }
 
 /// <summary>

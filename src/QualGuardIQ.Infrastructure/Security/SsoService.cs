@@ -5,6 +5,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Memory;
 using Microsoft.Extensions.Options;
 using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Application.Security;
@@ -18,14 +19,14 @@ namespace QualGuardIQ.Infrastructure.Security;
 /// <summary>What the browser carries between "start" and the provider's redirect back (protected, in the qms.sso cookie).</summary>
 public sealed record SsoRequestTicket(string State, string Nonce, string Verifier, Guid ProviderId, string Mode, Guid? TesterId, string? TesterName, string RedirectUri, DateTimeOffset ExpiresAt);
 /// <summary>Short-lived ticket the sign-in page exchanges for a session (or the next step) after a successful provider sign-in.</summary>
-public sealed record SsoCompletionTicket(Guid UserId, string Stamp, Guid ProviderId, string Amr, DateTimeOffset ExpiresAt);
+public sealed record SsoCompletionTicket(string Id, Guid UserId, string Stamp, Guid ProviderId, string Amr, string BindingHash, DateTimeOffset ExpiresAt);
 public sealed record SsoTestStep(string Name, bool Ok, string Detail);
 public sealed record SsoTestReport(bool Ok, IReadOnlyList<SsoTestStep> Steps, IDictionary<string, string?> Claims);
 public sealed record SsoProviderInput(IdentityProviderKind Kind, string DisplayName, string Authority, string ClientId, string? ClientSecret, bool ClearClientSecret,
     string? Scopes, IReadOnlyList<string>? AllowedDomains, IReadOnlyList<string>? SsoRequiredDomains, bool JitEnabled, Guid? JitDefaultRoleId, bool TrustProviderMfa, uint RowVersion = 0);
 
 /// <summary>Result of the provider's redirect back: a sign-in to finish, a recorded test, or a failure with a code the sign-in page explains.</summary>
-public sealed record SsoCallbackResult(string Mode, Guid? ProviderId, string? CompletionToken, string? ErrorCode, string? ErrorDetail);
+public sealed record SsoCallbackResult(string Mode, Guid? ProviderId, string? CompletionToken, string? ErrorCode, string? ErrorDetail, string? Binding = null);
 
 /// <summary>
 /// Single sign-on with OpenID Connect providers: provider settings (client secret encrypted), the sign-in round trip (state, nonce,
@@ -33,7 +34,7 @@ public sealed record SsoCallbackResult(string Mode, Guid? ProviderId, string? Co
 /// test sign-ins that gate enabling a provider, domains that must use single sign-on and break-glass accounts.
 /// </summary>
 public sealed class SsoService(AppDbContext db, UserManager<ApplicationUser> users, IDataProtectionProvider dp, OidcClient oidc, IClock clock,
-    ISecurityEventLogger security, ICurrentUser current, IAccessService access, IOptions<AuthOptions> authOptions)
+    ISecurityEventLogger security, ICurrentUser current, IAccessService access, IOptions<AuthOptions> authOptions, Microsoft.Extensions.Caching.Memory.IMemoryCache used)
 {
     public const string SignInMode = "signin";
     public const string TestMode = "test";
@@ -298,8 +299,10 @@ public sealed class SsoService(AppDbContext db, UserManager<ApplicationUser> use
         var (user, problem) = await MatchUserAsync(p, id, email!, ct);
         if (user is null) return new(t.Mode, p.Id, null, problem, null);
         var exp = clock.UtcNow.AddMinutes(Math.Clamp(authOptions.Value.ChallengeMinutes, 1, 30));
-        var token = _completion.Protect(JsonSerializer.Serialize(new SsoCompletionTicket(user.Id, user.SecurityStamp ?? "", p.Id, string.Join(' ', id.Amr), exp)));
-        return new(t.Mode, p.Id, token, null, null);
+        // The ticket works once, and only in the browser that made the round trip (it must also present the binding cookie).
+        var binding = OidcClient.RandomToken();
+        var token = _completion.Protect(JsonSerializer.Serialize(new SsoCompletionTicket(OidcClient.RandomToken(16), user.Id, user.SecurityStamp ?? "", p.Id, string.Join(' ', id.Amr), SignInSecurityService.Sha256(binding), exp)));
+        return new(t.Mode, p.Id, token, null, null, binding);
     }
 
     /// <summary>The email to match on, or why it cannot be trusted. Entra ID: email_verified or xms_edov; Google: email_verified and a matching hd (Workspace domain).</summary>
@@ -392,14 +395,16 @@ public sealed class SsoService(AppDbContext db, UserManager<ApplicationUser> use
     }
 
     /// <summary>Reads the completion ticket handed to the sign-in page. Error: "expired" or "invalid".</summary>
-    public async Task<(ApplicationUser? User, IdentityProvider? Provider, string Amr, string? Error)> ReadCompletionAsync(string? token, CancellationToken ct = default)
+    public async Task<(ApplicationUser? User, IdentityProvider? Provider, string Amr, string? Error)> ReadCompletionAsync(string? token, string? binding, CancellationToken ct = default)
     {
-        if (string.IsNullOrWhiteSpace(token)) return (null, null, "", "invalid");
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrEmpty(binding)) return (null, null, "", "invalid");
         SsoCompletionTicket? t;
         try { t = JsonSerializer.Deserialize<SsoCompletionTicket>(_completion.Unprotect(token)); }
         catch (Exception e) when (e is CryptographicException or JsonException or FormatException) { return (null, null, "", "invalid"); }
-        if (t is null) return (null, null, "", "invalid");
+        if (t is null || !CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(SignInSecurityService.Sha256(binding)), Encoding.ASCII.GetBytes(t.BindingHash))) return (null, null, "", "invalid");
         if (t.ExpiresAt <= clock.UtcNow) return (null, null, "", "expired");
+        var usedKey = "sso:done:" + t.Id;
+        lock (used) { if (used.TryGetValue(usedKey, out _)) return (null, null, "", "invalid"); used.Set(usedKey, true, t.ExpiresAt.AddMinutes(1)); }
         var p = await db.IdentityProviders.AsNoTracking().FirstOrDefaultAsync(x => x.Id == t.ProviderId && x.IsEnabled, ct);
         var user = await users.FindByIdAsync(t.UserId.ToString());
         if (p is null || user is null || !user.IsActive || user.SecurityStamp != t.Stamp) return (null, null, "", "invalid");
