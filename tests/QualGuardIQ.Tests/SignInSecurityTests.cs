@@ -174,6 +174,9 @@ public sealed class SignInSecurityTests(TestApp app)
         var setup = await (await c.PostOkAsync("/api/auth/mfa/enrol/start", new { challenge = step.Challenge })).JsonAsync();
         var key = setup.Str("key");
         Assert.Equal(32, key.Length);
+        // starting again (reload, second tab, two requests at once) shows the same key rather than replacing the one being scanned
+        var again = await Task.WhenAll(Enumerable.Range(0, 3).Select(_ => c.PostAsync("/api/auth/mfa/enrol/start", new { challenge = step.Challenge })));
+        foreach (var r in again) Assert.Equal(key, (await r.JsonAsync()).Str("key"));
         Assert.Equal(HttpStatusCode.BadRequest, (await c.PostAsync("/api/auth/mfa/enrol/confirm", new { challenge = step.Challenge, code = "111111" })).StatusCode);
         var done = await (await c.PostOkAsync("/api/auth/mfa/enrol/confirm", new { challenge = step.Challenge, code = TestTotp.Now(key, -1) })).JsonAsync();
         Assert.Equal(10, done.GetProperty("recoveryCodes").GetArrayLength());

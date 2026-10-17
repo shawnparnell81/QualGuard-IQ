@@ -49,7 +49,7 @@ export function Login() {
       );
     case 'step': {
       const s = view.step;
-      const expire = (m?: string) => setView({ kind: 'expired', message: m ?? 'This sign-in step timed out. For your security each step stays open for a few minutes. Start again: enter your email and password.' });
+      const expire = (m?: string) => setView({ kind: 'expired', message: m ?? `This sign-in step timed out. For your security each step stays open for ${Math.max(1, Math.round(s.expiresInSeconds / 60))} minutes. Start again: enter your email and password.` });
       const fail = (e: unknown) => { if (isStepEnd(e)) expire(msg(e)); else throw e; };
       if (s.next === 'change-password') return <ChangeRequired step={s} org={org} onExpire={expire} onStep={toStep} onDone={signedIn} fail={fail} />;
       if (s.next === 'mfa') return <EnterCode step={s} org={org} onExpire={expire} onDone={signedIn} fail={fail} onStartAgain={() => startAgain()} />;
@@ -121,8 +121,6 @@ function EnterCode({ step, org, onExpire, onDone, fail, onStartAgain }: { step: 
     try { await post('/api/auth/mfa/verify', { challenge: step.challenge, code, trustDevice: trust }); await onDone(); }
     catch (x) { setBusy(false); try { fail(x); } catch { setError(msg(x)); setCode(''); } }
   };
-  // submit automatically when the sixth digit is typed or pasted
-  useEffect(() => { if (!recovery && code.length === 6 && !busy) void submit(); }, [code]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <AuthShell title="Two-step verification" subtitle={recovery ? 'Enter one of your recovery codes.' : `Enter the code from your authenticator app for ${step.email}.`} organization={org}>
       <Box component="form" noValidate onSubmit={submit} sx={{ display: 'grid', gap: 2 }}>

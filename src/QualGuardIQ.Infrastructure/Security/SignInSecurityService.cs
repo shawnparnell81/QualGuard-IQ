@@ -88,14 +88,31 @@ public sealed class SignInSecurityService(AppDbContext db, UserManager<Applicati
     /// <summary>Creates a new key for set-up. It replaces nothing until the first code confirms it.</summary>
     public async Task<MfaSetupInfo> BeginSetupAsync(ApplicationUser user, string appName)
     {
-        var secret = Totp.NewSecret();
-        user.MfaPendingSecret = _secrets.Protect(Base32.Encode(secret));
-        user.MfaPendingExpiresAt = clock.UtcNow.AddMinutes(Math.Clamp(O.Mfa.SetupMinutes, 5, 60));
-        await users.UpdateAsync(user);
+        // A set-up already under way is shown again (a page reload or a second tab must not silently replace the key being scanned).
+        var key = PendingKey(user);
+        if (key is null)
+        {
+            // Conditional update, so two requests at the same moment (double click, second tab) end up showing the same stored key.
+            var now = clock.UtcNow;
+            var candidate = Base32.Encode(Totp.NewSecret());
+            var protectedKey = _secrets.Protect(candidate);
+            var until = now.AddMinutes(Math.Clamp(O.Mfa.SetupMinutes, 5, 60));
+            var stale = now.AddMinutes(2);
+            await db.Users.Where(u => u.Id == user.Id && (u.MfaPendingSecret == null || u.MfaPendingExpiresAt == null || u.MfaPendingExpiresAt <= stale))
+                .ExecuteUpdateAsync(x => x.SetProperty(u => u.MfaPendingSecret, protectedKey).SetProperty(u => u.MfaPendingExpiresAt, until));
+            await db.Entry(user).ReloadAsync();
+            key = PendingKey(user) ?? throw new AppException("Two-step set-up could not be started. Try again.", 409);
+        }
+        var secret = Base32.Decode(key);
         var issuer = Issuer(appName);
-        var key = Base32.Encode(secret);
         var uri = Totp.OtpAuthUri(issuer, user.Email ?? user.UserName ?? "account", secret);
         return new MfaSetupInfo(key, Base32.Grouped(key), uri, BarcodeService.Svg(BarcodeSymbology.Qr, uri, 220, 220), issuer, user.Email ?? "", user.MfaPendingExpiresAt.Value);
+    }
+
+    string? PendingKey(ApplicationUser user)
+    {
+        if (user.MfaPendingSecret is null || user.MfaPendingExpiresAt is not { } exp || exp <= clock.UtcNow.AddMinutes(2)) return null;
+        try { return _secrets.Unprotect(user.MfaPendingSecret); } catch (System.Security.Cryptography.CryptographicException) { return null; }
     }
 
     /// <summary>Confirms set-up with a code from the new key: turns two-step verification on, issues recovery codes, ends trust in browsers trusted under an older key.</summary>
