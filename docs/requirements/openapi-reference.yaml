@@ -1,0 +1,5026 @@
+openapi: 3.1.1
+info:
+  title: Manufacturing QMS FAI and AQL API
+  version: 1.0.0
+  description: API contract for First Article Inspection and configurable AQL sampling. AQL plans and values are organization-configured;
+    this contract does not embed proprietary sampling tables.
+servers:
+- url: https://api.example.com/api/v1
+  description: Production
+- url: https://staging-api.example.com/api/v1
+  description: Staging
+security:
+- bearerAuth: []
+tags:
+- name: FAI
+- name: FAI Characteristics
+- name: FAI Workflow
+- name: AQL Plans
+- name: AQL Inspections
+- name: Defects
+- name: Integrations
+- name: Dashboards
+- name: Reports
+paths:
+  /fai:
+    get:
+      tags:
+      - FAI
+      summary: List FAI records
+      operationId: listFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedFAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+      - &id001
+        name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - &id002
+        name: pageSize
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 200
+          default: 25
+      - name: search
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+    post:
+      tags:
+      - FAI
+      summary: Create FAI record
+      operationId: createFai
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FAICreate'
+  /fai/{faiId}:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI
+      summary: Get FAI record
+      operationId: getFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - FAI
+      summary: Update FAI record
+      operationId: updateFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FAIUpdate'
+    delete:
+      tags:
+      - FAI
+      summary: Delete eligible draft FAI
+      operationId: deleteFai
+      responses:
+        '204':
+          description: Operation completed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /fai/open:
+    get:
+      tags:
+      - FAI
+      summary: List open FAI records
+      operationId: listOpenFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedFAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters: &id003
+      - *id001
+      - *id002
+  /fai/overdue:
+    get:
+      tags:
+      - FAI
+      summary: List overdue FAI records
+      operationId: listOverdueFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedFAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters: *id003
+  /fai/approval-pending:
+    get:
+      tags:
+      - FAI
+      summary: List approval pending FAI records
+      operationId: listApprovalPendingFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedFAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters: *id003
+  /fai/closed:
+    get:
+      tags:
+      - FAI
+      summary: List closed FAI records
+      operationId: listClosedFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedFAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters: *id003
+  /fai/{faiId}/submit:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - FAI Workflow
+      summary: Submit FAI
+      operationId: submitFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /fai/{faiId}/start-inspection:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - FAI Workflow
+      summary: Start Inspection FAI
+      operationId: start_inspectionFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /fai/{faiId}/complete-inspection:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - FAI Workflow
+      summary: Complete Inspection FAI
+      operationId: complete_inspectionFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /fai/{faiId}/return:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - FAI Workflow
+      summary: Return FAI
+      operationId: returnFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /fai/{faiId}/approve:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - FAI Workflow
+      summary: Approve FAI
+      operationId: approveFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /fai/{faiId}/reject:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - FAI Workflow
+      summary: Reject FAI
+      operationId: rejectFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /fai/{faiId}/release:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - FAI Workflow
+      summary: Release FAI
+      operationId: releaseFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /fai/{faiId}/close:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - FAI Workflow
+      summary: Close FAI
+      operationId: closeFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /fai/{faiId}/reopen:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - FAI Workflow
+      summary: Reopen FAI
+      operationId: reopenFai
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAI'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /fai/{faiId}/audit-history:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI Workflow
+      summary: Get FAI audit history
+      operationId: getFaiAuditHistory
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAuditEvents'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters: *id003
+  /fai/{faiId}/workflow-history:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI Workflow
+      summary: Get FAI workflow history
+      operationId: getFaiWorkflowHistory
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAuditEvents'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters: *id003
+  /fai/{faiId}/characteristics:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI Characteristics
+      summary: List FAI characteristics
+      operationId: listFaiCharacteristics
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedCharacteristics'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters: *id003
+    post:
+      tags:
+      - FAI Characteristics
+      summary: Create FAI characteristic
+      operationId: createFaiCharacteristic
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAICharacteristic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FAICharacteristicInput'
+  /fai/{faiId}/characteristics/{characteristicId}:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: characteristicId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI Characteristics
+      summary: Get FAI characteristic
+      operationId: getFaiCharacteristic
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAICharacteristic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - FAI Characteristics
+      summary: Update FAI characteristic
+      operationId: updateFaiCharacteristic
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FAICharacteristic'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FAICharacteristicInput'
+    delete:
+      tags:
+      - FAI Characteristics
+      summary: Delete eligible FAI characteristic
+      operationId: deleteFaiCharacteristic
+      responses:
+        '204':
+          description: Operation completed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /fai/{faiId}/characteristics/missing:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI Characteristics
+      summary: List missing FAI characteristics
+      operationId: listMissingFaiCharacteristics
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedCharacteristics'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters: *id003
+  /fai/{faiId}/characteristics/failed:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI Characteristics
+      summary: List failed FAI characteristics
+      operationId: listFailedFaiCharacteristics
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedCharacteristics'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters: *id003
+  /fai/{faiId}/characteristics/open:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI Characteristics
+      summary: List open FAI characteristics
+      operationId: listOpenFaiCharacteristics
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedCharacteristics'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters: *id003
+  /fai/{faiId}/characteristics/{characteristicId}/results:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: characteristicId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI Characteristics
+      summary: List characteristic results
+      operationId: listCharacteristicResults
+      responses:
+        '200':
+          description: Successful response
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters: *id003
+    post:
+      tags:
+      - FAI Characteristics
+      summary: Record characteristic result
+      operationId: createCharacteristicResult
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacteristicResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharacteristicResultInput'
+  /fai/{faiId}/results/{resultId}:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: resultId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    put:
+      tags:
+      - FAI Characteristics
+      summary: Update characteristic result
+      operationId: updateCharacteristicResult
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CharacteristicResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CharacteristicResultInput'
+    delete:
+      tags:
+      - FAI Characteristics
+      summary: Delete eligible characteristic result
+      operationId: deleteCharacteristicResult
+      responses:
+        '204':
+          description: Operation completed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /fai/{faiId}/balloon-drawings:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI Characteristics
+      summary: List balloon drawings
+      operationId: listBalloonDrawings
+      responses:
+        '200':
+          description: Successful response
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+      - FAI Characteristics
+      summary: Upload balloon drawing
+      operationId: uploadBalloonDrawing
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                drawingId:
+                  type: string
+                  format: uuid
+                drawingRevision:
+                  type: string
+                file:
+                  type: string
+                  format: binary
+              required:
+              - drawingId
+              - drawingRevision
+              - file
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BalloonDrawing'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /fai/{faiId}/attachments:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI
+      summary: List FAI attachments
+      operationId: listFaiAttachments
+      responses:
+        '200':
+          description: Successful response
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+      - FAI
+      summary: Upload FAI attachment
+      operationId: uploadFaiAttachment
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                category:
+                  type:
+                  - string
+                  - 'null'
+                description:
+                  type:
+                  - string
+                  - 'null'
+                file:
+                  type: string
+                  format: binary
+              required:
+              - file
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /fai/{faiId}/attachments/{attachmentId}:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: attachmentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI
+      summary: Download FAI attachment
+      operationId: downloadFaiAttachment
+      responses:
+        '200':
+          description: File stream
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags:
+      - FAI
+      summary: Delete eligible FAI attachment
+      operationId: deleteFaiAttachment
+      responses:
+        '204':
+          description: Operation completed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /fai/{faiId}/approvals:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - FAI Workflow
+      summary: List FAI approvals
+      operationId: listFaiApprovals
+      responses:
+        '200':
+          description: Successful response
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+      - FAI Workflow
+      summary: Request FAI approval
+      operationId: requestFaiApproval
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalRequest'
+  /fai/{faiId}/approval-decision:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - FAI Workflow
+      summary: Record FAI approval decision
+      operationId: decideFaiApproval
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApprovalDecision'
+  /fai/{faiId}/linked-records:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Integrations
+      summary: List linked FAI records
+      operationId: listFaiLinkedRecords
+      responses:
+        '200':
+          description: Successful response
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /fai/{faiId}/ncr:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Integrations
+      summary: Create linked NCR
+      operationId: createNCRFromFai
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkedRecord'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLinkedRecordRequest'
+  /fai/{faiId}/capa:
+    parameters:
+    - name: faiId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Integrations
+      summary: Create linked CAPA
+      operationId: createCAPAFromFai
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkedRecord'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLinkedRecordRequest'
+  /aql/plans:
+    get:
+      tags:
+      - AQL Plans
+      summary: List AQL plans
+      operationId: listAqlPlans
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAQLPlans'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+      - *id001
+      - *id002
+      - name: search
+        in: query
+        schema:
+          type: string
+    post:
+      tags:
+      - AQL Plans
+      summary: Create AQL plan revision
+      operationId: createAqlPlan
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLPlan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AQLPlanInput'
+  /aql/plans/{planId}:
+    parameters:
+    - name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - AQL Plans
+      summary: Get AQL plan
+      operationId: getAqlPlan
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLPlan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - AQL Plans
+      summary: Update AQL plan
+      operationId: updateAqlPlan
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLPlan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AQLPlanInput'
+    delete:
+      tags:
+      - AQL Plans
+      summary: Delete eligible draft AQL plan
+      operationId: deleteAqlPlan
+      responses:
+        '204':
+          description: Operation completed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /aql/plans/{planId}/activate:
+    parameters:
+    - name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - AQL Plans
+      summary: Activate AQL plan
+      operationId: activateAqlPlan
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLPlan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /aql/plans/{planId}/deactivate:
+    parameters:
+    - name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - AQL Plans
+      summary: Deactivate AQL plan
+      operationId: deactivateAqlPlan
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLPlan'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /aql/plans/{planId}/levels:
+    parameters:
+    - name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - AQL Plans
+      summary: List AQL plan rows
+      operationId: listAqlPlanRows
+      responses:
+        '200':
+          description: Successful response
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+      - AQL Plans
+      summary: Create AQL plan row
+      operationId: createAqlPlanRow
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLPlanDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AQLPlanDetailInput'
+  /aql/plans/{planId}/levels/{levelId}:
+    parameters:
+    - name: planId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: levelId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    put:
+      tags:
+      - AQL Plans
+      summary: Update AQL plan row
+      operationId: updateAqlPlanRow
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLPlanDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AQLPlanDetailInput'
+    delete:
+      tags:
+      - AQL Plans
+      summary: Delete AQL plan row
+      operationId: deleteAqlPlanRow
+      responses:
+        '204':
+          description: Operation completed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /aql/calculate-sample:
+    post:
+      tags:
+      - AQL Plans
+      summary: Calculate sample size and thresholds
+      operationId: calculateAqlSample
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLCalculationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AQLCalculationRequest'
+  /aql/inspections:
+    get:
+      tags:
+      - AQL Inspections
+      summary: List AQL inspections
+      operationId: listAqlInspections
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAQLInspections'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+      - *id001
+      - *id002
+      - name: search
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+    post:
+      tags:
+      - AQL Inspections
+      summary: Create AQL inspection
+      operationId: createAqlInspection
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLInspection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AQLInspectionInput'
+  /aql/inspections/{inspectionId}:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - AQL Inspections
+      summary: Get AQL inspection
+      operationId: getAqlInspection
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLInspection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags:
+      - AQL Inspections
+      summary: Update AQL inspection
+      operationId: updateAqlInspection
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLInspection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AQLInspectionInput'
+    delete:
+      tags:
+      - AQL Inspections
+      summary: Delete eligible draft AQL inspection
+      operationId: deleteAqlInspection
+      responses:
+        '204':
+          description: Operation completed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /aql/inspections/open:
+    get:
+      tags:
+      - AQL Inspections
+      summary: List open AQL inspections
+      operationId: listOpenAqlInspections
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAQLInspections'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters: *id003
+  /aql/inspections/accepted:
+    get:
+      tags:
+      - AQL Inspections
+      summary: List accepted AQL inspections
+      operationId: listAcceptedAqlInspections
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAQLInspections'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters: *id003
+  /aql/inspections/rejected:
+    get:
+      tags:
+      - AQL Inspections
+      summary: List rejected AQL inspections
+      operationId: listRejectedAqlInspections
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAQLInspections'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters: *id003
+  /aql/inspections/completed:
+    get:
+      tags:
+      - AQL Inspections
+      summary: List completed AQL inspections
+      operationId: listCompletedAqlInspections
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAQLInspections'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters: *id003
+  /aql/inspections/{inspectionId}/submit:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - AQL Inspections
+      summary: Submit AQL inspection
+      operationId: submitAqlInspection
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLInspection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /aql/inspections/{inspectionId}/evaluate:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - AQL Inspections
+      summary: Evaluate AQL inspection
+      operationId: evaluateAqlInspection
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EvaluationResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /aql/inspections/{inspectionId}/accept:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - AQL Inspections
+      summary: Accept AQL inspection
+      operationId: acceptAqlInspection
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLInspection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /aql/inspections/{inspectionId}/reject:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - AQL Inspections
+      summary: Reject AQL inspection
+      operationId: rejectAqlInspection
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLInspection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /aql/inspections/{inspectionId}/approve:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - AQL Inspections
+      summary: Approve AQL inspection
+      operationId: approveAqlInspection
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLInspection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /aql/inspections/{inspectionId}/close:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - AQL Inspections
+      summary: Close AQL inspection
+      operationId: closeAqlInspection
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AQLInspection'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkflowAction'
+  /aql/defect-categories:
+    get:
+      tags:
+      - Defects
+      summary: List defect categories
+      operationId: listDefectCategories
+      responses:
+        '200':
+          description: Successful response
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+    post:
+      tags:
+      - Defects
+      summary: Create defect category
+      operationId: createDefectCategory
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DefectCategory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DefectCategoryInput'
+  /aql/inspections/{inspectionId}/defects:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Defects
+      summary: List inspection defects
+      operationId: listInspectionDefects
+      responses:
+        '200':
+          description: Successful response
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags:
+      - Defects
+      summary: Record inspection defect
+      operationId: createInspectionDefect
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionDefect'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InspectionDefectInput'
+  /aql/inspections/{inspectionId}/defects/{defectId}:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: defectId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    put:
+      tags:
+      - Defects
+      summary: Update inspection defect
+      operationId: updateInspectionDefect
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InspectionDefect'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InspectionDefectInput'
+    delete:
+      tags:
+      - Defects
+      summary: Delete eligible inspection defect
+      operationId: deleteInspectionDefect
+      responses:
+        '204':
+          description: Operation completed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /aql/inspections/{inspectionId}/ncr:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Integrations
+      summary: Create linked NCR
+      operationId: createNCRFromAql
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkedRecord'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLinkedRecordRequest'
+  /aql/inspections/{inspectionId}/capa:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    post:
+      tags:
+      - Integrations
+      summary: Create linked CAPA
+      operationId: createCAPAFromAql
+      responses:
+        '201':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LinkedRecord'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateLinkedRecordRequest'
+  /aql/inspections/{inspectionId}/linked-records:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Integrations
+      summary: List linked AQL records
+      operationId: listAqlLinkedRecords
+      responses:
+        '200':
+          description: Successful response
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+  /aql/inspections/{inspectionId}/audit-history:
+    parameters:
+    - name: inspectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - AQL Inspections
+      summary: Get AQL audit history
+      operationId: getAqlAuditHistory
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PagedAuditEvents'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters: *id003
+  /aql/suppliers/{supplierId}/history:
+    parameters:
+    - name: supplierId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Integrations
+      summary: Get supplier AQL history
+      operationId: getSupplierAqlHistory
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /aql/suppliers/{supplierId}/metrics:
+    parameters:
+    - name: supplierId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Integrations
+      summary: Get supplier AQL metrics
+      operationId: getSupplierAqlMetrics
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /aql/suppliers/{supplierId}/scorecard:
+    parameters:
+    - name: supplierId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Integrations
+      summary: Get supplier AQL scorecard
+      operationId: getSupplierAqlScorecard
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /aql/suppliers/{supplierId}/ppm:
+    parameters:
+    - name: supplierId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Integrations
+      summary: Get supplier AQL ppm
+      operationId: getSupplierAqlPpm
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /aql/suppliers/{supplierId}/acceptance-rate:
+    parameters:
+    - name: supplierId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Integrations
+      summary: Get supplier AQL acceptance rate
+      operationId: getSupplierAqlAcceptanceRate
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /aql/suppliers/{supplierId}/rejection-rate:
+    parameters:
+    - name: supplierId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Integrations
+      summary: Get supplier AQL rejection rate
+      operationId: getSupplierAqlRejectionRate
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /aql/suppliers/{supplierId}/defect-trends:
+    parameters:
+    - name: supplierId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+    get:
+      tags:
+      - Integrations
+      summary: Get supplier AQL defect trends
+      operationId: getSupplierAqlDefectTrends
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+        '404':
+          $ref: '#/components/responses/NotFound'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /dashboard/fai/open:
+    get:
+      tags:
+      - Dashboards
+      summary: Get fai open metric
+      operationId: getFaiOpenMetric
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /dashboard/fai/overdue:
+    get:
+      tags:
+      - Dashboards
+      summary: Get fai overdue metric
+      operationId: getFaiOverdueMetric
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /dashboard/fai/pass-rate:
+    get:
+      tags:
+      - Dashboards
+      summary: Get fai pass rate metric
+      operationId: getFaiPassRateMetric
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /dashboard/fai/fail-rate:
+    get:
+      tags:
+      - Dashboards
+      summary: Get fai fail rate metric
+      operationId: getFaiFailRateMetric
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /dashboard/aql/acceptance-rate:
+    get:
+      tags:
+      - Dashboards
+      summary: Get aql acceptance rate metric
+      operationId: getAqlAcceptanceRateMetric
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /dashboard/aql/rejection-rate:
+    get:
+      tags:
+      - Dashboards
+      summary: Get aql rejection rate metric
+      operationId: getAqlRejectionRateMetric
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /dashboard/aql/defect-rate:
+    get:
+      tags:
+      - Dashboards
+      summary: Get aql defect rate metric
+      operationId: getAqlDefectRateMetric
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /dashboard/aql/ppm:
+    get:
+      tags:
+      - Dashboards
+      summary: Get aql ppm metric
+      operationId: getAqlPpmMetric
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      parameters:
+      - name: dateFrom
+        in: query
+        schema:
+          type: string
+          format: date
+      - name: dateTo
+        in: query
+        schema:
+          type: string
+          format: date
+  /reports/fai-summary:
+    post:
+      tags:
+      - Reports
+      summary: Generate fai summary report
+      operationId: generateFaiSummaryReport
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+  /reports/fai-characteristics:
+    post:
+      tags:
+      - Reports
+      summary: Generate fai characteristics report
+      operationId: generateFaiCharacteristicsReport
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+  /reports/aql-summary:
+    post:
+      tags:
+      - Reports
+      summary: Generate aql summary report
+      operationId: generateAqlSummaryReport
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+  /reports/aql-supplier-performance:
+    post:
+      tags:
+      - Reports
+      summary: Generate aql supplier performance report
+      operationId: generateAqlSupplierPerformanceReport
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+  /reports/aql-defect-analysis:
+    post:
+      tags:
+      - Reports
+      summary: Generate aql defect analysis report
+      operationId: generateAqlDefectAnalysisReport
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+  /reports/aql-trends:
+    post:
+      tags:
+      - Reports
+      summary: Generate aql trends report
+      operationId: generateAqlTrendsReport
+      responses:
+        '200':
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MetricSeries'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '422':
+          $ref: '#/components/responses/UnprocessableEntity'
+        '500':
+          $ref: '#/components/responses/ServerError'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReportRequest'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ProblemDetails:
+      type: object
+      properties:
+        title:
+          type: string
+        status:
+          type: integer
+        detail:
+          type:
+          - string
+          - 'null'
+        traceId:
+          type: string
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
+      required:
+      - title
+      - status
+      - traceId
+    PageMetadata:
+      type: object
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 200
+        totalItems:
+          type: integer
+          minimum: 0
+        totalPages:
+          type: integer
+          minimum: 0
+      required:
+      - page
+      - pageSize
+      - totalItems
+      - totalPages
+    WorkflowAction:
+      type: object
+      properties:
+        comment:
+          type: string
+          minLength: 1
+          maxLength: 4000
+        reasonCode:
+          type:
+          - string
+          - 'null'
+        assigneeId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        expectedVersion:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+      required:
+      - comment
+    ApprovalRequest:
+      type: object
+      properties:
+        approvalRole:
+          type: string
+        approverId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        dueAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        comment:
+          type:
+          - string
+          - 'null'
+      required:
+      - approvalRole
+    ApprovalDecision:
+      type: object
+      properties:
+        decision:
+          type: string
+          enum:
+          - Approved
+          - Rejected
+          - Returned
+        comment:
+          type: string
+          minLength: 1
+        expectedVersion:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+      required:
+      - decision
+      - comment
+    Approval:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        approvalRole:
+          type: string
+        approverId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        status:
+          type: string
+          enum:
+          - Pending
+          - Approved
+          - Rejected
+          - Returned
+          - Canceled
+        comment:
+          type:
+          - string
+          - 'null'
+        createdAt:
+          type: string
+          format: date-time
+        decidedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+      required:
+      - id
+      - approvalRole
+      - status
+      - createdAt
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        contentType:
+          type: string
+        sizeBytes:
+          type: integer
+          minimum: 0
+        checksumSha256:
+          type:
+          - string
+          - 'null'
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          format: uuid
+      required:
+      - id
+      - fileName
+      - contentType
+      - sizeBytes
+      - createdAt
+    AuditEvent:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        action:
+          type: string
+        actorId:
+          type: string
+          format: uuid
+        occurredAt:
+          type: string
+          format: date-time
+        previousValue: {}
+        newValue: {}
+        reason:
+          type:
+          - string
+          - 'null'
+        correlationId:
+          type:
+          - string
+          - 'null'
+      required:
+      - id
+      - action
+      - actorId
+      - occurredAt
+    LinkedRecord:
+      type: object
+      properties:
+        recordType:
+          type: string
+          enum:
+          - NCR
+          - CAPA
+          - SCAR
+          - Product
+          - Part
+          - Drawing
+          - Specification
+          - Supplier
+          - Customer
+          - ChangeRequest
+          - InspectionPlan
+        recordId:
+          type: string
+          format: uuid
+        recordNumber:
+          type: string
+        relationshipType:
+          type:
+          - string
+          - 'null'
+      required:
+      - recordType
+      - recordId
+      - recordNumber
+    CreateLinkedRecordRequest:
+      type: object
+      properties:
+        title:
+          type:
+          - string
+          - 'null'
+        description:
+          type:
+          - string
+          - 'null'
+        ownerId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        dueDate:
+          type:
+          - string
+          - 'null'
+          format: date
+    FAI:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        faiNumber:
+          type: string
+        faiType:
+          type: string
+          enum:
+          - Full
+          - Partial
+          - Delta
+          - Requalification
+        reason:
+          type: string
+        productId:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        partRevision:
+          type:
+          - string
+          - 'null'
+        drawingId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        drawingRevision:
+          type:
+          - string
+          - 'null'
+        specificationId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        supplierId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        customerId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        lotNumber:
+          type:
+          - string
+          - 'null'
+        batchNumber:
+          type:
+          - string
+          - 'null'
+        serialNumber:
+          type:
+          - string
+          - 'null'
+        inspectorId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        reviewerId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        approverId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        status:
+          type: string
+          enum:
+          - Draft
+          - InspectionInProgress
+          - Review
+          - ReturnedForCorrection
+          - ApprovalPending
+          - Approved
+          - Rejected
+          - Closed
+          - Canceled
+          - Reopened
+        inspectionStartDate:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        inspectionCompleteDate:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        approvalDate:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        comments:
+          type:
+          - string
+          - 'null'
+        createdAt:
+          type: string
+          format: date-time
+        createdBy:
+          type: string
+          format: uuid
+        updatedAt:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        updatedBy:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        version:
+          type: integer
+          minimum: 0
+      required:
+      - id
+      - faiNumber
+      - faiType
+      - reason
+      - productId
+      - partId
+      - siteId
+      - status
+      - createdAt
+      - version
+    FAICreate:
+      type: object
+      properties:
+        faiType:
+          type: string
+          enum:
+          - Full
+          - Partial
+          - Delta
+          - Requalification
+        reason:
+          type: string
+        productId:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        partRevision:
+          type:
+          - string
+          - 'null'
+        drawingId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        drawingRevision:
+          type:
+          - string
+          - 'null'
+        specificationId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        supplierId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        customerId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        lotNumber:
+          type:
+          - string
+          - 'null'
+        batchNumber:
+          type:
+          - string
+          - 'null'
+        serialNumber:
+          type:
+          - string
+          - 'null'
+        comments:
+          type:
+          - string
+          - 'null'
+      required:
+      - faiType
+      - reason
+      - productId
+      - partId
+      - siteId
+    FAIUpdate:
+      allOf:
+      - $ref: '#/components/schemas/FAICreate'
+      - type: object
+        properties:
+          version:
+            type: integer
+            minimum: 0
+        required:
+        - version
+    FAICharacteristic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        faiId:
+          type: string
+          format: uuid
+        balloonNumber:
+          type: integer
+          minimum: 1
+        drawingReference:
+          type:
+          - string
+          - 'null'
+        characteristicType:
+          type: string
+          enum:
+          - Critical
+          - Key
+          - Significant
+          - Major
+          - Minor
+          - General
+        description:
+          type: string
+        dataType:
+          type: string
+          enum:
+          - Numeric
+          - Text
+          - Boolean
+          - Visual
+        nominalValue:
+          type:
+          - number
+          - 'null'
+        lowerSpecificationLimit:
+          type:
+          - number
+          - 'null'
+        upperSpecificationLimit:
+          type:
+          - number
+          - 'null'
+        unitOfMeasure:
+          type:
+          - string
+          - 'null'
+        inspectionMethod:
+          type:
+          - string
+          - 'null'
+        requirementSource:
+          type:
+          - string
+          - 'null'
+        acceptanceCriteria:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+          minimum: 0
+      required:
+      - id
+      - faiId
+      - balloonNumber
+      - characteristicType
+      - description
+      - dataType
+      - version
+    FAICharacteristicInput:
+      type: object
+      properties:
+        balloonNumber:
+          type: integer
+          minimum: 1
+        drawingReference:
+          type:
+          - string
+          - 'null'
+        characteristicType:
+          type: string
+          enum:
+          - Critical
+          - Key
+          - Significant
+          - Major
+          - Minor
+          - General
+        description:
+          type: string
+        dataType:
+          type: string
+          enum:
+          - Numeric
+          - Text
+          - Boolean
+          - Visual
+        nominalValue:
+          type:
+          - number
+          - 'null'
+        lowerSpecificationLimit:
+          type:
+          - number
+          - 'null'
+        upperSpecificationLimit:
+          type:
+          - number
+          - 'null'
+        unitOfMeasure:
+          type:
+          - string
+          - 'null'
+        inspectionMethod:
+          type:
+          - string
+          - 'null'
+        requirementSource:
+          type:
+          - string
+          - 'null'
+        acceptanceCriteria:
+          type:
+          - string
+          - 'null'
+      required:
+      - balloonNumber
+      - characteristicType
+      - description
+      - dataType
+    CharacteristicResult:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        characteristicId:
+          type: string
+          format: uuid
+        sequence:
+          type: integer
+          minimum: 1
+        measuredValue:
+          type:
+          - number
+          - 'null'
+        textValue:
+          type:
+          - string
+          - 'null'
+        booleanValue:
+          type:
+          - boolean
+          - 'null'
+        result:
+          type: string
+          enum:
+          - Pass
+          - Fail
+          - NotApplicable
+        equipmentId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        calibrationValid:
+          type:
+          - boolean
+          - 'null'
+        inspectedAt:
+          type: string
+          format: date-time
+        inspectorId:
+          type: string
+          format: uuid
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+          minimum: 0
+      required:
+      - id
+      - characteristicId
+      - sequence
+      - result
+      - inspectedAt
+      - inspectorId
+      - version
+    CharacteristicResultInput:
+      type: object
+      properties:
+        sequence:
+          type: integer
+          minimum: 1
+        measuredValue:
+          type:
+          - number
+          - 'null'
+        textValue:
+          type:
+          - string
+          - 'null'
+        booleanValue:
+          type:
+          - boolean
+          - 'null'
+        result:
+          type: string
+          enum:
+          - Pass
+          - Fail
+          - NotApplicable
+        equipmentId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+      required:
+      - sequence
+      - result
+    BalloonDrawing:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        faiId:
+          type: string
+          format: uuid
+        drawingId:
+          type: string
+          format: uuid
+        drawingRevision:
+          type: string
+        attachment:
+          $ref: '#/components/schemas/Attachment'
+      required:
+      - id
+      - faiId
+      - drawingId
+      - drawingRevision
+      - attachment
+    AQLPlan:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        inspectionType:
+          type: string
+          enum:
+          - Single
+          - Double
+          - Multiple
+          - Continuous
+        severity:
+          type: string
+          enum:
+          - Normal
+          - Reduced
+          - Tightened
+        revision:
+          type: string
+        status:
+          type: string
+          enum:
+          - Draft
+          - Approved
+          - Active
+          - Inactive
+          - Obsolete
+        effectiveDate:
+          type:
+          - string
+          - 'null'
+          format: date
+        version:
+          type: integer
+          minimum: 0
+      required:
+      - id
+      - name
+      - inspectionType
+      - severity
+      - revision
+      - status
+      - version
+    AQLPlanInput:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type:
+          - string
+          - 'null'
+        inspectionType:
+          type: string
+          enum:
+          - Single
+          - Double
+          - Multiple
+          - Continuous
+        severity:
+          type: string
+          enum:
+          - Normal
+          - Reduced
+          - Tightened
+        revision:
+          type: string
+        effectiveDate:
+          type:
+          - string
+          - 'null'
+          format: date
+        version:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+      required:
+      - name
+      - inspectionType
+      - severity
+      - revision
+    AQLPlanDetail:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        planId:
+          type: string
+          format: uuid
+        lotSizeMin:
+          type: integer
+          minimum: 1
+        lotSizeMax:
+          type: integer
+          minimum: 1
+        inspectionLevel:
+          type: string
+        aqlLevel:
+          type: number
+          minimum: 0
+        sampleSize:
+          type: integer
+          minimum: 1
+        acceptanceNumber:
+          type: integer
+          minimum: 0
+        rejectionNumber:
+          type: integer
+          minimum: 1
+        defectClass:
+          type: string
+          enum:
+          - Critical
+          - Major
+          - Minor
+      required:
+      - id
+      - planId
+      - lotSizeMin
+      - lotSizeMax
+      - inspectionLevel
+      - aqlLevel
+      - sampleSize
+      - acceptanceNumber
+      - rejectionNumber
+      - defectClass
+    AQLPlanDetailInput:
+      type: object
+      properties:
+        lotSizeMin:
+          type: integer
+          minimum: 1
+        lotSizeMax:
+          type: integer
+          minimum: 1
+        inspectionLevel:
+          type: string
+        aqlLevel:
+          type: number
+          minimum: 0
+        sampleSize:
+          type: integer
+          minimum: 1
+        acceptanceNumber:
+          type: integer
+          minimum: 0
+        rejectionNumber:
+          type: integer
+          minimum: 1
+        defectClass:
+          type: string
+          enum:
+          - Critical
+          - Major
+          - Minor
+      required:
+      - lotSizeMin
+      - lotSizeMax
+      - inspectionLevel
+      - aqlLevel
+      - sampleSize
+      - acceptanceNumber
+      - rejectionNumber
+      - defectClass
+    AQLInspection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        inspectionNumber:
+          type: string
+        planId:
+          type: string
+          format: uuid
+        supplierId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        customerId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        productId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        partRevision:
+          type:
+          - string
+          - 'null'
+        purchaseOrder:
+          type:
+          - string
+          - 'null'
+        workOrder:
+          type:
+          - string
+          - 'null'
+        lotNumber:
+          type:
+          - string
+          - 'null'
+        lotSize:
+          type: integer
+          minimum: 1
+        sampleSize:
+          type: integer
+          minimum: 1
+        inspectionLevel:
+          type: string
+        aqlLevelCritical:
+          type:
+          - number
+          - 'null'
+        aqlLevelMajor:
+          type:
+          - number
+          - 'null'
+        aqlLevelMinor:
+          type:
+          - number
+          - 'null'
+        criticalDefects:
+          type: integer
+          minimum: 0
+        majorDefects:
+          type: integer
+          minimum: 0
+        minorDefects:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum:
+          - Draft
+          - InProgress
+          - Submitted
+          - ApprovalPending
+          - Accepted
+          - Rejected
+          - Closed
+          - Canceled
+        overallResult:
+          type: string
+          enum:
+          - Pending
+          - Accepted
+          - Rejected
+        inspectorId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        inspectionDate:
+          type:
+          - string
+          - 'null'
+          format: date-time
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type: integer
+          minimum: 0
+      required:
+      - id
+      - inspectionNumber
+      - planId
+      - partId
+      - lotSize
+      - sampleSize
+      - status
+      - overallResult
+      - version
+    AQLInspectionInput:
+      type: object
+      properties:
+        planId:
+          type: string
+          format: uuid
+        supplierId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        customerId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        productId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        partRevision:
+          type:
+          - string
+          - 'null'
+        purchaseOrder:
+          type:
+          - string
+          - 'null'
+        workOrder:
+          type:
+          - string
+          - 'null'
+        lotNumber:
+          type:
+          - string
+          - 'null'
+        lotSize:
+          type: integer
+          minimum: 1
+        inspectionLevel:
+          type: string
+        aqlLevelCritical:
+          type:
+          - number
+          - 'null'
+        aqlLevelMajor:
+          type:
+          - number
+          - 'null'
+        aqlLevelMinor:
+          type:
+          - number
+          - 'null'
+        notes:
+          type:
+          - string
+          - 'null'
+        version:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+      required:
+      - planId
+      - partId
+      - lotSize
+      - inspectionLevel
+    DefectCategory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        defectClass:
+          type: string
+          enum:
+          - Critical
+          - Major
+          - Minor
+        description:
+          type: string
+        active:
+          type: boolean
+      required:
+      - id
+      - code
+      - defectClass
+      - description
+      - active
+    DefectCategoryInput:
+      type: object
+      properties:
+        code:
+          type: string
+        defectClass:
+          type: string
+          enum:
+          - Critical
+          - Major
+          - Minor
+        description:
+          type: string
+        active:
+          type: boolean
+          default: true
+      required:
+      - code
+      - defectClass
+      - description
+    InspectionDefect:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        inspectionId:
+          type: string
+          format: uuid
+        defectCategoryId:
+          type: string
+          format: uuid
+        quantityFound:
+          type: integer
+          minimum: 1
+        sampleUnitNumber:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        description:
+          type:
+          - string
+          - 'null'
+        attachmentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - id
+      - inspectionId
+      - defectCategoryId
+      - quantityFound
+    InspectionDefectInput:
+      type: object
+      properties:
+        defectCategoryId:
+          type: string
+          format: uuid
+        quantityFound:
+          type: integer
+          minimum: 1
+        sampleUnitNumber:
+          type:
+          - integer
+          - 'null'
+          minimum: 1
+        description:
+          type:
+          - string
+          - 'null'
+        attachmentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+      required:
+      - defectCategoryId
+      - quantityFound
+    AQLCalculationRequest:
+      type: object
+      properties:
+        planId:
+          type: string
+          format: uuid
+        lotSize:
+          type: integer
+          minimum: 1
+        inspectionLevel:
+          type: string
+        aqlLevelCritical:
+          type:
+          - number
+          - 'null'
+        aqlLevelMajor:
+          type:
+          - number
+          - 'null'
+        aqlLevelMinor:
+          type:
+          - number
+          - 'null'
+      required:
+      - planId
+      - lotSize
+      - inspectionLevel
+    AQLCalculationResult:
+      type: object
+      properties:
+        sampleSize:
+          type: integer
+          minimum: 1
+        thresholds:
+          type: array
+          items:
+            type: object
+            properties:
+              defectClass:
+                type: string
+                enum:
+                - Critical
+                - Major
+                - Minor
+              acceptanceNumber:
+                type: integer
+                minimum: 0
+              rejectionNumber:
+                type: integer
+                minimum: 1
+            required:
+            - defectClass
+            - acceptanceNumber
+            - rejectionNumber
+      required:
+      - sampleSize
+      - thresholds
+    EvaluationResult:
+      type: object
+      properties:
+        overallResult:
+          type: string
+          enum:
+          - Accepted
+          - Rejected
+        evaluatedAt:
+          type: string
+          format: date-time
+        details:
+          type: array
+          items:
+            type: object
+      required:
+      - overallResult
+      - evaluatedAt
+    MetricSeries:
+      type: object
+      properties:
+        name:
+          type: string
+        points:
+          type: array
+          items:
+            type: object
+            properties:
+              label:
+                type: string
+              value:
+                type: number
+            required:
+            - label
+            - value
+      required:
+      - name
+      - points
+    ReportRequest:
+      type: object
+      properties:
+        dateFrom:
+          type:
+          - string
+          - 'null'
+          format: date
+        dateTo:
+          type:
+          - string
+          - 'null'
+          format: date
+        siteId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        supplierId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        productId:
+          type:
+          - string
+          - 'null'
+          format: uuid
+        format:
+          type: string
+          enum:
+          - json
+          - csv
+          - xlsx
+          - pdf
+          default: json
+    PagedFAI:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FAI'
+        metadata:
+          $ref: '#/components/schemas/PageMetadata'
+      required:
+      - items
+      - metadata
+    PagedCharacteristics:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/FAICharacteristic'
+        metadata:
+          $ref: '#/components/schemas/PageMetadata'
+      required:
+      - items
+      - metadata
+    PagedAQLPlans:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AQLPlan'
+        metadata:
+          $ref: '#/components/schemas/PageMetadata'
+      required:
+      - items
+      - metadata
+    PagedAQLInspections:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AQLInspection'
+        metadata:
+          $ref: '#/components/schemas/PageMetadata'
+      required:
+      - items
+      - metadata
+    PagedAuditEvents:
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEvent'
+        metadata:
+          $ref: '#/components/schemas/PageMetadata'
+      required:
+      - items
+      - metadata
+  responses:
+    BadRequest:
+      description: Validation or business-rule failure
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Forbidden:
+      description: Permission denied
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    Conflict:
+      description: Concurrency, duplicate, or state-transition conflict
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    UnprocessableEntity:
+      description: QMS business-rule violation
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'
+    ServerError:
+      description: Unexpected server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemDetails'

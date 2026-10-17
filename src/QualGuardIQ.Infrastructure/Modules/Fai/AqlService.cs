@@ -406,7 +406,10 @@ public sealed class AqlService(AppDbContext db, ModuleSupport m)
 
     public async Task<SupplierAqlMetric> MetricsAsync(Guid supplierId, DateOnly from, DateOnly to, bool persist, CancellationToken ct)
     {
-        var f = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero); var t = new DateTimeOffset(to.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        // Reporting days are organization-local days, not UTC days.
+        var zone = await m.ZoneAsync(null, ct);
+        DateTimeOffset Start(DateOnly d) { var local = d.ToDateTime(TimeOnly.MinValue); return new DateTimeOffset(local, zone.GetUtcOffset(local)).ToUniversalTime(); }
+        var f = Start(from); var t = Start(to.AddDays(1));
         var lots = await db.AqlInspections.AsNoTracking().Where(a => a.SupplierId == supplierId && a.Status == AqlInspectionStatus.Decided && a.InspectionDate >= f && a.InspectionDate < t)
             .Select(a => new { a.OverallResult, a.SampleSize, a.CriticalDefects, a.MajorDefects, a.MinorDefects }).ToListAsync(ct);
         var mtr = new SupplierAqlMetric

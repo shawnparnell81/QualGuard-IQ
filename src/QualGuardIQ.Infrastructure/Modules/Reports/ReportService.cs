@@ -46,6 +46,7 @@ public sealed class ReportService(AppDbContext db, ModuleSupport m, IAccessServi
         var to = p.To ?? today; var from = p.From ?? to.AddMonths(-12).AddDays(1);
         if (from > to) throw new AppException("The start date must be on or before the end date.");
         if (to.DayNumber - from.DayNumber > 3660) throw new AppException("The date range is limited to ten years.");
+        _zone = await m.ZoneAsync(p.SiteId, ct);
         var (cols, rows, chart) = await r.Run(p, from, to, ct);
         return new ReportResult(r.Def, p with { From = from, To = to }, cols, rows, chart);
     }
@@ -73,7 +74,9 @@ public sealed class ReportService(AppDbContext db, ModuleSupport m, IAccessServi
     }
 
     private static Dictionary<string, object?> R(params (string K, object? V)[] kv) => kv.ToDictionary(x => x.K, x => x.V);
-    private static DateTimeOffset Utc(DateOnly d) => new(d.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+    private TimeZoneInfo _zone = TimeZoneInfo.Utc;
+    /// <summary>Start of a reporting day in the site's (or organization's) zone, as UTC.</summary>
+    private DateTimeOffset Utc(DateOnly d) { var local = d.ToDateTime(TimeOnly.MinValue); return new DateTimeOffset(local, _zone.GetUtcOffset(local)).ToUniversalTime(); }
     private static List<Dictionary<string, object?>> Months(DateOnly from, DateOnly to, Func<string, Dictionary<string, object?>> row)
     {
         var list = new List<Dictionary<string, object?>>();
