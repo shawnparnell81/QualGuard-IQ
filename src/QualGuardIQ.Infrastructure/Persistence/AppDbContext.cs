@@ -62,6 +62,8 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
         b.Entity<ApplicationUser>(e =>
         {
             e.Property(x => x.DisplayName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.PortalKind).HasMaxLength(20);
+            e.ToTable(t => t.HasCheckConstraint("ck_user_portal", "(\"PortalKind\" IS NULL AND \"PortalPartyId\" IS NULL) OR (\"PortalKind\" IN ('Customer','Supplier') AND \"PortalPartyId\" IS NOT NULL)"));
         });
 
         b.Entity<OrganizationSettings>(e =>

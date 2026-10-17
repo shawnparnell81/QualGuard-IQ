@@ -27,6 +27,7 @@ public partial class AppDbContext
     public DbSet<ScrapEvent> ScrapEvents => Set<ScrapEvent>();
     public DbSet<ReworkOrder> ReworkOrders => Set<ReworkOrder>();
     public DbSet<QualityMetricFact> QualityMetricFacts => Set<QualityMetricFact>();
+    public DbSet<PortalResponse> PortalResponses => Set<PortalResponse>();
 
     private static void SiteRefs<T>(EntityTypeBuilder<T> e) where T : class, Domain.Common.ISiteScoped
     {
@@ -214,6 +215,13 @@ public partial class AppDbContext
             e.HasOne<Ncr>().WithMany().HasForeignKey(x => x.NcrId).OnDelete(R);
             e.HasOne<Capa>().WithMany().HasForeignKey(x => x.CapaId).OnDelete(R);
             UserReq(e, x => x.OwnerId); User(e, x => x.ValidatedById); SiteRefs(e);
+        });
+        b.Entity<PortalResponse>(e =>
+        {
+            e.ToTable("portal_responses");
+            e.HasIndex(x => new { x.RecordType, x.RecordId });
+            e.Property(x => x.RecordType).HasMaxLength(50); e.Property(x => x.PartyKind).HasMaxLength(20); e.Property(x => x.Body).HasMaxLength(10000);
+            UserReq(e, x => x.AuthorId);
         });
         b.Entity<QualityMetricFact>(e =>
         {
