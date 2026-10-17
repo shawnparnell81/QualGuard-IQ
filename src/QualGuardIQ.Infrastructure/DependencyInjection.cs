@@ -102,6 +102,8 @@ public static class DependencyInjection
         s.AddScoped<SupplierQualityService>();
         s.AddScoped<Modules.Complaints.ComplaintService>();
         s.AddScoped<Modules.Risks.RiskService>();
+        s.AddScoped<MaintenanceService>();
+        P<MaintenanceEvent>(MaintenanceService.EventType, Permissions.CalibrationView, Permissions.MaintenanceEdit, x => (x.Number, $"{x.Kind} maintenance", x.Kind.ToString(), $"/calibration/equipment/{x.EquipmentId}", true));
         s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Risks.RiskService.RecordType,
             (id, ct) => sp.GetRequiredService<Modules.Risks.RiskService>().OnApprovedAsync(id, ct),
             (id, c, ct) => sp.GetRequiredService<Modules.Risks.RiskService>().OnRejectedAsync(id, c, ct)));

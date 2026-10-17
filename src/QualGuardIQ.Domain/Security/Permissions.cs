@@ -54,6 +54,8 @@ public static class Permissions
     public const string ChangesEdit = "changes.edit";
     /// <summary>Approve changes, waive affected items, verify implementation and reopen.</summary>
     public const string ChangesApprove = "changes.approve";
+    /// <summary>Record maintenance, repairs, breakdowns and qualification on equipment (viewing equipment needs calibration.view).</summary>
+    public const string MaintenanceEdit = "maintenance.edit";
     public const string RisksView = "risks.view";
     public const string RisksEdit = "risks.edit";
     /// <summary>Accept residual risk, reopen risks.</summary>

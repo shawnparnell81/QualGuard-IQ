@@ -420,22 +420,26 @@ public sealed class TrainingController(AppDbContext db, TrainingService training
 }
 
 [ApiController, Authorize, Route("api/calibration")]
-public sealed class CalibrationController(AppDbContext db, CalibrationService cal, ModuleSupport m) : ControllerBase
+public sealed class CalibrationController(AppDbContext db, CalibrationService cal, MaintenanceService mnt, ModuleSupport m) : ControllerBase
 {
     public sealed record RaiseNcrRequest(string Title, string Description);
 
     [HttpGet("equipment")]
     [RequirePermission(Permissions.CalibrationView)]
-    public async Task<object> Equipment([FromQuery] string? q, [FromQuery] EquipmentStatus? status, [FromQuery] int? dueWithinDays, CancellationToken ct)
+    public async Task<object> Equipment([FromQuery] string? q, [FromQuery] EquipmentStatus? status, [FromQuery] int? dueWithinDays, [FromQuery] string? category, [FromQuery] bool? calibrated, [FromQuery] int? maintenanceDueWithinDays, CancellationToken ct)
     {
         var query = await m.ScopeAsync(db.Equipment.AsNoTracking(), Permissions.CalibrationView, ct);
+        if (!string.IsNullOrWhiteSpace(category)) query = query.Where(x => x.Category == category);
+        if (calibrated is { } c) query = query.Where(x => x.RequiresCalibration == c);
+        if (maintenanceDueWithinDays is { } md) { var lim = (await m.TodayAsync(null, ct)).AddDays(md); query = query.Where(x => x.Status != EquipmentStatus.Retired && db.MaintenancePlans.Any(p => p.EquipmentId == x.Id && p.IsActive && p.NextDueOn <= lim)); }
         if (status is not null) query = query.Where(x => x.Status == status);
         if (dueWithinDays is { } d) { var lim = (await m.TodayAsync(null, ct)).AddDays(d); query = query.Where(x => x.Status != EquipmentStatus.Retired && x.NextDueOn != null && x.NextDueOn <= lim); }
         if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => EF.Functions.ILike(x.Number + " " + x.Name + " " + (x.SerialNumber ?? ""), $"%{q.Trim()}%"));
         var today = await m.TodayAsync(null, ct);
         return await query.OrderBy(x => x.NextDueOn).Select(x => new
         {
-            x.Id, x.Number, x.Name, x.SerialNumber, x.Location, x.Status, x.LastCalibratedOn, x.NextDueOn, x.CalibrationIntervalDays,
+            x.Id, x.Number, x.Name, x.SerialNumber, x.Location, x.Status, x.LastCalibratedOn, x.NextDueOn, x.CalibrationIntervalDays, x.Category, x.AssetNumber, x.RequiresCalibration,
+            NextMaintenanceOn = db.MaintenancePlans.Where(p => p.EquipmentId == x.Id && p.IsActive).Min(p => (DateOnly?)p.NextDueOn),
             Overdue = x.NextDueOn != null && x.NextDueOn < today && x.Status != EquipmentStatus.Retired,
             SiteCode = db.Sites.Where(s => s.Id == x.SiteId).Select(s => s.Code).First()
         }).Take(1000).ToListAsync(ct);
@@ -454,12 +458,25 @@ public sealed class CalibrationController(AppDbContext db, CalibrationService ca
         var canApprove = await m.CanAsync(Permissions.CalibrationApprove, e.SiteId, e.DepartmentId, ct);
         var latest = await db.CalibrationEvents.AsNoTracking().Where(x => x.EquipmentId == id).OrderByDescending(x => x.PerformedOn).ThenByDescending(x => x.CreatedAt).Select(x => (CalibrationResult?)x.Result).FirstOrDefaultAsync(ct);
         var openIa = await db.ImpactAssessments.AnyAsync(x => x.EquipmentId == id && x.Status == ImpactStatus.Open, ct);
-        var allowed = Allowed.Of(("record", canEdit && e.Status != EquipmentStatus.Retired),
-            ("returnToService", canApprove && e.Status is EquipmentStatus.Quarantined or EquipmentStatus.OutOfService && !openIa && latest is CalibrationResult.Pass or CalibrationResult.PassAfterAdjustment));
+        var canMaintain = await m.CanAsync(Permissions.MaintenanceEdit, e.SiteId, e.DepartmentId, ct);
+        var latestOn = await db.CalibrationEvents.AsNoTracking().Where(x => x.EquipmentId == id).MaxAsync(x => (DateOnly?)x.PerformedOn, ct);
+        var live = e.Status != EquipmentStatus.Retired;
+        var allowed = Allowed.Of(("record", canEdit && live && e.RequiresCalibration), ("edit", canEdit && live), ("retire", canApprove && live && !openIa),
+            ("returnToService", canApprove && e.Status is EquipmentStatus.Quarantined or EquipmentStatus.OutOfService && !openIa && latest is CalibrationResult.Pass or CalibrationResult.PassAfterAdjustment
+                && (e.RecalibrateAfter == null || latestOn >= e.RecalibrateAfter)),
+            ("maintain", canMaintain && live), ("repair", canMaintain && e.Status == EquipmentStatus.Down));
         return new
         {
             e.Id, e.Number, e.Name, e.Manufacturer, e.Model, e.SerialNumber, e.Location, e.MeasurementRange, e.Tolerance, e.SiteId, e.DepartmentId, e.Status,
-            e.CalibrationIntervalDays, e.LastCalibratedOn, e.NextDueOn, OwnerName = await db.Users.Where(u => u.Id == e.OwnerId).Select(u => u.DisplayName).FirstAsync(ct),
+            e.CalibrationIntervalDays, e.LastCalibratedOn, e.NextDueOn, e.OwnerId, e.Category, e.AssetNumber, e.RequiresCalibration, e.RecalibrateAfter, e.QualifiedOn, e.QualificationDueOn, e.QualificationNotes, e.RowVersion,
+            OwnerName = await db.Users.Where(u => u.Id == e.OwnerId).Select(u => u.DisplayName).FirstAsync(ct),
+            SiteCode = await db.Sites.Where(s => s.Id == e.SiteId).Select(s => s.Code).FirstAsync(ct),
+            Plans = await db.MaintenancePlans.AsNoTracking().Where(p => p.EquipmentId == id && p.IsActive).OrderBy(p => p.NextDueOn).ToListAsync(ct),
+            Maintenance = await db.MaintenanceEvents.AsNoTracking().Where(x => x.EquipmentId == id).OrderByDescending(x => x.PerformedOn).ThenByDescending(x => x.CreatedAt)
+                .Select(x => new { x.Id, x.Number, x.Kind, x.PerformedOn, x.PerformedBy, x.Description, x.DowntimeHours, x.ReturnedToService, x.CalibrationRequired, PlanTitle = db.MaintenancePlans.Where(p => p.Id == x.PlanId).Select(p => p.Title).FirstOrDefault() }).ToListAsync(ct),
+            Inspections = await db.Inspections.AsNoTracking().Where(i => db.InspectionResults.Any(r => r.InspectionId == i.Id && r.EquipmentId == id)).OrderByDescending(i => i.CreatedAt).Take(50)
+                .Select(i => new { i.Id, i.Number, PlanNumber = db.InspectionPlans.Where(p => p.Id == i.PlanId).Select(p => p.Number).First(), i.PlanRevision, i.Status, i.CreatedAt }).ToListAsync(ct),
+            Downtime = await db.MaintenanceEvents.Where(x => x.EquipmentId == id).SumAsync(x => x.DowntimeHours ?? 0, ct),
             Events = await db.CalibrationEvents.AsNoTracking().Where(x => x.EquipmentId == id).OrderByDescending(x => x.PerformedOn).ThenByDescending(x => x.CreatedAt).ToListAsync(ct),
             Impacts = await db.ImpactAssessments.AsNoTracking().Where(x => x.EquipmentId == id).OrderByDescending(x => x.CreatedAt).ToListAsync(ct),
             CanEdit = canEdit, CanApprove = canApprove, Allowed = allowed
@@ -472,6 +489,13 @@ public sealed class CalibrationController(AppDbContext db, CalibrationService ca
         var (ev, ia) = await cal.RecordAsync(id, r, ct);
         return new { EventId = ev.Id, ev.Number, ImpactAssessmentId = ia?.Id, ImpactNumber = ia?.Number };
     }
+
+    [HttpGet("equipment-categories")] public string[] Categories() => CalibrationService.Categories;
+    [HttpPut("equipment/{id:guid}")] public async Task<IActionResult> Update(Guid id, UpdateEquipmentRequest r, CancellationToken ct) { await cal.UpdateAsync(id, r, ct); return NoContent(); }
+    [HttpPost("equipment/{id:guid}/retire")] public async Task<IActionResult> Retire(Guid id, CancellationToken ct) { await cal.RetireAsync(id, ct); return NoContent(); }
+    [HttpPost("equipment/{id:guid}/maintenance-plans")] public async Task<object> AddPlan(Guid id, MaintenancePlanRequest r, CancellationToken ct) => new { (await mnt.AddPlanAsync(id, r, ct)).Id };
+    [HttpDelete("equipment/{id:guid}/maintenance-plans/{planId:guid}")] public async Task<IActionResult> DeactivatePlan(Guid id, Guid planId, CancellationToken ct) { await mnt.DeactivatePlanAsync(id, planId, ct); return NoContent(); }
+    [HttpPost("equipment/{id:guid}/maintenance")] public async Task<object> Maintain(Guid id, RecordMaintenanceRequest r, CancellationToken ct) { var e = await mnt.RecordAsync(id, r, ct); return new { e.Id, e.Number }; }
 
     [HttpPost("equipment/{id:guid}/return-to-service")]
     public async Task<IActionResult> ReturnToService(Guid id, CancellationToken ct) { await cal.ReturnToServiceAsync(id, ct); return NoContent(); }

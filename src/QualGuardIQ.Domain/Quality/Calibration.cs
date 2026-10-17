@@ -2,7 +2,8 @@ using QualGuardIQ.Domain.Common;
 
 namespace QualGuardIQ.Domain.Quality;
 
-public enum EquipmentStatus { Active = 0, Quarantined = 1, OutOfService = 2, Retired = 3 }
+public enum EquipmentStatus { Active = 0, Quarantined = 1, OutOfService = 2, Retired = 3, Down = 4 }
+public enum MaintenanceKind { Preventive = 0, Repair = 1, Breakdown = 2, Qualification = 3, Validation = 4 }
 public enum CalibrationResult { Pass = 0, PassAfterAdjustment = 1, OutOfTolerance = 2, Fail = 3 }
 public enum ImpactStatus { Open = 0, Completed = 1 }
 
@@ -23,6 +24,16 @@ public class Equipment : Entity, IAudited, ISiteScoped
     public int CalibrationIntervalDays { get; set; }
     public DateOnly? LastCalibratedOn { get; set; }
     public DateOnly? NextDueOn { get; set; }
+    /// <summary>Configurable equipment type (production, test, inspection, tooling, fixture, gage, mold, die…).</summary>
+    public string Category { get; set; } = "Inspection equipment";
+    public string? AssetNumber { get; set; }
+    /// <summary>False for tooling and production equipment that is maintained but not calibrated.</summary>
+    public bool RequiresCalibration { get; set; } = true;
+    /// <summary>Set by a repair that affects measurement: a calibration on or after this date is needed before return to service.</summary>
+    public DateOnly? RecalibrateAfter { get; set; }
+    public DateOnly? QualifiedOn { get; set; }
+    public DateOnly? QualificationDueOn { get; set; }
+    public string? QualificationNotes { get; set; }
     public string AuditLabel => $"equipment {Number}";
 }
 
@@ -64,4 +75,38 @@ public class ImpactAssessment : Entity, IAudited, ISiteScoped
     public Guid? CompletedById { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
     public string AuditLabel => $"impact assessment {Number}";
+}
+
+/// <summary>Preventive maintenance task on a schedule.</summary>
+public class MaintenancePlan : Entity, IAudited
+{
+    public Guid EquipmentId { get; set; }
+    public string Title { get; set; } = "";
+    public string? Instructions { get; set; }
+    public int IntervalDays { get; set; }
+    public DateOnly NextDueOn { get; set; }
+    public DateOnly? LastDoneOn { get; set; }
+    public bool IsActive { get; set; } = true;
+    public string AuditLabel => $"maintenance plan {Title}";
+}
+
+/// <summary>Maintenance, repair, breakdown, qualification or validation record. Never edited after it is recorded.</summary>
+public class MaintenanceEvent : Entity, IAudited, ISiteScoped, IContentLock
+{
+    public string Number { get; set; } = "";
+    public Guid EquipmentId { get; set; }
+    public Guid SiteId { get; set; }
+    public Guid? DepartmentId { get; set; }
+    public MaintenanceKind Kind { get; set; }
+    public Guid? PlanId { get; set; }
+    public DateOnly PerformedOn { get; set; }
+    public string PerformedBy { get; set; } = "";
+    public string Description { get; set; } = "";
+    public decimal? DowntimeHours { get; set; }
+    public bool ReturnedToService { get; set; }
+    public bool CalibrationRequired { get; set; }
+    public string AuditLabel => $"maintenance {Number}";
+    public string StatusProperty => nameof(Kind);
+    public bool IsLockedState(object? s) => true;
+    public IReadOnlyCollection<string> MutableWhenLocked { get; } = [];
 }
