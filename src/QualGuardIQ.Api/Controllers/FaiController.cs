@@ -230,9 +230,9 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
     public async Task<IActionResult> Delete(Guid faiId, CancellationToken ct) { await svc.CancelAsync(faiId, ct); return NoContent(); }
 
     [HttpPost("{faiId:guid}/copy")] [RequirePermission(Permissions.FaiEdit)] [ProducesResponseType<FAI>(201)]
-    public async Task<ActionResult<FAI>> Copy(Guid faiId, CopyRequest? r, CancellationToken ct) { var x = await svc.CopyAsync(faiId, r.Type, ct); return CreatedAtRoute("getFai", new { faiId = x.Id }, await Dto(x.Id, ct)); }
+    public async Task<ActionResult<FAI>> Copy(Guid faiId, CopyRequest? r, CancellationToken ct) { var x = await svc.CopyAsync(faiId, r?.Type, ct); return CreatedAtRoute("getFai", new { faiId = x.Id }, await Dto(x.Id, ct)); }
     [HttpPost("{faiId:guid}/clone")] [RequirePermission(Permissions.FaiEdit)] [ProducesResponseType<FAI>(201)]
-    public async Task<ActionResult<FAI>> Clone(Guid faiId, CloneRequest? r, CancellationToken ct) { var x = await svc.CloneAsync(faiId, r.ChangedBalloons, ct); return CreatedAtRoute("getFai", new { faiId = x.Id }, await Dto(x.Id, ct)); }
+    public async Task<ActionResult<FAI>> Clone(Guid faiId, CloneRequest? r, CancellationToken ct) { var x = await svc.CloneAsync(faiId, r?.ChangedBalloons, ct); return CreatedAtRoute("getFai", new { faiId = x.Id }, await Dto(x.Id, ct)); }
 
     // ---------- Workflow ----------
 

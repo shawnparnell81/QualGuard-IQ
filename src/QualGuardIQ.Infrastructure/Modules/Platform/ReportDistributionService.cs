@@ -40,7 +40,7 @@ public sealed record GroupRow(Guid Id, string Name, int Members);
 /// run, secure link by default with optional approved attachments, retry with back-off, failure notification, pause/resume, manual runs
 /// and a full distribution history. A run executes with its owner's permissions in its own scope.
 /// </summary>
-public sealed class ReportDistributionService(AppDbContext db, ModuleSupport m, IAccessService access, INotifier notifier, IClock clock, IServiceScopeFactory scopes, IServiceProvider sp, IConfiguration config,
+public sealed class ReportDistributionService(AppDbContext db, ModuleSupport m, IAccessService access, INotifier notifier, IClock clock, IServiceScopeFactory scopes, IServiceProvider sp,
     ILogger<ReportDistributionService> log)
 {
     public static readonly TimeSpan[] Backoff = [TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(15), TimeSpan.FromMinutes(60), TimeSpan.FromHours(4)];

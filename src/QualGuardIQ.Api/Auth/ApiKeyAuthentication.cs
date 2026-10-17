@@ -21,7 +21,7 @@ namespace QualGuardIQ.Api.Auth;
 public sealed class ApiKeyHandler(IOptionsMonitor<AuthenticationSchemeOptions> options, ILoggerFactory logger, UrlEncoder encoder,
     AppDbContext db, SignInManager<ApplicationUser> signIn, ISecurityEventLogger security) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-    public const string Scheme = "ApiKey";
+    public new const string Scheme = "ApiKey";
     public const string Header = "X-Api-Key";
     public const string ClientClaim = "qg_api_client";
     public const string RateClaim = "qg_api_rate";

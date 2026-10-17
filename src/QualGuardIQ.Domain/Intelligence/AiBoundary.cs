@@ -75,7 +75,6 @@ public class AiRequestLog : Entity
     public string? Model { get; set; }
     public AiOutcome Outcome { get; set; }
     public string? FallbackReason { get; set; }
-    public DateTimeOffset CreatedAt { get; set; }
     public int DurationMs { get; set; }
     public int SourceCount { get; set; }
     public int ExcludedSources { get; set; }

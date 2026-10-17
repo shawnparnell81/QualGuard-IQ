@@ -24,7 +24,7 @@ public sealed record SavedReportRun(Guid Id, string Name, SavedReportKind Kind, 
 /// Low-code designers on the shared reporting engine: saved reports (tabular, matrix, KPI, executive) built on catalog reports,
 /// scheduled distribution, dashboards with KPI / report / matrix / count widgets, and saved searches. Every run uses the viewer's own permissions.
 /// </summary>
-public sealed class DesignerService(AppDbContext db, ModuleSupport m, ReportService reports, IAccessService access, INotifier notifier, IClock clock)
+public sealed class DesignerService(AppDbContext db, ModuleSupport m, ReportService reports, IAccessService access, IClock clock)
 {
     // ---------- saved reports ----------
     public async Task<List<SavedReport>> ReportsAsync(CancellationToken ct)

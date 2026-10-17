@@ -75,7 +75,7 @@ public sealed record SyncResult(Guid RunId, SyncRunStatus Status, int Read, int 
 /// Connector framework: connections, mappings, scheduled/manual sync with delta cursors, idempotent external-id links,
 /// and the inbound change queue routed through the shared approval engine.
 /// </summary>
-public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessService access, ICurrentUser current, ErpAdapterRegistry adapters, SecretProtector secrets,
+public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, ErpAdapterRegistry adapters, SecretProtector secrets,
     ErpHttpHandlerProvider handlers, ErpTokenCache tokens, INumberingService numbers, INotifier notifier, WorkflowService workflow, ISiteCalendar calendar, IClock clock, ErpValidationService validation)
 {
     public const string ChangeType = "ErpChange";
@@ -324,7 +324,7 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, IAccessServ
 
     public static string Hash(JsonObject fields)
     {
-        var json = Canonical(fields).ToJsonString();
+        var json = Canonical(fields)!.ToJsonString();
         return Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(json)));
     }
 
