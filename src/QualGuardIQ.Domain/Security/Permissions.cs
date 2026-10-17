@@ -69,6 +69,13 @@ public static class Permissions
     /// <summary>Accept residual risk, reopen risks.</summary>
     public const string RisksApprove = "risks.approve";
 
+    /// <summary>Run reports and dashboards (each report also needs view on its source module).</summary>
+    public const string ReportsView = "reports.view";
+    /// <summary>Export report results to CSV/PDF; every export is written to the audit trail.</summary>
+    public const string ReportsExport = "reports.export";
+    /// <summary>See overdue actions across all modules in scope.</summary>
+    public const string ActionsView = "actions.view";
+
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
         .Where(f => f.IsLiteral && f.FieldType == typeof(string))
