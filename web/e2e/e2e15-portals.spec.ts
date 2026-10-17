@@ -57,6 +57,7 @@ test.describe('E2E 15: customer and supplier portals', () => {
     await page.getByRole('row').filter({ hasText: `Leaking valve ${t}` }).click();
     await expect(page).toHaveURL(new RegExp(`/portal/complaints/${answered}$`));
     await expect(page.getByText(`8D report ${t} sent with containment and root cause.`)).toBeVisible();
+    await shot(page, '05-customer-portal-complaint');
     await expect(page.getByText('Groove finish out of specification.')).toBeVisible();
     await expect(page.getByText(new RegExp(`${capaAnswered.number} — Seal groove finish ${t}`))).toBeVisible();
     await page.getByRole('button', { name: '← Back' }).click();
@@ -81,6 +82,7 @@ test.describe('E2E 15: customer and supplier portals', () => {
     // Direct URLs: another customer's complaint and a supplier-only area.
     await page.goto(`/portal/complaints/${foreign}`);
     await expect(page.getByTestId('portal-record-missing')).toBeVisible();
+    await shot(page, '05-customer-portal-not-shared');
     await expect(page.getByText(`Other customer issue ${t}`)).toHaveCount(0);
     await page.goto('/portal/scars');
     await expect(page.getByTestId('portal-unavailable')).toBeVisible();
@@ -93,7 +95,6 @@ test.describe('E2E 15: customer and supplier portals', () => {
     await page.goto(`/portal/complaints/${answered}`);
     await expect(page.getByText(`8D report ${t} sent with containment and root cause.`)).toBeVisible();
     await signOutAndCheck(page, `/portal/complaints/${answered}`, `Leaking valve ${t}`);
-    await shot(page, '05-customer-portal');
   });
 
   test('a supplier sees only its own NCRs and SCARs, responds when the SCAR waits for it, uploads evidence, sees its scorecard and reported audits, and cannot open another supplier by URL', async ({ page }) => {
@@ -165,6 +166,7 @@ test.describe('E2E 15: customer and supplier portals', () => {
     await expect(page.getByTestId('portal-audit')).toContainText(`Process audit ${t}`);
     await expect(page.getByTestId('portal-audit')).toContainText(`Degassing not recorded ${t}`);
     await expect(page.getByText(`Planned follow-up ${t}`)).toHaveCount(0);
+    await shot(page, '05-supplier-portal-audits');
 
     // Direct URLs to another supplier's records, and to the customer area.
     await page.goto(`/portal/scars/${scarB}`);
@@ -182,8 +184,8 @@ test.describe('E2E 15: customer and supplier portals', () => {
 
     await page.goto(`/portal/scars/${scarA}`);
     await expect(page.getByText('Degassing time shortened.')).toBeVisible();
+    await shot(page, '05-supplier-portal-scar');
     await signOutAndCheck(page, `/portal/scars/${scarA}`, `Casting porosity ${t}`);
-    await shot(page, '05-supplier-portal');
   });
 });
 

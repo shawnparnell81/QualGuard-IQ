@@ -40,6 +40,7 @@ test.describe('E2E 9: warehouse, scan station and shipping', () => {
     await page.getByRole('spinbutton').fill('12');
     await button(page, /^Receive$/).last().click();
     await expect(page.getByText(/Receipt .* posted\./)).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(412); // nothing wider than the phone
 
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.goto('/warehouse/stock');
