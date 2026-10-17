@@ -16700,6 +16700,2210 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/integrations/adapters:
+    get:
+      tags:
+        - Integrations
+      description: 'Requires permission: `integrations.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/integrations:
+    get:
+      tags:
+        - Integrations
+      description: 'Requires permission: `integrations.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Integrations
+      description: 'Requires permission: `integrations.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ConnectionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ConnectionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}':
+    get:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ConnectionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ConnectionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}/secrets':
+    put:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SecretInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SecretInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SecretInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}/test':
+    post:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}/enabled':
+    post:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EnableRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/EnableRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/EnableRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}/mappings':
+    get:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpEntityMapping'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpEntityMapping'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpEntityMapping'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}/mappings/{entity}':
+    put:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entity
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ErpEntity'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MappingInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/MappingInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/MappingInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}/mappings/{entity}/run':
+    post:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entity
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ErpEntity'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SyncResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SyncResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}/mappings/{entity}/csv':
+    post:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: entity
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/ErpEntity'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsvImportRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CsvImportRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CsvImportRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SyncResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SyncResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SyncResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}/runs':
+    get:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpSyncRun'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpSyncRun'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpSyncRun'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/integrations/changes:
+    get:
+      tags:
+        - Integrations
+      description: 'Requires permission: `integrations.view` (site/department scoped).'
+      parameters:
+        - name: connectionId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ChangeQueueStatus'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpChange'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpChange'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpChange'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/changes/{id}':
+    get:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ErpChange'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErpChange'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ErpChange'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/changes/{id}/submit':
+    post:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/changes/{id}/retry':
+    post:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/mes/events:
+    post:
+      tags:
+        - Mes
+      description: 'Requires permission: `production.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MesEventInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/MesEventInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/MesEventInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/production/work-orders:
+    get:
+      tags:
+        - Production
+      description: 'Requires permission: `production.view` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkOrder'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkOrder'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WorkOrder'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Production
+      description: 'Requires permission: `production.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/WorkOrderInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/production/work-orders/{id}':
+    get:
+      tags:
+        - Production
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/production/work-orders/{id}/related':
+    get:
+      tags:
+        - Production
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RelatedRecord'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RelatedRecord'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RelatedRecord'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/production/purchase-orders:
+    get:
+      tags:
+        - Production
+      description: 'Requires permission: `production.view` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PurchaseOrder'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PurchaseOrder'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PurchaseOrder'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Production
+      description: 'Requires permission: `production.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseOrderInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PurchaseOrderInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PurchaseOrderInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/production/purchase-orders/{id}':
+    get:
+      tags:
+        - Production
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/production/purchase-orders/{id}/related':
+    get:
+      tags:
+        - Production
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RelatedRecord'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RelatedRecord'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RelatedRecord'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/production/entries:
+    get:
+      tags:
+        - Production
+      description: 'Requires permission: `production.view` (site/department scoped).'
+      parameters:
+        - name: workOrderId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductionEntry'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductionEntry'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ProductionEntry'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Production
+      description: 'Requires permission: `production.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductionEntryInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ProductionEntryInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ProductionEntryInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ProductionEntryOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductionEntryOutcome'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ProductionEntryOutcome'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/production/live:
+    get:
+      tags:
+        - Production
+      description: 'Requires permission: `production.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/LiveMonitor'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LiveMonitor'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/LiveMonitor'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/trace/lots:
+    get:
+      tags:
+        - Trace
+      description: 'Requires permission: `trace.view` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lot'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lot'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lot'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Trace
+      description: 'Requires permission: `trace.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LotInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/LotInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/LotInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/trace/serials:
+    get:
+      tags:
+        - Trace
+      description: 'Requires permission: `trace.view` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SerialUnit'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SerialUnit'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SerialUnit'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Trace
+      description: 'Requires permission: `trace.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SerialInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SerialInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SerialInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/trace/events:
+    post:
+      tags:
+        - Trace
+      description: 'Requires permission: `trace.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TraceEventInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TraceEventInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TraceEventInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/trace/{kind}/{id}/genealogy':
+    get:
+      tags:
+        - Trace
+      description: Requires an authenticated user.
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            pattern: ^(lot|serial)$
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Genealogy'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Genealogy'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/Genealogy'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/trace/search:
+    get:
+      tags:
+        - Trace
+      description: 'Requires permission: `trace.view` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/TraceSearchResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TraceSearchResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/TraceSearchResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/trace/labels:
+    get:
+      tags:
+        - Trace
+      description: 'Requires permission: `trace.view` (site/department scoped).'
+      parameters:
+        - name: symbology
+          in: query
+          schema:
+            $ref: '#/components/schemas/BarcodeSymbology'
+        - name: content
+          in: query
+          schema:
+            type: string
+        - name: width
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 0
+        - name: height
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 0
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/trace/scan:
+    post:
+      tags:
+        - Trace
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ScanRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ScanResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ScanResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/recalls:
+    get:
+      tags:
+        - Recalls
+      description: 'Requires permission: `recalls.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recall'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recall'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Recall'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Recalls
+      description: 'Requires permission: `recalls.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecallInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RecallInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RecallInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/recalls/{id}':
+    get:
+      tags:
+        - Recalls
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/recalls/{id}/trace':
+    post:
+      tags:
+        - Recalls
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecallParty'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecallParty'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecallParty'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/recalls/{id}/contain':
+    post:
+      tags:
+        - Recalls
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecallStepInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RecallStepInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RecallStepInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/recalls/{id}/parties':
+    post:
+      tags:
+        - Recalls
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartyUpdate'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PartyUpdate'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PartyUpdate'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/recalls/{id}/capa':
+    post:
+      tags:
+        - Recalls
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CapaLinkRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CapaLinkRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CapaLinkRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/recalls/{id}/close':
+    post:
+      tags:
+        - Recalls
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RecallStepInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RecallStepInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RecallStepInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/returns:
+    get:
+      tags:
+        - Returns
+      description: 'Requires permission: `returns.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomerReturn'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomerReturn'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomerReturn'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Returns
+      description: 'Requires permission: `returns.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReturnInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReturnInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/returns/{id}':
+    get:
+      tags:
+        - Returns
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CustomerReturn'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerReturn'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CustomerReturn'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/returns/{id}/receive':
+    post:
+      tags:
+        - Returns
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnReceiveInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReturnReceiveInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReturnReceiveInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/returns/{id}/inspect':
+    post:
+      tags:
+        - Returns
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnInspectInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReturnInspectInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReturnInspectInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/returns/{id}/disposition':
+    post:
+      tags:
+        - Returns
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReturnDispositionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReturnDispositionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReturnDispositionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/returns/{id}/close':
+    post:
+      tags:
+        - Returns
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/returns/{id}/complaint':
+    post:
+      tags:
+        - Returns
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/returns/{id}/ncr':
+    post:
+      tags:
+        - Returns
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/returns/{id}/capa':
+    post:
+      tags:
+        - Returns
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warranty:
+    get:
+      tags:
+        - Returns
+      description: 'Requires permission: `returns.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WarrantyClaim'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WarrantyClaim'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/WarrantyClaim'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Returns
+      description: 'Requires permission: `returns.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarrantyInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/WarrantyInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/WarrantyInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warranty/{id}':
+    get:
+      tags:
+        - Returns
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/WarrantyClaim'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarrantyClaim'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/WarrantyClaim'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/warranty/{id}/decision':
+    post:
+      tags:
+        - Returns
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WarrantyDecisionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/WarrantyDecisionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/WarrantyDecisionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/warranty/metrics:
+    get:
+      tags:
+        - Returns
+      description: 'Requires permission: `returns.view` (site/department scoped).'
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/WarrantyMetrics'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WarrantyMetrics'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/WarrantyMetrics'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/intelligence/kpis:
+    get:
+      tags:
+        - Intelligence
+      description: 'Requires permission: `analytics.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/intelligence/kpis/{key}':
+    get:
+      tags:
+        - Intelligence
+      description: 'Requires permission: `analytics.view` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: period
+          in: query
+          schema:
+            default: 2
+            $ref: '#/components/schemas/KpiPeriod'
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/KpiSeries'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/KpiSeries'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/KpiSeries'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/intelligence/ask:
+    post:
+      tags:
+        - Intelligence
+      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AskRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CopilotAnswer'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CopilotAnswer'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CopilotAnswer'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/intelligence/summary/{type}/{id}':
+    get:
+      tags:
+        - Intelligence
+      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CopilotAnswer'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CopilotAnswer'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CopilotAnswer'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/intelligence/investigate/{ncrId}':
+    get:
+      tags:
+        - Intelligence
+      description: 'Requires permission: `copilot.use` (site/department scoped).'
+      parameters:
+        - name: ncrId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Investigation'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Investigation'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/Investigation'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/intelligence/trends:
+    get:
+      tags:
+        - Intelligence
+      description: 'Requires permission: `analytics.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TrendRow'
+            application/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TrendRow'
+            text/json:
+              schema:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/TrendRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/intelligence/predict/{kind}':
+    get:
+      tags:
+        - Intelligence
+      description: 'Requires permission: `analytics.view` (site/department scoped).'
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RiskScore'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RiskScore'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RiskScore'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/intelligence/executive:
+    get:
+      tags:
+        - Intelligence
+      description: 'Requires permission: `analytics.view` (site/department scoped).'
+      parameters:
+        - name: month
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ExecutiveSummary'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExecutiveSummary'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ExecutiveSummary'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/intelligence/datasets:
+    get:
+      tags:
+        - Intelligence
+      description: 'Requires permission: `analytics.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  type: string
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+            text/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/intelligence/datasets/{name}':
+    get:
+      tags:
+        - Intelligence
+      description: 'Requires permission: `analytics.view` (site/department scoped).'
+      parameters:
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1000
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/DatasetPage'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatasetPage'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/DatasetPage'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/alerts/rules:
+    get:
+      tags:
+        - Alerts
+      description: 'Requires permission: `alerts.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertRule'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertRule'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertRule'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Alerts
+      description: 'Requires permission: `alerts.admin` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertRuleInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AlertRuleInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AlertRuleInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/alerts/rules/{id}':
+    put:
+      tags:
+        - Alerts
+      description: 'Requires permission: `alerts.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AlertRuleInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AlertRuleInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AlertRuleInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/alerts/events:
+    get:
+      tags:
+        - Alerts
+      description: 'Requires permission: `alerts.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertEvent'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertEvent'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AlertEvent'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/alerts/evaluate:
+    post:
+      tags:
+        - Alerts
+      description: 'Requires permission: `alerts.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/alerts/endpoints:
+    get:
+      tags:
+        - Alerts
+      description: 'Requires permission: `alerts.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Alerts
+      description: 'Requires permission: `alerts.admin` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EndpointInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/EndpointInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/EndpointInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/alerts/endpoints/{id}':
+    put:
+      tags:
+        - Alerts
+      description: 'Requires permission: `alerts.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EndpointInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/EndpointInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/EndpointInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/master/families:
     get:
       tags:
@@ -21742,6 +23946,189 @@ components:
       properties:
         name:
           type: string
+    AlertEvent:
+      type: object
+      properties:
+        ruleId:
+          type: string
+          format: uuid
+        subjectKey:
+          type: string
+        title:
+          type: string
+        recordType:
+          type:
+            - 'null'
+            - string
+        recordId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        raisedAt:
+          type: string
+          format: date-time
+        channels:
+          type: string
+        deliveryErrors:
+          type:
+            - 'null'
+            - string
+        clearedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    AlertKind:
+      type: integer
+    AlertRule:
+      type: object
+      properties:
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/AlertKind'
+        threshold:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        windowDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        recipients:
+          type: string
+        inApp:
+          type: boolean
+        email:
+          type: boolean
+        sms:
+          type: boolean
+        teams:
+          type: boolean
+        active:
+          type: boolean
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    AlertRuleInput:
+      required:
+        - name
+        - kind
+        - threshold
+        - windowDays
+        - recipients
+        - inApp
+        - email
+        - sms
+        - teams
+        - active
+        - siteId
+        - departmentId
+      type: object
+      properties:
+        name:
+          type: string
+        kind:
+          $ref: '#/components/schemas/AlertKind'
+        threshold:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        windowDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        recipients:
+          type: array
+          items:
+            type: string
+            format: uuid
+        inApp:
+          type: boolean
+        email:
+          type: boolean
+        sms:
+          type: boolean
+        teams:
+          type: boolean
+        active:
+          type: boolean
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
     Approval:
       required:
         - id
@@ -22778,6 +25165,13 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AqlStageDto'
+    AskRequest:
+      required:
+        - question
+      type: object
+      properties:
+        question:
+          type: string
     AssignmentDto:
       required:
         - id
@@ -23114,6 +25508,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CharacteristicInput2'
+    BarcodeSymbology:
+      type: integer
     BrandingDto:
       required:
         - applicationName
@@ -23189,6 +25585,14 @@ components:
             - string
     CalibrationResult:
       type: integer
+    CapaLinkRequest:
+      required:
+        - capaId
+      type: object
+      properties:
+        capaId:
+          type: string
+          format: uuid
     CapaPlanRequest:
       required:
         - scope
@@ -23270,6 +25674,8 @@ components:
             - 'null'
             - string
           format: uuid
+    ChangeQueueStatus:
+      type: integer
     ChangeRequestInput:
       required:
         - title
@@ -23907,6 +26313,87 @@ components:
       properties:
         notes:
           type: string
+    ConflictPolicy:
+      type: integer
+    ConnectionInput:
+      required:
+        - name
+        - system
+        - edition
+        - baseUrl
+        - account
+        - company
+        - clientId
+        - username
+        - options
+        - maxConcurrency
+        - requestsPerMinute
+        - inventorySystemOfRecord
+        - adminNotes
+        - siteId
+        - departmentId
+      type: object
+      properties:
+        name:
+          type: string
+        system:
+          $ref: '#/components/schemas/ErpSystem'
+        edition:
+          type:
+            - 'null'
+            - string
+        baseUrl:
+          type:
+            - 'null'
+            - string
+        account:
+          type:
+            - 'null'
+            - string
+        company:
+          type:
+            - 'null'
+            - string
+        clientId:
+          type:
+            - 'null'
+            - string
+        username:
+          type:
+            - 'null'
+            - string
+        options:
+          type:
+            - 'null'
+            - object
+        maxConcurrency:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        requestsPerMinute:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        inventorySystemOfRecord:
+          type: boolean
+        adminNotes:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
     ControlPlanLineInput:
       required:
         - stepSequence
@@ -23980,6 +26467,67 @@ components:
     ControlPlanPhase:
       type: integer
       default: 2
+    CopilotAnswer:
+      required:
+        - question
+        - intent
+        - answer
+        - records
+        - trend
+        - method
+        - confidence
+      type: object
+      properties:
+        question:
+          type: string
+        intent:
+          type: string
+        answer:
+          type: string
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/CopilotRecord'
+        trend:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendRow'
+        method:
+          type: string
+        confidence:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+    CopilotRecord:
+      required:
+        - type
+        - id
+        - number
+        - title
+        - status
+        - url
+      type: object
+      properties:
+        type:
+          type: string
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        url:
+          type: string
+        detail:
+          type:
+            - 'null'
+            - string
     CopyRequest:
       required:
         - type
@@ -24779,6 +27327,13 @@ components:
           type: string
     Criticality:
       type: integer
+    CsvImportRequest:
+      required:
+        - content
+      type: object
+      properties:
+        content:
+          type: string
     CustomerAcceptanceRequest:
       required:
         - accepted
@@ -24804,8 +27359,163 @@ components:
         sentOn:
           type: string
           format: date
+    CustomerReturn:
+      type: object
+      properties:
+        number:
+          type: string
+        customerId:
+          type: string
+          format: uuid
+        productId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        returnReason:
+          type: string
+        customerReference:
+          type:
+            - 'null'
+            - string
+        status:
+          $ref: '#/components/schemas/ReturnStatus'
+        authorizedOn:
+          type: string
+          format: date
+        receivedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        condition:
+          type:
+            - 'null'
+            - string
+        inspectionNotes:
+          type:
+            - 'null'
+            - string
+        failureConfirmed:
+          type:
+            - 'null'
+            - boolean
+        rootCause:
+          type:
+            - 'null'
+            - string
+        correctiveAction:
+          type:
+            - 'null'
+            - string
+        disposition:
+          $ref: '#/components/schemas/ReturnDisposition'
+        dispositionNotes:
+          type:
+            - 'null'
+            - string
+        complaintId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ncrId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        capaId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        warrantyClaimId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ownerId:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     CustomFieldType:
       type: integer
+    DatasetPage:
+      required:
+        - dataset
+        - rows
+        - nextCursor
+        - asOf
+      type: object
+      properties:
+        dataset:
+          type: string
+        rows:
+          type: array
+          items:
+            type: object
+        nextCursor:
+          type:
+            - 'null'
+            - string
+        asOf:
+          type: string
+          format: date-time
     DataTypeCode:
       enum:
         - Numeric
@@ -25195,6 +27905,34 @@ components:
             - integer
             - string
           format: uint32
+    EnableRequest:
+      required:
+        - enabled
+      type: object
+      properties:
+        enabled:
+          type: boolean
+    EndpointInput:
+      required:
+        - name
+        - kind
+        - url
+        - secret
+        - enabled
+      type: object
+      properties:
+        name:
+          type: string
+        kind:
+          type: string
+        url:
+          type: string
+        secret:
+          type:
+            - 'null'
+            - string
+        enabled:
+          type: boolean
     EntityTagHeaderValue:
       type: object
       properties:
@@ -25203,6 +27941,255 @@ components:
         isWeak:
           type: boolean
     EquipmentStatus:
+      type: integer
+    ErpChange:
+      type: object
+      properties:
+        number:
+          type: string
+        connectionId:
+          type: string
+          format: uuid
+        entity:
+          $ref: '#/components/schemas/ErpEntity'
+        direction:
+          $ref: '#/components/schemas/SyncDirection'
+        externalId:
+          type: string
+        action:
+          type: string
+        before:
+          type:
+            - 'null'
+            - string
+        after:
+          type: string
+        payloadHash:
+          type: string
+        validationErrors:
+          type:
+            - 'null'
+            - string
+        status:
+          $ref: '#/components/schemas/ChangeQueueStatus'
+        runId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        localType:
+          type:
+            - 'null'
+            - string
+        localId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        decisionNote:
+          type:
+            - 'null'
+            - string
+        appliedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ErpEntity:
+      type: integer
+    ErpEntityMapping:
+      type: object
+      properties:
+        connectionId:
+          type: string
+          format: uuid
+        entity:
+          $ref: '#/components/schemas/ErpEntity'
+        direction:
+          $ref: '#/components/schemas/SyncDirection'
+        mode:
+          $ref: '#/components/schemas/SyncMode'
+        conflict:
+          $ref: '#/components/schemas/ConflictPolicy'
+        cron:
+          type: string
+        nextRunAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        fieldMap:
+          type: string
+        validationRules:
+          type: string
+        version:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ErpSyncRun:
+      type: object
+      properties:
+        connectionId:
+          type: string
+          format: uuid
+        entity:
+          $ref: '#/components/schemas/ErpEntity'
+        startedAt:
+          type: string
+          format: date-time
+        finishedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        status:
+          $ref: '#/components/schemas/SyncRunStatus'
+        read:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        created:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        updated:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        unchanged:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        queued:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        rejected:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        requests:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        error:
+          type:
+            - 'null'
+            - string
+        trigger:
+          type: string
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ErpSystem:
       type: integer
     EvaluationCode:
       enum:
@@ -25275,6 +28262,31 @@ components:
             - integer
             - string
           format: int32
+    ExecutiveSummary:
+      required:
+        - period
+        - text
+        - highlights
+        - risks
+        - kpis
+      type: object
+      properties:
+        period:
+          type: string
+        text:
+          type: string
+        highlights:
+          type: array
+          items:
+            type: string
+        risks:
+          type: array
+          items:
+            type: string
+        kpis:
+          type: array
+          items:
+            $ref: '#/components/schemas/KpiSeries'
     FAI:
       required:
         - id
@@ -26008,6 +29020,88 @@ components:
           format: uuid
     FormRecordStatus:
       type: integer
+    Genealogy:
+      required:
+        - root
+        - backward
+        - forward
+        - events
+        - suppliers
+        - customers
+      type: object
+      properties:
+        root:
+          $ref: '#/components/schemas/GenealogyNode'
+        backward:
+          type: array
+          items:
+            $ref: '#/components/schemas/GenealogyNode'
+        forward:
+          type: array
+          items:
+            $ref: '#/components/schemas/GenealogyNode'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/TraceEventRow'
+        suppliers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartyRow'
+        customers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PartyRow'
+    GenealogyNode:
+      required:
+        - kind
+        - id
+        - number
+        - partNumber
+        - revision
+        - status
+        - depth
+        - direction
+        - quantity
+        - via
+      type: object
+      properties:
+        kind:
+          type: string
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        partNumber:
+          type:
+            - 'null'
+            - string
+        revision:
+          type:
+            - 'null'
+            - string
+        status:
+          type: string
+        depth:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        direction:
+          type: string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        via:
+          type:
+            - 'null'
+            - string
     HistoryItem:
       required:
         - occurredAt
@@ -26163,6 +29257,39 @@ components:
             format: uuid
     InspectionStatus:
       type: integer
+    Investigation:
+      required:
+        - subject
+        - similar
+        - rootCauses
+        - actions
+        - recurringDefects
+        - method
+        - disclaimer
+      type: object
+      properties:
+        subject:
+          $ref: '#/components/schemas/CopilotRecord'
+        similar:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimilarNcr'
+        rootCauses:
+          type: array
+          items:
+            $ref: '#/components/schemas/Suggestion'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/Suggestion'
+        recurringDefects:
+          type: array
+          items:
+            $ref: '#/components/schemas/TrendRow'
+        method:
+          type: string
+        disclaimer:
+          type: string
     InvestigationRequest:
       required:
         - investigation
@@ -26220,6 +29347,69 @@ components:
       type: integer
     KpiFrequency:
       type: integer
+    KpiPeriod:
+      type: integer
+    KpiPoint:
+      required:
+        - period
+        - start
+        - end
+        - value
+        - numerator
+        - denominator
+      type: object
+      properties:
+        period:
+          type: string
+        start:
+          type: string
+          format: date
+        end:
+          type: string
+          format: date
+        value:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        numerator:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        denominator:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+    KpiSeries:
+      required:
+        - key
+        - label
+        - unit
+        - formula
+        - period
+        - points
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        unit:
+          type: string
+        formula:
+          type: string
+        period:
+          $ref: '#/components/schemas/KpiPeriod'
+        points:
+          type: array
+          items:
+            $ref: '#/components/schemas/KpiPoint'
     LevelInput:
       required:
         - code
@@ -26337,6 +29527,78 @@ components:
         - Complaint
         - Audit
         - Other
+    LiveMetric:
+      required:
+        - key
+        - label
+        - value
+        - unit
+        - numerator
+        - denominator
+        - url
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        value:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        unit:
+          type:
+            - 'null'
+            - string
+        numerator:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        denominator:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        url:
+          type: string
+    LiveMonitor:
+      required:
+        - asOf
+        - metrics
+        - openNcrs
+        - spcViolations
+        - scrapToday
+        - refreshSeconds
+      type: object
+      properties:
+        asOf:
+          type: string
+          format: date-time
+        metrics:
+          type: array
+          items:
+            $ref: '#/components/schemas/LiveMetric'
+        openNcrs:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelatedRecord'
+        spcViolations:
+          type: array
+        scrapToday:
+          type: array
+        refreshSeconds:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     LoginRequest:
       required:
         - email
@@ -26374,6 +29636,203 @@ components:
             - number
             - string
           format: double
+    Lot:
+      type: object
+      properties:
+        number:
+          type: string
+        kind:
+          $ref: '#/components/schemas/LotKind'
+        partId:
+          type: string
+          format: uuid
+        revision:
+          type:
+            - 'null'
+            - string
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierLotNumber:
+          type:
+            - 'null'
+            - string
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        customerLotNumber:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        unitOfMeasure:
+          type: string
+        manufacturedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        expiresOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        status:
+          $ref: '#/components/schemas/LotStatus'
+        workOrderId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        purchaseOrder:
+          type:
+            - 'null'
+            - string
+        parentLotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        source:
+          $ref: '#/components/schemas/RecordSource'
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    LotInput:
+      required:
+        - number
+        - kind
+        - partId
+        - revision
+        - supplierId
+        - supplierLotNumber
+        - customerId
+        - customerLotNumber
+        - quantity
+        - unitOfMeasure
+        - manufacturedOn
+        - expiresOn
+        - workOrderId
+        - purchaseOrder
+        - siteId
+        - departmentId
+      type: object
+      properties:
+        number:
+          type:
+            - 'null'
+            - string
+        kind:
+          $ref: '#/components/schemas/LotKind'
+        partId:
+          type: string
+          format: uuid
+        revision:
+          type:
+            - 'null'
+            - string
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierLotNumber:
+          type:
+            - 'null'
+            - string
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        customerLotNumber:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        unitOfMeasure:
+          type:
+            - 'null'
+            - string
+        manufacturedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        expiresOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        workOrderId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        purchaseOrder:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    LotKind:
+      type: integer
+    LotStatus:
+      type: integer
     LpaAnswer:
       required:
         - question
@@ -26692,6 +30151,34 @@ components:
             - 'null'
             - string
           format: date
+    MappingInput:
+      required:
+        - direction
+        - mode
+        - conflict
+        - cron
+        - fieldMap
+        - validationRules
+      type: object
+      properties:
+        direction:
+          $ref: '#/components/schemas/SyncDirection'
+        mode:
+          $ref: '#/components/schemas/SyncMode'
+        conflict:
+          $ref: '#/components/schemas/ConflictPolicy'
+        cron:
+          type: string
+        fieldMap:
+          type:
+            - 'null'
+            - object
+          additionalProperties:
+            type: string
+        validationRules:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonElement'
     MasterStatus:
       type: integer
     MeasurementInput:
@@ -26738,6 +30225,26 @@ components:
           type:
             - 'null'
             - string
+    MesEventInput:
+      required:
+        - source
+        - eventId
+        - kind
+        - siteId
+        - payload
+      type: object
+      properties:
+        source:
+          type: string
+        eventId:
+          type: string
+        kind:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        payload:
+          $ref: '#/components/schemas/JsonElement'
     Metric:
       required:
         - key
@@ -27258,6 +30765,25 @@ components:
       properties:
         reason:
           type: string
+    OperationInput:
+      required:
+        - sequence
+        - name
+        - workCenter
+      type: object
+      properties:
+        sequence:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        name:
+          type: string
+        workCenter:
+          type:
+            - 'null'
+            - string
     OutcomeInput:
       required:
         - achieved
@@ -27461,6 +30987,56 @@ components:
           format: int32
     PartType:
       type: integer
+    PartyRow:
+      required:
+        - id
+        - code
+        - name
+        - quantity
+        - lots
+        - serials
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        lots:
+          type: array
+          items:
+            type: string
+        serials:
+          type: array
+          items:
+            type: string
+    PartyUpdate:
+      required:
+        - partyId
+        - notified
+        - contained
+        - response
+      type: object
+      properties:
+        partyId:
+          type: string
+          format: uuid
+        notified:
+          type: boolean
+        contained:
+          type: boolean
+        response:
+          type:
+            - 'null'
+            - string
     PerformanceRequest:
       required:
         - periodStart
@@ -27638,6 +31214,44 @@ components:
         - Active
         - Inactive
         - Obsolete
+    PoLineInput:
+      required:
+        - lineNumber
+        - partId
+        - itemNumber
+        - revision
+        - quantity
+        - dueOn
+      type: object
+      properties:
+        lineNumber:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        itemNumber:
+          type: string
+        revision:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        dueOn:
+          type:
+            - 'null'
+            - string
+          format: date
     PortalAccountDto:
       required:
         - id
@@ -27784,6 +31398,422 @@ components:
             type: array
             items:
               type: string
+    ProductionEntry:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/ProductionEntryKind'
+        workOrderId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        operationSequence:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        workCenter:
+          type:
+            - 'null'
+            - string
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        good:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        rejected:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        scrapped:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        reworked:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        firstPass:
+          type: boolean
+        downtimeMinutes:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        downtimeReason:
+          type:
+            - 'null'
+            - string
+        characteristic:
+          type:
+            - 'null'
+            - string
+        value:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        lowerLimit:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        upperLimit:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        inSpec:
+          type:
+            - 'null'
+            - boolean
+        parameters:
+          type:
+            - 'null'
+            - string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        device:
+          type: string
+        source:
+          $ref: '#/components/schemas/RecordSource'
+        externalEventId:
+          type:
+            - 'null'
+            - string
+        ncrId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        recordedAt:
+          type: string
+          format: date-time
+        recordedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ProductionEntryInput:
+      required:
+        - kind
+        - workOrderId
+        - operationSequence
+        - workCenter
+        - good
+        - rejected
+        - scrapped
+        - reworked
+        - firstPass
+        - downtimeMinutes
+        - downtimeReason
+        - characteristic
+        - value
+        - lowerLimit
+        - upperLimit
+        - parameters
+        - lotNumber
+        - serialNumber
+        - device
+        - spcChartId
+        - recordedAt
+        - siteId
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/ProductionEntryKind'
+        workOrderId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        operationSequence:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        workCenter:
+          type:
+            - 'null'
+            - string
+        good:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        rejected:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        scrapped:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        reworked:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        firstPass:
+          type: boolean
+        downtimeMinutes:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        downtimeReason:
+          type:
+            - 'null'
+            - string
+        characteristic:
+          type:
+            - 'null'
+            - string
+        value:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        lowerLimit:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        upperLimit:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        parameters:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonElement'
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        device:
+          type:
+            - 'null'
+            - string
+        spcChartId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        recordedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    ProductionEntryKind:
+      type: integer
+    ProductionEntryOutcome:
+      required:
+        - entry
+        - spcViolations
+        - ncrId
+        - ncrNumber
+      type: object
+      properties:
+        entry:
+          $ref: '#/components/schemas/ProductionEntry'
+        spcViolations:
+          type: array
+          items:
+            type: string
+        ncrId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ncrNumber:
+          type:
+            - 'null'
+            - string
+    PurchaseOrder:
+      type: object
+      properties:
+        number:
+          type: string
+        supplierId:
+          type: string
+          format: uuid
+        orderedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        status:
+          $ref: '#/components/schemas/PurchaseOrderStatus'
+        source:
+          $ref: '#/components/schemas/RecordSource'
+        externalRef:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    PurchaseOrderInput:
+      required:
+        - number
+        - supplierId
+        - orderedOn
+        - lines
+        - siteId
+        - departmentId
+      type: object
+      properties:
+        number:
+          type: string
+        supplierId:
+          type: string
+          format: uuid
+        orderedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/PoLineInput'
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    PurchaseOrderStatus:
+      type: integer
     QualityMetricFact:
       type: object
       properties:
@@ -27882,6 +31912,230 @@ components:
       properties:
         reason:
           type: string
+    Recall:
+      type: object
+      properties:
+        number:
+          type: string
+        title:
+          type: string
+        reason:
+          type: string
+        riskRating:
+          $ref: '#/components/schemas/Severity'
+        status:
+          $ref: '#/components/schemas/RecallStatus'
+        containment:
+          type:
+            - 'null'
+            - string
+        customerNotification:
+          type:
+            - 'null'
+            - string
+        closureSummary:
+          type:
+            - 'null'
+            - string
+        capaId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ncrId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        closedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        ownerId:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    RecallInput:
+      required:
+        - title
+        - reason
+        - riskRating
+        - siteId
+        - departmentId
+        - ownerId
+        - items
+      type: object
+      properties:
+        title:
+          type: string
+        reason:
+          type: string
+        riskRating:
+          $ref: '#/components/schemas/Severity'
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ownerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecallItemInput'
+    RecallItemInput:
+      required:
+        - productId
+        - partId
+        - lotId
+        - serialId
+        - note
+      type: object
+      properties:
+        productId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        note:
+          type:
+            - 'null'
+            - string
+    RecallParty:
+      type: object
+      properties:
+        recallId:
+          type: string
+          format: uuid
+        partyKind:
+          type: string
+        partyId:
+          type: string
+          format: uuid
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        lots:
+          type:
+            - 'null'
+            - string
+        serials:
+          type:
+            - 'null'
+            - string
+        notifiedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        containedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        response:
+          type:
+            - 'null'
+            - string
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    RecallStatus:
+      type: integer
+    RecallStepInput:
+      required:
+        - notes
+      type: object
+      properties:
+        notes:
+          type: string
     RecordCalibrationRequest:
       required:
         - performedOn
@@ -27958,6 +32212,31 @@ components:
             - 'null'
             - string
           format: date
+    RecordSource:
+      type: integer
+    RelatedRecord:
+      required:
+        - type
+        - id
+        - number
+        - title
+        - status
+        - url
+      type: object
+      properties:
+        type:
+          type: string
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        url:
+          type: string
     ReleaseRequest:
       required:
         - customerApprovalReference
@@ -28200,6 +32479,20 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ResultInput'
+    ReturnDisposition:
+      type: integer
+    ReturnDispositionInput:
+      required:
+        - disposition
+        - notes
+      type: object
+      properties:
+        disposition:
+          $ref: '#/components/schemas/ReturnDisposition'
+        notes:
+          type:
+            - 'null'
+            - string
     ReturnEvaluationRequest:
       required:
         - evaluation
@@ -28215,6 +32508,93 @@ components:
             - string
         failureConfirmed:
           type: boolean
+    ReturnInput:
+      required:
+        - customerId
+        - productId
+        - partId
+        - serialNumber
+        - lotNumber
+        - quantity
+        - returnReason
+        - customerReference
+        - complaintId
+        - siteId
+        - departmentId
+        - ownerId
+      type: object
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        productId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        returnReason:
+          type: string
+        customerReference:
+          type:
+            - 'null'
+            - string
+        complaintId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ownerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    ReturnInspectInput:
+      required:
+        - inspectionNotes
+        - failureConfirmed
+        - rootCause
+        - correctiveAction
+      type: object
+      properties:
+        inspectionNotes:
+          type: string
+        failureConfirmed:
+          type: boolean
+        rootCause:
+          type:
+            - 'null'
+            - string
+        correctiveAction:
+          type:
+            - 'null'
+            - string
     ReturnReceiptRequest:
       required:
         - returnAuthorization
@@ -28238,6 +32618,28 @@ components:
           type:
             - 'null'
             - string
+    ReturnReceiveInput:
+      required:
+        - receivedOn
+        - quantity
+        - condition
+      type: object
+      properties:
+        receivedOn:
+          type: string
+          format: date
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        condition:
+          type:
+            - 'null'
+            - string
+    ReturnStatus:
+      type: integer
     ReviewInput:
       required:
         - review
@@ -28778,6 +33180,46 @@ components:
             - integer
             - string
           format: int32
+    RiskScore:
+      required:
+        - kind
+        - id
+        - label
+        - score
+        - confidence
+        - observations
+        - drivers
+      type: object
+      properties:
+        kind:
+          type: string
+        id:
+          type: string
+          format: uuid
+        label:
+          type: string
+        score:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        confidence:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        observations:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        drivers:
+          type: array
+          items:
+            type: string
     RiskSettingsDto:
       required:
         - probability
@@ -29302,6 +33744,55 @@ components:
             - integer
             - string
           format: uint32
+    ScanRequest:
+      required:
+        - code
+      type: object
+      properties:
+        code:
+          type: string
+    ScanResult:
+      required:
+        - raw
+        - kind
+        - type
+        - id
+        - number
+        - url
+        - detail
+      type: object
+      properties:
+        raw:
+          type: string
+        kind:
+          type: string
+        type:
+          type:
+            - 'null'
+            - string
+        id:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        number:
+          type:
+            - 'null'
+            - string
+        url:
+          type:
+            - 'null'
+            - string
+        detail:
+          type:
+            - 'null'
+            - string
+        candidates:
+          type:
+            - 'null'
+            - array
+          items:
+            $ref: '#/components/schemas/ScanResult'
     ScanStatus:
       type: integer
     ScarResponseRequest:
@@ -29580,6 +34071,20 @@ components:
             - 'null'
             - string
           format: uuid
+    SecretInput:
+      required:
+        - secret
+        - secondarySecret
+      type: object
+      properties:
+        secret:
+          type:
+            - 'null'
+            - string
+        secondarySecret:
+          type:
+            - 'null'
+            - string
     SecurityEventDto:
       required:
         - id
@@ -29616,6 +34121,157 @@ components:
           type:
             - 'null'
             - string
+    SerialInput:
+      required:
+        - serialNumber
+        - partId
+        - revision
+        - productId
+        - lotId
+        - manufacturedOn
+        - workOrderId
+        - warrantyMonths
+        - siteId
+        - departmentId
+      type: object
+      properties:
+        serialNumber:
+          type: string
+        partId:
+          type: string
+          format: uuid
+        revision:
+          type:
+            - 'null'
+            - string
+        productId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        manufacturedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        workOrderId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        warrantyMonths:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    SerialStatus:
+      type: integer
+    SerialUnit:
+      type: object
+      properties:
+        serialNumber:
+          type: string
+        partId:
+          type: string
+          format: uuid
+        revision:
+          type:
+            - 'null'
+            - string
+        productId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        manufacturedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        status:
+          $ref: '#/components/schemas/SerialStatus'
+        workOrderId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        shippedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        parentSerialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        warrantyEndsOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     SettingsDto:
       required:
         - applicationName
@@ -29707,6 +34363,25 @@ components:
           type:
             - 'null'
             - string
+    SimilarNcr:
+      required:
+        - ncr
+        - similarity
+        - sharedTerms
+      type: object
+      properties:
+        ncr:
+          $ref: '#/components/schemas/CopilotRecord'
+        similarity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        sharedTerms:
+          type: array
+          items:
+            type: string
     SiteDto:
       required:
         - id
@@ -30152,6 +34827,32 @@ components:
             - string
         hasValue:
           type: boolean
+    Suggestion:
+      required:
+        - text
+        - support
+        - confidence
+        - sources
+      type: object
+      properties:
+        text:
+          type: string
+        support:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        confidence:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        sources:
+          type: array
+          items:
+            type: string
     SupplierApprovalRequest:
       required:
         - proposedStatus
@@ -30542,6 +35243,77 @@ components:
       properties:
         reason:
           type: string
+    SyncDirection:
+      type: integer
+    SyncMode:
+      type: integer
+    SyncResult:
+      required:
+        - runId
+        - status
+        - read
+        - created
+        - updated
+        - unchanged
+        - queued
+        - rejected
+        - requests
+        - error
+      type: object
+      properties:
+        runId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/SyncRunStatus'
+        read:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        created:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        updated:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        unchanged:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        queued:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        rejected:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        requests:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        error:
+          type:
+            - 'null'
+            - string
+    SyncRunStatus:
+      type: integer
     TextRequest:
       required:
         - text
@@ -30549,6 +35321,224 @@ components:
       properties:
         text:
           type: string
+    TraceEventInput:
+      required:
+        - kind
+        - fromLotId
+        - fromSerialId
+        - toLotId
+        - toSerialId
+        - quantity
+        - workOrderId
+        - operationSequence
+        - supplierId
+        - customerId
+        - refType
+        - refId
+        - refNumber
+        - notes
+        - occurredAt
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/TraceEventKind'
+        fromLotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        fromSerialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        toLotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        toSerialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        workOrderId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        operationSequence:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        refType:
+          type:
+            - 'null'
+            - string
+        refId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        refNumber:
+          type:
+            - 'null'
+            - string
+        notes:
+          type:
+            - 'null'
+            - string
+        occurredAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+    TraceEventKind:
+      type: integer
+    TraceEventRow:
+      required:
+        - id
+        - kind
+        - occurredAt
+        - from
+        - to
+        - quantity
+        - workOrder
+        - ref
+        - party
+        - notes
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/TraceEventKind'
+        occurredAt:
+          type: string
+          format: date-time
+        from:
+          type:
+            - 'null'
+            - string
+        to:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        workOrder:
+          type:
+            - 'null'
+            - string
+        ref:
+          type:
+            - 'null'
+            - string
+        party:
+          type:
+            - 'null'
+            - string
+        notes:
+          type:
+            - 'null'
+            - string
+    TraceHit:
+      required:
+        - type
+        - id
+        - number
+        - title
+        - status
+        - url
+        - group
+      type: object
+      properties:
+        type:
+          type: string
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        title:
+          type: string
+        status:
+          type: string
+        url:
+          type: string
+        group:
+          type: string
+    TraceSearchResult:
+      required:
+        - query
+        - matches
+        - related
+      type: object
+      properties:
+        query:
+          type: string
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/TraceHit'
+        related:
+          type: array
+          items:
+            $ref: '#/components/schemas/TraceHit'
+    TrendRow:
+      required:
+        - label
+        - current
+        - previous
+        - change
+      type: object
+      properties:
+        label:
+          type: string
+        current:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        previous:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        change:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
     UpdateDocumentRequest:
       required:
         - title
@@ -30748,8 +35738,434 @@ components:
           type: boolean
         notes:
           type: string
+    WarrantyClaim:
+      type: object
+      properties:
+        number:
+          type: string
+        customerId:
+          type: string
+          format: uuid
+        productId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        claimedOn:
+          type: string
+          format: date
+        failedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        failureMode:
+          type: string
+        componentPartId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        laborCost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        partsCost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        freightCost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        otherCost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        totalCost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        supplierRecovery:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        status:
+          $ref: '#/components/schemas/WarrantyClaimStatus'
+        decision:
+          type:
+            - 'null'
+            - string
+        returnId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        complaintId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ncrId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        capaId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    WarrantyClaimStatus:
+      type: integer
+    WarrantyDecisionInput:
+      required:
+        - approve
+        - decision
+        - supplierRecovery
+      type: object
+      properties:
+        approve:
+          type: boolean
+        decision:
+          type: string
+        supplierRecovery:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+    WarrantyGroup:
+      required:
+        - id
+        - label
+        - claims
+        - quantity
+        - cost
+      type: object
+      properties:
+        id:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        label:
+          type: string
+        claims:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        cost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+    WarrantyInput:
+      required:
+        - customerId
+        - productId
+        - partId
+        - serialNumber
+        - lotNumber
+        - quantity
+        - claimedOn
+        - failedOn
+        - failureMode
+        - componentPartId
+        - supplierId
+        - laborCost
+        - partsCost
+        - freightCost
+        - otherCost
+        - returnId
+        - complaintId
+        - siteId
+        - departmentId
+      type: object
+      properties:
+        customerId:
+          type: string
+          format: uuid
+        productId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        claimedOn:
+          type: string
+          format: date
+        failedOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        failureMode:
+          type: string
+        componentPartId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        laborCost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        partsCost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        freightCost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        otherCost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        returnId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        complaintId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    WarrantyMetrics:
+      required:
+        - claimQuantity
+        - shippedQuantity
+        - ppm
+        - totalCost
+        - supplierRecovery
+        - claims
+        - trend
+        - byProduct
+        - byComponent
+        - bySupplier
+      type: object
+      properties:
+        claimQuantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        shippedQuantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        ppm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        totalCost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        supplierRecovery:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        claims:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        trend:
+          type: array
+          items:
+            $ref: '#/components/schemas/WarrantyTrend'
+        byProduct:
+          type: array
+          items:
+            $ref: '#/components/schemas/WarrantyGroup'
+        byComponent:
+          type: array
+          items:
+            $ref: '#/components/schemas/WarrantyGroup'
+        bySupplier:
+          type: array
+          items:
+            $ref: '#/components/schemas/WarrantyGroup'
     WarrantyStatus:
       type: integer
+    WarrantyTrend:
+      required:
+        - period
+        - claims
+        - quantity
+        - cost
+        - shipped
+        - ppm
+      type: object
+      properties:
+        period:
+          type: string
+        claims:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        cost:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        shipped:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        ppm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
     WorkflowAction:
       required:
         - comment
@@ -30777,6 +36193,175 @@ components:
           type:
             - 'null'
             - string
+    WorkOrder:
+      type: object
+      properties:
+        number:
+          type: string
+        kind:
+          $ref: '#/components/schemas/WorkOrderKind'
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        itemNumber:
+          type: string
+        revision:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        quantityCompleted:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        quantityScrapped:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        quantityReworked:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        startOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        dueOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        status:
+          $ref: '#/components/schemas/WorkOrderStatus'
+        source:
+          $ref: '#/components/schemas/RecordSource'
+        externalRef:
+          type:
+            - 'null'
+            - string
+        routingRef:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    WorkOrderInput:
+      required:
+        - number
+        - kind
+        - partId
+        - revision
+        - quantity
+        - startOn
+        - dueOn
+        - routingRef
+        - operations
+        - siteId
+        - departmentId
+      type: object
+      properties:
+        number:
+          type:
+            - 'null'
+            - string
+        kind:
+          $ref: '#/components/schemas/WorkOrderKind'
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        revision:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        startOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        dueOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        routingRef:
+          type:
+            - 'null'
+            - string
+        operations:
+          type:
+            - 'null'
+            - array
+          items:
+            $ref: '#/components/schemas/OperationInput'
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    WorkOrderKind:
+      type: integer
+    WorkOrderStatus:
+      type: integer
   securitySchemes:
     bearerAuth:
       type: http
@@ -30820,6 +36405,13 @@ tags:
   - name: FAI Workflow
   - name: FAI Characteristics
   - name: Inspection
+  - name: Mes
+  - name: Production
+  - name: Trace
+  - name: Recalls
+  - name: Returns
+  - name: Intelligence
+  - name: Alerts
   - name: MasterData
   - name: Suppliers
   - name: Objectives
