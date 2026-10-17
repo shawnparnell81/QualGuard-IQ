@@ -50,6 +50,10 @@ const CustomerDetail = lazy(() => import('./pages/Products').then((m) => ({ defa
 const SupplierList = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierList })));
 const SupplierNew = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierNew })));
 const SupplierDetail = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierDetail })));
+const RecordRedirect = lazy(() => import('./pages/RecordRedirect').then((m) => ({ default: m.RecordRedirect })));
+const ChangeList = lazy(() => import('./pages/Changes').then((m) => ({ default: m.ChangeList })));
+const ChangeNew = lazy(() => import('./pages/Changes').then((m) => ({ default: m.ChangeNew })));
+const ChangeDetail = lazy(() => import('./pages/Changes').then((m) => ({ default: m.ChangeDetail })));
 const InspectionList = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.InspectionList })));
 const InspectionDetail = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.InspectionDetail })));
 const PlanList = lazy(() => import('./pages/Inspection').then((m) => ({ default: m.PlanList })));
@@ -141,6 +145,10 @@ export function App() {
               <Route path="/suppliers" element={<SupplierList />} />
               <Route path="/suppliers/new" element={<SupplierNew />} />
               <Route path="/suppliers/scar" element={<ScarList />} />
+              <Route path="/records/:type/:id" element={<RecordRedirect />} />
+              <Route path="/changes" element={<ChangeList />} />
+              <Route path="/changes/new" element={<ChangeNew />} />
+              <Route path="/changes/:id" element={<ChangeDetail />} />
               <Route path="/inspection" element={<InspectionList />} />
               <Route path="/inspection/plans" element={<PlanList />} />
               <Route path="/inspection/plans/new" element={<PlanNew />} />
