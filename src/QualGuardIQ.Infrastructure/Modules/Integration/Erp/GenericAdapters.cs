@@ -64,6 +64,15 @@ public sealed class CsvExchangeAdapter : IErpAdapter
     /// <summary>Parses RFC 4180 CSV (quoted fields, doubled quotes, embedded newlines).</summary>
     public static List<Dictionary<string, string>> Parse(string text)
     {
+        var rows = ReadRows(text);
+        if (rows.Count == 0) return [];
+        var head = rows[0].Select(h => h.Trim().TrimStart('\uFEFF')).ToList();
+        return rows.Skip(1).Where(r => r.Any(x => x.Length > 0)).Select(r => head.Select((h, k) => (h, v: k < r.Count ? r[k] : "")).ToDictionary(x => x.h, x => x.v)).ToList();
+    }
+
+    /// <summary>RFC 4180 rows in file order (blank lines kept, so row numbers match the file).</summary>
+    public static List<List<string>> ReadRows(string text)
+    {
         var rows = new List<List<string>>(); var row = new List<string>(); var f = new System.Text.StringBuilder(); var q = false;
         for (var i = 0; i < text.Length; i++)
         {
@@ -79,9 +88,7 @@ public sealed class CsvExchangeAdapter : IErpAdapter
             }
         }
         if (f.Length > 0 || row.Count > 0) { row.Add(f.ToString()); rows.Add(row); }
-        if (rows.Count == 0) return [];
-        var head = rows[0].Select(h => h.Trim().TrimStart('\uFEFF')).ToList();
-        return rows.Skip(1).Where(r => r.Any(x => x.Length > 0)).Select(r => head.Select((h, k) => (h, v: k < r.Count ? r[k] : "")).ToDictionary(x => x.h, x => x.v)).ToList();
+        return rows;
     }
 
     public ExternalRecord ToRecord(ErpCallContext c, ErpEntity entity, Dictionary<string, string> row)

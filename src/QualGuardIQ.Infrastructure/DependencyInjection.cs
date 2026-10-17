@@ -171,6 +171,7 @@ public static class DependencyInjection
             (id, ct) => sp.GetRequiredService<NcrService>().OnApprovedAsync(id, ct), (id, _, ct) => sp.GetRequiredService<NcrService>().OnRejectedAsync(id, ct)));
         // Prompt 4: APQP, SPC/MSA, LPA, cost of quality, supplier development, analytics, portals.
         s.AddScoped<Modules.Apqp.ApqpService>();
+        s.AddScoped<Modules.Apqp.ApqpImportService>();
         s.AddScoped<Modules.Apqp.SpcService>();
         s.AddScoped<Modules.Apqp.MsaService>();
         s.AddScoped<Modules.Apqp.LpaService>();

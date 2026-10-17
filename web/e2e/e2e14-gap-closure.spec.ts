@@ -283,4 +283,40 @@ test.describe('E2E 14: gap closure', () => {
     expect((await device.post('/api/mes/events', ev('3'))).status()).toBe(401);
     await device.dispose();
   });
+
+  test('PFMEA lines import from a spreadsheet with a mapping preview, row errors, recalculated RPN and the rejected rows left out', async ({ page }) => {
+    const admin = await Api.as(users.admin);
+    const t = Date.now().toString(36);
+    const pf = await admin.post<{ id: string; number: string }>('/api/apqp/pfmea', { title: `Import PFMEA ${t}`, siteId: state().siteId });
+    const csv = ['Proc No,Process function,Failure mode,Failure effect,S,Failure cause,O,D,RPN',
+      '10,Press bearing,Bearing too shallow,Noise at end of line,7,Press stop worn,4,3,999',
+      '20,Torque bolts,Bolt under-torqued,Cover leak,12,Tool not calibrated,5,6,',
+      '30,Leak test,Leak not detected,Field leak,6,Test pressure low,3,4,'].join('\n');
+    await signIn(page, users.admin);
+    await page.goto(`/apqp/pfmea/${pf.id}`);
+    await page.getByRole('button', { name: 'Import lines' }).click();
+    const d = dialog(page);
+    await d.getByTestId('import-file').setInputFiles({ name: 'line-3-pfmea.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+    await d.getByRole('button', { name: 'Preview' }).click();
+    // "Proc No" is not a recognised step column: the required Step field is unmapped until it is chosen.
+    await expect(d.getByText('Map the required columns: Step.')).toBeVisible();
+    await d.getByRole('combobox', { name: 'Step *' }).click();
+    await page.getByRole('option', { name: 'Proc No', exact: true }).click();
+    const summary = d.getByTestId('import-summary');
+    await expect(summary).toContainText('3 rows');
+    await expect(summary).toContainText('2 ready');
+    await expect(summary).toContainText('1 rejected');
+    const rows = d.getByTestId('import-rows');
+    await expect(rows).toContainText('Severity must be between 1 and 10');
+    await expect(rows).toContainText('RPN in the file (999) replaced by the calculated 84');
+    await expect(d.getByRole('button', { name: 'Import 2 lines' })).toBeDisabled();
+    await d.getByLabel(/Import the 2 valid rows/).check();
+    await d.getByRole('button', { name: 'Import 2 lines' }).click();
+    await expect(d).toHaveCount(0);
+    await expect(page.getByTestId('import-done')).toContainText(`2 line(s) imported into ${pf.number} rev 1. 1 rejected row(s) left out.`);
+    await expect(page.locator('input[value="Bearing too shallow"]')).toHaveCount(1); // the draft's line editor shows the imported line
+    const lines = await admin.get<{ failureMode: string; rpn: number }[]>(`/api/apqp/pfmea/${pf.id}/lines`);
+    expect(lines.map((l) => l.rpn).sort()).toEqual([72, 84]);
+    await expect(page.getByRole('row').filter({ hasText: 'line-3-pfmea.csv' }).first()).toContainText('2 ok · 1 rejected');
+  });
 });

@@ -14,6 +14,7 @@ public partial class AppDbContext
     public DbSet<PfmeaLine> PfmeaLines => Set<PfmeaLine>();
     public DbSet<ControlPlan> ControlPlans => Set<ControlPlan>();
     public DbSet<ControlPlanLine> ControlPlanLines => Set<ControlPlanLine>();
+    public DbSet<ApqpLineImport> ApqpLineImports => Set<ApqpLineImport>();
     public DbSet<SpcChart> SpcCharts => Set<SpcChart>();
     public DbSet<SpcSample> SpcSamples => Set<SpcSample>();
     public DbSet<MsaStudy> MsaStudies => Set<MsaStudy>();
@@ -103,6 +104,17 @@ public partial class AppDbContext
             e.HasOne<ControlPlan>().WithMany().HasForeignKey(x => x.PlanId).OnDelete(C);
             e.HasOne<InspectionPlan>().WithMany().HasForeignKey(x => x.InspectionPlanId).OnDelete(R);
             e.HasOne<SpcChart>().WithMany().HasForeignKey(x => x.SpcChartId).OnDelete(R);
+        });
+        b.Entity<ApqpLineImport>(e =>
+        {
+            e.ToTable("apqp_line_imports");
+            e.HasIndex(x => new { x.DocumentType, x.DocumentNumber, x.ImportedAt });
+            e.HasIndex(x => x.DocumentId);
+            e.Property(x => x.DocumentType).HasMaxLength(30); e.Property(x => x.DocumentNumber).HasMaxLength(50);
+            e.Property(x => x.FileName).HasMaxLength(260); e.Property(x => x.FileHash).HasMaxLength(64); e.Property(x => x.Format).HasMaxLength(10); e.Property(x => x.Mode).HasMaxLength(10);
+            e.Property(x => x.Mapping).HasColumnType("jsonb"); e.Property(x => x.Rows).HasColumnType("jsonb"); e.Property(x => x.Message).HasMaxLength(2000);
+            UserReq(e, x => x.ImportedById);
+            SiteRefs(e);
         });
         b.Entity<SpcChart>(e =>
         {

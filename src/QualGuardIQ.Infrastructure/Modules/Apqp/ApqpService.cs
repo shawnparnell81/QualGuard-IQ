@@ -37,7 +37,7 @@ public sealed class ApqpService(AppDbContext db, ModuleSupport m, INumberingServ
         _ => throw new AppException("Unknown APQP document type.")
     };
 
-    async Task<ApqpDocument> LoadAsync(string type, Guid id, CancellationToken ct)
+    public async Task<ApqpDocument> LoadAsync(string type, Guid id, CancellationToken ct)
     {
         await m.ViewAsync(type, id, ct);
         return await Set(type).FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("Document");
@@ -179,33 +179,51 @@ public sealed class ApqpService(AppDbContext db, ModuleSupport m, INumberingServ
         var rows = new List<PfmeaLine>();
         foreach (var l in lines)
         {
-            ModuleSupport.Required(l.ProcessFunction, "Process function", 1000);
-            ModuleSupport.Required(l.FailureMode, "Failure mode", 1000);
-            ModuleSupport.Required(l.FailureEffect, "Failure effect", 1000);
-            ModuleSupport.Required(l.FailureCause, "Failure cause", 1000);
-            PfmeaMath.Validate(l.Severity, l.Occurrence, l.Detection);
-            if (l.ResponsibleId is { } rid) await m.RequireActiveUserAsync(rid, "responsible person", ct);
-            if (l.RecommendedAction is { Length: > 0 } && (l.ResponsibleId is null || l.DueOn is null)) throw new AppException($"Recommended action for \"{l.FailureMode}\" needs a responsible person and due date.");
-            var rev = l.RevisedSeverity is not null || l.RevisedOccurrence is not null || l.RevisedDetection is not null;
-            if (rev)
-            {
-                if (l.RevisedSeverity is null || l.RevisedOccurrence is null || l.RevisedDetection is null) throw new AppException("Revised ratings need severity, occurrence and detection.");
-                PfmeaMath.Validate(l.RevisedSeverity.Value, l.RevisedOccurrence.Value, l.RevisedDetection.Value);
-                if (l.CompletedOn is null) throw new AppException("Revised ratings are recorded after the action is completed.");
-            }
-            rows.Add(new PfmeaLine
-            {
-                PfmeaId = id, StepSequence = l.StepSequence, ProcessFunction = l.ProcessFunction.Trim(), FailureMode = l.FailureMode.Trim(), FailureEffect = l.FailureEffect.Trim(), FailureCause = l.FailureCause.Trim(),
-                PreventionControls = l.PreventionControls, DetectionControls = l.DetectionControls, Severity = l.Severity, Occurrence = l.Occurrence, Detection = l.Detection,
-                Rpn = PfmeaMath.Rpn(l.Severity, l.Occurrence, l.Detection), Priority = PfmeaMath.Priority(l.Severity, l.Occurrence, l.Detection),
-                SpecialCharacteristic = l.SpecialCharacteristic, RecommendedAction = l.RecommendedAction, ResponsibleId = l.ResponsibleId, DueOn = l.DueOn, CompletedOn = l.CompletedOn, ActionTaken = l.ActionTaken,
-                RevisedSeverity = l.RevisedSeverity, RevisedOccurrence = l.RevisedOccurrence, RevisedDetection = l.RevisedDetection,
-                RevisedRpn = rev ? PfmeaMath.Rpn(l.RevisedSeverity!.Value, l.RevisedOccurrence!.Value, l.RevisedDetection!.Value) : null
-            });
+            if ((await PfmeaLineErrorsAsync(l, ct)).FirstOrDefault() is { } error) throw new AppException(error);
+            rows.Add(NewPfmeaLine(id, l));
         }
         db.PfmeaLines.RemoveRange(db.PfmeaLines.Where(x => x.PfmeaId == id));
         db.PfmeaLines.AddRange(rows);
         await db.SaveChangesAsync(ct);
+    }
+
+    /// <summary>Every rule a PFMEA line must meet (shared by the editor and bulk import). Empty when the line is valid.</summary>
+    public async Task<List<string>> PfmeaLineErrorsAsync(PfmeaLineInput l, CancellationToken ct)
+    {
+        var errors = new List<string>();
+        void Try(Action a) { try { a(); } catch (AppException e) { errors.Add(e.Message); } }
+        Try(() => ModuleSupport.Required(l.ProcessFunction, "Process function", 1000));
+        Try(() => ModuleSupport.Required(l.FailureMode, "Failure mode", 1000));
+        Try(() => ModuleSupport.Required(l.FailureEffect, "Failure effect", 1000));
+        Try(() => ModuleSupport.Required(l.FailureCause, "Failure cause", 1000));
+        Try(() => PfmeaMath.Validate(l.Severity, l.Occurrence, l.Detection));
+        foreach (var (v, n) in new[] { (l.PreventionControls, "Prevention controls"), (l.DetectionControls, "Detection controls"), (l.RecommendedAction, "Recommended action"), (l.ActionTaken, "Action taken") })
+            if (v is { Length: > 2000 }) errors.Add($"{n} is longer than 2000 characters.");
+        if (l.ResponsibleId is { } rid) { try { await m.RequireActiveUserAsync(rid, "responsible person", ct); } catch (AppException e) { errors.Add(e.Message); } }
+        if (l.RecommendedAction is { Length: > 0 } && (l.ResponsibleId is null || l.DueOn is null)) errors.Add($"Recommended action for \"{l.FailureMode}\" needs a responsible person and due date.");
+        var rev = l.RevisedSeverity is not null || l.RevisedOccurrence is not null || l.RevisedDetection is not null;
+        if (rev)
+        {
+            if (l.RevisedSeverity is null || l.RevisedOccurrence is null || l.RevisedDetection is null) errors.Add("Revised ratings need severity, occurrence and detection.");
+            else Try(() => PfmeaMath.Validate(l.RevisedSeverity.Value, l.RevisedOccurrence.Value, l.RevisedDetection.Value));
+            if (l.CompletedOn is null) errors.Add("Revised ratings are recorded after the action is completed.");
+        }
+        return errors;
+    }
+
+    /// <summary>A line with RPN and action priority always recalculated from the ratings.</summary>
+    public static PfmeaLine NewPfmeaLine(Guid pfmeaId, PfmeaLineInput l)
+    {
+        var rev = l.RevisedSeverity is not null && l.RevisedOccurrence is not null && l.RevisedDetection is not null;
+        return new PfmeaLine
+        {
+            PfmeaId = pfmeaId, StepSequence = l.StepSequence, ProcessFunction = l.ProcessFunction.Trim(), FailureMode = l.FailureMode.Trim(), FailureEffect = l.FailureEffect.Trim(), FailureCause = l.FailureCause.Trim(),
+            PreventionControls = l.PreventionControls, DetectionControls = l.DetectionControls, Severity = l.Severity, Occurrence = l.Occurrence, Detection = l.Detection,
+            Rpn = PfmeaMath.Rpn(l.Severity, l.Occurrence, l.Detection), Priority = PfmeaMath.Priority(l.Severity, l.Occurrence, l.Detection),
+            SpecialCharacteristic = l.SpecialCharacteristic, RecommendedAction = l.RecommendedAction, ResponsibleId = l.ResponsibleId, DueOn = l.DueOn, CompletedOn = l.CompletedOn, ActionTaken = l.ActionTaken,
+            RevisedSeverity = l.RevisedSeverity, RevisedOccurrence = l.RevisedOccurrence, RevisedDetection = l.RevisedDetection,
+            RevisedRpn = rev ? PfmeaMath.Rpn(l.RevisedSeverity!.Value, l.RevisedOccurrence!.Value, l.RevisedDetection!.Value) : null
+        };
     }
 
     /// <summary>Verification of a completed PFMEA action is recorded on the draft revision by someone other than the responsible person.</summary>
@@ -311,7 +329,8 @@ public sealed class ApqpService(AppDbContext db, ModuleSupport m, INumberingServ
         };
         d.Number = src.Number; d.Revision = max + 1; d.Title = src.Title; d.Status = ApqpStatus.Draft; d.ProductId = src.ProductId; d.PartId = src.PartId; d.PartRevision = src.PartRevision;
         d.OwnerId = m.UserId; d.SiteId = src.SiteId; d.DepartmentId = src.DepartmentId; d.ChangeReason = reason.Trim();
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        // Joins the caller's transaction when there is one (bulk import creates the revision and its lines atomically).
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
         db.Add(d);
         switch (type)
         {
@@ -328,7 +347,7 @@ public sealed class ApqpService(AppDbContext db, ModuleSupport m, INumberingServ
         db.RecordLinks.Add(new RecordLink { FromType = type, FromId = id, ToType = type, ToId = d.Id, LinkType = "Revised as" });
         await db.SaveChangesAsync(ct);
         await m.IndexAsync(type, d.Id, d.Title, ct);
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         return d;
     }
 
