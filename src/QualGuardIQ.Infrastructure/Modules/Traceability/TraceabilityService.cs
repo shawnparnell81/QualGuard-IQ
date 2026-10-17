@@ -295,7 +295,7 @@ public sealed class TraceabilityService(AppDbContext db, ModuleSupport m, INumbe
         }
         if (await m.TryScopeAsync(db.CustomerReturns.AsNoTracking(), Permissions.ReturnsView, ct) is { } rets)
             foreach (var r in await rets.Where(x => (x.PartId != null && partIds.Contains(x.PartId.Value)) || customerIds.Contains(x.CustomerId) || (x.LotNumber != null && lotNumbers.Contains(x.LotNumber)) || (x.SerialNumber != null && serialNumbers.Contains(x.SerialNumber))).Take(50).ToListAsync(ct))
-                related.Add(new("CustomerReturn", r.Id, r.Number, r.ReturnReason, r.Status.ToString(), $"/trace/returns/{r.Id}", "Return"));
+                related.Add(new("CustomerReturn", r.Id, r.Number, r.ReturnReason, r.Status.ToString(), $"/field/returns/{r.Id}", "Return"));
         return new TraceSearchResult(q, matches, related.DistinctBy(x => (x.Type, x.Id)).ToList());
     }
 }
