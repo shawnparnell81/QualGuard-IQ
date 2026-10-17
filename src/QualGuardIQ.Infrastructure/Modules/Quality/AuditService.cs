@@ -128,9 +128,11 @@ public sealed class AuditService(AppDbContext db, ModuleSupport m, INumberingSer
         await m.IndexAsync(FindingType, f.Id, f.Statement, ct);
     }
 
+    /// <summary>Closing is an approval act: audits approvers may close without edit rights on the audit.</summary>
     public async Task CloseAsync(Guid id, CancellationToken ct)
     {
-        var a = await LoadEditAsync(id, ct);
+        await m.ViewAsync(RecordType, id, ct);
+        var a = await db.Audits.FirstAsync(x => x.Id == id, ct);
         if (a.Status != AuditStatus.Reporting) throw new ConflictException("Move the audit to reporting first.");
         await m.RequireAsync(Permissions.AuditsApprove, a.SiteId, a.DepartmentId, ct);
         var findings = await db.AuditFindings.Where(f => f.AuditId == id).ToListAsync(ct);
