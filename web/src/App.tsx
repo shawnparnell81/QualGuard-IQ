@@ -5,6 +5,10 @@ import { useAuth, useBranding } from './auth';
 import { makeTheme } from './theme';
 import { TopBar } from './layout/TopBar';
 import { CommandPalette } from './layout/CommandPalette';
+import { EnterpriseOverview, WarRoom, OrgStructure, StandardList, StandardNew, StandardDetail, SkillsMatrix, CurriculumList, AuditProgramList, AuditProgramDetail } from './pages/Enterprise';
+import { ComplianceHome, ValidationList, ValidationNew, ValidationDetail } from './pages/Compliance';
+import { ProjectList, ProjectNew, ProjectDetail, PpapList, PpapNew, PpapDetail, CapabilityStudies } from './pages/Launch';
+import { Part11Readiness, RetentionPage, ContinuityPage, ApiAccessPage } from './pages/Governance';
 import { Login } from './pages/Login';
 
 const LiveMonitor = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.LiveMonitor })));
@@ -309,6 +313,31 @@ export function App() {
               <Route path="/admin/portal" element={<PortalAccounts />} />
               <Route path="/suppliers/reviews-due" element={<ReviewsDue />} />
               <Route path="/suppliers/:id" element={<SupplierDetail />} />
+              <Route path="/enterprise" element={<EnterpriseOverview />} />
+              <Route path="/enterprise/war-room/:siteId" element={<WarRoom />} />
+              <Route path="/enterprise/org" element={<OrgStructure />} />
+              <Route path="/enterprise/standards" element={<StandardList />} />
+              <Route path="/enterprise/standards/new" element={<StandardNew />} />
+              <Route path="/enterprise/standards/:id" element={<StandardDetail />} />
+              <Route path="/training/skills" element={<SkillsMatrix />} />
+              <Route path="/training/curricula" element={<CurriculumList />} />
+              <Route path="/audits/programs" element={<AuditProgramList />} />
+              <Route path="/audits/programs/:id" element={<AuditProgramDetail />} />
+              <Route path="/compliance" element={<ComplianceHome />} />
+              <Route path="/validation" element={<ValidationList />} />
+              <Route path="/validation/new" element={<ValidationNew />} />
+              <Route path="/validation/:id" element={<ValidationDetail />} />
+              <Route path="/launch" element={<ProjectList />} />
+              <Route path="/launch/new" element={<ProjectNew />} />
+              <Route path="/launch/ppap" element={<PpapList />} />
+              <Route path="/launch/ppap/new" element={<PpapNew />} />
+              <Route path="/launch/ppap/:id" element={<PpapDetail />} />
+              <Route path="/launch/capability" element={<CapabilityStudies />} />
+              <Route path="/launch/:id" element={<ProjectDetail />} />
+              <Route path="/governance" element={<Part11Readiness />} />
+              <Route path="/governance/retention" element={<RetentionPage />} />
+              <Route path="/governance/continuity" element={<ContinuityPage />} />
+              <Route path="/governance/api" element={<ApiAccessPage />} />
               <Route path="/admin" element={<AdminHome />} />
               <Route path="/admin/users" element={<UsersPage />} />
               <Route path="/admin/roles" element={<RolesPage />} />

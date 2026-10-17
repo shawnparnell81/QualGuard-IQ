@@ -103,6 +103,7 @@ export const modules: ModuleDef[] = [
         { label: 'Open findings', path: '/audits/findings' },
         { label: 'All findings', path: '/audits/findings?all=1' },
       ] },
+      { label: 'Annual programs', path: '/audits/programs' },
     ],
   },
   {
@@ -118,6 +119,10 @@ export const modules: ModuleDef[] = [
         { label: 'Courses', path: '/training/courses', permission: 'training.view' },
         { label: 'Training status', path: '/training/status', permission: 'training.view' },
         { label: 'New course', path: '/training/courses/new', permission: 'training.edit' },
+      ] },
+      { label: 'Workforce', path: '/training/skills', permission: 'training.view', children: [
+        { label: 'Skills matrix', path: '/training/skills', permission: 'training.view' },
+        { label: 'Curricula & programs', path: '/training/curricula', permission: 'training.view' },
       ] },
     ],
   },
@@ -533,6 +538,61 @@ export const modules: ModuleDef[] = [
     sidebar: [
       { label: 'Dashboard', path: '/reports' },
       { label: 'Report library', path: '/reports/catalog' },
+    ],
+  },
+  {
+    key: 'enterprise',
+    label: 'Enterprise',
+    description: 'Multi-site scorecards, war rooms, organization structure and corporate standards',
+    icon: <HubOutlined fontSize="small" />,
+    basePath: '/enterprise',
+    permissions: ['enterprise.view'],
+    sidebar: [
+      { label: 'Plant scorecards', path: '/enterprise' },
+      { label: 'Organization', path: '/enterprise/org' },
+      { label: 'Corporate standards', path: '/enterprise/standards' },
+    ],
+  },
+  {
+    key: 'compliance',
+    label: 'Compliance',
+    description: 'Compliance packs, obligations, coverage and validation',
+    icon: <RuleOutlined fontSize="small" />,
+    basePath: '/compliance',
+    permissions: ['compliance.view', 'validation.view'],
+    sidebar: [
+      { label: 'Compliance', path: '/compliance', permission: 'compliance.view' },
+      { label: 'Validation', path: '/validation', permission: 'validation.view', children: [
+        { label: 'All validations', path: '/validation', permission: 'validation.view' },
+        { label: 'New validation', path: '/validation/new', permission: 'validation.edit' },
+      ] },
+    ],
+  },
+  {
+    key: 'launch',
+    label: 'Launch',
+    description: 'APQP launch and transfer projects, PPAP and capability',
+    icon: <FlagOutlined fontSize="small" />,
+    basePath: '/launch',
+    permissions: ['apqp.view'],
+    sidebar: [
+      { label: 'Projects', path: '/launch' },
+      { label: 'PPAP', path: '/launch/ppap' },
+      { label: 'Capability', path: '/launch/capability' },
+    ],
+  },
+  {
+    key: 'governance',
+    label: 'Governance',
+    description: 'Part 11 readiness, retention, business continuity, API clients and channels',
+    icon: <AdminPanelSettingsOutlined fontSize="small" />,
+    basePath: '/governance',
+    permissions: ['governance.view', 'audittrail.view', 'api.admin'],
+    sidebar: [
+      { label: 'Part 11 readiness', path: '/governance', permission: 'audittrail.view' },
+      { label: 'Retention', path: '/governance/retention', permission: 'governance.view' },
+      { label: 'Business continuity', path: '/governance/continuity', permission: 'governance.view' },
+      { label: 'API & channels', path: '/governance/api', permission: 'api.admin' },
     ],
   },
   {
