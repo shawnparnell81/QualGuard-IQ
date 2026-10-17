@@ -284,6 +284,12 @@ public static class DependencyInjection
         s.AddScoped<Modules.Inventory.ShippingService>();
         s.AddScoped<Modules.Inventory.CountService>();
         s.AddScoped<Modules.Inventory.WarehouseInsights>();
+        s.AddHttpClient("print", c => c.Timeout = TimeSpan.FromSeconds(10));
+        s.AddSingleton<Modules.Logistics.IPrintTransport, Modules.Logistics.VirtualPrintTransport>();
+        s.AddSingleton<Modules.Logistics.IPrintTransport, Modules.Logistics.RawTcpPrintTransport>();
+        s.AddSingleton<Modules.Logistics.IPrintTransport, Modules.Logistics.HttpRelayPrintTransport>();
+        s.AddScoped<Modules.Logistics.LabelPrintService>();
+        s.AddScoped<Jobs.LabelPrintQueueJob>();
         s.AddScoped<Modules.Production.ProductionService>();
         s.AddScoped<Modules.Analytics.KpiEngine>();
         s.AddScoped<Modules.Analytics.CopilotService>();
