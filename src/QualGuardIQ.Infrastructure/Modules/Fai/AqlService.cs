@@ -388,6 +388,7 @@ public sealed class AqlService(AppDbContext db, ModuleSupport m, INumberingServi
         var supplierId = r.SupplierId ?? i?.SupplierId;
         var rec = await RecommendAsync(supplierId, partId, ct);
         if (supplierId is { } sid && !await db.Suppliers.AnyAsync(x => x.Id == sid, ct)) throw new AppException("Select an existing supplier.");
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
         var number = i?.Number ?? await (numbers ?? throw new InvalidOperationException("Numbering unavailable.")).NextAsync(RecordType, siteId, ct);
         var a = new AqlInspection
         {
@@ -411,6 +412,7 @@ public sealed class AqlService(AppDbContext db, ModuleSupport m, INumberingServi
             }
         }
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
         return a;
     }
 
@@ -666,7 +668,7 @@ public sealed class AqlService(AppDbContext db, ModuleSupport m, INumberingServi
             var desc = T(description) ?? $"AQL lot {a.InspectionNumber} rejected ({a.PlanLabel}, level {a.InspectionLevel}, sample {a.SampleSize} of {a.LotSize}): " + (a.Rationale ?? "") + " Defects: "
                 + (defects.Count == 0 ? "none recorded" : string.Join(", ", defects.Select(d => $"{d.DefectCode} ({d.DefectType}) x{d.QuantityFound}"))) + ".";
             n = await ncrs!.CreateAsync(new CreateNcrRequest(T(title) ?? $"AQL lot rejection {part.PartNumber}", desc, "AQL inspection", a.SiteId, a.DepartmentId, ownerId, part.PartNumber, a.LotNumber, a.LotSize,
-                DateOnly.FromDateTime(a.InspectionDate.UtcDateTime), a.CriticalDefects > 0 ? Severity.Critical : a.MajorDefects > 0 ? Severity.Major : Severity.Minor,
+                await m.TodayAsync(a.SiteId, ct), a.CriticalDefects > 0 ? Severity.Critical : a.MajorDefects > 0 ? Severity.Major : Severity.Minor,
                 new NcrDetails(a.ProductId, a.PartId, a.PartRevision, a.SupplierId, a.CustomerId, WorkOrder: a.WorkOrder, PurchaseOrder: a.PurchaseOrder, DetectionPoint: "AQL inspection")), ct);
         }
         db.RecordLinks.Add(new RecordLink { FromType = RecordType, FromId = a.Id, ToType = NcrService.RecordType, ToId = n.Id, LinkType = "Nonconformance" });

@@ -32,7 +32,8 @@ public sealed class AqlController(AppDbContext db, AqlService svc, CapaService c
     // ---------- Plans ----------
 
     private async Task<HashSet<Guid>> DeactivatedAsync(CancellationToken ct) =>
-        (await db.SamplingRevisions.AsNoTracking().GroupBy(r => r.PlanId).Select(g => g.OrderByDescending(r => r.CreatedAt).First()).Where(r => r.Action == "Deactivated").Select(r => r.PlanId).ToListAsync(ct)).ToHashSet();
+        (await db.SamplingRevisions.AsNoTracking().Select(r => new { r.PlanId, r.Action, r.CreatedAt }).ToListAsync(ct))
+            .GroupBy(r => r.PlanId).Where(g => g.MaxBy(r => r.CreatedAt)!.Action == "Deactivated").Select(g => g.Key).ToHashSet();
 
     private async Task<AQLPlan> PlanDto(Guid planId, CancellationToken ct)
     {
