@@ -10,7 +10,7 @@ public sealed class FormField
 {
     public string Key { get; set; } = "";
     public string Label { get; set; } = "";
-    /// <summary>text, longtext, number, date, boolean, choice, calc</summary>
+    /// <summary>One of <see cref="FormDefinitions.FieldTypes"/> (table columns may also be "table").</summary>
     public string Type { get; set; } = "text";
     public bool Required { get; set; }
     public List<string>? Options { get; set; }
@@ -31,6 +31,24 @@ public sealed class FormField
     public List<FieldCheck>? Checks { get; set; }
     /// <summary>Library component (key@version) this field was inserted from.</summary>
     public string? FromComponent { get; set; }
+    /// <summary>Help text shown under the input and in the print layout's instructions.</summary>
+    public string? Help { get; set; }
+    public string? Placeholder { get; set; }
+    /// <summary>Layout width in a 12-column grid (print and screen).</summary>
+    public int? Width { get; set; }
+    /// <summary>Decimals shown and stored for numeric and calculated values.</summary>
+    public int? Decimals { get; set; }
+    public int? MaxLength { get; set; }
+    /// <summary>Measurement fields: nominal value; Min/Max are the tolerance limits (out-of-tolerance values are recorded, not rejected).</summary>
+    public decimal? Nominal { get; set; }
+    /// <summary>Calculated true/false results: the two words shown, e.g. ["PASS", "FAIL"].</summary>
+    public List<string>? ResultLabels { get; set; }
+    /// <summary>Attachment and photo fields: accepted file extensions, e.g. [".pdf", ".xlsx"].</summary>
+    public List<string>? Accept { get; set; }
+    /// <summary>Nested table columns (table columns of type "table").</summary>
+    public List<FormField>? Columns { get; set; }
+    /// <summary>Where an imported field came from (sheet!cell, page/region, content control tag).</summary>
+    public string? SourceLocation { get; set; }
 }
 
 public sealed class FieldCondition
@@ -53,8 +71,8 @@ public sealed class FieldCheck
 public static class FormSchema
 {
     private static readonly JsonSerializerOptions Json = new() { PropertyNameCaseInsensitive = true, PropertyNamingPolicy = JsonNamingPolicy.CamelCase, DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull };
-    private static readonly HashSet<string> Types = ["text", "longtext", "number", "date", "boolean", "choice", "calc"];
 
+    /// <summary>Parses a version 1 field list (also used by library components). Full form definitions use <see cref="FormDefinitions"/>.</summary>
     public static List<FormField> Parse(string json)
     {
         List<FormField>? fields;
@@ -62,42 +80,7 @@ public static class FormSchema
         catch (JsonException) { throw new AppException("The form definition is not valid JSON."); }
         if (fields is null || fields.Count == 0) throw new AppException("A form needs at least one field.");
         if (fields.Count > 300) throw new AppException("A form can have at most 300 fields.");
-        var keys = new HashSet<string>();
-        foreach (var f in fields)
-        {
-            if (!System.Text.RegularExpressions.Regex.IsMatch(f.Key ?? "", "^[a-z][a-z0-9_]{0,49}$")) throw new AppException($"Field key '{f.Key}' must be lowercase letters, numbers and underscores.");
-            if (!keys.Add(f.Key!)) throw new AppException($"Field key '{f.Key}' is used twice.");
-            if (string.IsNullOrWhiteSpace(f.Label)) throw new AppException($"Field '{f.Key}' needs a label.");
-            if (!Types.Contains(f.Type)) throw new AppException($"Field '{f.Key}' has unknown type '{f.Type}'.");
-            if (f.Type == "choice" && (f.Options is null || f.Options.Count == 0)) throw new AppException($"Choice field '{f.Key}' needs options.");
-            if (f.Type == "calc" && string.IsNullOrWhiteSpace(f.Formula)) throw new AppException($"Calculated field '{f.Key}' needs a formula.");
-        }
-        foreach (var f in fields)
-        {
-            foreach (var (c, what) in new[] { (f.VisibleWhen, "visibility rule"), (f.RequiredWhen, "required rule") })
-            {
-                if (c is null) continue;
-                if (c.Field == f.Key || !keys.Contains(c.Field)) throw new AppException($"The {what} of '{f.Key}' refers to '{c.Field}', which is not another field of this form.");
-                if (!Conditions.Operators.Contains(c.Operator)) throw new AppException($"The {what} of '{f.Key}' has unknown operator '{c.Operator}'.");
-            }
-            if (f.Pattern is { Length: > 0 })
-            {
-                if (f.Pattern.Length > 300) throw new AppException($"The pattern of '{f.Key}' is too long.");
-                try { _ = new System.Text.RegularExpressions.Regex(f.Pattern, System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromMilliseconds(100)); }
-                catch (ArgumentException) { throw new AppException($"The pattern of '{f.Key}' is not a valid regular expression."); }
-            }
-            foreach (var k in f.Checks ?? [])
-            {
-                if (!Conditions.Operators.Contains(k.Operator) || k.Operator is "isEmpty" or "isNotEmpty") throw new AppException($"A check on '{f.Key}' has an unsupported operator '{k.Operator}'.");
-                if (string.IsNullOrWhiteSpace(k.Message)) throw new AppException($"A check on '{f.Key}' needs a message.");
-                if (!string.IsNullOrWhiteSpace(k.Field) && !keys.Contains(k.Field)) throw new AppException($"A check on '{f.Key}' compares with unknown field '{k.Field}'.");
-                if (string.IsNullOrWhiteSpace(k.Field) && string.IsNullOrWhiteSpace(k.Value)) throw new AppException($"A check on '{f.Key}' needs a field or a value to compare with.");
-            }
-        }
-        foreach (var f in fields.Where(f => f.Type == "calc"))
-            foreach (var id in Calc.Identifiers(f.Formula!))
-                if (!fields.Any(o => o.Key == id && o.Type is "number" or "calc" && o.Key != f.Key))
-                    throw new AppException($"Formula of '{f.Key}' uses '{id}', which is not a number field.");
+        FormDefinitions.Validate(new FormDefinition { SchemaVersion = 1, Fields = fields });
         return fields;
     }
 
@@ -105,78 +88,7 @@ public static class FormSchema
 
     /// <summary>Validates entered values, computes calculated fields, and returns the normalized values.</summary>
     public static Dictionary<string, string?> Apply(List<FormField> fields, Dictionary<string, string?> input, bool requireComplete)
-    {
-        var errors = new List<string>();
-        foreach (var k in input.Keys.Where(k => fields.All(f => f.Key != k))) errors.Add($"Unknown field '{k}'.");
-        var output = new Dictionary<string, string?>();
-        var numbers = new Dictionary<string, decimal>();
-        var visible = VisibleKeys(fields, input);
-        var raw = input.ToDictionary(kv => kv.Key, kv => (object?)kv.Value, StringComparer.Ordinal);
-        foreach (var f in fields.Where(f => f.Type != "calc"))
-        {
-            input.TryGetValue(f.Key, out var v);
-            v = string.IsNullOrWhiteSpace(v) ? null : v.Trim();
-            if (!visible.Contains(f.Key)) { output[f.Key] = null; continue; } // hidden by a dynamic rule: cleared, never required
-            var required = f.Required || (f.RequiredWhen is { } rw && Conditions.Matches(new Condition(rw.Field, rw.Operator, rw.Value), raw));
-            if (v is null) { if (requireComplete && required) errors.Add($"{f.Label} is required."); output[f.Key] = null; continue; }
-            if (f.Pattern is { Length: > 0 } pat && f.Type is "text" or "longtext" && !System.Text.RegularExpressions.Regex.IsMatch(v, pat, System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromMilliseconds(100)))
-                errors.Add(string.IsNullOrWhiteSpace(f.PatternMessage) ? $"{f.Label} is not in the expected format." : f.PatternMessage);
-            switch (f.Type)
-            {
-                case "number":
-                    if (!decimal.TryParse(v, NumberStyles.Number, CultureInfo.InvariantCulture, out var n)) { errors.Add($"{f.Label} must be a number."); break; }
-                    if (f.Min is { } min && n < min) errors.Add($"{f.Label} must be at least {min}.");
-                    if (f.Max is { } max && n > max) errors.Add($"{f.Label} must be at most {max}.");
-                    numbers[f.Key] = n;
-                    break;
-                case "date":
-                    if (!DateOnly.TryParseExact(v, "yyyy-MM-dd", out _)) errors.Add($"{f.Label} must be a date.");
-                    break;
-                case "boolean":
-                    if (v is not ("true" or "false")) errors.Add($"{f.Label} must be yes or no.");
-                    break;
-                case "choice":
-                    if (!f.Options!.Contains(v)) errors.Add($"{f.Label} must be one of: {string.Join(", ", f.Options!)}.");
-                    break;
-                default:
-                    if (v.Length > (f.Type == "longtext" ? 10000 : 1000)) errors.Add($"{f.Label} is too long.");
-                    break;
-            }
-            output[f.Key] = v;
-        }
-        var pending = fields.Where(f => f.Type == "calc").ToList();
-        for (var pass = 0; pass < pending.Count + 1 && pending.Count > 0; pass++)
-        {
-            foreach (var f in pending.ToList())
-            {
-                var ids = Calc.Identifiers(f.Formula!);
-                if (ids.Any(i => fields.First(x => x.Key == i).Type == "calc" && !numbers.ContainsKey(i) && pending.Any(p => p.Key == i))) continue;
-                pending.Remove(f);
-                if (ids.All(numbers.ContainsKey))
-                {
-                    try
-                    {
-                        var r = Math.Round(Calc.Evaluate(f.Formula!, numbers), 6);
-                        numbers[f.Key] = r;
-                        output[f.Key] = Math.Round(r, 6).ToString("0.######", CultureInfo.InvariantCulture);
-                    }
-                    catch (DivideByZeroException) { output[f.Key] = null; }
-                }
-                else output[f.Key] = null;
-            }
-        }
-        if (pending.Count > 0) errors.Add("Calculated fields refer to each other in a loop.");
-        var values = output.ToDictionary(kv => kv.Key, kv => (object?)(numbers.TryGetValue(kv.Key, out var n) ? n : kv.Value), StringComparer.Ordinal);
-        foreach (var f in fields.Where(f => f.Checks is { Count: > 0 } && output.GetValueOrDefault(f.Key) is not null))
-            foreach (var k in f.Checks!)
-            {
-                var other = string.IsNullOrWhiteSpace(k.Field) ? k.Value : output.GetValueOrDefault(k.Field!);
-                if (other is null) continue; // nothing to compare with yet
-                if (!Conditions.Matches(new Condition(f.Key, k.Operator, other), values)) errors.Add(k.Message);
-            }
-        if (errors.Count > 0) throw new AppException(string.Join(" ", errors));
-        return output;
-    }
+        => FormDefinitions.Apply(new FormDefinition { SchemaVersion = 1, Fields = fields }, input, requireComplete);
 
     /// <summary>Keys of fields shown for the given values (dynamic visibility rules; a field hidden by a hidden field is hidden too).</summary>
     public static HashSet<string> VisibleKeys(List<FormField> fields, IReadOnlyDictionary<string, string?> input)

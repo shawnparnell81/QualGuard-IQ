@@ -107,7 +107,7 @@ public sealed class DocumentService(
         rev.TrainingRequired = req.TrainingRequired;
         if (rev.Document.Kind == DocumentKind.FormTemplate && req.FieldSchema is not null)
         {
-            Application.Forms.FormSchema.Parse(req.FieldSchema);
+            Application.Forms.FormDefinitions.Parse(req.FieldSchema);
             rev.FieldSchema = req.FieldSchema;
         }
         await db.SaveChangesAsync(ct);
@@ -138,7 +138,7 @@ public sealed class DocumentService(
         if (rev.Document.Kind == DocumentKind.FormTemplate)
         {
             if (string.IsNullOrWhiteSpace(rev.FieldSchema)) throw new AppException("Define the form fields before submitting for approval.");
-            Application.Forms.FormSchema.Parse(rev.FieldSchema);
+            Application.Forms.FormDefinitions.Parse(rev.FieldSchema);
         }
         else if (!await db.Attachments.AnyAsync(a => a.OwnerType == type && a.OwnerId == rev.Id && !a.IsArchived, ct))
             throw new AppException("Attach the controlled file before submitting for approval.");
