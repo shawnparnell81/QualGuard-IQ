@@ -26,6 +26,7 @@ public partial class AppDbContext
     public DbSet<ShipmentLine> ShipmentLines => Set<ShipmentLine>();
     public DbSet<PickTask> PickTasks => Set<PickTask>();
     public DbSet<PickConfirmation> PickConfirmations => Set<PickConfirmation>();
+    public DbSet<ShipmentVerificationScan> ShipmentVerificationScans => Set<ShipmentVerificationScan>();
     public DbSet<ShipmentContainer> ShipmentContainers => Set<ShipmentContainer>();
     public DbSet<ContainerItem> ContainerItems => Set<ContainerItem>();
 
@@ -99,6 +100,16 @@ public partial class AppDbContext
             e.HasOne<Lot>().WithMany().HasForeignKey(x => x.LotId).OnDelete(R);
             e.HasOne<ReceivingRequirement>().WithMany().HasForeignKey(x => x.ReceivingRequirementId).OnDelete(R);
         });
+        b.Entity<ShipmentVerificationScan>(e =>
+        {
+            e.ToTable("shipment_verification_scans");
+            e.HasIndex(x => x.ClientRequestId).IsUnique().HasFilter("\"ClientRequestId\" IS NOT NULL AND \"Outcome\" = 0");
+            e.HasIndex(x => new { x.ShipmentId, x.Active });
+            e.Property(x => x.ClientRequestId).HasMaxLength(100); e.Property(x => x.Code).HasMaxLength(300); e.Property(x => x.Issue).HasMaxLength(1000);
+            Q(e, nameof(ShipmentVerificationScan.Quantity), nameof(ShipmentVerificationScan.CountedQuantity));
+            e.HasOne<Shipment>().WithMany().HasForeignKey(x => x.ShipmentId).OnDelete(C);
+            UserReq(e, x => x.UserId);
+        });
         b.Entity<PickConfirmation>(e =>
         {
             e.ToTable("pick_confirmations");
@@ -163,7 +174,8 @@ public partial class AppDbContext
             e.HasOne<Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(R);
             e.HasOne<Carrier>().WithMany().HasForeignKey(x => x.CarrierId).OnDelete(R);
             e.HasIndex(x => new { x.AssignedPickerId, x.Status });
-            UserReq(e, x => x.OwnerId); UserReq(e, x => x.AssignedPickerId); SiteRefs(e);
+            e.HasIndex(x => new { x.AssignedVerifierId, x.Status });
+            UserReq(e, x => x.OwnerId); UserReq(e, x => x.AssignedPickerId); UserReq(e, x => x.AssignedVerifierId); UserReq(e, x => x.ValidatedById); SiteRefs(e);
         });
         b.Entity<ShipmentLine>(e =>
         {

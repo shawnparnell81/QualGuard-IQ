@@ -144,7 +144,18 @@ public sealed class ShippingController(ShippingService svc, InventoryService inv
     [HttpPost("shipments/{id:guid}/verify")] public Task<VerifyResult> Verify(Guid id, VerifyInput r, CancellationToken ct) => svc.VerifyAsync(id, r, ct);
     [HttpPost("shipments/{id:guid}/ship")] public async Task<IActionResult> Ship(Guid id, ShipInput r, CancellationToken ct) { await svc.ShipAsync(id, r, ct); return NoContent(); }
     [HttpPost("shipments/{id:guid}/delivered")] public async Task<IActionResult> Delivered(Guid id, DeliveredInput r, CancellationToken ct) { await svc.DeliveredAsync(id, r, ct); return NoContent(); }
-    [HttpPost("shipments/{id:guid}/cancel")] public async Task<IActionResult> Cancel(Guid id, CancellationToken ct) { await svc.CancelAsync(id, ct); return NoContent(); }
+    /// <summary>Cancels before shipping; staged (picked) stock needs returnLocationId and is moved back as available stock.</summary>
+    [HttpPost("shipments/{id:guid}/cancel")] public async Task<IActionResult> Cancel(Guid id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] CancelShipmentInput? r, CancellationToken ct) { await svc.CancelAsync(id, r, ct); return NoContent(); }
+    [HttpPut("shipments/{id:guid}/verifier")] public async Task<object> AssignVerifier(Guid id, AssignVerifierInput r, CancellationToken ct) { var s = await svc.AssignVerifierAsync(id, r, ct); return new { s.Id, s.AssignedVerifierId }; }
+    /// <summary>The caller's assigned shipments awaiting verification, for download to a scan device.</summary>
+    [HttpGet("my-verifications")] [RequirePermission(Permissions.ShippingEdit)] public Task<MyVerifications> MyVerifications(CancellationToken ct) => svc.MyVerificationsAsync(ct);
+    [HttpGet("shipments/{id:guid}/verification")] public Task<VerificationStatus> Verification(Guid id, CancellationToken ct) => svc.VerificationAsync(id, ct);
+    /// <summary>One verification scan (desk or device queue): idempotent on clientRequestId; refused scans return 409 with the reason.</summary>
+    [HttpPost("shipments/{id:guid}/verification/scans")] public Task<VerificationStatus> VerificationScan(Guid id, VerificationScanInput r, CancellationToken ct) => svc.ScanVerificationAsync(id, r, ct);
+    [HttpGet("shipments/{id:guid}/verification/scans")] public Task<List<VerificationScanRow>> VerificationScans(Guid id, CancellationToken ct) => svc.VerificationScansAsync(id, ct);
+    /// <summary>Confirms online that inventory, holds, revision, customer requirements and status allow release (required after offline scans).</summary>
+    [HttpPost("shipments/{id:guid}/verification/validate")] public Task<VerificationStatus> ValidateVerification(Guid id, CancellationToken ct) => svc.ValidateVerificationAsync(id, ct);
+    [HttpPost("shipments/{id:guid}/verification/restart")] public Task<VerificationStatus> RestartVerification(Guid id, CancellationToken ct) => svc.RestartVerificationAsync(id, ct);
     [HttpGet("shipments/{id:guid}/packing-list")] public async Task<FileContentResult> PackingList(Guid id, CancellationToken ct) => File(await svc.PackingListAsync(id, ct), "application/pdf", "packing-list.pdf");
     [HttpGet("shipments/{id:guid}/bill-of-lading")] public async Task<FileContentResult> Bol(Guid id, CancellationToken ct) => File(await svc.BillOfLadingAsync(id, ct), "application/pdf", "bill-of-lading.pdf");
     [HttpGet("shipments/{id:guid}/custody")] public Task<List<CustodyRow>> Custody(Guid id, CancellationToken ct) => inv.CustodyAsync(ShippingService.ShipmentType, id, ct);

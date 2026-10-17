@@ -33987,9 +33987,241 @@ paths:
           schema:
             type: string
             format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/CancelShipmentInput'
+          text/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/CancelShipmentInput'
+          application/*+json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/CancelShipmentInput'
       responses:
         '200':
           description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/verifier':
+    put:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssignVerifierInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AssignVerifierInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AssignVerifierInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/shipping/my-verifications:
+    get:
+      tags:
+        - Shipping
+      description: 'Requires permission: `shipping.edit` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/MyVerifications'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyVerifications'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/MyVerifications'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/verification':
+    get:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/verification/scans':
+    post:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerificationScanInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/VerificationScanInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/VerificationScanInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    get:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VerificationScanRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VerificationScanRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/VerificationScanRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/verification/validate':
+    post:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/shipping/shipments/{id}/verification/restart':
+    post:
+      tags:
+        - Shipping
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/VerificationStatus'
         '401':
           description: Not signed in
         '403':
@@ -35947,6 +36179,16 @@ components:
             - 'null'
             - string
           format: uuid
+    AssignVerifierInput:
+      required:
+        - verifierId
+      type: object
+      properties:
+        verifierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
     AssumptionInput:
       required:
         - topic
@@ -36822,6 +37064,21 @@ components:
             - string
     CalibrationResult:
       type: integer
+    CancelShipmentInput:
+      required:
+        - returnLocationId
+        - reason
+      type: object
+      properties:
+        returnLocationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        reason:
+          type:
+            - 'null'
+            - string
     CapabilityInput:
       required:
         - title
@@ -45623,6 +45880,140 @@ components:
           format: double
         unitOfMeasure:
           type: string
+    MobileVerifyContainer:
+      required:
+        - id
+        - number
+        - kind
+        - parentId
+        - items
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        kind:
+          $ref: '#/components/schemas/ContainerKind'
+        parentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/MobileVerifyItem'
+    MobileVerifyItem:
+      required:
+        - lineId
+        - partNumber
+        - lotNumber
+        - lotRevision
+        - serialNumber
+        - quantity
+      type: object
+      properties:
+        lineId:
+          type: string
+          format: uuid
+        partNumber:
+          type: string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        lotRevision:
+          type:
+            - 'null'
+            - string
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+    MobileVerifyLine:
+      required:
+        - lineId
+        - lineNumber
+        - partNumber
+        - revision
+        - quantity
+        - requiredLot
+        - verified
+      type: object
+      properties:
+        lineId:
+          type: string
+          format: uuid
+        lineNumber:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        partNumber:
+          type: string
+        revision:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        requiredLot:
+          type:
+            - 'null'
+            - string
+        verified:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+    MobileVerifyList:
+      required:
+        - shipmentId
+        - number
+        - customer
+        - state
+        - lines
+        - containers
+        - scannedCodes
+      type: object
+      properties:
+        shipmentId:
+          type: string
+          format: uuid
+        number:
+          type: string
+        customer:
+          type:
+            - 'null'
+            - string
+        state:
+          $ref: '#/components/schemas/ShipmentVerificationState'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/MobileVerifyLine'
+        containers:
+          type: array
+          items:
+            $ref: '#/components/schemas/MobileVerifyContainer'
+        scannedCodes:
+          type: array
+          items:
+            type: string
     MoveInput:
       required:
         - partId
@@ -46096,6 +46487,23 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/MobilePickList'
+    MyVerifications:
+      required:
+        - userId
+        - downloadedAt
+        - lists
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        downloadedAt:
+          type: string
+          format: date-time
+        lists:
+          type: array
+          items:
+            $ref: '#/components/schemas/MobileVerifyList'
     NcrDetails:
       type: object
       properties:
@@ -50368,6 +50776,22 @@ components:
           type: string
         url:
           type: string
+    ReleaseCheck:
+      required:
+        - key
+        - label
+        - passed
+        - message
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        passed:
+          type: boolean
+        message:
+          type: string
     ReleaseRequest:
       required:
         - customerApprovalReference
@@ -53803,6 +54227,23 @@ components:
             - 'null'
             - string
           format: date-time
+        assignedVerifierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        verificationState:
+          $ref: '#/components/schemas/ShipmentVerificationState'
+        validatedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        validatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
         siteId:
           type: string
           format: uuid
@@ -54126,6 +54567,99 @@ components:
             - 'null'
             - string
     ShipmentStatus:
+      type: integer
+    ShipmentVerificationScan:
+      type: object
+      properties:
+        shipmentId:
+          type: string
+          format: uuid
+        clientRequestId:
+          type:
+            - 'null'
+            - string
+        userId:
+          type: string
+          format: uuid
+        deviceTimestamp:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        receivedAt:
+          type: string
+          format: date-time
+        offline:
+          type: boolean
+        code:
+          type: string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        outcome:
+          $ref: '#/components/schemas/MobileOutcome'
+        issue:
+          type:
+            - 'null'
+            - string
+        lineId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        containerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        countedQuantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        active:
+          type: boolean
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ShipmentVerificationState:
       type: integer
     SignInDto:
       required:
@@ -57234,8 +57768,78 @@ components:
           type:
             - 'null'
             - string
+    VerificationScanInput:
+      required:
+        - code
+        - quantity
+      type: object
+      properties:
+        code:
+          type: string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        clientRequestId:
+          type:
+            - 'null'
+            - string
+        deviceTimestamp:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        offline:
+          type: boolean
+          default: false
+    VerificationScanRow:
+      required:
+        - scan
+        - user
+      type: object
+      properties:
+        scan:
+          $ref: '#/components/schemas/ShipmentVerificationScan'
+        user:
+          type: string
     VerificationState:
       type: integer
+    VerificationStatus:
+      required:
+        - outcome
+        - message
+        - state
+        - status
+        - lines
+        - checks
+        - offlineScans
+      type: object
+      properties:
+        outcome:
+          $ref: '#/components/schemas/MobileOutcome'
+        message:
+          type: string
+        state:
+          $ref: '#/components/schemas/ShipmentVerificationState'
+        status:
+          $ref: '#/components/schemas/ShipmentStatus'
+        lines:
+          type: array
+          items:
+            $ref: '#/components/schemas/VerifyLine'
+        checks:
+          type: array
+          items:
+            $ref: '#/components/schemas/ReleaseCheck'
+        offlineScans:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     VerifyInput:
       required:
         - accepted

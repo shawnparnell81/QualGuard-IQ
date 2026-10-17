@@ -11,13 +11,13 @@ import { StatusChip, fmtDate, fmtDateTime, localDate } from '../components/Statu
 import { Facts, Section, StepDialog, lookupLabel, useLookup, useSites } from '../components/Kit';
 import { AttachmentsAndHistory } from '../components/RecordTabs';
 import { mono } from '../theme';
-import { LocationSelect, MetricTile, ScanField, carrierKinds, containerKinds, pickStatus, shipKinds, shipStatus, useCarriers, type Carrier } from '../warehouse/common';
+import { LocationSelect, MetricTile, ScanField, carrierKinds, containerKinds, pickStatus, shipKinds, shipStatus, useCarriers, useLocations, type Carrier } from '../warehouse/common';
 import { Custody, FlowChart, RefLedger, SitePicker, qty, type Dash } from './Warehouse';
 
 const mod = modules.find((m) => m.key === 'shipping')!;
 const mnum = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue() ?? '')}</span>;
 
-interface Shipment { id: string; number: string; kind: number; status: number; assignedPickerId?: string | null; assignedAt?: string | null; customerId?: string; supplierId?: string; toSiteId?: string; shipTo?: string; customerPo?: string; promisedOn?: string; stagingLocationId: string; carrierId?: string;
+interface Shipment { id: string; number: string; kind: number; status: number; assignedPickerId?: string | null; assignedAt?: string | null; assignedVerifierId?: string | null; verificationState?: number; validatedAt?: string | null; customerId?: string; supplierId?: string; toSiteId?: string; shipTo?: string; customerPo?: string; promisedOn?: string; stagingLocationId: string; carrierId?: string;
   serviceLevel?: string; trackingNumber?: string; bolNumber?: string; grossWeight?: number; shippedAt?: string; deliveredOn?: string; notes?: string; siteId: string }
 interface Line { id: string; lineNumber: number; partId: string; revision?: string; quantity: number; lotId?: string; quantityPicked: number; quantityVerified: number }
 interface Pick { id: string; lineId: string; partId: string; lotId?: string; serialId?: string; locationId: string; quantity: number; quantityPicked: number; status: number; pickedAt?: string }
@@ -149,11 +149,13 @@ export function ShipmentDetail() {
   const d = useQuery({ queryKey: ['shipment', id], queryFn: () => get<Detail>(`/api/shipping/shipments/${id}`) });
   const carriers = useCarriers();
   const s = d.data?.shipment;
+  const locs = useLocations(s?.siteId);
   if (!s) return <ModuleWorkspace module={mod} crumbs={[{ label: 'Shipments', to: '/shipping/shipments' }]} title="Loading…">{d.error ? <Alert severity="error">{(d.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   const edit = can('shipping.edit');
   const refresh = () => { qc.invalidateQueries({ queryKey: ['shipment', id] }); qc.invalidateQueries({ queryKey: ['custody'] }); qc.invalidateQueries({ queryKey: ['pick-confirmations', id] }); };
   const run = async (f: () => Promise<unknown>, ok: string) => { setMsg(null); try { await f(); setMsg({ ok: true, text: ok }); refresh(); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } };
   const live = s.status < 5;
+  const staged = d.data!.picks.some((p) => p.task.quantityPicked > 0);
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Shipments', to: '/shipping/shipments' }, { label: s.number }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{s.number}</span><Typography color="text.secondary">{d.data!.customer ?? s.shipTo}</Typography>{s.status === 7 && <Chip color="default" label="Cancelled" />}</Stack>}
@@ -172,7 +174,7 @@ export function ShipmentDetail() {
               <TableCell sx={{ fontFamily: mono }}>{l.lotNumber}</TableCell><TableCell align="right">{qty(l.line.quantity)}</TableCell><TableCell align="right">{qty(l.line.quantityPicked)}</TableCell><TableCell align="right">{qty(l.line.quantityVerified)}</TableCell></TableRow>)}</TableBody></Table></Paper>}
           {tab === 'pick' && <PickTab d={d.data!} edit={edit && live} run={run} />}
           {tab === 'pack' && <PackTab d={d.data!} edit={edit && live} run={run} />}
-          {tab === 'verify' && <VerifyTab d={d.data!} edit={edit && live} onDone={refresh} />}
+          {tab === 'verify' && <VerifyTab d={d.data!} edit={edit && live} onDone={refresh} run={run} />}
           {tab === 'ship' && <Section title="Documents & tracking"><Stack gap={2}>
             <Stack direction="row" gap={1} flexWrap="wrap">
               <Button variant="outlined" href={`/api/shipping/shipments/${id}/packing-list`} target="_blank">Packing list (PDF)</Button>
@@ -193,8 +195,10 @@ export function ShipmentDetail() {
         onConfirm={async (v) => { await post(`/api/shipping/shipments/${id}/ship`, { carrierId: v.carrierId, trackingNumber: v.tracking || null, serviceLevel: v.service || null, grossWeight: v.weight ? Number(v.weight) : null }); refresh(); }} />
       <StepDialog open={dlg === 'delivered'} title="Confirm delivery" confirm="Record delivery" onClose={() => setDlg(null)} inputs={[{ name: 'on', label: 'Delivered on', type: 'date', initial: localDate() }]}
         onConfirm={async (v) => { await post(`/api/shipping/shipments/${id}/delivered`, { deliveredOn: v.on }); refresh(); }} />
-      <StepDialog open={dlg === 'cancel'} danger title={`Cancel ${s.number}?`} confirm="Cancel shipment" onClose={() => setDlg(null)} intro="Open picks are released and reserved stock becomes available again." inputs={[]}
-        onConfirm={async () => { await post(`/api/shipping/shipments/${id}/cancel`, {}); refresh(); }} />
+      <StepDialog open={dlg === 'cancel'} danger title={`Cancel ${s.number}?`} confirm="Cancel shipment" onClose={() => setDlg(null)}
+        intro={staged ? 'Open picks are released. Picked stock is staged and goes back, as available stock, to the location you choose.' : 'Open picks are released and reserved stock becomes available again.'}
+        inputs={staged ? [{ name: 'returnLocationId', label: 'Return staged stock to', type: 'select', options: (locs.data ?? []).filter((l) => l.active && l.purpose === 0 && l.id !== s.stagingLocationId).map((l) => [l.id, `${l.code} · ${l.name}`]) }, { name: 'reason', label: 'Reason' }] : [{ name: 'reason', label: 'Reason' }]}
+        onConfirm={async (v) => { await post(`/api/shipping/shipments/${id}/cancel`, { returnLocationId: v.returnLocationId || null, reason: v.reason || null }); refresh(); }} />
     </ModuleWorkspace>
   );
 }
@@ -205,7 +209,7 @@ function PickTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
   const [item, setItem] = useState<Record<string, string>>({});
   if (!d.picks.length) return <Typography color="text.secondary">No pick list yet. Build it from the header.</Typography>;
   return <Stack gap={1.5}>
-    <PickerAssign d={d} edit={edit} run={run} />
+    <WorkAssign d={d} edit={edit} run={run} kind="picker" />
     {d.picks.map((p) => (
     <Paper key={p.task.id} variant="outlined" sx={{ p: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.3fr 1fr 1fr 120px' }, gap: 1.5, alignItems: 'center', opacity: p.task.status === 1 ? 0.6 : 1 }}>
       <Box><Typography sx={{ fontFamily: mono, fontWeight: 700, fontSize: 18 }}>{p.locationCode}</Typography>
@@ -224,22 +228,26 @@ function PickTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
 interface PickConfirmationRow { confirmation: { id: string; clientRequestId?: string; deviceTimestamp?: string; receivedAt: string; offline: boolean; locationCode?: string; itemCode?: string; quantity: number; outcome: number; code?: string; reason?: string }; user: string; taskSummary?: string }
 const outcomes = ['Accepted', 'Duplicate', 'Refused'];
 
-/** Assigns the pick list to one picker; only that person can confirm its picks and it appears in their device download. */
-function PickerAssign({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
+/** Assigns warehouse work to one person; only they can confirm it and it appears in their scan-station download. */
+function WorkAssign({ d, edit, run, kind }: { d: Detail; edit: boolean; run: Run; kind: 'picker' | 'verifier' }) {
   const s = d.shipment;
-  const pickers = useQuery({ queryKey: ['pickers', s.id], queryFn: () => get<{ id: string; name: string }[]>(`/api/shipping/shipments/${s.id}/pickers`), enabled: edit && s.status <= 1 });
+  const open = kind === 'picker' ? s.status <= 1 : s.status <= 4;
+  const pickers = useQuery({ queryKey: ['pickers', s.id], queryFn: () => get<{ id: string; name: string }[]>(`/api/shipping/shipments/${s.id}/pickers`), enabled: edit && open });
+  const assigned = kind === 'picker' ? s.assignedPickerId : s.assignedVerifierId;
   const [v, setV] = useState<string | null>(null);
-  const current = pickers.data?.find((p) => p.id === s.assignedPickerId)?.name;
-  if (!edit || s.status > 1) return null;
-  const value = v ?? s.assignedPickerId ?? '';
-  return <Paper variant="outlined" sx={{ p: 2 }} data-testid="picker-assign">
+  const current = pickers.data?.find((p) => p.id === assigned)?.name;
+  if (!edit || !open) return null;
+  const value = v ?? assigned ?? '';
+  const what = kind === 'picker' ? 'picks' : 'verification';
+  return <Paper variant="outlined" sx={{ p: 2 }} data-testid={`${kind}-assign`}>
     <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} alignItems={{ sm: 'center' }}>
-      <TextField select size="small" label="Assigned picker" value={value} onChange={(e) => setV(e.target.value)} sx={{ minWidth: 240 }}>
-        <MenuItem value="">Not assigned (any picker at the desk)</MenuItem>
+      <TextField select size="small" label={kind === 'picker' ? 'Assigned picker' : 'Assigned verifier'} value={value} onChange={(e) => setV(e.target.value)} sx={{ minWidth: 240 }}>
+        <MenuItem value="">Not assigned (anyone at the desk)</MenuItem>
         {(pickers.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
       </TextField>
-      <Button variant="outlined" disabled={value === (s.assignedPickerId ?? '')} onClick={() => run(async () => { await put(`/api/shipping/shipments/${s.id}/picker`, { pickerId: value || null }); setV(null); }, value ? 'Picker assigned; the picks appear in their scan-station download.' : 'Picker unassigned.')}>Save</Button>
-      <Typography variant="body2" color="text.secondary">{s.assignedPickerId ? `Assigned to ${current ?? 'a picker'}${s.assignedAt ? ' ' + fmtDateTime(s.assignedAt) : ''}. Only they can confirm these picks.` : 'Assign a picker to send the picks to their device for offline picking.'}</Typography>
+      <Button variant="outlined" disabled={value === (assigned ?? '')} onClick={() => run(async () => { await put(`/api/shipping/shipments/${s.id}/${kind}`, kind === 'picker' ? { pickerId: value || null } : { verifierId: value || null }); setV(null); },
+        value ? (kind === 'picker' ? 'Picker assigned; the picks appear in their scan-station download.' : 'Verifier assigned; the shipment appears in their scan-station download.') : `${kind === 'picker' ? 'Picker' : 'Verifier'} unassigned.`)}>Save</Button>
+      <Typography variant="body2" color="text.secondary">{assigned ? `Assigned to ${current ?? 'a team member'}${kind === 'picker' && s.assignedAt ? ' ' + fmtDateTime(s.assignedAt) : ''}. Only they can confirm the ${what}.` : `Assign someone to send the ${what} to their device for offline work.`}</Typography>
     </Stack>
   </Paper>;
 }
@@ -288,7 +296,7 @@ function PackTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
   </Box>;
 }
 
-function VerifyTab({ d, edit, onDone }: { d: Detail; edit: boolean; onDone: () => void }) {
+function VerifyTab({ d, edit, onDone, run }: { d: Detail; edit: boolean; onDone: () => void; run: Run }) {
   const [scans, setScans] = useState<{ code: string; quantity?: number }[]>([]);
   const [res, setRes] = useState<VerifyResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -308,7 +316,46 @@ function VerifyTab({ d, edit, onDone }: { d: Detail; edit: boolean; onDone: () =
         <Table size="small"><TableBody>{res.lines.map((l) => <TableRow key={l.lineId}><TableCell>{l.lineNumber}. {l.partNumber}</TableCell><TableCell align="right" sx={{ color: l.verified === l.expected ? 'success.main' : 'error.main', fontWeight: 700 }}>{qty(l.verified)} / {qty(l.expected)}</TableCell></TableRow>)}</TableBody></Table></Stack>
         : <Table size="small"><TableBody>{d.lines.map((l) => <TableRow key={l.line.id}><TableCell>{l.line.lineNumber}. {l.partNumber}</TableCell><TableCell align="right">{qty(l.line.quantityVerified)} / {qty(l.line.quantity)}</TableCell></TableRow>)}</TableBody></Table>}
     </Section>
+    <Box sx={{ gridColumn: { md: 'span 2' } }}><Stack gap={2}>
+      <WorkAssign d={d} edit={edit} run={run} kind="verifier" />
+      <VerificationPanel d={d} edit={edit} onDone={onDone} />
+    </Stack></Box>
   </Box>;
+}
+
+export const verificationStates = ['Not started', 'In progress', 'Pending validation', 'Validated'];
+interface ReleaseCheck { key: string; label: string; passed: boolean; message: string }
+interface VerificationStatus { outcome: number; message: string; state: number; status: number; lines: VerifyResult['lines']; checks: ReleaseCheck[]; offlineScans: number }
+interface ScanRow { scan: { id: string; code: string; quantity?: number; clientRequestId?: string; deviceTimestamp?: string; receivedAt: string; offline: boolean; outcome: number; issue?: string; countedQuantity: number; active: boolean }; user: string }
+
+/** Verification state, the online release confirmation (required after offline scans) and every scan event received. */
+function VerificationPanel({ d, edit, onDone }: { d: Detail; edit: boolean; onDone: () => void }) {
+  const id = d.shipment.id;
+  const st = useQuery({ queryKey: ['verification', id, d.shipment.status], queryFn: () => get<VerificationStatus>(`/api/shipping/shipments/${id}/verification`) });
+  const log = useQuery({ queryKey: ['verification-scans', id, d.shipment.status], queryFn: () => get<ScanRow[]>(`/api/shipping/shipments/${id}/verification/scans`) });
+  const [res, setRes] = useState<VerificationStatus | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const act = async (path: string) => { setErr(null); try { const r = await post<VerificationStatus>(`/api/shipping/shipments/${id}/verification/${path}`, {}); setRes(r); st.refetch(); log.refetch(); onDone(); } catch (e) { setErr((e as Error).message); } };
+  const state = res?.state ?? st.data?.state ?? d.shipment.verificationState ?? 0;
+  const offline = res?.offlineScans ?? st.data?.offlineScans ?? 0;
+  return <Section title="Verification and release" action={<StatusChip status={verificationStates[state]} />}>
+    <Stack gap={1.5} data-testid="verification-panel">
+      {state === 2 && <Alert severity="warning" data-testid="pending-validation">Contents are verified{offline ? ` (${offline} scan${offline > 1 ? 's' : ''} made offline)` : ''} but the release conditions are not confirmed. Confirm them online before shipping.</Alert>}
+      {state === 3 && d.shipment.validatedAt && <Alert severity="success">Release conditions confirmed {fmtDateTime(d.shipment.validatedAt)}. Shipping checks them again.</Alert>}
+      {edit && <Stack direction="row" gap={1}>
+        {state === 2 && <Button variant="contained" disabled={!navigator.onLine} onClick={() => act('validate')}>Confirm release conditions</Button>}
+        {state > 0 && <Button color="inherit" onClick={() => act('restart')}>Restart verification</Button>}
+      </Stack>}
+      {err && <Alert severity="error">{err}</Alert>}
+      {res?.checks.length ? <Table size="small" data-testid="release-checks"><TableBody>{res.checks.map((c) => <TableRow key={c.key}>
+        <TableCell sx={{ width: 200, fontWeight: 600 }}>{c.label}</TableCell><TableCell><StatusChip status={c.passed ? 'Passed' : 'Failed'} /></TableCell><TableCell>{c.message}</TableCell></TableRow>)}</TableBody></Table> : null}
+      {!!log.data?.length && <Table size="small" data-testid="verification-scans"><TableHead><TableRow><TableCell>Received</TableCell><TableCell>Device time</TableCell><TableCell>By</TableCell><TableCell>Scan</TableCell><TableCell align="right">Counted</TableCell><TableCell>Outcome</TableCell></TableRow></TableHead>
+        <TableBody>{log.data.map(({ scan: x, user }) => <TableRow key={x.id} sx={{ opacity: x.active || x.outcome !== 0 ? 1 : 0.55 }}>
+          <TableCell>{fmtDateTime(x.receivedAt)}</TableCell><TableCell>{x.deviceTimestamp ? fmtDateTime(x.deviceTimestamp) : '—'}{x.offline && <Chip size="small" label="offline" sx={{ ml: 1 }} />}</TableCell><TableCell>{user}</TableCell>
+          <TableCell sx={{ fontFamily: mono }}>{x.code}</TableCell><TableCell align="right">{x.outcome === 0 ? qty(x.countedQuantity) : ''}</TableCell>
+          <TableCell><StatusChip status={x.outcome === 0 ? (x.active ? 'Accepted' : 'Restarted') : outcomes[x.outcome]} />{x.issue && <Typography variant="caption" display="block" color="text.secondary">{x.issue}</Typography>}</TableCell></TableRow>)}</TableBody></Table>}
+    </Stack>
+  </Section>;
 }
 
 // ------------------------------------------------------------------ carriers

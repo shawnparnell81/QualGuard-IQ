@@ -393,12 +393,47 @@ public class Shipment : Entity, IAudited, ISiteScoped
     /// <summary>The picker the pick list is assigned to; only this person can confirm its picks (scan station, online or offline).</summary>
     public Guid? AssignedPickerId { get; set; }
     public DateTimeOffset? AssignedAt { get; set; }
+    /// <summary>The person assigned to scan-verify the packed contents (online or offline on a device).</summary>
+    public Guid? AssignedVerifierId { get; set; }
+    public ShipmentVerificationState VerificationState { get; set; }
+    /// <summary>When the release conditions (inventory, holds, revision, customer requirements, status) were last confirmed online.</summary>
+    public DateTimeOffset? ValidatedAt { get; set; }
+    public Guid? ValidatedById { get; set; }
     public Guid SiteId { get; set; }
     public Guid? DepartmentId { get; set; }
     public string AuditLabel => $"shipment {Number}";
 }
 
 public enum MobileOutcome { Accepted = 0, Duplicate = 1, Rejected = 2 }
+
+/// <summary>NotStarted → InProgress (scans counted) → PendingValidation (contents complete, release conditions not yet confirmed online,
+/// e.g. after offline scans or when a condition failed) → Validated (confirmed online; the shipment is Verified and can be shipped).</summary>
+public enum ShipmentVerificationState { NotStarted = 0, InProgress = 1, PendingValidation = 2, Validated = 3 }
+
+/// <summary>
+/// One verification scan (carton, pallet, lot, serial or part with quantity) from the desk or a device queue. Idempotent on the client
+/// request id; refused scans are kept with the reason. Active = counts toward the current verification (a restart deactivates them).
+/// </summary>
+public class ShipmentVerificationScan : Entity
+{
+    public Guid ShipmentId { get; set; }
+    public string? ClientRequestId { get; set; }
+    public Guid UserId { get; set; }
+    public DateTimeOffset? DeviceTimestamp { get; set; }
+    public DateTimeOffset ReceivedAt { get; set; }
+    public bool Offline { get; set; }
+    public string Code { get; set; } = "";
+    public decimal? Quantity { get; set; }
+    public MobileOutcome Outcome { get; set; }
+    public string? Issue { get; set; }
+    public Guid? LineId { get; set; }
+    public Guid? ContainerId { get; set; }
+    public Guid? LotId { get; set; }
+    public Guid? SerialId { get; set; }
+    /// <summary>Quantity this scan verified (items); container scans count their packed contents.</summary>
+    public decimal CountedQuantity { get; set; }
+    public bool Active { get; set; }
+}
 
 /// <summary>
 /// Every pick confirmation received, online or replayed from a device queue: who, device time, server time, what was scanned and whether it was

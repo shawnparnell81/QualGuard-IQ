@@ -13,6 +13,7 @@ import { mono } from '../theme';
 import { newRequestId, postOrQueue, useOfflineQueue } from '../offline';
 import { checkPickItem, downloadPickWork, markPicked, normalizeLocation, pickWorkExpired, PICK_WORK_HOURS, readPickWork, type PickWork } from '../offlinePicks';
 import { fmtDateTime } from '../components/Status';
+import { checkVerifyScan, downloadVerifyWork, markVerified, progress, readVerifyWork, resetVerified, verifyWorkExpired, VERIFY_WORK_HOURS, type VerifyWork } from '../offlineVerifications';
 import { SyncBanner } from '../components/SyncBanner';
 import { ScanField, StockBadge, stockStatusLabel, useLocations, type StockRow } from '../warehouse/common';
 import { qty } from './Warehouse';
@@ -20,7 +21,7 @@ import { qty } from './Warehouse';
 const mod = modules.find((m) => m.key === 'warehouse')!;
 interface ScanLink { type: string; id: string; number: string; title: string; status: string; url: string }
 interface Ctx { match: { raw: string; kind: string; type?: string; id?: string; number?: string; url?: string; detail?: string }; stock: StockRow[]; holds: ScanLink[]; related: ScanLink[]; actions: string[] }
-const flows: [string, string, string, string?][] = [['receive', 'Receive PO', 'Against a purchase order'], ['blind', 'Blind receipt', 'No PO or delivery', 'inventory.receive_blind'], ['inspect', 'Inspect', 'Open the inspection'], ['move', 'Move', 'Put away / relocate'], ['issue', 'Issue', 'To a work order'], ['pick', 'Pick', 'Assigned picks · works offline', 'shipping.edit'], ['ship', 'Ship', 'Pick & verify'], ['trace', 'Trace', 'What is this?']];
+const flows: [string, string, string, string?][] = [['receive', 'Receive PO', 'Against a purchase order'], ['blind', 'Blind receipt', 'No PO or delivery', 'inventory.receive_blind'], ['inspect', 'Inspect', 'Open the inspection'], ['move', 'Move', 'Put away / relocate'], ['issue', 'Issue', 'To a work order'], ['pick', 'Pick', 'Assigned picks · works offline', 'shipping.edit'], ['verify', 'Verify shipment', 'Assigned · works offline', 'shipping.edit'], ['ship', 'Ship', 'Pick & verify'], ['trace', 'Trace', 'What is this?']];
 const scan = (code: string) => post<Ctx>('/api/warehouse/scan', { code });
 
 /** Result banner: green for posted, amber for queued offline, red for refused. */
@@ -59,6 +60,7 @@ export function ScanStation() {
           {flow === 'move' && <MoveFlow key="m" initialItem={p.get('item') ?? ''} />}
           {flow === 'issue' && <IssueFlow key="is" initialItem={p.get('item') ?? ''} />}
           {flow === 'pick' && <PickFlow key="p" />}
+          {flow === 'verify' && <VerifyFlow key="v" />}
           {flow === 'ship' && <ShipFlow key="s" />}
           {(flow === 'trace' || flow === 'lookup') && <TraceFlow key="t" onAction={(a, code) => setP({ flow: a, item: code })} />}
         </Paper>
@@ -404,6 +406,108 @@ function PickFlow() {
   </Stack>;
 }
 
+interface VerificationStatus { outcome: number; message: string; state: number; status: number; checks: { key: string; label: string; passed: boolean; message: string }[]; offlineScans: number }
+const vStates = ['Not started', 'In progress', 'Pending validation', 'Validated'];
+
+/**
+ * Shipment verification that keeps working without a connection: download my assigned shipments, scan cartons, pallets, lots and
+ * serials. The device refuses duplicates and wrong items at once; each accepted scan posts now or is saved with its request id and
+ * device time and syncs on reconnect, where the server checks it again. Offline scans never release the shipment: once the contents
+ * are complete it waits as "pending validation" until the release conditions (stock, holds, revision, customer, status) are
+ * confirmed online.
+ */
+function VerifyFlow() {
+  const { me } = useAuth();
+  const q = useOfflineQueue();
+  const uid = me!.id;
+  const [work, setWork] = useState<VerifyWork | null>(() => readVerifyWork(uid));
+  const [sel, setSel] = useState<string | null>(null);
+  const [code, setCode] = useState(''); const [n, setN] = useState('');
+  const [out, setOut] = useState<Outcome>(null);
+  const [status, setStatus] = useState<VerificationStatus | null>(null);
+  const [busy, setBusy] = useState(false);
+  const pendingIds = q.items.filter((x) => x.url.includes('/verification/scans') && x.state !== 'failed' && x.state !== 'conflict').map((x) => x.id);
+  const download = async () => {
+    setOut(null); setBusy(true);
+    try { const w = await downloadVerifyWork(uid, pendingIds); setWork(w); setSel(null); setStatus(null); setOut({ tone: 'success', text: `Downloaded ${w.lists.length} shipment${w.lists.length === 1 ? '' : 's'} assigned to you for verification.` }); }
+    catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+    finally { setBusy(false); }
+  };
+  const expired = !!work && verifyWorkExpired(work);
+  const list = work?.lists.find((l) => l.shipmentId === sel) ?? null;
+  const scans = list ? work!.scanned[list.shipmentId] ?? [] : [];
+  const prog = list ? progress(list, scans) : {};
+  const complete = !!list && list.lines.every((l) => (prog[l.lineId] ?? 0) === l.quantity);
+  const pendingHere = list ? q.items.filter((x) => x.url.includes(`/shipments/${list.shipmentId}/verification/scans`)) : [];
+  const record = async (raw: string) => {
+    setOut(null);
+    const quantity = n ? Number(n) : null;
+    const r = checkVerifyScan(list!, scans, raw, quantity);
+    if (r.error) { setCode(''); setOut({ tone: 'error', text: r.error }); return; }
+    setBusy(true);
+    const rid = newRequestId();
+    try {
+      const res = await postOrQueue<VerificationStatus>(`/api/shipping/shipments/${list!.shipmentId}/verification/scans`,
+        { code: raw.trim(), quantity, clientRequestId: rid, deviceTimestamp: new Date().toISOString(), offline: !navigator.onLine }, `Verify ${list!.number} · ${raw.trim()}`);
+      setWork(markVerified(uid, list!.shipmentId, { code: raw.trim(), lines: r.lines!, containers: r.containers!, requestId: rid }));
+      if (res.queued) setOut({ tone: 'warning', text: `${raw.trim()} saved on this device; it syncs when the connection returns. The shipment stays pending validation until it is confirmed online.` });
+      else { setStatus(res.result!); setOut({ tone: 'success', text: res.result!.message }); }
+      setCode(''); setN('');
+    } catch (e) { setCode(''); setOut({ tone: 'error', text: (e as Error).message }); }
+    finally { setBusy(false); }
+  };
+  const confirmOnline = async () => {
+    setBusy(true); setOut(null);
+    try {
+      const r = await post<VerificationStatus>(`/api/shipping/shipments/${list!.shipmentId}/verification/validate`, {});
+      setStatus(r); setOut({ tone: r.state === 3 ? 'success' : 'error', text: r.message });
+    } catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+    finally { setBusy(false); }
+  };
+  const restart = async () => {
+    setBusy(true); setOut(null);
+    try { const r = await post<VerificationStatus>(`/api/shipping/shipments/${list!.shipmentId}/verification/restart`, {}); setStatus(r); setWork(resetVerified(uid, list!.shipmentId)); setOut({ tone: 'success', text: r.message }); }
+    catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+    finally { setBusy(false); }
+  };
+  const state = status?.state ?? (list && !pendingHere.length && list.state > 0 && scans.length ? list.state : complete ? 2 : scans.length ? 1 : 0);
+  return <Stack gap={2} data-testid="verify-flow">
+    <Stack direction="row" gap={1} alignItems="center" justifyContent="space-between">
+      <Typography variant="body2" color="text.secondary">{work ? `Downloaded ${fmtDateTime(work.downloadedAt)}` : 'No verification work on this device yet.'}</Typography>
+      <Button variant="outlined" disabled={!q.online || busy} onClick={download}>{work ? 'Refresh my verifications' : 'Download my verifications'}</Button>
+    </Stack>
+    {!q.online && !work && <Alert severity="warning">Download your assigned shipments while connected; their contents can then be verified offline.</Alert>}
+    {expired && <Alert severity="warning">This download is older than {VERIFY_WORK_HOURS} hours. Refresh it before verifying so cancelled or changed shipments are not loaded.</Alert>}
+    {out && <Alert severity={out.tone} data-testid="verify-result">{out.text}</Alert>}
+    {work && !expired && !list && (work.lists.length === 0 ? <Alert severity="info">No shipments are assigned to you for verification.</Alert>
+      : <Stack gap={1} data-testid="verify-lists">{work.lists.map((l) => { const s = work.scanned[l.shipmentId] ?? []; const pr = progress(l, s); const left = l.lines.reduce((a, x) => a + Math.max(0, x.quantity - (pr[x.lineId] ?? 0)), 0); return (
+        <Button key={l.shipmentId} variant="outlined" onClick={() => { setSel(l.shipmentId); setStatus(null); setOut(null); setCode(''); setN(''); }} sx={{ justifyContent: 'space-between', py: 1.5 }}>
+          <span style={{ fontFamily: mono }}>{l.number}</span><span>{l.customer ?? ''} · {left ? `${qty(left)} to verify` : 'contents verified'}</span></Button>); })}</Stack>)}
+    {list && !expired && <>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography sx={{ fontFamily: mono, fontSize: 18 }}>{list.number}</Typography>
+        <Stack direction="row" gap={1} alignItems="center"><Chip size="small" data-testid="verify-state" color={state === 3 ? 'success' : state === 2 ? 'warning' : 'default'} label={vStates[state]} />
+          <Button size="small" onClick={() => { setSel(null); setStatus(null); }}>All my shipments</Button></Stack>
+      </Stack>
+      <Paper variant="outlined" sx={{ p: 1.5 }}>
+        {list.lines.map((l) => <Stack key={l.lineId} direction="row" justifyContent="space-between" sx={{ py: 0.5 }}>
+          <Typography>{l.lineNumber}. {l.partNumber}{l.revision ? ` rev ${l.revision}` : ''}{l.requiredLot ? ` · lot ${l.requiredLot}` : ''}</Typography>
+          <Typography sx={{ fontWeight: 700, color: (prog[l.lineId] ?? 0) === l.quantity ? 'success.main' : 'text.primary' }}>{qty(prog[l.lineId] ?? 0)} / {qty(l.quantity)}</Typography></Stack>)}
+        <Typography variant="caption" color="text.secondary">Packed: {list.containers.filter((c) => !c.parentId).map((c) => c.number).join(', ') || 'no containers'}</Typography>
+      </Paper>
+      {!complete && state !== 3 && <Stack gap={1.5}>
+        <ScanField label="Scan carton, pallet, lot or serial" value={code} onChange={setCode} onScan={record} autoFocus />
+        <TextField label="Quantity (loose lot scans only)" size="small" value={n} onChange={(e) => setN(e.target.value)} inputProps={{ inputMode: 'decimal' }} />
+      </Stack>}
+      {complete && state !== 3 && <Alert severity="warning" data-testid="verify-pending">Contents verified{pendingHere.length ? `; ${pendingHere.length} scan${pendingHere.length === 1 ? '' : 's'} still on this device` : ''}. The shipment is pending validation: holds, stock, revision, customer requirements and status must be confirmed online before it can ship.</Alert>}
+      {complete && state !== 3 && <Big disabled={!q.online || busy || pendingHere.some((x) => x.state === 'local' || x.state === 'syncing')} onClick={confirmOnline}>Confirm release conditions online</Big>}
+      {state === 3 && <Alert severity="success" data-testid="verify-validated">Verified and release conditions confirmed. Shipping checks them again at release.</Alert>}
+      {status?.checks.length ? <Stack gap={0.5} data-testid="verify-checks">{status.checks.map((c) => <Typography key={c.key} variant="body2" color={c.passed ? 'success.main' : 'error.main'}>{c.passed ? '✓' : '✗'} {c.label}: {c.message}</Typography>)}</Stack> : null}
+      {scans.length > 0 && <Button color="inherit" disabled={!q.online || busy} onClick={restart}>Restart verification</Button>}
+    </>}
+  </Stack>;
+}
+
 function ShipFlow() {
   const [id, setId] = useState<string | null>(null); const [out, setOut] = useState<Outcome>(null);
   const [loc, setLoc] = useState(''); const [verify, setVerify] = useState<string[]>([]);
@@ -421,7 +525,7 @@ function ShipFlow() {
     try { const r = await post<{ verified: boolean; issues: string[] }>(`/api/shipping/shipments/${id}/verify`, { scans: verify.map((code) => ({ code, quantity: null })) }); setOut(r.verified ? { tone: 'success', text: 'Shipment verified — ready to ship.' } : { tone: 'warning', text: r.issues.join(' ') || 'Not verified yet.' }); d.refetch(); }
     catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
   };
-  if (!navigator.onLine) return <Alert severity="warning">Verification checks live stock, so it needs a connection. Assigned picks can be picked offline under Pick; moves and issues also queue offline.</Alert>;
+  if (!navigator.onLine) return <Alert severity="warning">Desk verification here checks live stock, so it needs a connection. Assigned shipments can be verified offline under Verify shipment, assigned picks under Pick; moves and issues also queue offline.</Alert>;
   return <Stack gap={2}>
     {!id ? <ScanField label="Scan shipment number or carton (QG:CTN)" onScan={find} autoFocus /> : <Typography sx={{ fontFamily: mono, fontSize: 18 }}>{d.data?.shipment.number}</Typography>}
     {out && <Alert severity={out.tone}>{out.text}</Alert>}
