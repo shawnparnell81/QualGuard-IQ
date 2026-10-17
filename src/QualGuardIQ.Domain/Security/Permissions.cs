@@ -179,6 +179,8 @@ public static class Permissions
     public const string PlatformAdmin = "platform.admin";
     /// <summary>Share saved reports and dashboards with everyone.</summary>
     public const string ReportsShare = "reports.share";
+    /// <summary>Approve board report editions for distribution.</summary>
+    public const string ReportsApprove = "reports.approve";
 
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)

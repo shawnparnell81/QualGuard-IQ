@@ -5208,6 +5208,86 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("backup_records", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Platform.BoardReportEdition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ApprovedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Confidential")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("GeneratedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GeneratedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid?>("ScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("ScopeAllSites")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ScopeSiteIds")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "Version")
+                        .IsUnique();
+
+                    b.ToTable("board_report_editions", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Platform.BusinessRule", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6062,10 +6142,210 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("recovery_objectives", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Platform.ReportArtifact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Confidential")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<byte[]>("Data")
+                        .HasColumnType("bytea");
+
+                    b.Property<Guid>("DistributionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset?>("PurgedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DistributionId");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("report_artifacts", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Platform.ReportDeliveryPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AllowConfidential")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowCsv")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowPdf")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AllowXlsx")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("AllowedEmailDomains")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("AttachmentsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("MaxAttachmentBytes")
+                        .HasColumnType("bigint");
+
+                    b.Property<int>("RetentionDays")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("report_delivery_policy", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Platform.ReportDistribution", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ArtifactId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Attempt")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Delivered")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("DeliveryMode")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("EditionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Excluded")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("Recipients")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ScheduleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Trigger")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("TriggeredById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ScheduleId", "StartedAt");
+
+                    b.ToTable("report_distributions", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Platform.ReportDistributionRecipient", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DistributionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("DownloadedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Outcome")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DistributionId", "UserId");
+
+                    b.ToTable("report_distribution_recipients", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Platform.ReportSchedule", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("BoardReportKind")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -6078,14 +6358,36 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<int>("DeliveryMode")
+                        .HasColumnType("integer");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Format")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("GenerateDraftEdition")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTimeOffset?>("LastRunAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastStatus")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int>("MaxAttempts")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasDefaultValue(3);
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<DateTimeOffset?>("NextRunAt")
                         .HasColumnType("timestamp with time zone");
@@ -6093,9 +6395,26 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("PauseReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("PausedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("PausedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecipientRoleIds")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
                     b.Property<string>("Recipients")
                         .IsRequired()
                         .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("RetryAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<uint>("RowVersion")
                         .IsConcurrencyToken()
@@ -6103,8 +6422,18 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
 
-                    b.Property<Guid>("SavedReportId")
+                    b.Property<Guid?>("SavedReportId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TimeZone")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasDefaultValue("UTC");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -6230,6 +6559,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<string>("Columns")
                         .IsRequired()
                         .HasColumnType("jsonb");
+
+                    b.Property<bool>("Confidential")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -17914,6 +18246,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<Guid?>("AttachmentId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Body")
                         .HasColumnType("text");
 
@@ -19369,13 +19704,39 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Navigation("Site");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Platform.ReportArtifact", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Platform.ReportDistribution", null)
+                        .WithMany()
+                        .HasForeignKey("DistributionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Platform.ReportDistribution", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Platform.ReportSchedule", null)
+                        .WithMany()
+                        .HasForeignKey("ScheduleId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Platform.ReportDistributionRecipient", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Platform.ReportDistribution", null)
+                        .WithMany()
+                        .HasForeignKey("DistributionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Platform.ReportSchedule", b =>
                 {
                     b.HasOne("QualGuardIQ.Domain.Platform.SavedReport", null)
                         .WithMany()
                         .HasForeignKey("SavedReportId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Cascade);
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Platform.RuleFiring", b =>
