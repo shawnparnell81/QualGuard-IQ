@@ -109,16 +109,18 @@ export const modules: ModuleDef[] = [
   },
   {
     key: 'calibration',
-    label: 'Calibration',
-    description: 'Measuring equipment, calibration records and out-of-tolerance impact',
+    label: 'Equipment',
+    description: 'Equipment, tooling and gages: calibration, out-of-tolerance impact, preventive maintenance and repair history',
     icon: <SpeedOutlined fontSize="small" />,
     basePath: '/calibration/equipment',
     permissions: ['calibration.view'],
     sidebar: [
       { label: 'Equipment', path: '/calibration/equipment', children: [
         { label: 'All equipment', path: '/calibration/equipment' },
-        { label: 'Due in 30 days', path: '/calibration/equipment?view=due' },
+        { label: 'Calibration due', path: '/calibration/equipment?view=due' },
+        { label: 'Maintenance due', path: '/calibration/equipment?view=pm' },
         { label: 'Quarantined', path: '/calibration/equipment?view=quarantined' },
+        { label: 'Down', path: '/calibration/equipment?view=down' },
         { label: 'Add equipment', path: '/calibration/equipment/new', permission: 'calibration.edit' },
       ] },
     ],
