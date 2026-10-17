@@ -326,6 +326,14 @@ stored data and revision and confirms it is identical.
 **Manifest** (Document templates → Manifest): choose the site, carrier and ship date to print the list of shipments
 for the driver to sign. Manifests are recorded like other documents.
 
+## Generated drafts
+
+If your organization has turned them on, NCR and CAPA pages and the investigation helper show a **Generated
+draft** panel. Choose **Generate draft** to get a short draft that cites the records it used as [S1], [S2]… with
+links. A generated draft is labelled as not reviewed: check each statement against the cited records, copy what you
+need into the record yourself, then choose **Mark as reviewed and used** or **Discard**. Drafts never change,
+approve or close a record. If the service is unavailable you see the built-in rule-based result instead.
+
 ## Text and push notifications
 
 Open the account menu → **Text and push notifications** to receive a copy of your notifications by text message or

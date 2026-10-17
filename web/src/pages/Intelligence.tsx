@@ -10,6 +10,7 @@ import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDateTime, localDate } from '../components/Status';
 import { Section, StepDialog, useRunner, useSites } from '../components/Kit';
 import { mono } from '../theme';
+import { GeneratedDraft } from './Generation';
 
 const insights = modules.find((m) => m.key === 'insights')!;
 const admin = modules.find((m) => m.key === 'admin')!;
@@ -154,6 +155,7 @@ export function InvestigatePage() {
             <Section title="Recurring defects"><Table size="small"><TableBody>{d.recurringDefects.map((t) => <TableRow key={t.label}><TableCell>{t.label}</TableCell><TableCell sx={{ fontFamily: mono }}>{t.current} now · {t.previous} before</TableCell></TableRow>)}</TableBody></Table></Section></Stack>
         </Box>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2 }}>{d.method}</Typography>
+        <Box sx={{ mt: 2 }}><GeneratedDraft key={ncrId} fn="ncr-investigation" recordType="Ncr" recordId={ncrId} /></Box>
       </>}
     </ModuleWorkspace>
   );

@@ -117,3 +117,11 @@ The worker runs: document release (hourly), due reminders (daily), alerts, appro
 A provider is off until its current configuration passes a connection test; production providers also need
 approval by a second person with `integrations.approve`. Only users who opt in themselves receive messages.
 The gateway contract, secret handling, retries and receipts are in `docs/setup/sms-push-providers.md`.
+
+## Generated content (optional)
+
+**Platform → Generated content** (`platform.admin`) controls optional generated drafts. The built-in rule-based
+features remain the default and the fallback. Drafts are off until the mode allows approved functions, the function
+is enabled with a provider, and the provider has passed its connection test (external services also approved by a
+second person with `integrations.approve`). Restricted records are never sent, text is redacted, and every request
+is logged. See `docs/setup/generation-providers.md`.
