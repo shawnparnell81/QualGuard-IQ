@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { AppBar, Badge, Box, Button, IconButton, InputBase, Menu, MenuItem, Toolbar, Tooltip, Typography, Divider, ListItemText } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
+import ExpandMore from '@mui/icons-material/ExpandMore';
 import NotificationsNoneOutlined from '@mui/icons-material/NotificationsNoneOutlined';
 import AssignmentIndOutlined from '@mui/icons-material/AssignmentIndOutlined';
 import AccountCircleOutlined from '@mui/icons-material/AccountCircleOutlined';
@@ -14,10 +15,9 @@ import { mono } from '../theme';
 interface Notif { id: number; title: string; body: string | null; link: string | null; createdAt: string; readAt: string | null }
 
 export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
-  const { me, can, logout } = useAuth();
+  const { me, logout } = useAuth();
   const { data: brand } = useBranding();
   const nav = useNavigate();
-  const loc = useLocation();
   const qc = useQueryClient();
   const [q, setQ] = useState('');
   const [userEl, setUserEl] = useState<HTMLElement | null>(null);
@@ -39,21 +39,9 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
           </Box>
           <Typography sx={{ fontWeight: 600, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>{brand?.applicationName}</Typography>
         </Box>
-        <Box component="nav" sx={{ display: 'flex', gap: 0.5, flexWrap: 'nowrap', overflowX: 'auto' }}>
-          {visibleModules(can).map((m) => {
-            const roots = [m.basePath, ...m.sidebar.flatMap((i) => [i.path, ...(i.children ?? []).map((c) => c.path)])].map((x) => '/' + x.split(/[/?]/)[1]);
-            const active = roots.some((r) => loc.pathname === r || loc.pathname.startsWith(r + '/'));
-            return (
-              <Button key={m.key} component={RouterLink} to={m.basePath} startIcon={m.icon} color="inherit" size="small"
-                sx={{ px: 1.25, whiteSpace: 'nowrap', flexShrink: 0, opacity: active ? 1 : 0.85, borderBottom: active ? '2px solid' : '2px solid transparent', borderColor: active ? 'secondary.light' : 'transparent', borderRadius: 0 }}>
-                {m.label}
-              </Button>
-            );
-          })}
-        </Box>
-        <Box sx={{ flex: 1 }} />
+        <ModuleNav />
         <Box component="form" onSubmit={(e) => { e.preventDefault(); if (q.trim()) nav(`/search?q=${encodeURIComponent(q.trim())}`); }}
-          sx={{ display: 'flex', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.12)', borderRadius: 1, px: 1, width: 240, flexShrink: 0 }}>
+          sx={{ display: 'flex', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.12)', borderRadius: 1, px: 1, width: 220, flexShrink: 0, ml: 1 }}>
           <SearchIcon fontSize="small" sx={{ opacity: 0.8 }} />
           <InputBase value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search records" sx={{ color: 'inherit', ml: 1, flex: 1, fontSize: 13 }} inputProps={{ 'aria-label': 'Search records' }} />
           <Tooltip title="Command palette"><Box component="button" type="button" onClick={onOpenPalette}
@@ -84,5 +72,58 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         </Menu>
       </Toolbar>
     </AppBar>
+  );
+}
+
+/** Top module menu. Modules that do not fit the bar move into a "More" menu instead of scrolling out of sight. */
+function ModuleNav() {
+  const { can } = useAuth();
+  const loc = useLocation();
+  const mods = visibleModules(can);
+  const navRef = useRef<HTMLDivElement>(null);
+  const measureRef = useRef<HTMLDivElement>(null);
+  const [fit, setFit] = useState(mods.length);
+  const [moreEl, setMoreEl] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    const nav = navRef.current, measure = measureRef.current;
+    if (!nav || !measure) return;
+    const calc = () => {
+      const widths = Array.from(measure.children).map((c) => (c as HTMLElement).offsetWidth + 4);
+      const avail = nav.clientWidth;
+      const total = widths.reduce((a, b) => a + b, 0);
+      if (total <= avail) { setFit(widths.length); return; }
+      let used = 96, n = 0;
+      while (n < widths.length && used + widths[n] <= avail) used += widths[n++];
+      setFit(Math.max(1, n));
+    };
+    calc();
+    const ro = new ResizeObserver(calc);
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, [mods.length]);
+  const isActive = (m: (typeof mods)[number]) => {
+    const roots = [m.basePath, ...m.sidebar.flatMap((i) => [i.path, ...(i.children ?? []).map((c) => c.path)])].map((x) => '/' + x.split(/[/?]/)[1]);
+    return roots.some((r) => loc.pathname === r || loc.pathname.startsWith(r + '/'));
+  };
+  const btn = (m: (typeof mods)[number], active: boolean) => (
+    <Button key={m.key} component={RouterLink} to={m.basePath} startIcon={m.icon} color="inherit" size="small"
+      sx={{ px: 1.25, whiteSpace: 'nowrap', flexShrink: 0, opacity: active ? 1 : 0.85, borderBottom: active ? '2px solid' : '2px solid transparent', borderColor: active ? 'secondary.light' : 'transparent', borderRadius: 0 }}>
+      {m.label}
+    </Button>
+  );
+  const shown = mods.slice(0, fit), rest = mods.slice(fit);
+  const restActive = rest.find(isActive);
+  return (
+    <Box ref={navRef} component="nav" aria-label="Modules" sx={{ display: 'flex', gap: 0.5, flex: '1 1 auto', minWidth: 0, position: 'relative', overflow: 'hidden' }}>
+      <Box ref={measureRef} aria-hidden sx={{ position: 'absolute', visibility: 'hidden', display: 'flex', gap: 0.5, pointerEvents: 'none' }}>{mods.map((m) => btn(m, false))}</Box>
+      {shown.map((m) => btn(m, isActive(m)))}
+      {rest.length > 0 && <>
+        <Button color="inherit" size="small" endIcon={<ExpandMore />} onClick={(e) => setMoreEl(e.currentTarget)} aria-label="More modules"
+          sx={{ px: 1.25, whiteSpace: 'nowrap', flexShrink: 0, borderRadius: 0, borderBottom: '2px solid', borderColor: restActive ? 'secondary.light' : 'transparent' }}>{restActive ? restActive.label : 'More'}</Button>
+        <Menu anchorEl={moreEl} open={!!moreEl} onClose={() => setMoreEl(null)}>
+          {rest.map((m) => <MenuItem key={m.key} component={RouterLink} to={m.basePath} onClick={() => setMoreEl(null)} selected={isActive(m)} sx={{ gap: 1.5 }}>{m.icon}<ListItemText primary={m.label} /></MenuItem>)}
+        </Menu>
+      </>}
+    </Box>
   );
 }
