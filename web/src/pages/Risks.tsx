@@ -250,11 +250,11 @@ export function RiskSettingsPage() {
       <Section title="Score bands" action={<Button size="small" onClick={() => upd((c) => { c.bands.push({ minScore: (c.bands.at(-1)?.minScore ?? 0) + 5, label: '', color: '#607d8b', requiresAcceptance: false, escalate: false }); })}>Add band</Button>}>
         <Table size="small"><TableHead><TableRow><TableCell>Minimum score</TableCell><TableCell>Label</TableCell><TableCell>Color</TableCell><TableCell>Residual needs acceptance</TableCell><TableCell>Escalate</TableCell><TableCell /></TableRow></TableHead>
           <TableBody>{s.bands.map((b, i) => <TableRow key={i}>
-            <TableCell><TextField size="small" type="number" value={b.minScore} sx={{ width: 90 }} onChange={(e) => upd((c) => { c.bands[i].minScore = Number(e.target.value); })} /></TableCell>
-            <TableCell><TextField size="small" value={b.label} onChange={(e) => upd((c) => { c.bands[i].label = e.target.value; })} /></TableCell>
+            <TableCell><TextField size="small" type="number" value={b.minScore} sx={{ width: 90 }} slotProps={{ htmlInput: { 'aria-label': `Band ${i + 1} minimum score` } }} onChange={(e) => upd((c) => { c.bands[i].minScore = Number(e.target.value); })} /></TableCell>
+            <TableCell><TextField size="small" value={b.label} slotProps={{ htmlInput: { 'aria-label': `Band ${i + 1} label` } }} onChange={(e) => upd((c) => { c.bands[i].label = e.target.value; })} /></TableCell>
             <TableCell><Stack direction="row" gap={1} alignItems="center"><input type="color" aria-label={`Color for ${b.label}`} value={b.color} onChange={(e) => upd((c) => { c.bands[i].color = e.target.value; })} /><span style={{ fontFamily: mono, fontSize: 12 }}>{b.color}</span></Stack></TableCell>
-            <TableCell><Checkbox checked={b.requiresAcceptance} onChange={(e) => upd((c) => { c.bands[i].requiresAcceptance = e.target.checked; })} /></TableCell>
-            <TableCell><Checkbox checked={b.escalate} onChange={(e) => upd((c) => { c.bands[i].escalate = e.target.checked; })} /></TableCell>
+            <TableCell><Checkbox slotProps={{ input: { 'aria-label': `Band ${i + 1} residual needs acceptance` } }} checked={b.requiresAcceptance} onChange={(e) => upd((c) => { c.bands[i].requiresAcceptance = e.target.checked; })} /></TableCell>
+            <TableCell><Checkbox slotProps={{ input: { 'aria-label': `Band ${i + 1} escalate` } }} checked={b.escalate} onChange={(e) => upd((c) => { c.bands[i].escalate = e.target.checked; })} /></TableCell>
             <TableCell><IconButton aria-label="Remove band" onClick={() => upd((c) => { c.bands.splice(i, 1); })}><DeleteOutline fontSize="small" /></IconButton></TableCell>
           </TableRow>)}</TableBody></Table>
       </Section>

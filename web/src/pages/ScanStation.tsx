@@ -112,8 +112,8 @@ function BlindReceiveFlow() {
   return <Stack gap={2}>
     <Step n={1} label="Receiving dock" value={dock?.code}><ScanField label="Scan dock location" onScan={findLoc} autoFocus /></Step>
     <Step n={2} label="Part" value={part?.label}><ScanField label="Scan part label (QG:PART) or type part number" onScan={findPart} /></Step>
-    <Step n={3} label="Supplier lot / heat"><TextField fullWidth value={lot} onChange={(e) => setLot(e.target.value)} placeholder="Optional" /></Step>
-    <Step n={4} label="Quantity"><TextField fullWidth type="number" value={n} onChange={(e) => setN(e.target.value)} slotProps={{ htmlInput: { inputMode: 'decimal', style: { fontSize: 22 } } }} /></Step>
+    <Step n={3} label="Supplier lot / heat"><TextField fullWidth value={lot} onChange={(e) => setLot(e.target.value)} placeholder="Optional" slotProps={{ htmlInput: { 'aria-label': 'Supplier lot' } }} /></Step>
+    <Step n={4} label="Quantity"><TextField fullWidth type="number" value={n} onChange={(e) => setN(e.target.value)} slotProps={{ htmlInput: { inputMode: 'decimal', style: { fontSize: 22 }, 'aria-label': 'Quantity' } }} /></Step>
     {out && <Alert severity={out.tone}>{out.text}</Alert>}
     <Big disabled={!dock || !part || !(Number(n) > 0)} onClick={submit}>Receive</Big>
     <Typography variant="caption" color="text.secondary">Blind receipts have no purchase order to check against. Parts with a receiving inspection plan land as awaiting inspection.</Typography>
@@ -293,7 +293,7 @@ function MoveFlow({ initialItem }: { initialItem: string }) {
       <span>{s.locationCode}</span><span>{qty(s.available)} {stockStatusLabel[s.status]}</span></Button>)}</Stack>}
     <Step n={2} label="From" value={from}><ScanField label="Scan source location" onScan={setFrom} /></Step>
     <Step n={3} label="To" value={to}><ScanField label="Scan destination location" onScan={setTo} /></Step>
-    <Step n={4} label="Quantity"><TextField fullWidth type="number" value={n} onChange={(e) => setN(e.target.value)} slotProps={{ htmlInput: { inputMode: 'decimal', style: { fontSize: 22 } } }} /></Step>
+    <Step n={4} label="Quantity"><TextField fullWidth type="number" value={n} onChange={(e) => setN(e.target.value)} slotProps={{ htmlInput: { inputMode: 'decimal', style: { fontSize: 22 }, 'aria-label': 'Quantity' } }} /></Step>
     {out && <Alert severity={out.tone}>{out.text}</Alert>}
     <Big disabled={!item || !from || !to || !(Number(n) > 0)} onClick={submit}>Move</Big>
     {(item || from || to) && <Big color="inherit" onClick={() => { setItem(''); setFrom(''); setTo(''); setN(''); setStock([]); setOut(null); }}>Start over</Big>}
@@ -399,7 +399,7 @@ function PickFlow() {
           <Step n={1} label="Location" value={loc}><ScanField label="Scan pick location" value={locIn} onChange={setLocIn} onScan={scanLoc} autoFocus /></Step>
           {loc && <Step n={2} label="Item" value={item}><ScanField label="Scan the lot / serial picked" value={itemIn} onChange={setItemIn} onScan={scanItem} autoFocus /></Step>}
           {warn && <Alert severity="info">{warn}</Alert>}
-          {item && <Step n={3} label="Quantity picked"><TextField fullWidth value={n} onChange={(e) => setN(e.target.value)} inputProps={{ inputMode: 'decimal', 'aria-label': 'Quantity picked' }} /></Step>}
+          {item && <Step n={3} label="Quantity picked"><TextField fullWidth value={n} onChange={(e) => setN(e.target.value)} slotProps={{ htmlInput: { inputMode: 'decimal', 'aria-label': 'Quantity picked' } }} /></Step>}
           {item && <Big disabled={busy} onClick={confirm}>Confirm pick</Big>}
           {(loc || item) && <Button color="inherit" onClick={reset}>Start this pick again</Button>}
         </Stack>

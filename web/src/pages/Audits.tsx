@@ -100,7 +100,7 @@ export function AuditNew() {
               <Stack key={f.id} direction="row" gap={1}>
                 <TextField size="small" label="Clause" sx={{ width: 110 }} {...register(`checklist.${i}.clause`)} />
                 <TextField size="small" label={`Question ${i + 1}`} sx={{ flex: 1 }} {...register(`checklist.${i}.question`)} error={!!errors.checklist?.[i]?.question} />
-                <IconButton onClick={() => items.remove(i)} disabled={items.fields.length === 1}><DeleteOutline /></IconButton>
+                <IconButton aria-label={`Remove question ${i + 1}`} onClick={() => items.remove(i)} disabled={items.fields.length === 1}><DeleteOutline /></IconButton>
               </Stack>
             ))}
           </Stack>
