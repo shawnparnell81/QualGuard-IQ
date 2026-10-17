@@ -97,6 +97,7 @@ builder.Services.AddOpenApi(o => QualGuardIQ.Api.OpenApi.OpenApiSetup.Configure(
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.Configure<ForwardedHeadersOptions>(o => o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
 
+builder.Services.AddMemoryCache();
 var app = builder.Build();
 
 if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
@@ -119,6 +120,7 @@ app.Use(async (ctx, next) =>
 });
 app.UseAuthentication();
 app.UseMiddleware<BearerValidation>();
+app.UseMiddleware<PortalBoundary>();
 app.UseRateLimiter();
 
 // CSRF: every state-changing API call must carry the antiforgery header.
