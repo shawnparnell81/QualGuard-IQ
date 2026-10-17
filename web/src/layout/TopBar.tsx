@@ -1,11 +1,14 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
-import { AppBar, Badge, Box, Button, IconButton, InputBase, Menu, MenuItem, Toolbar, Tooltip, Typography, Divider, ListItemText } from '@mui/material';
+import { AppBar, Badge, Box, Button, IconButton, InputBase, Menu, MenuItem, Toolbar, Tooltip, Divider, ListItemIcon, ListItemText, ListSubheader } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import NotificationsNoneOutlined from '@mui/icons-material/NotificationsNoneOutlined';
 import AssignmentIndOutlined from '@mui/icons-material/AssignmentIndOutlined';
 import AccountCircleOutlined from '@mui/icons-material/AccountCircleOutlined';
+import Check from '@mui/icons-material/Check';
+import { BrandLogo } from '../components/Brand';
+import { useColorMode, type ColorPreference } from '../colorMode';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth, useBranding } from '../auth';
 import { visibleModules } from '../modules/registry';
@@ -16,6 +19,7 @@ interface Notif { id: number; title: string; body: string | null; link: string |
 
 export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { me, logout } = useAuth();
+  const { preference, setPreference } = useColorMode();
   const { data: brand } = useBranding();
   const nav = useNavigate();
   const qc = useQueryClient();
@@ -31,27 +35,28 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
   };
 
   return (
-    <AppBar position="sticky" color="primary" elevation={0}>
-      <Toolbar variant="dense" sx={{ gap: 1, minHeight: 52 }}>
-        <Box component={RouterLink} to="/" aria-label={brand?.applicationName ?? 'Home'} sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'inherit', textDecoration: 'none', mr: { xs: 0.5, sm: 2 } }}>
-          <Box sx={{ width: 26, height: 26, borderRadius: '6px', bgcolor: 'secondary.main', display: 'grid', placeItems: 'center', fontFamily: mono, fontWeight: 600, fontSize: 13 }}>
-            {(brand?.applicationName ?? 'Q').slice(0, 1)}
-          </Box>
-          <Typography sx={{ fontWeight: 600, letterSpacing: '0.01em', whiteSpace: 'nowrap', display: { xs: 'none', sm: 'block' } }}>{brand?.applicationName}</Typography>
+    <AppBar position="sticky" color="inherit" elevation={0}
+      sx={{ bgcolor: 'background.bar', color: 'text.primary', borderBottom: 1, borderColor: 'divider', boxShadow: (t) => t.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(18, 38, 70, 0.04)' }}>
+      <Toolbar variant="dense" sx={{ gap: 1, minHeight: 56 }}>
+        {/* Mark + wordmark; narrow screens keep the mark only so the bar never outgrows a phone. */}
+        <Box component={RouterLink} to="/" aria-label={`${brand?.applicationName ?? 'QualGuard IQ'} home`} data-testid="brand-home"
+          sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'inherit', textDecoration: 'none', mr: { xs: 0.5, sm: 2 }, flexShrink: 0, borderRadius: 1 }}>
+          <BrandLogo variant="mark" height={30} width={30} />
+          <BrandLogo variant="wordmark" height={19} sx={{ display: { xs: 'none', sm: 'block' } }} />
         </Box>
         <ModuleNav />
         <Box component="form" onSubmit={(e) => { e.preventDefault(); if (q.trim()) nav(`/search?q=${encodeURIComponent(q.trim())}`); }}
-          sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', bgcolor: 'rgba(255,255,255,0.12)', borderRadius: 1, px: 1, width: 220, flexShrink: 0, ml: 1 }}>
-          <SearchIcon fontSize="small" sx={{ opacity: 0.8 }} />
+          sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', bgcolor: 'action.hover', border: 1, borderColor: 'divider', borderRadius: 1, px: 1, py: 0.25, width: 220, flexShrink: 0, ml: 1, '&:focus-within': { borderColor: 'primary.main' } }}>
+          <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
           <InputBase value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search records" sx={{ color: 'inherit', ml: 1, flex: 1, fontSize: 13 }} inputProps={{ 'aria-label': 'Search records' }} />
           <Tooltip title="Command palette"><Box component="button" type="button" onClick={onOpenPalette}
-            sx={{ fontFamily: mono, fontSize: 11, border: '1px solid rgba(255,255,255,0.4)', borderRadius: 0.5, px: 0.6, color: 'inherit', bgcolor: 'transparent', cursor: 'pointer' }}>Ctrl K</Box></Tooltip>
+            sx={{ fontFamily: mono, fontSize: 11, border: 1, borderColor: 'divider', borderRadius: 0.5, px: 0.6, color: 'text.secondary', bgcolor: 'transparent', cursor: 'pointer' }}>Ctrl K</Box></Tooltip>
         </Box>
         {/* Narrow screens: the search box would push the bar wider than the phone; the palette searches records too. */}
-        <Tooltip title="Search"><IconButton color="inherit" onClick={onOpenPalette} aria-label="Search" sx={{ display: { xs: 'inline-flex', md: 'none' } }}><SearchIcon /></IconButton></Tooltip>
-        <Tooltip title="My Work"><IconButton color="inherit" component={RouterLink} to="/my-work"><AssignmentIndOutlined /></IconButton></Tooltip>
+        <Tooltip title="Search"><IconButton onClick={onOpenPalette} aria-label="Search" sx={{ color: 'text.secondary', display: { xs: 'inline-flex', md: 'none' } }}><SearchIcon /></IconButton></Tooltip>
+        <Tooltip title="My Work"><IconButton sx={{ color: 'text.secondary' }} component={RouterLink} to="/my-work"><AssignmentIndOutlined /></IconButton></Tooltip>
         <Tooltip title="Notifications">
-          <IconButton color="inherit" onClick={(e) => setNotifEl(e.currentTarget)}>
+          <IconButton sx={{ color: 'text.secondary' }} onClick={(e) => setNotifEl(e.currentTarget)}>
             <Badge badgeContent={notifs.data?.unread ?? 0} color="secondary"><NotificationsNoneOutlined /></Badge>
           </IconButton>
         </Tooltip>
@@ -65,12 +70,20 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
           <Divider />
           <MenuItem onClick={async () => { await post('/api/my/notifications/read-all'); qc.invalidateQueries({ queryKey: ['notifications'] }); }}>Mark all as read</MenuItem>
         </Menu>
-        <IconButton color="inherit" onClick={(e) => setUserEl(e.currentTarget)} aria-label="User menu"><AccountCircleOutlined /></IconButton>
+        <IconButton sx={{ color: 'text.secondary' }} onClick={(e) => setUserEl(e.currentTarget)} aria-label="User menu"><AccountCircleOutlined /></IconButton>
         <Menu anchorEl={userEl} open={!!userEl} onClose={() => setUserEl(null)}>
           <MenuItem disabled><ListItemText primary={me?.displayName} secondary={me?.email} /></MenuItem>
           <Divider />
           <MenuItem onClick={() => { setUserEl(null); nav('/account/sign-ins'); }}>Sign-in history</MenuItem>
           <MenuItem onClick={() => { setUserEl(null); nav('/account/messaging'); }}>Text and push notifications</MenuItem>
+          <Divider />
+          <ListSubheader sx={{ lineHeight: '32px', bgcolor: 'transparent' }}>Appearance</ListSubheader>
+          {([['light', 'Light'], ['dark', 'Dark'], ['system', 'Match device']] as [ColorPreference, string][]).map(([v, l]) => (
+            <MenuItem key={v} selected={preference === v} onClick={() => setPreference(v)} aria-checked={preference === v} role="menuitemradio">
+              <ListItemIcon>{preference === v && <Check fontSize="small" />}</ListItemIcon><ListItemText primary={l} />
+            </MenuItem>
+          ))}
+          <Divider />
           <MenuItem onClick={async () => { setUserEl(null); await logout(); nav('/'); }}>Sign out</MenuItem>
         </Menu>
       </Toolbar>
@@ -109,8 +122,8 @@ function ModuleNav() {
     return roots.some((r) => loc.pathname === r || loc.pathname.startsWith(r + '/'));
   };
   const btn = (m: (typeof mods)[number], active: boolean) => (
-    <Button key={m.key} component={RouterLink} to={m.basePath} startIcon={m.icon} color="inherit" size="small"
-      sx={{ px: 1.25, whiteSpace: 'nowrap', flexShrink: 0, opacity: active ? 1 : 0.85, borderBottom: active ? '2px solid' : '2px solid transparent', borderColor: active ? 'secondary.light' : 'transparent', borderRadius: 0 }}>
+    <Button key={m.key} component={RouterLink} to={m.basePath} startIcon={m.icon} color="inherit" size="small" aria-current={active ? 'page' : undefined}
+      sx={{ px: 1.25, minHeight: 56, whiteSpace: 'nowrap', flexShrink: 0, color: active ? 'primary.main' : 'text.secondary', fontWeight: active ? 600 : 500, borderBottom: '2px solid', borderColor: active ? 'primary.main' : 'transparent', borderRadius: 0, '&:hover': { color: 'primary.main', bgcolor: 'action.hover' } }}>
       {m.label}
     </Button>
   );
@@ -122,7 +135,7 @@ function ModuleNav() {
       {shown.map((m) => btn(m, isActive(m)))}
       {rest.length > 0 && <>
         <Button color="inherit" size="small" endIcon={<ExpandMore />} onClick={(e) => setMoreEl(e.currentTarget)} aria-label="More modules"
-          sx={{ px: 1.25, whiteSpace: 'nowrap', flexShrink: 0, borderRadius: 0, borderBottom: '2px solid', borderColor: restActive ? 'secondary.light' : 'transparent' }}>{restActive ? restActive.label : shown.length === 0 ? 'Modules' : 'More'}</Button>
+          sx={{ px: 1.25, minHeight: 56, whiteSpace: 'nowrap', flexShrink: 0, borderRadius: 0, borderBottom: '2px solid', color: restActive ? 'primary.main' : 'text.secondary', borderColor: restActive ? 'primary.main' : 'transparent', '&:hover': { color: 'primary.main', bgcolor: 'action.hover' } }}>{restActive ? restActive.label : shown.length === 0 ? 'Modules' : 'More'}</Button>
         <Menu anchorEl={moreEl} open={!!moreEl} onClose={() => setMoreEl(null)}>
           {rest.map((m) => <MenuItem key={m.key} component={RouterLink} to={m.basePath} onClick={() => setMoreEl(null)} selected={isActive(m)} sx={{ gap: 1.5 }}>{m.icon}<ListItemText primary={m.label} /></MenuItem>)}
         </Menu>

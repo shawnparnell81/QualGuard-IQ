@@ -6,6 +6,7 @@ import { get, post } from '../api';
 import { useAuth } from '../auth';
 import { fmtDate, fmtDateTime } from '../components/Status';
 import { mono } from '../theme';
+import { BrandLogo } from '../components/Brand';
 
 /**
  * External portal for customer and supplier contacts. It has its own slim shell and talks only to /api/portal;
@@ -30,12 +31,13 @@ export function PortalApp() {
   const known = tabs.some(([v]) => v === t);
   const signOut = async () => { await logout(); nav('/', { replace: true }); };
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#F4F2ED' }}>
-      <Box component="header" sx={{ bgcolor: '#26323C', color: '#fff', px: 3, py: 1.25, display: 'flex', alignItems: 'center', gap: 2 }}>
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default' }}>
+      <Box component="header" sx={{ bgcolor: 'background.bar', color: 'text.primary', borderBottom: 1, borderColor: 'divider', borderTop: 3, borderTopColor: 'primary.main', px: 3, py: 1, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+        <BrandLogo variant="mark" height={28} width={28} />
         <Typography sx={{ fontWeight: 700, letterSpacing: 0.3 }}>{me.data?.kind ?? ''} portal</Typography>
-        <Typography sx={{ opacity: 0.75, flex: 1 }} data-testid="portal-party">{me.data?.partyName}</Typography>
-        <Typography variant="body2" sx={{ opacity: 0.8 }}>{me.data?.displayName}</Typography>
-        <Button size="small" sx={{ color: '#fff' }} onClick={signOut}>Sign out</Button>
+        <Typography sx={{ color: 'text.secondary', flex: 1 }} data-testid="portal-party">{me.data?.partyName}</Typography>
+        <Typography variant="body2" color="text.secondary">{me.data?.displayName}</Typography>
+        <Button size="small" variant="outlined" onClick={signOut}>Sign out</Button>
       </Box>
       <Container maxWidth="lg" sx={{ py: 3 }}>
         {me.error && <Alert severity="error">{(me.error as Error).message}</Alert>}
