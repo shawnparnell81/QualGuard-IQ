@@ -62,6 +62,11 @@ const PlanDetail = lazy(() => import('./pages/Inspection').then((m) => ({ defaul
 const ComplaintList = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintList })));
 const ComplaintNew = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintNew })));
 const ComplaintDetail = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintDetail })));
+const RiskList = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskList })));
+const RiskNew = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskNew })));
+const RiskDetail = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskDetail })));
+const RiskMatrix = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskMatrix })));
+const RiskSettingsPage = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskSettingsPage })));
 const ComplaintTrends = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintTrends })));
 const ScarList = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.ScarList })));
 const ScarDetail = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.ScarDetail })));
@@ -154,6 +159,11 @@ export function App() {
               <Route path="/inspection/plans/new" element={<PlanNew />} />
               <Route path="/inspection/plans/:id" element={<PlanDetail />} />
               <Route path="/inspection/:id" element={<InspectionDetail />} />
+              <Route path="/risks" element={<RiskList />} />
+              <Route path="/risks/new" element={<RiskNew />} />
+              <Route path="/risks/matrix" element={<RiskMatrix />} />
+              <Route path="/risks/settings" element={<RiskSettingsPage />} />
+              <Route path="/risks/:id" element={<RiskDetail />} />
               <Route path="/complaints" element={<ComplaintList />} />
               <Route path="/complaints/new" element={<ComplaintNew />} />
               <Route path="/complaints/trends" element={<ComplaintTrends />} />
