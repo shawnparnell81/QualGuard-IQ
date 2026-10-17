@@ -182,6 +182,6 @@ public sealed class GapClosureErpValidationTests(TestApp app)
             var all = a.Editions.SelectMany(e => a.Unverified(e)).Select(u => u.Topic).ToHashSet();
             foreach (var t in topics) Assert.Contains(t, all);
         }
-        Assert.Equal([ErpSystem.NetSuite, ErpSystem.Sap, ErpSystem.Oracle, ErpSystem.Plex, ErpSystem.DelmiaWorks], ErpValidationService.KeyAssumptions.Keys);
+        Assert.Equal([ErpSystem.NetSuite, ErpSystem.Sap, ErpSystem.Oracle, ErpSystem.Plex, ErpSystem.DelmiaWorks, ErpSystem.BcManufacturing], ErpValidationService.KeyAssumptions.Keys);
     }
 }
