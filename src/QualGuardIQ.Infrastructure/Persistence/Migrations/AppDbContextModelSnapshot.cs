@@ -18015,6 +18015,104 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("work_order_operations", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Security.IdentityProvider", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.PrimitiveCollection<List<string>>("AllowedDomains")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<string>("Authority")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("ClientId")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DisplayName")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("EncryptedClientSecret")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid?>("JitDefaultRoleId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("JitEnabled")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTimeOffset?>("LastTestAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LastTestBy")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<string>("LastTestDetail")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<bool>("LastTestSucceeded")
+                        .HasColumnType("boolean");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.PrimitiveCollection<List<string>>("SsoRequiredDomains")
+                        .IsRequired()
+                        .HasColumnType("text[]");
+
+                    b.Property<string>("TestedSettingsHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<bool>("TrustProviderMfa")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DisplayName")
+                        .IsUnique();
+
+                    b.ToTable("identity_providers", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Security.PasswordHistoryEntry", b =>
                 {
                     b.Property<long>("Id")
@@ -18366,6 +18464,43 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_ura_dept_needs_site", "\"DepartmentId\" IS NULL OR \"SiteId\" IS NOT NULL");
                         });
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Security.UserSsoLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("EmailAtLink")
+                        .HasMaxLength(256)
+                        .HasColumnType("character varying(256)");
+
+                    b.Property<DateTimeOffset?>("LastUsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProviderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProviderId", "Subject")
+                        .IsUnique();
+
+                    b.HasIndex("UserId", "ProviderId")
+                        .IsUnique();
+
+                    b.ToTable("user_sso_links", "qms");
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.ActionItem", b =>
@@ -19495,6 +19630,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("SecurityStamp")
                         .HasColumnType("text");
+
+                    b.Property<bool>("SsoBreakGlass")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("TwoFactorEnabled")
                         .HasColumnType("boolean");
@@ -23193,6 +23331,21 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .IsRequired();
 
                     b.Navigation("Role");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Security.UserSsoLink", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Security.IdentityProvider", null)
+                        .WithMany()
+                        .HasForeignKey("ProviderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.ActionItem", b =>

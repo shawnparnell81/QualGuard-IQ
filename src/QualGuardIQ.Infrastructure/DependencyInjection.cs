@@ -35,6 +35,10 @@ public static class DependencyInjection
         services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
         services.Configure<AuthOptions>(config.GetSection(AuthOptions.Section));
         services.AddScoped<SignInSecurityService>();
+        services.AddMemoryCache();
+        services.AddHttpClient("sso", c => c.Timeout = TimeSpan.FromSeconds(15));
+        services.AddSingleton<OidcClient>();
+        services.AddScoped<SsoService>();
         services.AddSingleton<AuthMailQueue>();
         Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddSingleton<IAuthMailer>(services, sp => sp.GetRequiredService<AuthMailQueue>());
         services.AddScoped<INumberingService, NumberingService>();

@@ -33,7 +33,8 @@ public sealed class AuthController(
     IOptions<AuthOptions> authOptions,
     IConfiguration config,
     IWebHostEnvironment env,
-    IAntiforgery antiforgery) : ControllerBase
+    IAntiforgery antiforgery,
+    SsoService sso) : ControllerBase
 {
     public const string TrustedCookie = "qms.trusted";
 
@@ -85,6 +86,7 @@ public sealed class AuthController(
     {
         await validator.ValidateAndThrowAsync(req);
         var user = await users.FindByEmailAsync(req.Email);
+        if (await SsoRequiredAsync(req.Email, user) is { } ssoOnly) return ssoOnly;
         if (user is null || !user.IsActive)
         {
             await security.LogAsync("SignInFailed", false, user?.Id, req.Email, user is null ? "Unknown account" : "Account disabled");
@@ -181,7 +183,9 @@ public sealed class AuthController(
     public async Task<IActionResult> Forgot(ForgotRequest req)
     {
         var started = System.Diagnostics.Stopwatch.StartNew();
-        if (!string.IsNullOrWhiteSpace(req.Email) && req.Email.Length <= 256 && req.Email.Contains('@'))
+        // People whose domain must use single sign-on have no password here to reset (break-glass accounts excepted).
+        if (!string.IsNullOrWhiteSpace(req.Email) && req.Email.Length <= 256 && req.Email.Contains('@')
+            && (await sso.RequiredProviderAsync(req.Email) is null || (await users.FindByEmailAsync(req.Email))?.SsoBreakGlass == true))
             await mfa.RequestResetAsync(req.Email, HttpContext.Connection.RemoteIpAddress?.ToString(), await AppNameAsync(), BaseUrl());
         // even out the response time between known and unknown addresses
         var floor = TimeSpan.FromMilliseconds(400);
@@ -220,6 +224,7 @@ public sealed class AuthController(
     {
         await validator.ValidateAndThrowAsync(req);
         var user = await users.FindByEmailAsync(req.Email);
+        if (await SsoRequiredAsync(req.Email, user) is { } ssoOnly) return ssoOnly;
         if (user is null || !user.IsActive)
         {
             await security.LogAsync("TokenFailed", false, user?.Id, req.Email, user is null ? "Unknown account" : "Account disabled");
@@ -263,6 +268,24 @@ public sealed class AuthController(
         return SignIn(principal, IdentityConstants.BearerScheme);
     }
 
+    public sealed record SsoCompleteRequest(string Challenge);
+
+    /// <summary>
+    /// Finishes a single sign-on: the sign-in page posts the ticket the provider round trip produced. 204 = signed in; 200 = the app's
+    /// two-step step is still needed (the provider's MFA is not trusted for this provider), same as after a password.
+    /// </summary>
+    [HttpPost("sso/complete")]
+    [AllowAnonymous]
+    [EnableRateLimiting("login")]
+    public async Task<IActionResult> SsoComplete(SsoCompleteRequest req)
+    {
+        var (user, provider, amr, error) = await sso.ReadCompletionAsync(req.Challenge);
+        if (error is not null) return await ChallengeProblem(error, user);
+        var how = $"Single sign-on ({provider!.DisplayName}{(amr.Length > 0 ? ", provider methods: " + amr : "")})";
+        if (provider.TrustProviderMfa) return await CompleteAsync(user!, how + "; provider MFA trusted");
+        return await NextStepAsync(user!, passwordJustChanged: false, viaSso: how);
+    }
+
     [HttpPost("logout")]
     [Authorize]
     public async Task<IActionResult> Logout()
@@ -283,9 +306,10 @@ public sealed class AuthController(
     }
 
     // ---------- helpers ----------
-    async Task<IActionResult> NextStepAsync(ApplicationUser user, bool passwordJustChanged)
+    async Task<IActionResult> NextStepAsync(ApplicationUser user, bool passwordJustChanged, string? viaSso = null)
     {
-        if (user.MustChangePassword && !passwordJustChanged)
+        // single sign-on uses no password here, so a temporary password never needs replacing on that path
+        if (user.MustChangePassword && !passwordJustChanged && viaSso is null)
         {
             await security.LogAsync("SignInStepRequired", true, user.Id, user.Email, "New password required");
             return Ok(Step(user, SignInStages.ChangePassword, "Your administrator set a temporary password. Choose your own password to continue."));
@@ -293,7 +317,7 @@ public sealed class AuthController(
         if (user.MfaSecret is not null)
         {
             if (await mfa.FindTrustedDeviceAsync(user, Request.Cookies[TrustedCookie], touch: true, HttpContext.Connection.RemoteIpAddress?.ToString()) is { } device)
-                return await CompleteAsync(user, $"Trusted browser ({device.Name}); no code asked");
+                return await CompleteAsync(user, (viaSso is null ? "" : viaSso + "; ") + $"Trusted browser ({device.Name}); no code asked");
             await security.LogAsync("SignInStepRequired", true, user.Id, user.Email, "Code required");
             var p = await mfa.PolicyAsync();
             return Ok(Step(user, SignInStages.Mfa, null, p.TrustedDevicesEnabled, mfa.TrustedDays(p), await mfa.RecoveryCodesLeftAsync(user.Id)));
@@ -305,7 +329,17 @@ public sealed class AuthController(
             var p = await mfa.PolicyAsync();
             return Ok(Step(user, SignInStages.Enrol, req.Reason, p.TrustedDevicesEnabled, mfa.TrustedDays(p)));
         }
-        return await CompleteAsync(user, passwordJustChanged ? "Password changed" : null);
+        return await CompleteAsync(user, viaSso ?? (passwordJustChanged ? "Password changed" : null));
+    }
+
+    /// <summary>403 sso_required when the email's domain must use single sign-on and the account is not a break-glass account.</summary>
+    async Task<IActionResult?> SsoRequiredAsync(string email, ApplicationUser? user)
+    {
+        var p = await sso.RequiredProviderAsync(email);
+        if (p is null || user?.SsoBreakGlass == true) return null;
+        await security.LogAsync("SignInBlockedSso", false, user?.Id, email, $"Password sign-in refused: {SsoService.DomainOf(email)} must use {p.DisplayName}");
+        return StatusCode(403, new { code = "sso_required", providerId = p.Id, providerName = p.DisplayName,
+            title = $"Your organization signs in with {p.DisplayName}. Use the \"Sign in with {p.DisplayName}\" button." });
     }
 
     StepResponse Step(ApplicationUser user, string stage, string? reason, bool trust = false, int days = 0, int codesLeft = 0)
