@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using QualGuardIQ.Application.Abstractions;
+using QualGuardIQ.Application.Rules;
 
 namespace QualGuardIQ.Application.Forms;
 
@@ -19,6 +20,33 @@ public sealed class FormField
     /// <summary>calc fields: arithmetic over number field keys, e.g. "(d1 + d2) / 2".</summary>
     public string? Formula { get; set; }
     public string? Section { get; set; }
+    /// <summary>Dynamic rule: the field is shown (and validated) only when this condition on another field holds. Hidden fields are cleared.</summary>
+    public FieldCondition? VisibleWhen { get; set; }
+    /// <summary>Dynamic rule: the field becomes required when this condition holds.</summary>
+    public FieldCondition? RequiredWhen { get; set; }
+    /// <summary>Dynamic validation: text must match this regular expression.</summary>
+    public string? Pattern { get; set; }
+    public string? PatternMessage { get; set; }
+    /// <summary>Dynamic validation: comparisons against another field or a fixed value (for example end date ≥ start date).</summary>
+    public List<FieldCheck>? Checks { get; set; }
+    /// <summary>Library component (key@version) this field was inserted from.</summary>
+    public string? FromComponent { get; set; }
+}
+
+public sealed class FieldCondition
+{
+    public string Field { get; set; } = "";
+    public string Operator { get; set; } = "equals";
+    public string? Value { get; set; }
+}
+
+public sealed class FieldCheck
+{
+    public string Operator { get; set; } = "greaterOrEqual";
+    /// <summary>Another field key to compare with; when empty, Value is used.</summary>
+    public string? Field { get; set; }
+    public string? Value { get; set; }
+    public string Message { get; set; } = "";
 }
 
 /// <summary>Parses, validates and evaluates controlled form schemas. Calculated values are always computed on the server.</summary>
@@ -44,6 +72,28 @@ public static class FormSchema
             if (f.Type == "choice" && (f.Options is null || f.Options.Count == 0)) throw new AppException($"Choice field '{f.Key}' needs options.");
             if (f.Type == "calc" && string.IsNullOrWhiteSpace(f.Formula)) throw new AppException($"Calculated field '{f.Key}' needs a formula.");
         }
+        foreach (var f in fields)
+        {
+            foreach (var (c, what) in new[] { (f.VisibleWhen, "visibility rule"), (f.RequiredWhen, "required rule") })
+            {
+                if (c is null) continue;
+                if (c.Field == f.Key || !keys.Contains(c.Field)) throw new AppException($"The {what} of '{f.Key}' refers to '{c.Field}', which is not another field of this form.");
+                if (!Conditions.Operators.Contains(c.Operator)) throw new AppException($"The {what} of '{f.Key}' has unknown operator '{c.Operator}'.");
+            }
+            if (f.Pattern is { Length: > 0 })
+            {
+                if (f.Pattern.Length > 300) throw new AppException($"The pattern of '{f.Key}' is too long.");
+                try { _ = new System.Text.RegularExpressions.Regex(f.Pattern, System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromMilliseconds(100)); }
+                catch (ArgumentException) { throw new AppException($"The pattern of '{f.Key}' is not a valid regular expression."); }
+            }
+            foreach (var k in f.Checks ?? [])
+            {
+                if (!Conditions.Operators.Contains(k.Operator) || k.Operator is "isEmpty" or "isNotEmpty") throw new AppException($"A check on '{f.Key}' has an unsupported operator '{k.Operator}'.");
+                if (string.IsNullOrWhiteSpace(k.Message)) throw new AppException($"A check on '{f.Key}' needs a message.");
+                if (!string.IsNullOrWhiteSpace(k.Field) && !keys.Contains(k.Field)) throw new AppException($"A check on '{f.Key}' compares with unknown field '{k.Field}'.");
+                if (string.IsNullOrWhiteSpace(k.Field) && string.IsNullOrWhiteSpace(k.Value)) throw new AppException($"A check on '{f.Key}' needs a field or a value to compare with.");
+            }
+        }
         foreach (var f in fields.Where(f => f.Type == "calc"))
             foreach (var id in Calc.Identifiers(f.Formula!))
                 if (!fields.Any(o => o.Key == id && o.Type is "number" or "calc" && o.Key != f.Key))
@@ -60,11 +110,17 @@ public static class FormSchema
         foreach (var k in input.Keys.Where(k => fields.All(f => f.Key != k))) errors.Add($"Unknown field '{k}'.");
         var output = new Dictionary<string, string?>();
         var numbers = new Dictionary<string, decimal>();
+        var visible = VisibleKeys(fields, input);
+        var raw = input.ToDictionary(kv => kv.Key, kv => (object?)kv.Value, StringComparer.Ordinal);
         foreach (var f in fields.Where(f => f.Type != "calc"))
         {
             input.TryGetValue(f.Key, out var v);
             v = string.IsNullOrWhiteSpace(v) ? null : v.Trim();
-            if (v is null) { if (requireComplete && f.Required) errors.Add($"{f.Label} is required."); output[f.Key] = null; continue; }
+            if (!visible.Contains(f.Key)) { output[f.Key] = null; continue; } // hidden by a dynamic rule: cleared, never required
+            var required = f.Required || (f.RequiredWhen is { } rw && Conditions.Matches(new Condition(rw.Field, rw.Operator, rw.Value), raw));
+            if (v is null) { if (requireComplete && required) errors.Add($"{f.Label} is required."); output[f.Key] = null; continue; }
+            if (f.Pattern is { Length: > 0 } pat && f.Type is "text" or "longtext" && !System.Text.RegularExpressions.Regex.IsMatch(v, pat, System.Text.RegularExpressions.RegexOptions.None, TimeSpan.FromMilliseconds(100)))
+                errors.Add(string.IsNullOrWhiteSpace(f.PatternMessage) ? $"{f.Label} is not in the expected format." : f.PatternMessage);
             switch (f.Type)
             {
                 case "number":
@@ -110,8 +166,34 @@ public static class FormSchema
             }
         }
         if (pending.Count > 0) errors.Add("Calculated fields refer to each other in a loop.");
+        var values = output.ToDictionary(kv => kv.Key, kv => (object?)(numbers.TryGetValue(kv.Key, out var n) ? n : kv.Value), StringComparer.Ordinal);
+        foreach (var f in fields.Where(f => f.Checks is { Count: > 0 } && output.GetValueOrDefault(f.Key) is not null))
+            foreach (var k in f.Checks!)
+            {
+                var other = string.IsNullOrWhiteSpace(k.Field) ? k.Value : output.GetValueOrDefault(k.Field!);
+                if (other is null) continue; // nothing to compare with yet
+                if (!Conditions.Matches(new Condition(f.Key, k.Operator, other), values)) errors.Add(k.Message);
+            }
         if (errors.Count > 0) throw new AppException(string.Join(" ", errors));
         return output;
+    }
+
+    /// <summary>Keys of fields shown for the given values (dynamic visibility rules; a field hidden by a hidden field is hidden too).</summary>
+    public static HashSet<string> VisibleKeys(List<FormField> fields, IReadOnlyDictionary<string, string?> input)
+    {
+        var raw = input.ToDictionary(kv => kv.Key, kv => (object?)kv.Value, StringComparer.Ordinal);
+        var visible = fields.Select(f => f.Key).ToHashSet();
+        for (var pass = 0; pass < fields.Count; pass++)
+        {
+            var changed = false;
+            foreach (var f in fields.Where(f => f.VisibleWhen is not null && visible.Contains(f.Key)))
+            {
+                var c = f.VisibleWhen!;
+                if (!visible.Contains(c.Field) || !Conditions.Matches(new Condition(c.Field, c.Operator, c.Value), raw)) { visible.Remove(f.Key); changed = true; }
+            }
+            if (!changed) break;
+        }
+        return visible;
     }
 }
 

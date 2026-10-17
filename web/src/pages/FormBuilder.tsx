@@ -5,6 +5,7 @@ import ArrowUpward from '@mui/icons-material/ArrowUpward';
 export interface FieldDef {
   key: string; label: string; type: string; required?: boolean; options?: string[] | null;
   min?: number | null; max?: number | null; unit?: string | null; formula?: string | null; section?: string | null;
+  visibleWhen?: { field: string; operator: string; value?: string | null } | null;
 }
 export const fieldTypes = [
   ['text', 'Short text'], ['longtext', 'Long text'], ['number', 'Number'], ['date', 'Date'], ['boolean', 'Yes / no'], ['choice', 'Choice list'], ['calc', 'Calculated'],
@@ -66,11 +67,31 @@ export function SchemaPreview({ schema }: { schema: string }) {
 }
 
 /** Renders a form record. Calculated fields are read-only and filled from the server response. */
+/** Mirrors the server's dynamic visibility rules so hidden fields disappear while typing; the server re-checks on save and submit. */
+export function visibleFields(fields: FieldDef[], values: Record<string, string | null>): FieldDef[] {
+  const match = (c: NonNullable<FieldDef['visibleWhen']>) => {
+    const a = (values[c.field] ?? '').trim(); const b = (c.value ?? '').trim(); const na = Number(a), nb = Number(b); const num = a !== '' && b !== '' && !isNaN(na) && !isNaN(nb);
+    const cmp = num ? na - nb : a.localeCompare(b);
+    switch (c.operator) {
+      case 'equals': return a !== '' && a.toLowerCase() === b.toLowerCase(); case 'notEquals': return a.toLowerCase() !== b.toLowerCase();
+      case 'greaterThan': return a !== '' && cmp > 0; case 'greaterOrEqual': return a !== '' && cmp >= 0; case 'lessThan': return a !== '' && cmp < 0; case 'lessOrEqual': return a !== '' && cmp <= 0;
+      case 'contains': return a.toLowerCase().includes(b.toLowerCase()); case 'in': return b.split(',').map((x) => x.trim().toLowerCase()).includes(a.toLowerCase());
+      case 'isEmpty': return a === ''; case 'isNotEmpty': return a !== ''; default: return true;
+    }
+  };
+  let shown = new Set(fields.map((f) => f.key));
+  for (let i = 0; i < fields.length; i++) {
+    const next = new Set([...shown].filter((k) => { const f = fields.find((x) => x.key === k)!; return !f.visibleWhen || (shown.has(f.visibleWhen.field) && match(f.visibleWhen)); }));
+    if (next.size === shown.size) break; shown = next;
+  }
+  return fields.filter((f) => shown.has(f.key));
+}
+
 export function FormRenderer({ fields, values, onChange, readOnly }: { fields: FieldDef[]; values: Record<string, string | null>; onChange: (v: Record<string, string | null>) => void; readOnly: boolean }) {
   const set = (k: string, v: string | null) => onChange({ ...values, [k]: v });
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
-      {fields.map((f) => {
+      {visibleFields(fields, values).map((f) => {
         const v = values[f.key] ?? '';
         const label = `${f.label}${f.unit ? ` (${f.unit})` : ''}`;
         const common = { key: f.key, label, required: !!f.required, disabled: readOnly, size: 'small' as const };

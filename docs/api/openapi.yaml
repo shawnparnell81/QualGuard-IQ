@@ -25825,6 +25825,199 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/forms/library:
+    get:
+      tags:
+        - FormLibrary
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FormComponent'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FormComponent'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FormComponent'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - FormLibrary
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormComponentInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/FormComponentInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/FormComponentInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/forms/library/{id}':
+    put:
+      tags:
+        - FormLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormComponentInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/FormComponentInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/FormComponentInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/forms/library/{id}/publish':
+    post:
+      tags:
+        - FormLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/forms/library/{id}/new-version':
+    post:
+      tags:
+        - FormLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/forms/library/{id}/insert':
+    get:
+      tags:
+        - FormLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: prefix
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FormField'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FormField'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FormField'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/forms/library/preview:
+    post:
+      tags:
+        - FormLibrary
+      description: 'Requires permission: `forms.view` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormPreviewInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/FormPreviewInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/FormPreviewInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/FormPreviewResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FormPreviewResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/FormPreviewResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/forms/templates/effective:
     get:
       tags:
@@ -38452,6 +38645,32 @@ components:
           type: string
         name:
           type: string
+    FieldCheck:
+      type: object
+      properties:
+        operator:
+          type: string
+        field:
+          type:
+            - 'null'
+            - string
+        value:
+          type:
+            - 'null'
+            - string
+        message:
+          type: string
+    FieldCondition:
+      type: object
+      properties:
+        field:
+          type: string
+        operator:
+          type: string
+        value:
+          type:
+            - 'null'
+            - string
     FileStreamResult:
       type: object
       properties:
@@ -38536,6 +38755,198 @@ components:
     FmeaType:
       type: integer
       default: 0
+    FormComponent:
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        category:
+          type: string
+        description:
+          type:
+            - 'null'
+            - string
+        version:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        status:
+          $ref: '#/components/schemas/LibraryStatus'
+        fieldsJson:
+          type: string
+        publishedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        publishedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    FormComponentInput:
+      required:
+        - key
+        - name
+        - category
+        - description
+        - fieldsJson
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        category:
+          type:
+            - 'null'
+            - string
+        description:
+          type:
+            - 'null'
+            - string
+        fieldsJson:
+          type: string
+    FormField:
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+        required:
+          type: boolean
+        options:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        min:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        max:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        unit:
+          type:
+            - 'null'
+            - string
+        formula:
+          type:
+            - 'null'
+            - string
+        section:
+          type:
+            - 'null'
+            - string
+        visibleWhen:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/FieldCondition'
+        requiredWhen:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/FieldCondition'
+        pattern:
+          type:
+            - 'null'
+            - string
+        patternMessage:
+          type:
+            - 'null'
+            - string
+        checks:
+          type:
+            - 'null'
+            - array
+          items:
+            $ref: '#/components/schemas/FieldCheck'
+        fromComponent:
+          type:
+            - 'null'
+            - string
+    FormPreviewInput:
+      required:
+        - fieldsJson
+        - values
+      type: object
+      properties:
+        fieldsJson:
+          type: string
+        values:
+          type:
+            - 'null'
+            - object
+          additionalProperties:
+            type: string
+    FormPreviewResult:
+      required:
+        - valid
+        - visible
+        - values
+        - error
+      type: object
+      properties:
+        valid:
+          type: boolean
+        visible:
+          type: array
+          items:
+            type: string
+        values:
+          type:
+            - 'null'
+            - object
+          additionalProperties:
+            type: string
+        error:
+          type:
+            - 'null'
+            - string
     FormRecordStatus:
       type: integer
     GateDecision:
@@ -39435,6 +39846,8 @@ components:
         isActive:
           type: boolean
           default: true
+    LibraryStatus:
+      type: integer
     LineDecision:
       type: integer
     LineDecisionInput:
@@ -52126,6 +52539,7 @@ tags:
   - name: Organization
   - name: Platform
   - name: Designer
+  - name: FormLibrary
   - name: Forms
   - name: Ncrs
   - name: Capas

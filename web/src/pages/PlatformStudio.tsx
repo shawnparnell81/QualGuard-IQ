@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Paper, Stack, Switch, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { get, put } from '../api';
+import { get, post, put } from '../api';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { mono } from '../theme';
 import { mod } from './Enterprise';
@@ -102,6 +102,125 @@ export function WorkflowDesigner() {
           <Button variant="contained" onClick={() => setEditing(null)}>Done</Button>
         </DialogActions>
       </Dialog>
+    </ModuleWorkspace>
+  );
+}
+
+/* ---------------- Form designer ---------------- */
+interface Cond { field: string; operator: string; value?: string | null }
+interface Check { operator: string; field?: string | null; value?: string | null; message: string }
+interface FField { key: string; label: string; type: string; required?: boolean; options?: string[] | null; min?: number | null; max?: number | null; unit?: string | null; formula?: string | null; section?: string | null;
+  visibleWhen?: Cond | null; requiredWhen?: Cond | null; pattern?: string | null; patternMessage?: string | null; checks?: Check[] | null; fromComponent?: string | null }
+const ftypes: [string, string, string][] = [['text', 'Short text', 'Aa'], ['longtext', 'Paragraph', '¶'], ['number', 'Number', '#'], ['date', 'Date', '📅'], ['boolean', 'Yes / no', '✓'], ['choice', 'Choice list', '☰'], ['calc', 'Calculated', 'ƒ']];
+const ops = ['equals', 'notEquals', 'greaterThan', 'greaterOrEqual', 'lessThan', 'lessOrEqual', 'contains', 'in', 'isEmpty', 'isNotEmpty'];
+const clean = (fs: FField[]) => JSON.stringify(fs.map((f) => Object.fromEntries(Object.entries(f).filter(([, v]) => v !== null && v !== undefined && v !== ''))));
+
+function CondEditor({ label, value, keys, onChange }: { label: string; value?: Cond | null; keys: string[]; onChange: (c: Cond | null) => void }) {
+  return (
+    <Stack direction="row" gap={1}>
+      <TextField select size="small" label={label} value={value?.field ?? ''} onChange={(e) => onChange(e.target.value ? { field: e.target.value, operator: value?.operator ?? 'equals', value: value?.value ?? '' } : null)} sx={{ flex: 1 }}>
+        <MenuItem value="">Always</MenuItem>{keys.map((k) => <MenuItem key={k} value={k}>{k}</MenuItem>)}</TextField>
+      <TextField select size="small" label="is" value={value?.operator ?? 'equals'} disabled={!value} onChange={(e) => onChange({ ...value!, operator: e.target.value })} sx={{ width: 110 }}>{ops.map((o) => <MenuItem key={o} value={o}>{opLabel[o]}</MenuItem>)}</TextField>
+      <TextField size="small" label="Value" value={value?.value ?? ''} disabled={!value} onChange={(e) => onChange({ ...value!, value: e.target.value })} sx={{ width: 110 }} />
+    </Stack>
+  );
+}
+
+/** Form designer: palette + canvas + property panel with dynamic rules and validation, live preview evaluated by the server, and the versioned component library. Saves into a form template's draft revision (document control publishes it). */
+export function FormDesigner() {
+  const qc = useQueryClient();
+  const [tab, setTab] = useState('design');
+  const templates = useQuery({ queryKey: ['form-templates'], queryFn: () => get<any>('/api/documents?kind=2&pageSize=100&page=1') });
+  const library = useQuery({ queryKey: ['form-library'], queryFn: () => get<any[]>('/api/forms/library') });
+  const [tplId, setTplId] = useState(''); const tpl = useQuery({ queryKey: ['doc', tplId], enabled: !!tplId, queryFn: () => get<any>(`/api/documents/${tplId}`) });
+  const draftRev = tpl.data?.revisions?.find((r: any) => r.status === 0);
+  const [fields, setFields] = useState<FField[]>([]); const [loadedFor, setLoadedFor] = useState('');
+  if (draftRev && loadedFor !== draftRev.id) { setLoadedFor(draftRev.id); try { setFields(draftRev.fieldSchema ? JSON.parse(draftRev.fieldSchema) : []); } catch { setFields([]); } }
+  const [sel, setSel] = useState<number | null>(null); const f = sel != null ? fields[sel] : null;
+  const set = (patch: Partial<FField>) => setFields(fields.map((x, i) => (i === sel ? { ...x, ...patch } : x)));
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [sample, setSample] = useState<Record<string, string>>({}); const [preview, setPreview] = useState<any>(null);
+  const [comp, setComp] = useState<{ open: boolean; key: string; name: string; category: string }>({ open: false, key: '', name: '', category: 'General' });
+  const keys = fields.map((x) => x.key);
+  const add = (type: string) => { const n = fields.length + 1; setFields([...fields, { key: `${type}_${n}`, label: ftypes.find((t) => t[0] === type)![1], type, options: type === 'choice' ? ['Option A', 'Option B'] : undefined, formula: type === 'calc' ? '' : undefined }]); setSel(fields.length); };
+  const insert = async (c: any) => { const prefix = window.prompt('Key prefix for the inserted fields (optional)', c.key) ?? ''; try { const fs = await get<FField[]>(`/api/forms/library/${c.id}/insert?prefix=${encodeURIComponent(prefix)}`); setFields([...fields, ...fs]); setMsg({ ok: true, text: `Inserted ${c.name} v${c.version}.` }); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } };
+  const runPreview = async () => { setPreview(await post<any>('/api/forms/library/preview', { fieldsJson: clean(fields), values: sample })); };
+  const save = async () => {
+    setMsg(null);
+    try { await put(`/api/documents/revisions/${draftRev.id}`, { changeSummary: draftRev.changeSummary, effectiveDate: draftRev.effectiveDate, trainingRequired: draftRev.trainingRequired, rowVersion: draftRev.rowVersion, fieldSchema: clean(fields) }); setMsg({ ok: true, text: `Saved to ${tpl.data.number} rev ${draftRev.revision} (draft). Submit it for approval in Documents to publish.` }); qc.invalidateQueries({ queryKey: ['doc', tplId] }); }
+    catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
+  };
+  const saveComponent = async () => { setMsg(null); try { await post('/api/forms/library', { key: comp.key, name: comp.name, category: comp.category, description: null, fieldsJson: clean(fields) }); setComp({ ...comp, open: false }); qc.invalidateQueries({ queryKey: ['form-library'] }); setMsg({ ok: true, text: 'Component saved as a draft in the library.' }); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } };
+  return (
+    <ModuleWorkspace module={P()} crumbs={crumbs('Form designer')} title="Form designer" tabs={[{ value: 'design', label: 'Design' }, { value: 'preview', label: 'Live preview' }, { value: 'library', label: 'Component library' }]} tab={tab} onTab={setTab}
+      actions={<Stack direction="row" gap={1}><Button disabled={fields.length === 0} onClick={() => setComp({ ...comp, open: true })}>Save as component</Button><Button variant="contained" disabled={!draftRev} onClick={save}>Save to template draft</Button></Stack>}>
+      {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
+      <Stack direction="row" gap={2} alignItems="center" sx={{ mb: 2 }}>
+        <TextField select size="small" label="Form template" value={tplId} onChange={(e) => { setTplId(e.target.value); setSel(null); }} sx={{ minWidth: 360 }}>
+          {(templates.data?.items ?? []).map((t: any) => <MenuItem key={t.id} value={t.id}>{t.number} — {t.title}</MenuItem>)}</TextField>
+        {tplId && !draftRev && tpl.data && <Alert severity="info" sx={{ py: 0 }}>No draft revision. Start a new revision in Documents to change this template; you can still design and save components.</Alert>}
+        {draftRev && <Chip color="warning" label={`Editing rev ${draftRev.revision} (draft)`} />}
+      </Stack>
+      {tab === 'design' && <Box sx={{ display: 'grid', gridTemplateColumns: '200px 1fr 360px', gap: 2, alignItems: 'start' }}>
+        <Paper sx={{ p: 1.5 }}><Typography variant="overline">Palette</Typography>
+          <Stack gap={.75}>{ftypes.map(([t, l, icon]) => <Button key={t} variant="outlined" size="small" sx={{ justifyContent: 'flex-start' }} onClick={() => add(t)}><Box component="span" sx={{ width: 24, fontFamily: mono }}>{icon}</Box>{l}</Button>)}</Stack>
+          <Typography variant="overline" sx={{ display: 'block', mt: 2 }}>Library</Typography>
+          <Stack gap={.75}>{(library.data ?? []).filter((c) => c.status === 1).map((c) => <Button key={c.id} size="small" sx={{ justifyContent: 'flex-start', textAlign: 'left' }} onClick={() => insert(c)}>⧉ {c.name} v{c.version}</Button>)}
+            {(library.data ?? []).filter((c) => c.status === 1).length === 0 && <Typography variant="caption" color="text.secondary">No published components.</Typography>}</Stack></Paper>
+        <Paper sx={{ p: 1.5, minHeight: 300, bgcolor: 'rgba(0,128,128,.03)' }}><Typography variant="overline">Canvas · {fields.length} fields</Typography>
+          <Stack gap={1}>{fields.map((x, i) => <Paper key={i} onClick={() => setSel(i)} sx={{ p: 1.25, cursor: 'pointer', display: 'flex', gap: 1.5, alignItems: 'center', outline: sel === i ? '2px solid' : 'none', outlineColor: 'primary.main' }}>
+            <Box sx={{ width: 28, height: 28, borderRadius: 1, bgcolor: 'primary.main', color: 'primary.contrastText', display: 'grid', placeItems: 'center', fontFamily: mono, fontSize: 13 }}>{ftypes.find((t) => t[0] === x.type)?.[2]}</Box>
+            <Box sx={{ flex: 1 }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{x.label}{x.required ? ' *' : ''}</Typography><Typography variant="caption" sx={{ fontFamily: mono }}>{x.key}</Typography></Box>
+            {x.visibleWhen && <Chip size="small" color="info" label={`shown if ${x.visibleWhen.field} ${opLabel[x.visibleWhen.operator]} ${x.visibleWhen.value ?? ''}`} />}
+            {x.requiredWhen && <Chip size="small" color="warning" label="conditionally required" />}
+            {(x.checks?.length || x.pattern) && <Chip size="small" label="validated" />}
+            {x.fromComponent && <Chip size="small" variant="outlined" label={x.fromComponent} />}
+            <Button size="small" disabled={i === 0} onClick={(e) => { e.stopPropagation(); const n = [...fields]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; setFields(n); setSel(i - 1); }}>↑</Button>
+            <Button size="small" color="error" onClick={(e) => { e.stopPropagation(); setFields(fields.filter((_, j) => j !== i)); setSel(null); }}>✕</Button></Paper>)}
+            {fields.length === 0 && <Typography color="text.secondary" sx={{ p: 3, textAlign: 'center' }}>Pick a template, then add fields from the palette or insert a library component.</Typography>}</Stack></Paper>
+        <Paper sx={{ p: 1.5 }}><Typography variant="overline">Properties</Typography>
+          {!f && <Typography variant="body2" color="text.secondary">Select a field on the canvas.</Typography>}
+          {f && <Stack gap={1.25}>
+            <TextField size="small" label="Label" value={f.label} onChange={(e) => set({ label: e.target.value })} />
+            <TextField size="small" label="Key" value={f.key} onChange={(e) => set({ key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })} />
+            <TextField size="small" label="Section" value={f.section ?? ''} onChange={(e) => set({ section: e.target.value || null })} />
+            <FormControlLabel control={<Switch checked={!!f.required} disabled={f.type === 'calc'} onChange={(e) => set({ required: e.target.checked })} />} label="Always required" />
+            {f.type === 'choice' && <TextField size="small" label="Options (comma separated)" value={(f.options ?? []).join(', ')} onChange={(e) => set({ options: e.target.value.split(',').map((s) => s.trim()) })} />}
+            {f.type === 'calc' && <TextField size="small" label="Formula" value={f.formula ?? ''} onChange={(e) => set({ formula: e.target.value })} />}
+            {f.type === 'number' && <Stack direction="row" gap={1}><TextField size="small" type="number" label="Min" value={f.min ?? ''} onChange={(e) => set({ min: e.target.value === '' ? null : Number(e.target.value) })} /><TextField size="small" type="number" label="Max" value={f.max ?? ''} onChange={(e) => set({ max: e.target.value === '' ? null : Number(e.target.value) })} /><TextField size="small" label="Unit" value={f.unit ?? ''} onChange={(e) => set({ unit: e.target.value || null })} /></Stack>}
+            <Typography variant="overline">Dynamic rules</Typography>
+            <CondEditor label="Show when" value={f.visibleWhen} keys={keys.filter((k) => k !== f.key)} onChange={(c) => set({ visibleWhen: c })} />
+            <CondEditor label="Required when" value={f.requiredWhen} keys={keys.filter((k) => k !== f.key)} onChange={(c) => set({ requiredWhen: c })} />
+            <Typography variant="overline">Validation</Typography>
+            {(f.type === 'text' || f.type === 'longtext') && <><TextField size="small" label="Pattern (regular expression)" value={f.pattern ?? ''} onChange={(e) => set({ pattern: e.target.value || null })} /><TextField size="small" label="Pattern message" value={f.patternMessage ?? ''} onChange={(e) => set({ patternMessage: e.target.value || null })} /></>}
+            {(f.checks ?? []).map((c, i) => <Stack key={i} direction="row" gap={.5}>
+              <TextField select size="small" label="Must be" value={c.operator} onChange={(e) => set({ checks: f.checks!.map((x, j) => (j === i ? { ...x, operator: e.target.value } : x)) })} sx={{ width: 90 }}>{ops.slice(0, 8).map((o) => <MenuItem key={o} value={o}>{opLabel[o]}</MenuItem>)}</TextField>
+              <TextField select size="small" label="Field" value={c.field ?? ''} onChange={(e) => set({ checks: f.checks!.map((x, j) => (j === i ? { ...x, field: e.target.value || null } : x)) })} sx={{ width: 100 }}><MenuItem value="">value →</MenuItem>{keys.filter((k) => k !== f.key).map((k) => <MenuItem key={k} value={k}>{k}</MenuItem>)}</TextField>
+              <TextField size="small" label="Value" value={c.value ?? ''} disabled={!!c.field} onChange={(e) => set({ checks: f.checks!.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)) })} sx={{ width: 70 }} />
+              <TextField size="small" label="Message" value={c.message} onChange={(e) => set({ checks: f.checks!.map((x, j) => (j === i ? { ...x, message: e.target.value } : x)) })} sx={{ flex: 1 }} /></Stack>)}
+            <Button size="small" onClick={() => set({ checks: [...(f.checks ?? []), { operator: 'greaterOrEqual', field: null, value: '', message: '' }] })}>+ Add check</Button>
+          </Stack>}</Paper>
+      </Box>}
+      {tab === 'preview' && <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+        <Paper sx={{ p: 2 }}><Typography variant="overline">Sample entry</Typography>
+          <Stack gap={1.25}>{fields.filter((x) => x.type !== 'calc' && (!preview || preview.visible.includes(x.key))).map((x) => x.type === 'choice'
+            ? <TextField key={x.key} select size="small" label={x.label} value={sample[x.key] ?? ''} onChange={(e) => setSample({ ...sample, [x.key]: e.target.value })}><MenuItem value="">—</MenuItem>{(x.options ?? []).map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}</TextField>
+            : <TextField key={x.key} size="small" type={x.type === 'date' ? 'date' : 'text'} InputLabelProps={{ shrink: true }} label={x.label} value={sample[x.key] ?? ''} onChange={(e) => setSample({ ...sample, [x.key]: e.target.value })} />)}</Stack>
+          <Button variant="contained" sx={{ mt: 2 }} onClick={runPreview}>Evaluate rules</Button></Paper>
+        <Paper sx={{ p: 2 }}><Typography variant="overline">Result</Typography>
+          {!preview && <Typography color="text.secondary">Enter sample values and evaluate. Hidden fields disappear from the entry pane.</Typography>}
+          {preview && <>{preview.error ? <Alert severity="warning">{preview.error}</Alert> : <Alert severity="success">All rules pass.</Alert>}
+            <Typography variant="body2" sx={{ mt: 1 }}>Visible: {preview.visible.join(', ')}</Typography>
+            {preview.values && <Box component="pre" sx={{ fontFamily: mono, fontSize: 12 }}>{JSON.stringify(preview.values, null, 2)}</Box>}</>}</Paper>
+      </Box>}
+      {tab === 'library' && <Stack gap={1}>{(library.data ?? []).map((c) => <Paper key={c.id} sx={{ p: 1.5, display: 'flex', gap: 2, alignItems: 'center' }}>
+        <Chip size="small" color={c.status === 1 ? 'success' : 'warning'} label={c.status === 1 ? 'Published' : 'Draft'} /><Typography sx={{ fontWeight: 600, flex: 1 }}>{c.name} <Typography component="span" variant="caption" sx={{ fontFamily: mono }}>{c.key} v{c.version} · {c.category}</Typography></Typography>
+        {c.status === 0 && <Button size="small" onClick={async () => { try { await post(`/api/forms/library/${c.id}/publish`); qc.invalidateQueries({ queryKey: ['form-library'] }); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } }}>Publish</Button>}
+        {c.status === 1 && <Button size="small" onClick={async () => { try { await post(`/api/forms/library/${c.id}/new-version`); qc.invalidateQueries({ queryKey: ['form-library'] }); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } }}>New version</Button>}</Paper>)}
+        {library.data?.length === 0 && <Typography color="text.secondary">The library is empty. Design fields and choose “Save as component”.</Typography>}</Stack>}
+      <Dialog open={comp.open} onClose={() => setComp({ ...comp, open: false })} fullWidth maxWidth="xs"><DialogTitle>Save as library component</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}><TextField label="Component key" value={comp.key} onChange={(e) => setComp({ ...comp, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })} /><TextField label="Name" value={comp.name} onChange={(e) => setComp({ ...comp, name: e.target.value })} /><TextField label="Category" value={comp.category} onChange={(e) => setComp({ ...comp, category: e.target.value })} /></DialogContent>
+        <DialogActions><Button onClick={() => setComp({ ...comp, open: false })}>Cancel</Button><Button variant="contained" onClick={saveComponent}>Save draft</Button></DialogActions></Dialog>
     </ModuleWorkspace>
   );
 }
