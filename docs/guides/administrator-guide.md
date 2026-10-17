@@ -110,3 +110,10 @@ dates, a pack version (content fingerprint) and a mapping version. Every state c
 
 The worker runs: document release (hourly), due reminders (daily), alerts, approval escalations and report schedules
 (every few minutes), workforce updates (daily) and data exports. Job status is shown on Platform › System health.
+
+## SMS and push providers
+
+**Platform → SMS and push** (`api.admin`) configures providers, message templates and shows the delivery log.
+A provider is off until its current configuration passes a connection test; production providers also need
+approval by a second person with `integrations.approve`. Only users who opt in themselves receive messages.
+The gateway contract, secret handling, retries and receipts are in `docs/setup/sms-push-providers.md`.
