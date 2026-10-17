@@ -15,6 +15,7 @@ import { SignDialog } from '../components/SignDialog';
 import { useWork } from '../work';
 import { type FieldDef } from './FormBuilder';
 import { FormView } from '../forms/FormView';
+import { FormSignDialog } from '../forms/FormSignDialog';
 import { parseDefinition, type FormDef } from '../forms/definition';
 import { mono } from '../theme';
 
@@ -78,7 +79,11 @@ export function FormRecordNew() {
   );
 }
 
-interface FormDetail { id: string; number: string; title: string; templateId: string; templateNumber: string; templateRevision: string; status: number; submittedAt: string | null; rowVersion: number; siteId: string; fields: FieldDef[]; definition?: FormDef; values: Record<string, string | null>; canEdit: boolean }
+interface FormDetail { id: string; number: string; title: string; templateId: string; templateNumber: string; templateRevision: string; status: number; submittedAt: string | null; rowVersion: number; siteId: string; fields: FieldDef[]; definition?: FormDef; values: Record<string, string | null>; canEdit: boolean;
+  signatures?: { id: string; key: string; label: string; role: string; meaning: string; signerName: string; signedAt: string; verification: string; comment: string | null; valid: boolean }[] }
+
+/** Signature roles signed while the record is completed, before submission (matches the server). */
+const preSubmit = ['prepared', 'performed', 'verified', 'witness'];
 
 export function FormRecordDetail() {
   const { id } = useParams();
@@ -87,6 +92,7 @@ export function FormRecordDetail() {
   const [values, setValues] = useState<Record<string, string | null>>({});
   const [saved, setSaved] = useState(false);
   const [signing, setSigning] = useState(false);
+  const [signBlock, setSignBlock] = useState<string | null>(null);
   const rec = useQuery({ queryKey: ['formrecord', id], queryFn: () => get<FormDetail>(`/api/forms/records/${id}`) });
   const work = useWork();
   const refresh = () => { qc.invalidateQueries({ queryKey: ['formrecord', id] }); qc.invalidateQueries({ queryKey: ['work'] }); };
@@ -95,11 +101,16 @@ export function FormRecordDetail() {
   const d = rec.data;
   if (!d) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'Form records', to: '/forms/records' }]} title="Loading">{rec.error ? <Alert severity="error">{(rec.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   const approval = work.data?.approvals.find((a) => a.recordId === d.id);
+  const def = parseDefinition(d.definition ?? d.fields);
+  const block = signBlock ? def.signatures.find((b) => b.key === signBlock) : undefined;
+  const dirty = JSON.stringify(values) !== JSON.stringify(d.values);
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Form records', to: '/forms/records' }, { label: d.number }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={formStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Form', value: 'form' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
+        <Button variant="outlined" href={`/api/forms/records/${d.id}/pdf?style=standardized`} target="_blank">Print</Button>
+        {def.layout && <Button variant="outlined" href={`/api/forms/records/${d.id}/pdf?style=original`} target="_blank">Print original look</Button>}
         {approval && <Button variant="contained" color="secondary" onClick={() => setSigning(true)}>Review and sign</Button>}
         {d.canEdit && <Button variant="outlined" onClick={() => run(async () => { const r = await put<{ values: Record<string, string | null> }>(`/api/forms/records/${d.id}`, { values, rowVersion: d.rowVersion }); setValues(r.values); setSaved(true); })}>Save draft</Button>}
         {d.canEdit && <Button variant="contained" onClick={() => run(async () => { await put(`/api/forms/records/${d.id}`, { values, rowVersion: d.rowVersion }); await post(`/api/forms/records/${d.id}/submit`); })}>Submit</Button>}
@@ -109,11 +120,17 @@ export function FormRecordDetail() {
       <Box sx={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 3 }}>
         <Facts items={[['Template', `${d.templateNumber} revision ${d.templateRevision}`], ['Status', formStatus[d.status]], ['Submitted', fmtDateTime(d.submittedAt)]]} />
         <Box sx={{ minWidth: 0 }}>
-          {tab === 'form' && <Paper sx={{ p: 3 }}><FormView def={parseDefinition(d.definition ?? d.fields)} values={values} onChange={setValues} readOnly={!d.canEdit} recordType="FormRecord" recordId={d.id} siteId={d.siteId} /></Paper>}
+          {tab === 'form' && <Paper sx={{ p: 3 }}><FormView def={def} values={values} onChange={setValues} readOnly={!d.canEdit} recordType="FormRecord" recordId={d.id} siteId={d.siteId}
+            signatures={d.signatures ?? []} onSign={setSignBlock} canSign={(k) => { const b = def.signatures.find((x) => x.key === k); return !!b && (preSubmit.includes(b.role) ? d.canEdit : d.status === 1); }} /></Paper>}
           {tab === 'approvals' && <ApprovalsPanel type="FormRecord" id={d.id} />}
           {tab === 'more' && <AttachmentsAndHistory type="FormRecord" id={d.id} canEdit={d.canEdit} />}
         </Box>
       </Box>
+      {block && <FormSignDialog block={block} recordNumber={d.number} onClose={() => setSignBlock(null)} onSign={async (password, mfaCode, comment) => {
+        if (dirty && d.canEdit) { const r = await put<{ values: Record<string, string | null> }>(`/api/forms/records/${d.id}`, { values, rowVersion: d.rowVersion }); setValues(r.values); }
+        await post(`/api/forms/records/${d.id}/signatures/${block.key}`, { password, mfaCode, comment });
+        refresh();
+      }} />}
       {signing && approval && <SignDialog approvalId={approval.id} recordNumber={approval.recordNumber} stepName={approval.stepName} onClose={() => { setSigning(false); refresh(); }} />}
     </ModuleWorkspace>
   );

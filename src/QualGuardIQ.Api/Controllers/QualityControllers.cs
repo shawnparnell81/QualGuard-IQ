@@ -1,4 +1,5 @@
 using QualGuardIQ.Application.Abstractions;
+using QualGuardIQ.Application.Forms;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -76,6 +77,47 @@ public sealed class FormsController(AppDbContext db, FormService forms, ModuleSu
         var editable = r.Status is FormRecordStatus.Draft or FormRecordStatus.Rejected && await m.CanAsync(Permissions.FormsEdit, r.SiteId, r.DepartmentId, ct);
         return new { r.Id, r.Number, r.Title, r.TemplateId, r.TemplateNumber, r.TemplateRevision, r.Status, r.SiteId, r.SubmittedAt, r.RowVersion, Fields = def.Fields, Definition = def, Values = values, CanEdit = editable,
             Signatures = (await forms.SignaturesAsync(id, ct)).Select(s => new { s.Id, Key = s.SignatureKey, s.Label, s.Role, s.Meaning, s.SignerId, s.SignerName, s.SignedAt, s.Verification, s.Comment, Valid = !s.IsInvalidated, s.InvalidatedAt, s.InvalidatedReason }) };
+    }
+
+    /// <summary>Form record as PDF: style=standardized (QualGuard IQ layout) or original (converted source layout). Printing is audited.</summary>
+    [HttpGet("records/{id:guid}/pdf")]
+    public async Task<IActionResult> RecordPdf(Guid id, [FromQuery] string? style, [FromServices] FormPrintService print, CancellationToken ct)
+    {
+        var r = await print.RecordAsync(id, style, ct);
+        Response.Headers["X-Print-Style"] = r.Style;
+        return File(r.Pdf, "application/pdf", r.FileName);
+    }
+
+    /// <summary>Blank form template revision as PDF (controlled copy when effective, watermarked otherwise). Printing is audited.</summary>
+    [HttpGet("templates/revisions/{revisionId:guid}/pdf")]
+    public async Task<IActionResult> TemplatePdf(Guid revisionId, [FromQuery] string? style, [FromServices] FormPrintService print, CancellationToken ct)
+    {
+        var r = await print.TemplateAsync(revisionId, style, ct);
+        Response.Headers["X-Print-Style"] = r.Style;
+        return File(r.Pdf, "application/pdf", r.FileName);
+    }
+
+    public sealed record PreviewRequest(string FieldSchema, string? Style, Dictionary<string, string?>? Values);
+
+    /// <summary>Designer print preview of an unsaved definition (validated first). Returns a PDF watermarked PREVIEW.</summary>
+    [HttpPost("preview/pdf")]
+    [RequirePermission(Permissions.FormsEdit)]
+    public async Task<IActionResult> PreviewPdf(PreviewRequest req, [FromServices] FormPrintService print, CancellationToken ct)
+    {
+        var r = await print.PreviewAsync(req.FieldSchema, req.Style, req.Values, ct);
+        Response.Headers["X-Print-Style"] = r.Style;
+        return File(r.Pdf, "application/pdf", r.FileName);
+    }
+
+    /// <summary>Designer check: validates an unsaved definition and computes calculated values for sample entries, without saving anything.</summary>
+    [HttpPost("preview/evaluate")]
+    [RequirePermission(Permissions.FormsEdit)]
+    public object Evaluate(PreviewRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.FieldSchema) || req.FieldSchema.Length > 4_000_000) throw new AppException("The form definition is missing or too large.");
+        var def = FormDefinitions.Parse(req.FieldSchema);
+        FormDefinitions.Validate(def);
+        return new { Values = FormDefinitions.Apply(def, req.Values ?? [], requireComplete: false), Fields = def.Fields.Count, Tables = def.Tables.Count, Sections = def.Sections.Count, Signatures = def.Signatures.Count };
     }
 
     [HttpPost("records/{id:guid}/signatures/{key}")]

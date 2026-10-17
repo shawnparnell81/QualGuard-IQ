@@ -21,6 +21,101 @@ public sealed class FormDefinition
     public List<FormField> Fields { get; set; } = [];
     public List<FormTable> Tables { get; set; } = [];
     public List<SignatureBlock> Signatures { get; set; } = [];
+    /// <summary>Source-faithful print layout captured at conversion (worksheet grids, document paragraphs and tables). Drives the original-look output.</summary>
+    public SourceLayout? Layout { get; set; }
+}
+
+/// <summary>
+/// The arrangement of the converted source: an ordered list of blocks. A grid block is a worksheet range or a document table
+/// (column widths, row heights, merged cells, borders, fonts, fills, alignment); a paragraph block is document text.
+/// Cells can be bound to form content with <see cref="LayoutCell.Bind"/>.
+/// </summary>
+public sealed class SourceLayout
+{
+    /// <summary>xlsx, docx, csv or pdf.</summary>
+    public string Source { get; set; } = "xlsx";
+    public string? FileName { get; set; }
+    public List<LayoutBlock> Blocks { get; set; } = [];
+}
+
+public sealed class LayoutBlock
+{
+    /// <summary>grid, paragraph or pagebreak.</summary>
+    public string Type { get; set; } = "grid";
+    /// <summary>Worksheet name or document part this block came from.</summary>
+    public string? Origin { get; set; }
+    public string? Orientation { get; set; }
+    public LayoutGrid? Grid { get; set; }
+    public string? Text { get; set; }
+    public CellStyle? Style { get; set; }
+    /// <summary>Paragraph left indent in points.</summary>
+    public double Indent { get; set; }
+    public double SpaceBefore { get; set; }
+    public double SpaceAfter { get; set; }
+}
+
+public sealed class LayoutGrid
+{
+    public List<double> ColumnWidths { get; set; } = [];
+    public List<double> RowHeights { get; set; } = [];
+    public List<LayoutCell> Cells { get; set; } = [];
+    /// <summary>Rows at the top repeated on every printed page (print titles or a table's header rows).</summary>
+    public int RepeatRows { get; set; }
+    /// <summary>A template row range that repeats once per row of a dynamic table when printed and filled.</summary>
+    public RepeatRegion? Repeat { get; set; }
+}
+
+public sealed class RepeatRegion
+{
+    public string Table { get; set; } = "";
+    /// <summary>Zero-based first grid row of the repeating band and its height in rows (normally 1).</summary>
+    public int StartRow { get; set; }
+    public int RowCount { get; set; } = 1;
+    /// <summary>How many band copies the source showed (blank rows on the original sheet); printing never shows fewer.</summary>
+    public int SourceRows { get; set; } = 1;
+}
+
+public sealed class LayoutCell
+{
+    public int R { get; set; }
+    public int C { get; set; }
+    public int RowSpan { get; set; } = 1;
+    public int ColSpan { get; set; } = 1;
+    /// <summary>Static text (labels, headings).</summary>
+    public string? Text { get; set; }
+    /// <summary>
+    /// What the cell shows from the record: "field:key", "col:table.column" (inside a repeat region), "cell:table.column.rowIndex" (fixed rows),
+    /// "total:table.function_column" (e.g. total:dims.sum_qty), "sig:block.name", "sig:block.date", "sig:block.meaning", "check:key" (boolean drawn as a box).
+    /// </summary>
+    public string? Bind { get; set; }
+    public CellStyle? Style { get; set; }
+}
+
+public sealed class CellStyle
+{
+    /// <summary>sans, serif or mono (closest standard face of the source font).</summary>
+    public string? Font { get; set; }
+    /// <summary>Source font name, kept for the fidelity report.</summary>
+    public string? FontName { get; set; }
+    public double? Size { get; set; }
+    public bool Bold { get; set; }
+    public bool Italic { get; set; }
+    public bool Underline { get; set; }
+    public string? Colour { get; set; }
+    public string? Fill { get; set; }
+    /// <summary>left, center, right.</summary>
+    public string? Align { get; set; }
+    /// <summary>top, middle, bottom.</summary>
+    public string? VAlign { get; set; }
+    public bool Wrap { get; set; }
+    /// <summary>Border styles: thin, medium, thick, dashed, dotted, double, or null for none.</summary>
+    public string? BorderTop { get; set; }
+    public string? BorderRight { get; set; }
+    public string? BorderBottom { get; set; }
+    public string? BorderLeft { get; set; }
+    public string? BorderColour { get; set; }
+    /// <summary>Number format from the source (e.g. "0.000", "yyyy-mm-dd").</summary>
+    public string? NumberFormat { get; set; }
 }
 
 public sealed class PageSetup
@@ -38,6 +133,8 @@ public sealed class PageSetup
     public string PrintStyle { get; set; } = "standardized";
     /// <summary>Base font size in points for printing (8–12).</summary>
     public decimal FontSize { get; set; } = 9;
+    /// <summary>Confidentiality marking printed in the footer ({confidentiality}).</summary>
+    public string Confidentiality { get; set; } = "Internal";
 }
 
 /// <summary>Header or footer text. Tokens: {template}, {revision}, {record}, {title}, {page}, {pages}, {site}, {printed}, {printedBy}, {status}, {confidentiality}.</summary>
@@ -181,6 +278,72 @@ public static class FormDefinitions
         return scope;
     }
 
+    public const int MaxLayoutBlocks = 2000, MaxLayoutCells = 60000;
+    static readonly HashSet<string> BorderStyles = ["thin", "medium", "thick", "dashed", "dotted", "double", "hair"];
+
+    /// <summary>Checks the source layout: block kinds, grid bounds, merged ranges inside the grid and bindings that refer to real fields, tables and signatures.</summary>
+    public static void ValidateLayout(FormDefinition d, SourceLayout l)
+    {
+        if (l.Source is not ("xlsx" or "docx" or "csv" or "pdf")) throw new AppException("Layout source must be xlsx, docx, csv or pdf.");
+        if (l.Blocks.Count > MaxLayoutBlocks) throw new AppException($"A layout can have at most {MaxLayoutBlocks} blocks.");
+        var fields = d.Fields.Select(f => f.Key).ToHashSet();
+        var tables = d.Tables.ToDictionary(t => t.Key);
+        var sigs = d.Signatures.Select(s => s.Key).ToHashSet();
+        var cells = 0;
+        foreach (var b in l.Blocks)
+        {
+            if (b.Type is not ("grid" or "paragraph" or "pagebreak")) throw new AppException($"Layout block type '{b.Type}' is not supported.");
+            if (b.Orientation is not (null or "portrait" or "landscape")) throw new AppException("Layout orientation must be portrait or landscape.");
+            CheckStyle(b.Style);
+            if (b.Type != "grid") continue;
+            var g = b.Grid ?? throw new AppException("A grid block needs a grid.");
+            if (g.ColumnWidths.Count is 0 or > 200 || g.RowHeights.Count is 0 or > 5000) throw new AppException("A layout grid needs 1–200 columns and 1–5000 rows.");
+            if (g.ColumnWidths.Any(w => w is < 0 or > 2000) || g.RowHeights.Any(h => h is < 0 or > 2000)) throw new AppException("Layout column widths and row heights must be 0–2000 points.");
+            if (g.RepeatRows < 0 || g.RepeatRows > g.RowHeights.Count) throw new AppException("Layout repeat rows exceed the grid.");
+            if (g.Repeat is { } rr)
+            {
+                if (!tables.ContainsKey(rr.Table)) throw new AppException($"Layout repeat region refers to unknown table '{rr.Table}'.");
+                if (rr.StartRow < 0 || rr.RowCount < 1 || rr.StartRow + rr.RowCount > g.RowHeights.Count || rr.SourceRows < 1) throw new AppException("Layout repeat region is outside the grid.");
+            }
+            cells += g.Cells.Count;
+            if (cells > MaxLayoutCells) throw new AppException($"A layout can have at most {MaxLayoutCells} cells.");
+            foreach (var c in g.Cells)
+            {
+                if (c.R < 0 || c.C < 0 || c.RowSpan < 1 || c.ColSpan < 1 || c.R + c.RowSpan > g.RowHeights.Count || c.C + c.ColSpan > g.ColumnWidths.Count)
+                    throw new AppException($"Layout cell at row {c.R + 1}, column {c.C + 1} is outside the grid.");
+                if (c.Text is { Length: > 4000 }) throw new AppException("Layout cell text can be at most 4000 characters.");
+                CheckStyle(c.Style);
+                if (c.Bind is null) continue;
+                var i = c.Bind.IndexOf(':');
+                var (kind, target) = i < 0 ? ("", c.Bind) : (c.Bind[..i], c.Bind[(i + 1)..]);
+                var parts = target.Split('.');
+                var ok = kind switch
+                {
+                    "field" or "check" => fields.Contains(target),
+                    "col" => parts.Length == 2 && tables.TryGetValue(parts[0], out var t1) && t1.Columns.Any(x => x.Key == parts[1] || parts[1] == "_row"),
+                    "cell" => parts.Length == 3 && tables.TryGetValue(parts[0], out var t2) && t2.Columns.Any(x => x.Key == parts[1]) && int.TryParse(parts[2], out var ri) && ri >= 0,
+                    "total" => parts.Length == 2 && tables.TryGetValue(parts[0], out var t3) && (t3.Totals ?? []).Any(x => $"{x.Function}_{x.Column}" == parts[1]),
+                    "sig" => parts.Length == 2 && sigs.Contains(parts[0]) && parts[1] is "name" or "date" or "meaning",
+                    _ => false
+                };
+                if (!ok) throw new AppException($"Layout cell binding '{c.Bind}' does not refer to a field, table, total or signature in this form.");
+            }
+        }
+    }
+
+    static void CheckStyle(CellStyle? s)
+    {
+        if (s is null) return;
+        if (s.Font is not (null or "sans" or "serif" or "mono")) throw new AppException("Layout font must be sans, serif or mono.");
+        if (s.Size is < 4 or > 72) throw new AppException("Layout font size must be 4–72 points.");
+        if (s.Align is not (null or "left" or "center" or "right")) throw new AppException("Layout alignment must be left, center or right.");
+        if (s.VAlign is not (null or "top" or "middle" or "bottom")) throw new AppException("Layout vertical alignment must be top, middle or bottom.");
+        foreach (var b in new[] { s.BorderTop, s.BorderRight, s.BorderBottom, s.BorderLeft })
+            if (b is not null && !BorderStyles.Contains(b)) throw new AppException($"Layout border style '{b}' is not supported.");
+        foreach (var c in new[] { s.Colour, s.Fill, s.BorderColour })
+            if (c is not null && !Regex.IsMatch(c, "^#[0-9A-Fa-f]{6}$")) throw new AppException("Layout colours must be #RRGGBB.");
+    }
+
     public static void Validate(FormDefinition d)
     {
         if (d.Fields.Count == 0 && d.Tables.Count == 0) throw new AppException("A form needs at least one field or table.");
@@ -193,6 +356,8 @@ public static class FormDefinitions
         if (d.Page.FontSize is < 7 or > 12) throw new AppException("Print font size must be between 7 and 12 points.");
         if (d.Page.PrintStyle is not ("standardized" or "original")) throw new AppException("Print style must be standardized or original.");
         if (d.Page.Watermark is { Length: > 40 }) throw new AppException("Watermark text can be at most 40 characters.");
+        if (string.IsNullOrWhiteSpace(d.Page.Confidentiality) || d.Page.Confidentiality.Length > 40) throw new AppException("Confidentiality marking must be 1–40 characters.");
+        if (d.Layout is { } layout) ValidateLayout(d, layout);
 
         var all = new HashSet<string>(StringComparer.Ordinal); // keys share one namespace so values never collide
         var sections = new Dictionary<string, FormSection>();

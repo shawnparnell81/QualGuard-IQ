@@ -30353,6 +30353,100 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/forms/records/{id}/pdf':
+    get:
+      tags:
+        - Forms
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: style
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/forms/templates/revisions/{revisionId}/pdf':
+    get:
+      tags:
+        - Forms
+      description: Requires an authenticated user.
+      parameters:
+        - name: revisionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: style
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/forms/preview/pdf:
+    post:
+      tags:
+        - Forms
+      description: 'Requires permission: `forms.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PreviewRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PreviewRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/forms/preview/evaluate:
+    post:
+      tags:
+        - Forms
+      description: 'Requires permission: `forms.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PreviewRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PreviewRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PreviewRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/forms/records/{id}/signatures/{key}':
     post:
       tags:
@@ -54690,6 +54784,25 @@ components:
             - integer
             - string
           format: uint32
+    PreviewRequest:
+      required:
+        - fieldSchema
+        - style
+        - values
+      type: object
+      properties:
+        fieldSchema:
+          type: string
+        style:
+          type:
+            - 'null'
+            - string
+        values:
+          type:
+            - 'null'
+            - object
+          additionalProperties:
+            type: string
     PreviewStep:
       required:
         - stage
