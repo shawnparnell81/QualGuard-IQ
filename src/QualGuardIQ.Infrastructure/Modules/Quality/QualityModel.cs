@@ -9,6 +9,7 @@ namespace QualGuardIQ.Infrastructure.Persistence;
 public partial class AppDbContext
 {
     public DbSet<FormRecord> FormRecords => Set<FormRecord>();
+    public DbSet<FormSignature> FormSignatures => Set<FormSignature>();
     public DbSet<Ncr> Ncrs => Set<Ncr>();
     public DbSet<Capa> Capas => Set<Capa>();
     public DbSet<Audit> Audits => Set<Audit>();
@@ -45,6 +46,29 @@ public partial class AppDbContext
             e.HasOne<DocumentRevision>().WithMany().HasForeignKey(x => x.TemplateRevisionId).OnDelete(DeleteBehavior.Restrict);
         });
         Scoped<FormRecord>(b);
+        b.Entity<FormSignature>(e =>
+        {
+            e.ToTable("form_signatures", t =>
+            {
+                t.HasCheckConstraint("ck_form_signatures_verification", "\"Verification\" IN ('password', 'password+mfa')");
+                t.HasCheckConstraint("ck_form_signatures_invalidated", "(NOT \"IsInvalidated\" AND \"InvalidatedAt\" IS NULL) OR (\"IsInvalidated\" AND \"InvalidatedAt\" IS NOT NULL)");
+            });
+            e.Property(x => x.SignatureKey).HasMaxLength(50).IsRequired();
+            e.Property(x => x.Label).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Role).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Meaning).HasMaxLength(300).IsRequired();
+            e.Property(x => x.SignerName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.Verification).HasMaxLength(20).IsRequired();
+            e.Property(x => x.Comment).HasMaxLength(1000);
+            e.Property(x => x.ContentHash).HasMaxLength(64).IsFixedLength().IsRequired();
+            e.Property(x => x.SignatureHash).HasMaxLength(64).IsFixedLength().IsRequired();
+            e.Property(x => x.InvalidatedReason).HasMaxLength(300);
+            e.HasOne<FormRecord>().WithMany().HasForeignKey(x => x.FormRecordId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.SignerId).OnDelete(DeleteBehavior.Restrict);
+            // one valid signature per block; invalidated ones are kept as history
+            e.HasIndex(x => new { x.FormRecordId, x.SignatureKey }).IsUnique().HasFilter("NOT \"IsInvalidated\"");
+            e.HasIndex(x => x.SignerId);
+        });
 
         b.Entity<Ncr>(e =>
         {

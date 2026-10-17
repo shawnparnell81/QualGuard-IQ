@@ -17,7 +17,7 @@ namespace QualGuardIQ.Infrastructure.Services;
 /// </summary>
 public sealed class WorkflowService(
     AppDbContext db, IRecordRegistry records, IAccessService access, ICurrentUser current, INotifier notifier,
-    UserManager<ApplicationUser> users, IEnumerable<IApprovalHandler> handlers, IClock clock, ISecurityEventLogger security, QualGuardIQ.Infrastructure.Modules.Enterprise.QualificationService qualifications, RecordConditions conditions, QualGuardIQ.Infrastructure.Modules.Platform.RuleEngine rules)
+    UserManager<ApplicationUser> users, IEnumerable<IApprovalHandler> handlers, IClock clock, ISecurityEventLogger security, QualGuardIQ.Infrastructure.Modules.Enterprise.QualificationService qualifications, RecordConditions conditions, QualGuardIQ.Infrastructure.Modules.Platform.RuleEngine rules, SignerVerification signer)
 {
     public async Task<ApprovalRequest> SubmitAsync(string recordType, Guid recordId, CancellationToken ct)
     {
@@ -66,26 +66,7 @@ public sealed class WorkflowService(
         if (!approve && string.IsNullOrWhiteSpace(comment))
             throw new AppException("A reason is required to reject.");
 
-        var user = await users.FindByIdAsync(uid.ToString()) ?? throw new ForbiddenException();
-        if (!await users.CheckPasswordAsync(user, password ?? ""))
-        {
-            await users.AccessFailedAsync(user);
-            await security.LogAsync("SignatureFailed", false, uid, user.Email, $"Approval {req.RecordNumber}");
-            throw new AppException("Password is incorrect. The signature was not applied.", 401);
-        }
-        var verification = "password";
-        if (user.TwoFactorEnabled || step.RequireMfa)
-        {
-            if (!user.TwoFactorEnabled) throw new AppException("This step needs an MFA-verified signature. Set up an authenticator app first.", 400);
-            var code = (mfaCode ?? "").Replace(" ", "").Replace("-", "");
-            if (code.Length == 0 || !await users.VerifyTwoFactorTokenAsync(user, users.Options.Tokens.AuthenticatorTokenProvider, code))
-            {
-                await security.LogAsync("SignatureFailed", false, uid, user.Email, $"Approval {req.RecordNumber}: MFA code");
-                throw new AppException("The authenticator code is incorrect. The signature was not applied.", 401);
-            }
-            verification = "password+mfa";
-        }
-        await users.ResetAccessFailedCountAsync(user);
+        var (user, verification) = await signer.VerifyAsync(uid, password, mfaCode, step.RequireMfa, $"Approval {req.RecordNumber}", "This step needs an MFA-verified signature. Set up an authenticator app first.");
         if (approve && step.RequiredSkillId is { } skillId)
         {
             var q = await qualifications.CheckAsync(uid, skillId, ct);
