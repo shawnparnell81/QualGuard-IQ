@@ -90,12 +90,16 @@ public sealed class NcrsController(AppDbContext db, NcrService ncrs, CapaService
 
     [HttpGet]
     [RequirePermission(Permissions.NcrView)]
-    public async Task<object> List([FromQuery] string? q, [FromQuery] NcrStatus? status, [FromQuery] bool openOnly = false, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
+    public async Task<object> List([FromQuery] string? q, [FromQuery] NcrStatus? status, [FromQuery] bool openOnly = false, [FromQuery] Guid? supplierId = null, [FromQuery] Guid? customerId = null, [FromQuery] Guid? partId = null, [FromQuery] Guid? productId = null, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default)
     {
         var query = await m.ScopeAsync(db.Ncrs.AsNoTracking(), Permissions.NcrView, ct);
+        if (supplierId is not null) query = query.Where(x => x.SupplierId == supplierId);
+        if (customerId is not null) query = query.Where(x => x.CustomerId == customerId);
+        if (partId is not null) query = query.Where(x => x.PartId == partId);
+        if (productId is not null) query = query.Where(x => x.ProductId == productId);
         if (status is not null) query = query.Where(x => x.Status == status);
         if (openOnly) query = query.Where(x => x.Status != NcrStatus.Closed && x.Status != NcrStatus.Cancelled);
-        if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => EF.Functions.ILike(x.Number + " " + x.Title + " " + (x.PartNumber ?? "") + " " + (x.LotNumber ?? ""), $"%{q.Trim()}%"));
+        if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => EF.Functions.ILike(x.Number + " " + x.Title + " " + (x.PartNumber ?? "") + " " + (x.LotNumber ?? "") + " " + (x.BatchNumber ?? "") + " " + (x.SerialNumber ?? "") + " " + (x.WorkOrder ?? "") + " " + (x.PurchaseOrder ?? ""), $"%{q.Trim()}%"));
         return await Paging.PageAsync(query.OrderByDescending(x => x.CreatedAt).Select(x => new
         {
             x.Id, x.Number, x.Title, x.Source, x.Severity, x.Status, x.PartNumber, x.LotNumber, x.DetectedOn, x.Disposition,
@@ -120,12 +124,23 @@ public sealed class NcrsController(AppDbContext db, NcrService ncrs, CapaService
         var s = n.Status;
         var allowed = Allowed.Of(("contain", canEdit && s <= NcrStatus.Contained), ("dispose", canEdit && s == NcrStatus.Contained),
             ("capa", canEdit && s is >= NcrStatus.Contained and <= NcrStatus.DispositionApproved),
-            ("close", canEdit && s == NcrStatus.DispositionApproved && (!n.CapaRequired || anyCapa) && await Allowed.ActionsClosedAsync(db, NcrService.RecordType, id, false, ct)),
+            ("details", canEdit && s is NcrStatus.Open or NcrStatus.Contained or NcrStatus.DispositionApproved),
+            ("verify", canEdit && s == NcrStatus.DispositionApproved && n.VerifiedAt == null),
+            ("close", canEdit && s == NcrStatus.DispositionApproved && n.VerifiedAt != null && (!n.CapaRequired || anyCapa) && await Allowed.ActionsClosedAsync(db, NcrService.RecordType, id, false, ct)),
+            ("reopen", s == NcrStatus.Closed && await m.CanAsync(Permissions.NcrApprove, n.SiteId, n.DepartmentId, ct)),
             ("actions", canEdit && s < NcrStatus.Closed));
         return new
         {
             n.Id, n.Number, n.Title, n.Description, n.Source, n.SiteId, n.DepartmentId, n.OwnerId, n.PartNumber, n.LotNumber, n.QuantityAffected, n.DetectedOn, n.Severity,
             n.Status, n.ContainmentSummary, n.Disposition, n.DispositionJustification, n.CapaRequired, n.ClosureNotes, n.ClosedAt, n.CreatedAt,
+            n.ProductId, n.PartId, n.PartRevision, n.SupplierId, n.CustomerId, n.Process, n.Operation, n.WorkOrder, n.PurchaseOrder, n.BatchNumber, n.SerialNumber,
+            n.DetectionPoint, n.DefectCode, n.Requirement, n.ActualCondition, n.Segregation, n.Investigation, n.DispositionInstructions, n.QuantityDispositioned,
+            n.QuantityScrapped, n.CostOfPoorQuality, n.VerificationNotes, n.VerifiedAt, n.ReopenCount, n.ReopenReason, n.RowVersion,
+            VerifiedByName = n.VerifiedById == null ? null : await db.Users.Where(u => u.Id == n.VerifiedById).Select(u => u.DisplayName).FirstAsync(ct),
+            ProductLabel = n.ProductId == null ? null : await db.Products.Where(x => x.Id == n.ProductId).Select(x => x.Number + " " + x.Name).FirstAsync(ct),
+            PartLabel = n.PartId == null ? null : await db.Parts.Where(x => x.Id == n.PartId).Select(x => x.PartNumber + " " + x.Name).FirstAsync(ct),
+            SupplierLabel = n.SupplierId == null ? null : await db.Suppliers.Where(x => x.Id == n.SupplierId).Select(x => x.Code + " " + x.LegalName).FirstAsync(ct),
+            CustomerLabel = n.CustomerId == null ? null : await db.Customers.Where(x => x.Id == n.CustomerId).Select(x => x.Code + " " + x.Name).FirstAsync(ct),
             OwnerName = await db.Users.Where(u => u.Id == n.OwnerId).Select(u => u.DisplayName).FirstAsync(ct),
             SiteCode = await db.Sites.Where(s => s.Id == n.SiteId).Select(s => s.Code).FirstAsync(ct),
             Capas = linkedCapas, CanEdit = canEdit, Allowed = allowed
@@ -140,6 +155,17 @@ public sealed class NcrsController(AppDbContext db, NcrService ncrs, CapaService
 
     [HttpPost("{id:guid}/close")]
     public async Task<IActionResult> Close(Guid id, TextRequest r, CancellationToken ct) { await ncrs.CloseAsync(id, r.Text, ct); return NoContent(); }
+
+    public sealed record DetailsRequest(NcrDetails Details, uint RowVersion);
+
+    [HttpPut("{id:guid}/details")]
+    public async Task<IActionResult> Details(Guid id, DetailsRequest r, CancellationToken ct) { await ncrs.UpdateDetailsAsync(id, r.Details, r.RowVersion, ct); return NoContent(); }
+
+    [HttpPost("{id:guid}/verify")]
+    public async Task<IActionResult> Verify(Guid id, NcrVerifyRequest r, CancellationToken ct) { await ncrs.VerifyAsync(id, r, ct); return NoContent(); }
+
+    [HttpPost("{id:guid}/reopen")]
+    public async Task<IActionResult> Reopen(Guid id, TextRequest r, CancellationToken ct) { await ncrs.ReopenAsync(id, r.Text, ct); return NoContent(); }
 
     [HttpPost("{id:guid}/capa")]
     public async Task<object> CreateCapa(Guid id, CreateCapaFromNcr r, CancellationToken ct)
@@ -185,11 +211,17 @@ public sealed class CapasController(AppDbContext db, CapaService capas, ModuleSu
         var canVerify = c.OwnerId != m.UserId && await m.CanAsync(Permissions.CapaApprove, c.SiteId, c.DepartmentId, ct);
         var allowed = Allowed.Of(("rootCause", canEdit && c.Status <= CapaStatus.Implementation),
             ("check", canEdit && c.Status == CapaStatus.Implementation && await Allowed.ActionsClosedAsync(db, CapaService.RecordType, id, true, ct)),
-            ("verify", canVerify && c.Status == CapaStatus.EffectivenessCheck), ("actions", canEdit && c.Status < CapaStatus.EffectivenessCheck));
+            ("verify", canVerify && c.Status == CapaStatus.EffectivenessCheck), ("actions", canEdit && c.Status < CapaStatus.EffectivenessCheck),
+            ("plan", canEdit && c.Status < CapaStatus.Closed),
+            ("reopen", c.Status == CapaStatus.Closed && await m.CanAsync(Permissions.CapaApprove, c.SiteId, c.DepartmentId, ct)));
+        var team = System.Text.Json.JsonSerializer.Deserialize<List<Guid>>(c.TeamJson) ?? [];
         return new
         {
             c.Id, c.Number, c.Title, c.ProblemStatement, c.CapaType, c.Source, c.SiteId, c.DepartmentId, c.OwnerId, c.Status, c.RootCauseMethod, c.RootCause,
             c.EffectivenessCriteria, c.EffectivenessDueOn, c.EffectivenessResult, c.WasEffective, c.ClosedAt, c.CreatedAt,
+            c.Scope, c.Impact, c.Risk, c.ImmediateCorrection, c.Containment, c.ContributingCauses, c.EscapePoint, c.RecurrenceMonitoring, c.RecurrenceReviewOn,
+            c.ReopenCount, c.ReopenReason, c.RowVersion, Analysis = System.Text.Json.JsonDocument.Parse(c.AnalysisJson).RootElement.Clone(),
+            Team = await db.Users.Where(u => team.Contains(u.Id)).Select(u => new { u.Id, u.DisplayName }).ToListAsync(ct),
             OwnerName = await db.Users.Where(u => u.Id == c.OwnerId).Select(u => u.DisplayName).FirstAsync(ct),
             VerifiedByName = c.EffectivenessVerifiedById == null ? null : await db.Users.Where(u => u.Id == c.EffectivenessVerifiedById).Select(u => u.DisplayName).FirstAsync(ct),
             SiteCode = await db.Sites.Where(s => s.Id == c.SiteId).Select(s => s.Code).FirstAsync(ct),
@@ -199,6 +231,12 @@ public sealed class CapasController(AppDbContext db, CapaService capas, ModuleSu
 
     [HttpPost("{id:guid}/root-cause")]
     public async Task<IActionResult> RootCause(Guid id, RootCauseRequest r, CancellationToken ct) { await capas.RecordRootCauseAsync(id, r, ct); return NoContent(); }
+
+    [HttpPut("{id:guid}/plan")]
+    public async Task<IActionResult> Plan(Guid id, CapaPlanRequest r, CancellationToken ct) { await capas.SavePlanAsync(id, r, ct); return NoContent(); }
+
+    [HttpPost("{id:guid}/reopen")]
+    public async Task<IActionResult> Reopen(Guid id, TextRequest r, CancellationToken ct) { await capas.ReopenAsync(id, r.Text, ct); return NoContent(); }
 
     [HttpPost("{id:guid}/effectiveness-check")]
     public async Task<IActionResult> StartCheck(Guid id, CancellationToken ct) { await capas.StartEffectivenessCheckAsync(id, ct); return NoContent(); }

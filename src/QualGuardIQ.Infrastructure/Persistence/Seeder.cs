@@ -77,6 +77,7 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
         ("FormTemplateRevision", "Form template approval", Permissions.FormsApprove),
         ("FormRecord", "Form record review", Permissions.FormsApprove),
         ("Ncr", "NCR disposition approval", Permissions.NcrApprove),
+        ("Supplier", "Supplier approval", Permissions.SuppliersApprove),
     ];
 
     public static readonly (string Type, string Prefix)[] DefaultSequences =

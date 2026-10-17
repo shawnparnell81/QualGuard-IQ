@@ -83,7 +83,7 @@ public sealed class QualityModuleTests(TestApp app)
         Assert.Equal(HttpStatusCode.NotFound, (await outsider.GetAsync($"/api/ncrs/{ncrId}")).StatusCode);
         Assert.Equal(HttpStatusCode.Conflict, (await owner.PostAsync($"/api/ncrs/{ncrId}/disposition", new { disposition = 2, justification = "Rework", capaRequired = true })).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync($"/api/ncrs/{ncrId}/containment", new { text = "Lot quarantined in MRB cage; WIP 100% inspected" })).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync($"/api/ncrs/{ncrId}/disposition", new { disposition = 2, justification = "Re-bore to next size per engineering", capaRequired = true })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync($"/api/ncrs/{ncrId}/disposition", new { disposition = 2, justification = "Re-bore to next size per engineering", capaRequired = true, instructions = "Re-bore to 25.20 per ECN; 100% inspect" })).StatusCode);
         var ncr = await owner.GetElAsync($"/api/ncrs/{ncrId}");
         Assert.Equal(HttpStatusCode.OK, (await mrb.SignAsync(await mrb.PendingApprovalIdAsync(ncr.Str("number")))).StatusCode);
         Assert.Equal(3, (await owner.GetElAsync($"/api/ncrs/{ncrId}")).Int("status"));
@@ -93,7 +93,11 @@ public sealed class QualityModuleTests(TestApp app)
         var capa = await (await owner.PostOkAsync($"/api/ncrs/{ncrId}/capa", new { title = (string?)null, problemStatement = (string?)null, ownerId = (Guid?)null })).JsonAsync();
         var capaId = capa.Id();
         Assert.StartsWith("CAPA-", capa.Str("number"));
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostAsync($"/api/ncrs/{ncrId}/close", new { text = "Too early" })).StatusCode); // not verified
+        Assert.Equal(HttpStatusCode.BadRequest, (await owner.PostAsync($"/api/ncrs/{ncrId}/verify", new { notes = "Partial", quantityDispositioned = 10m, costOfPoorQuality = 0m })).StatusCode); // quantity not accounted
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync($"/api/ncrs/{ncrId}/verify", new { notes = "12 reworked and re-inspected", quantityDispositioned = 12m, costOfPoorQuality = 480m })).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync($"/api/ncrs/{ncrId}/close", new { text = "Lot reworked and released; CAPA opened" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await owner.PostAsync($"/api/ncrs/{ncrId}/reopen", new { text = "Recurred" })).StatusCode);
 
         Assert.Equal(HttpStatusCode.Conflict, (await owner.PostAsync($"/api/capas/{capaId}/effectiveness-check")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await owner.PostAsync($"/api/capas/{capaId}/root-cause", new { method = "5 Whys", rootCause = "Worn boring bar insert; no tool-life limit in the setup sheet", effectivenessCriteria = "Zero oversize bores in the next 10 lots", effectivenessDueOn = Today.AddDays(60) })).StatusCode);

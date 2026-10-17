@@ -69,6 +69,10 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.Property(x => x.ApplicationName).HasMaxLength(100).IsRequired();
             e.Property(x => x.OrganizationName).HasMaxLength(200).IsRequired();
             e.Property(x => x.PrimaryColor).HasMaxLength(9);
+            e.Property(x => x.SupplierSuspendedPolicy).HasDefaultValue(QualGuardIQ.Domain.MasterData.SupplierRestriction.Block).HasSentinel((QualGuardIQ.Domain.MasterData.SupplierRestriction)(-1));
+            e.Property(x => x.SupplierDisqualifiedPolicy).HasDefaultValue(QualGuardIQ.Domain.MasterData.SupplierRestriction.Block).HasSentinel((QualGuardIQ.Domain.MasterData.SupplierRestriction)(-1));
+            e.Property(x => x.SupplierUnapprovedPolicy).HasDefaultValue(QualGuardIQ.Domain.MasterData.SupplierRestriction.Warn).HasSentinel((QualGuardIQ.Domain.MasterData.SupplierRestriction)(-1));
+            e.Property(x => x.SupplierExpiredCertPolicy).HasDefaultValue(QualGuardIQ.Domain.MasterData.SupplierRestriction.Warn).HasSentinel((QualGuardIQ.Domain.MasterData.SupplierRestriction)(-1));
             e.ToTable(t => t.HasCheckConstraint("ck_org_color", "\"PrimaryColor\" IS NULL OR \"PrimaryColor\" ~ '^#[0-9A-Fa-f]{6}$'"));
         });
 

@@ -57,7 +57,28 @@ public partial class AppDbContext
             e.HasIndex(x => x.Number).IsUnique();
             e.HasIndex(x => new { x.Status, x.SiteId });
             e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
-            e.ToTable(t => t.HasCheckConstraint("ck_ncr_qty", "\"QuantityAffected\" IS NULL OR \"QuantityAffected\" >= 0"));
+            foreach (var n in new[] { nameof(Ncr.PartRevision) }) e.Property(n).HasMaxLength(10);
+            foreach (var n in new[] { nameof(Ncr.Process), nameof(Ncr.Operation), nameof(Ncr.WorkOrder), nameof(Ncr.PurchaseOrder), nameof(Ncr.BatchNumber), nameof(Ncr.SerialNumber), nameof(Ncr.DetectionPoint), nameof(Ncr.DefectCode) })
+                e.Property(n).HasMaxLength(100);
+            foreach (var n in new[] { nameof(Ncr.Requirement), nameof(Ncr.ActualCondition), nameof(Ncr.Segregation), nameof(Ncr.Investigation), nameof(Ncr.DispositionInstructions), nameof(Ncr.VerificationNotes), nameof(Ncr.ReopenReason) })
+                e.Property(n).HasMaxLength(4000);
+            e.Property(x => x.QuantityDispositioned).HasPrecision(18, 4);
+            e.Property(x => x.QuantityScrapped).HasPrecision(18, 4);
+            e.Property(x => x.CostOfPoorQuality).HasPrecision(18, 2);
+            e.HasIndex(x => x.SupplierId);
+            e.HasIndex(x => x.CustomerId);
+            e.HasIndex(x => x.PartId);
+            e.HasOne<QualGuardIQ.Domain.MasterData.Product>().WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<QualGuardIQ.Domain.MasterData.Part>().WithMany().HasForeignKey(x => x.PartId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<QualGuardIQ.Domain.MasterData.Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<QualGuardIQ.Domain.MasterData.Customer>().WithMany().HasForeignKey(x => x.CustomerId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.VerifiedById).OnDelete(DeleteBehavior.Restrict);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_ncr_qty", "\"QuantityAffected\" IS NULL OR \"QuantityAffected\" >= 0");
+                t.HasCheckConstraint("ck_ncr_qty_disp", "\"QuantityDispositioned\" IS NULL OR \"QuantityDispositioned\" >= 0");
+                t.HasCheckConstraint("ck_ncr_copq", "\"CostOfPoorQuality\" IS NULL OR \"CostOfPoorQuality\" >= 0");
+            });
         });
         Scoped<Ncr>(b);
 
@@ -70,6 +91,10 @@ public partial class AppDbContext
             e.Property(x => x.CapaType).HasMaxLength(30).IsRequired();
             e.Property(x => x.Source).HasMaxLength(60).IsRequired();
             e.Property(x => x.RootCauseMethod).HasMaxLength(60);
+            foreach (var n in new[] { nameof(Capa.Scope), nameof(Capa.Impact), nameof(Capa.ImmediateCorrection), nameof(Capa.Containment), nameof(Capa.ContributingCauses), nameof(Capa.EscapePoint), nameof(Capa.RecurrenceMonitoring), nameof(Capa.ReopenReason) })
+                e.Property(n).HasMaxLength(4000);
+            e.Property(x => x.TeamJson).HasColumnType("jsonb").HasDefaultValueSql("'[]'::jsonb");
+            e.Property(x => x.AnalysisJson).HasColumnType("jsonb").HasDefaultValueSql("'{}'::jsonb");
             e.HasIndex(x => x.Number).IsUnique();
             e.HasIndex(x => new { x.Status, x.SiteId });
             e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);

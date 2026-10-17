@@ -35,6 +35,13 @@ public static class Permissions
     public const string CalibrationView = "calibration.view";
     public const string CalibrationEdit = "calibration.edit";
     public const string CalibrationApprove = "calibration.approve";
+    public const string MasterDataView = "masterdata.view";
+    public const string MasterDataEdit = "masterdata.edit";
+    public const string SuppliersView = "suppliers.view";
+    public const string SuppliersEdit = "suppliers.edit";
+    public const string SuppliersApprove = "suppliers.approve";
+    /// <summary>Use a restricted (suspended, disqualified, unapproved, expired) supplier with a recorded reason.</summary>
+    public const string SuppliersOverride = "suppliers.override";
 
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)

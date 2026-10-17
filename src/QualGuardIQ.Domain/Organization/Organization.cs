@@ -11,6 +11,11 @@ public class OrganizationSettings : Entity, IAudited
     public Guid? LogoAttachmentId { get; set; }
     public string TimeZone { get; set; } = "America/New_York";
     public bool LoginHistoryEnabled { get; set; }
+    /// <summary>Supplier restriction policy: what happens when a record references a supplier in this condition.</summary>
+    public QualGuardIQ.Domain.MasterData.SupplierRestriction SupplierSuspendedPolicy { get; set; } = QualGuardIQ.Domain.MasterData.SupplierRestriction.Block;
+    public QualGuardIQ.Domain.MasterData.SupplierRestriction SupplierDisqualifiedPolicy { get; set; } = QualGuardIQ.Domain.MasterData.SupplierRestriction.Block;
+    public QualGuardIQ.Domain.MasterData.SupplierRestriction SupplierUnapprovedPolicy { get; set; } = QualGuardIQ.Domain.MasterData.SupplierRestriction.Warn;
+    public QualGuardIQ.Domain.MasterData.SupplierRestriction SupplierExpiredCertPolicy { get; set; } = QualGuardIQ.Domain.MasterData.SupplierRestriction.Warn;
     public string AuditLabel => "Organization settings";
 }
 

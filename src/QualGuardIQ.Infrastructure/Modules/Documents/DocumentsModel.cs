@@ -53,5 +53,6 @@ public partial class AppDbContext
     {
         ConfigureDocuments(b);
         ConfigureQuality(b);
+        ConfigureMasterData(b);
     }
 }
