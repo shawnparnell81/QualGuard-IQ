@@ -6588,6 +6588,125 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("alert_rules", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.ApqpLineImport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Accepted")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DocumentNumber")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("DocumentRevision")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<bool>("DryRun")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Duplicates")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FileHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(260)
+                        .HasColumnType("character varying(260)");
+
+                    b.Property<string>("Format")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<DateTimeOffset>("ImportedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ImportedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Mapping")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("Rejected")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("RevisedFromId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("Rows")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("TotalRows")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("ImportedById");
+
+                    b.HasIndex("SiteId");
+
+                    b.HasIndex("DocumentType", "DocumentNumber", "ImportedAt");
+
+                    b.ToTable("apqp_line_imports", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.AqlDefectCategory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -17930,6 +18049,26 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("DepartmentId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Organization.Site", null)
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.ApqpLineImport", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Organization.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ImportedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.HasOne("QualGuardIQ.Domain.Organization.Site", null)
                         .WithMany()

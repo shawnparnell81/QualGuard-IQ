@@ -53,6 +53,45 @@ public sealed class ApqpController(AppDbContext db, ApqpService svc) : Controlle
     [HttpPost("{id:guid}/obsolete")] public async Task<IActionResult> Obsolete(string kind, Guid id, ReasonRequest r, CancellationToken ct) { await svc.ObsoleteAsync(T(kind), id, r.Reason, ct); return NoContent(); }
     [HttpPost("{id:guid}/links")] public async Task<IActionResult> Link(string kind, Guid id, ApqpLinkRequest r, CancellationToken ct) { await svc.LinkAsync(T(kind), id, r.ToType, r.ToId, r.LinkType, ct); return NoContent(); }
 
+    // ---------- bulk line import (PFMEA, control plan) ----------
+    static string ImportType(string kind) => kind switch { "pfmea" => ApqpService.PfmeaType, "plans" => ApqpService.PlanType, _ => throw new AppException("Bulk import is available for PFMEAs and control plans.") };
+
+    /// <summary>Fields the import maps to (key, label, required, help, recognised column names).</summary>
+    [HttpGet("import/columns")] [RequirePermission(Permissions.ApqpView)]
+    public IReadOnlyList<ImportColumn> ImportColumns(string kind) => ApqpImportService.ColumnsFor(ImportType(kind));
+
+    /// <summary>Blank import template: format=xlsx (default; with a Help sheet) or csv.</summary>
+    [HttpGet("import/template")] [RequirePermission(Permissions.ApqpView)]
+    public IActionResult ImportTemplate(string kind, [FromServices] ApqpImportService imports, [FromQuery] string format = "xlsx")
+    { var (content, type, name) = imports.Template(ImportType(kind), format); return File(content, type, name); }
+
+    /// <summary>
+    /// Imports lines from a .csv or .xlsx file. dryRun=true (default) validates and previews without writing. mapping is a JSON object
+    /// field key → column name. mode Append (default) or Replace. A released revision is never changed: set createRevision with
+    /// revisionReason to create the next revision and import into it in one transaction. allowPartial imports the valid rows when others are rejected.
+    /// </summary>
+    [HttpPost("{id:guid}/import")] [RequirePermission(Permissions.ApqpEdit)] [RequestSizeLimit(TabularImport.MaxBytes + 1024 * 1024)]
+    public async Task<ApqpImportResult> Import(string kind, Guid id, IFormFile file, [FromServices] ApqpImportService imports, [FromForm] string? mapping, [FromForm] string? mode,
+        [FromForm] bool dryRun = true, [FromForm] bool createRevision = false, [FromForm] string? revisionReason = null, [FromForm] bool allowPartial = false, CancellationToken ct = default)
+    {
+        Dictionary<string, string>? map = null;
+        if (!string.IsNullOrWhiteSpace(mapping))
+            try { map = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(mapping); }
+            catch (System.Text.Json.JsonException) { throw new AppException("mapping must be a JSON object of field key to column name."); }
+        using var ms = new MemoryStream();
+        await file.CopyToAsync(ms, ct);
+        return await imports.ImportAsync(ImportType(kind), id, new ApqpImportRequest(file.FileName, ms.ToArray(), map, mode ?? "Append", dryRun, createRevision, revisionReason, allowPartial), ct);
+    }
+
+    /// <summary>Imports and dry runs for every revision of the document, newest first.</summary>
+    [HttpGet("{id:guid}/imports")]
+    public Task<List<object>> Imports(string kind, Guid id, [FromServices] ApqpImportService imports, CancellationToken ct) => imports.HistoryAsync(ImportType(kind), id, ct);
+
+    /// <summary>Rejected and duplicate rows of an import as CSV (original columns plus row number, outcome and errors).</summary>
+    [HttpGet("~/api/apqp/imports/{importId:guid}/rejected.csv")]
+    public async Task<IActionResult> Rejected(Guid importId, [FromServices] ApqpImportService imports, CancellationToken ct)
+    { var (content, name) = await imports.RejectedCsvAsync(importId, ct); return File(content, "text/csv", name); }
+
     /// <summary>Action-priority and RPN calculator used by the PFMEA editor (no data is stored).</summary>
     [HttpGet("~/api/apqp/pfmea/priority")] [RequirePermission(Permissions.ApqpView)]
     public object Priority([FromQuery] int s, [FromQuery] int o, [FromQuery] int d) { PfmeaMath.Validate(s, o, d); return new { Rpn = PfmeaMath.Rpn(s, o, d), Priority = PfmeaMath.Priority(s, o, d).ToString() }; }

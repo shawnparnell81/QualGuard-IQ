@@ -434,3 +434,43 @@ public class PortalResponse : Entity, IAudited
     public string Body { get; set; } = "";
     public string AuditLabel => $"portal response on {RecordType}";
 }
+
+// ---------- bulk line import (PFMEA and control plan) ----------
+
+public enum ApqpImportStatus { DryRun = 0, Committed = 1, Refused = 2 }
+
+/// <summary>
+/// One bulk line import (or dry run) into a PFMEA or control plan revision: file identity, column mapping, counts and the
+/// per-row outcome (accepted, rejected with errors, duplicate). Never changed after it is written.
+/// </summary>
+public class ApqpLineImport : Entity, ISiteScoped, IAppendOnly
+{
+    /// <summary>Pfmea or ControlPlan.</summary>
+    public string DocumentType { get; set; } = "";
+    /// <summary>The revision the lines were (or would be) written to.</summary>
+    public Guid DocumentId { get; set; }
+    public string DocumentNumber { get; set; } = "";
+    public int DocumentRevision { get; set; }
+    /// <summary>The released revision a new draft revision was created from for this import, if any.</summary>
+    public Guid? RevisedFromId { get; set; }
+    public string FileName { get; set; } = "";
+    public string FileHash { get; set; } = "";
+    public string Format { get; set; } = "";
+    /// <summary>Append or Replace.</summary>
+    public string Mode { get; set; } = "Append";
+    public bool DryRun { get; set; }
+    public ApqpImportStatus Status { get; set; }
+    public int TotalRows { get; set; }
+    public int Accepted { get; set; }
+    public int Rejected { get; set; }
+    public int Duplicates { get; set; }
+    /// <summary>JSON: field key → source column.</summary>
+    public string Mapping { get; set; } = "{}";
+    /// <summary>JSON: per-row outcome with source values, errors and warnings.</summary>
+    public string Rows { get; set; } = "[]";
+    public string? Message { get; set; }
+    public Guid ImportedById { get; set; }
+    public DateTimeOffset ImportedAt { get; set; }
+    public Guid SiteId { get; set; }
+    public Guid? DepartmentId { get; set; }
+}

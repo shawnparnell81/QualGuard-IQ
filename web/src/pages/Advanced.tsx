@@ -12,6 +12,7 @@ import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDate, fmtDateTime, localDate } from '../components/Status';
 import { Facts, SchemaForm, Section, StepDialog, useRunner, useUsers } from '../components/Kit';
 import { mono } from '../theme';
+import { ImportHistory, LineImportDialog } from '../components/LineImport';
 
 const mod = (k: string) => modules.find((m) => m.key === k)!;
 const num = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue() ?? '')}</span>;
@@ -105,7 +106,9 @@ export function ApqpDetail() {
   const users = useUsers();
   const [draft, setDraft] = useState<Line[] | null>(null);
   const [dlg, setDlg] = useState<'revise' | 'obsolete' | null>(null);
-  const refresh = () => { qc.invalidateQueries({ queryKey: ['apqp-doc', kind, id] }); qc.invalidateQueries({ queryKey: ['apqp-lines', kind, id] }); qc.invalidateQueries({ queryKey: ['apqp-hist', kind, id] }); setDraft(null); };
+  const [imp, setImp] = useState(false);
+  const [imported, setImported] = useState<string | null>(null);
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['apqp-imports'] }); qc.invalidateQueries({ queryKey: ['apqp-doc', kind, id] }); qc.invalidateQueries({ queryKey: ['apqp-lines', kind, id] }); qc.invalidateQueries({ queryKey: ['apqp-hist', kind, id] }); setDraft(null); };
   const { error, busy, run } = useRunner(refresh);
   const d = doc.data?.document;
   if (!d) return <ModuleWorkspace module={mod('apqp')} crumbs={[{ label: 'Planning', to: '/apqp' }]} title="Loading…">{doc.error ? <Alert severity="error">{(doc.error as Error).message}</Alert> : null}</ModuleWorkspace>;
@@ -118,11 +121,13 @@ export function ApqpDetail() {
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>rev {d.revision}</span><StatusChip status={apqpStatus[d.status]} /></Stack>}
       actions={<Stack direction="row" gap={1}>
         <Button component={RouterLink} to={`/insights/graph?type=${kind === 'flows' ? 'ProcessFlow' : kind === 'pfmea' ? 'Pfmea' : 'ControlPlan'}&id=${d.id}`}>Relationships</Button>
+        {kind !== 'flows' && can('apqp.edit') && (d.status === 0 || d.status === 2) && <Button variant="outlined" disabled={draft !== null} onClick={() => setImp(true)}>Import lines</Button>}
         {editable && <Button variant="contained" disabled={busy || draft !== null} onClick={() => run(() => post(`/api/apqp/${kind}/${id}/submit`))}>Submit for release</Button>}
         {d.status === 2 && can('apqp.edit') && <Button variant="outlined" onClick={() => setDlg('revise')}>Start revision</Button>}
         {d.status === 2 && can('apqp.approve') && <Button color="error" onClick={() => setDlg('obsolete')}>Make obsolete</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {imported && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setImported(null)} data-testid="import-done">{imported}</Alert>}
       <Facts items={[['Title', d.title], ['Product', doc.data?.productName ?? '—'], ['Part', `${doc.data?.partNumber ?? '—'}${d.partRevision ? ` rev ${d.partRevision}` : ''}`], ['Owner', doc.data?.ownerName ?? '—'],
         ...(kind === 'plans' ? [['Phase', phases[d.phase ?? 2]] as [string, string]] : []), ['Released', fmtDateTime(d.releasedAt)], ['Change reason', d.changeReason ?? '—']]} />
       <Section title={kind === 'flows' ? 'Process steps' : kind === 'pfmea' ? 'Failure modes' : 'Control characteristics'}
@@ -152,6 +157,9 @@ export function ApqpDetail() {
           </Table>
         </Paper>
       </Section>
+      {kind !== 'flows' && <Section title="Line imports"><ImportHistory kind={kind} docId={d.id} /></Section>}
+      {kind !== 'flows' && <LineImportDialog open={imp} onClose={() => setImp(false)} kind={kind} docId={d.id} released={d.status === 2} label={kindLabel[kind]}
+        onDone={(r) => { setImported(`${r.accepted} line(s) imported into ${r.documentNumber} rev ${r.documentRevision}${r.revisionCreated ? ' (new revision)' : ''}.${r.rejected ? ` ${r.rejected} rejected row(s) left out.` : ''}`); refresh(); if (r.documentId !== d.id) nav(`/apqp/${kind}/${r.documentId}`); }} />}
       <Section title="Revision history">
         <DataTable data={hist.data ?? []} onRowClick={(r) => nav(`/apqp/${kind}/${r.document.id}`)} columns={[{ header: 'Rev', accessorFn: (r) => r.document.revision }, { header: 'Status', accessorFn: (r) => apqpStatus[r.document.status] },
           { header: 'Released', accessorFn: (r) => fmtDate(r.document.releasedAt) }, { header: 'Reason', accessorFn: (r) => r.document.changeReason ?? '' }]} />

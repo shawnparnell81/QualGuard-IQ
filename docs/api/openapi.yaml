@@ -681,6 +681,192 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/apqp/{kind}/import/columns':
+    get:
+      tags:
+        - Apqp
+      description: 'Requires permission: `apqp.view` (site/department scoped).'
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            pattern: ^(flows|pfmea|plans)$
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImportColumn'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImportColumn'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ImportColumn'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/apqp/{kind}/import/template':
+    get:
+      tags:
+        - Apqp
+      description: 'Requires permission: `apqp.view` (site/department scoped).'
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            pattern: ^(flows|pfmea|plans)$
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            default: xlsx
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/apqp/{kind}/{id}/import':
+    post:
+      tags:
+        - Apqp
+      description: 'Requires permission: `apqp.edit` (site/department scoped).'
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            pattern: ^(flows|pfmea|plans)$
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              allOf:
+                - type: object
+                  properties:
+                    file:
+                      $ref: '#/components/schemas/IFormFile'
+                - type: object
+                  properties:
+                    mapping:
+                      type: string
+                - type: object
+                  properties:
+                    mode:
+                      type: string
+                - type: object
+                  properties:
+                    dryRun:
+                      type: boolean
+                      default: true
+                - type: object
+                  properties:
+                    createRevision:
+                      type: boolean
+                      default: false
+                - type: object
+                  properties:
+                    revisionReason:
+                      type: string
+                - type: object
+                  properties:
+                    allowPartial:
+                      type: boolean
+                      default: false
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ApqpImportResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApqpImportResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ApqpImportResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/apqp/{kind}/{id}/imports':
+    get:
+      tags:
+        - Apqp
+      description: Requires an authenticated user.
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            pattern: ^(flows|pfmea|plans)$
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+            application/json:
+              schema:
+                type: array
+            text/json:
+              schema:
+                type: array
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/apqp/imports/{importId}/rejected.csv':
+    get:
+      tags:
+        - Apqp
+      description: Requires an authenticated user.
+      parameters:
+        - name: importId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/apqp/pfmea/priority:
     get:
       tags:
@@ -34329,6 +34515,93 @@ components:
           format: uuid
         fmeaType:
           $ref: '#/components/schemas/FmeaType'
+    ApqpImportResult:
+      required:
+        - importId
+        - status
+        - dryRun
+        - documentId
+        - documentNumber
+        - documentRevision
+        - revisionCreated
+        - mode
+        - totalRows
+        - accepted
+        - rejected
+        - duplicates
+        - mapping
+        - unmappedColumns
+        - missingRequired
+        - rows
+        - message
+      type: object
+      properties:
+        importId:
+          type: string
+          format: uuid
+        status:
+          type: string
+        dryRun:
+          type: boolean
+        documentId:
+          type: string
+          format: uuid
+        documentNumber:
+          type: string
+        documentRevision:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        revisionCreated:
+          type: boolean
+        mode:
+          type: string
+        totalRows:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        accepted:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        rejected:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        duplicates:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        mapping:
+          type: object
+          additionalProperties:
+            type: string
+        unmappedColumns:
+          type: array
+          items:
+            type: string
+        missingRequired:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportRowResult'
+        message:
+          type:
+            - 'null'
+            - string
     ApqpLinkRequest:
       required:
         - toType
@@ -42237,6 +42510,27 @@ components:
           format: date
         notes:
           type: string
+    ImportColumn:
+      required:
+        - key
+        - label
+        - required
+        - help
+        - aliases
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        required:
+          type: boolean
+        help:
+          type: string
+        aliases:
+          type: array
+          items:
+            type: string
     ImportCsvRequest:
       required:
         - csv
@@ -42244,6 +42538,38 @@ components:
       properties:
         csv:
           type: string
+    ImportRowResult:
+      required:
+        - row
+        - status
+        - errors
+        - warnings
+        - values
+        - calculated
+      type: object
+      properties:
+        row:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        status:
+          type: string
+        errors:
+          type: array
+          items:
+            type: string
+        warnings:
+          type: array
+          items:
+            type: string
+        values:
+          type: object
+          additionalProperties:
+            type: string
+        calculated:
+          type: object
     InspectionDefect:
       required:
         - id

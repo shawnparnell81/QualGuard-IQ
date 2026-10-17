@@ -76,3 +76,28 @@ Governance → Retention. A policy can be narrowed by record type, module, produ
 
 ## Content library search and paging
 Documents → Content library now searches on the server with no 1,000-file limit: 50 files per page with Previous/Next, a total count, sort (newest, oldest, name, largest; ties broken by id so pages never overlap) and filters for kind, classification, retention state and date added. The API (`GET /api/files/search`) also filters by content type, uploader, site, department and owning record type. Visibility follows the owning record's view permission, site and department, applied in the database from values copied onto each file at upload; files uploaded before this change are back-filled at startup. Every file shown is still re-checked against its record; if a record's access changed since upload, the page says some files are hidden and the total may be slightly high.
+
+## Importing PFMEA lines from a spreadsheet
+
+Open a PFMEA and choose **Import lines**. Download the Excel template (it has a Help sheet describing every column) or use your own
+.xlsx or .csv file. Old .xls files must be saved as .xlsx first.
+
+1. Choose the file and whether to **add** the rows to the existing lines or **replace** all lines of the draft.
+2. **Preview** runs a dry run: nothing is written. Columns are matched by name (for example "Potential failure mode", "Sev", "Occ",
+   "Det"); change any field's column in the mapping panel. Required fields: Step, Process function, Failure mode, Failure effect, S,
+   Failure cause, O, D.
+3. Each row is shown as Ready, Rejected (with the reasons) or Duplicate (same step, failure mode and cause as an earlier row or an
+   existing line). Ratings must be whole numbers 1–10; a recommended action needs a responsible person (email or name of an active
+   user) and a due date; revised ratings need a completion date; special characteristics must be one of your organization's codes
+   (default CC, SC, KPC, KCC, HI, OS, YC, YS; set `Apqp:SpecialCharacteristicCodes` to change them); when the PFMEA is linked to a
+   process flow, the step must be one of its steps.
+4. RPN (S×O×D) and action priority are always recalculated. If the file has its own RPN or AP column, a different value is shown as a
+   note and the calculated value is used. Formula cells are read as their last calculated value.
+5. **Import** writes the ready rows in one transaction. While any row is rejected nothing is imported, unless you switch on
+   "Import the valid rows and leave the rejected ones out". **Download rejected rows** gives a CSV of the rows that were left out with
+   their errors, ready to fix and import again.
+
+A released PFMEA never changes. Importing into it asks for a change reason and creates the next draft revision (with the existing lines
+copied) and adds the imported lines to it in the same step; if the import is refused, no revision is created. Every import and preview
+is listed under **Line imports** with the file name, mode, revision and counts, and committed imports are written to the audit trail
+with the file's SHA-256 fingerprint.
