@@ -266,8 +266,8 @@ public sealed class SsoService(AppDbContext db, UserManager<ApplicationUser> use
             return new(t.Mode, p.Id, null, "provider", e.Message);
         }
         claims["sub"] = Cut(id.Subject, 12) + (id.Subject.Length > 12 ? "…" : ""); claims["email"] = id.Email; claims["name"] = id.Name;
-        claims["email_verified"] = id.Claims.TryGetProperty("email_verified", out var ev) ? ev.ToString() : null;
-        if (p.Kind == IdentityProviderKind.Entra) claims["xms_edov"] = id.Claims.TryGetProperty("xms_edov", out var xe) ? xe.ToString() : null;
+        claims["email_verified"] = id.Claims.TryGetProperty("email_verified", out var ev) ? ev.GetRawText().Trim('"') : null;
+        if (p.Kind == IdentityProviderKind.Entra) claims["xms_edov"] = id.Claims.TryGetProperty("xms_edov", out var xe) ? xe.GetRawText().Trim('"') : null;
         if (p.Kind == IdentityProviderKind.Google) claims["hd"] = id.Str("hd");
         claims["amr"] = id.Amr.Count > 0 ? string.Join(", ", id.Amr) : null;
 

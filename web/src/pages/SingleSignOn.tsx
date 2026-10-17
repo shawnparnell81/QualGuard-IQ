@@ -140,7 +140,7 @@ export function SingleSignOnPage() {
                   {p.isEnabled
                     ? <Button size="small" color="warning" variant="outlined" onClick={() => act(() => post(`/api/admin/sso/providers/${p.id}/disable`), `${p.displayName} turned off.`)}>Turn off</Button>
                     : <Tooltip title={p.testCurrent ? '' : 'Run a test sign-in with the current settings first'}><span>
-                        <Button size="small" variant="contained" disabled={!p.testCurrent} onClick={() => act(() => post(`/api/admin/sso/providers/${p.id}/enable`), `${p.displayName} is on. People see "Sign in with ${p.displayName}" on the sign-in page.`)}>Turn on</Button>
+                        <Button size="small" variant="contained" disabled={!p.testCurrent} onClick={() => { setTested(null); act(() => post(`/api/admin/sso/providers/${p.id}/enable`), `${p.displayName} is on. People see "Sign in with ${p.displayName}" on the sign-in page.`); }}>Turn on</Button>
                       </span></Tooltip>}
                   {!p.isEnabled && <Button size="small" color="error" onClick={() => { if (window.confirm(`Remove ${p.displayName}? Links to ${p.linkedAccounts} account(s) are removed too.`)) act(() => del(`/api/admin/sso/providers/${p.id}`), `${p.displayName} removed.`); }}>Remove</Button>}
                 </Stack>
