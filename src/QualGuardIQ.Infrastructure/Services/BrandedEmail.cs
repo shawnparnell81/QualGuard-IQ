@@ -13,11 +13,11 @@ public static class BrandedEmail
 {
     public const string LogoContentId = "qualguard-iq-logo";
 
-    public static MailMessage Create(string from, string to, string appName, string title, string? body, string? link)
+    public static MailMessage Create(string from, string to, string appName, string title, string? body, string? link, string? buttonText = null)
     {
         var text = $"{body}\n\n{link}".Trim();
         var msg = new MailMessage(from, to, $"[{appName}] {title}", text) { BodyEncoding = Encoding.UTF8, SubjectEncoding = Encoding.UTF8 };
-        var html = AlternateView.CreateAlternateViewFromString(Html(appName, title, body, link), Encoding.UTF8, MediaTypeNames.Text.Html);
+        var html = AlternateView.CreateAlternateViewFromString(Html(appName, title, body, link, buttonText), Encoding.UTF8, MediaTypeNames.Text.Html);
         var logo = new LinkedResource(new MemoryStream(BrandLogo.EmailPng), "image/png") { ContentId = LogoContentId, TransferEncoding = TransferEncoding.Base64 };
         logo.ContentType.Name = "qualguard-iq.png";
         html.LinkedResources.Add(logo);
@@ -45,12 +45,12 @@ public static class BrandedEmail
 
     static string E(string? s) => WebUtility.HtmlEncode(s ?? "");
 
-    static string Html(string appName, string title, string? body, string? link)
+    static string Html(string appName, string title, string? body, string? link, string? buttonText = null)
     {
         var paragraphs = string.Join("", (body ?? "").Replace("\r", "").Split("\n\n", StringSplitOptions.RemoveEmptyEntries)
             .Select(p => $"<p style=\"margin:0 0 12px;line-height:1.5\">{E(p).Replace("\n", "<br>")}</p>"));
         var button = string.IsNullOrWhiteSpace(link) ? "" :
-            $"<p style=\"margin:20px 0 0\"><a href=\"{E(link)}\" style=\"display:inline-block;background:{BrandLogo.BlueHex};color:#FFFFFF;text-decoration:none;font-weight:600;padding:10px 18px;border-radius:6px\">Open in {E(appName)}</a></p>" +
+            $"<p style=\"margin:20px 0 0\"><a href=\"{E(link)}\" style=\"display:inline-block;background:{BrandLogo.BlueHex};color:#FFFFFF;text-decoration:none;font-weight:600;padding:10px 18px;border-radius:6px\">{(buttonText is { Length: > 0 } ? E(buttonText) : "Open in " + E(appName))}</a></p>" +
             $"<p style=\"margin:12px 0 0;font-size:12px;color:#5B6676;word-break:break-all\">{E(link)}</p>";
         return $"""
             <!doctype html>

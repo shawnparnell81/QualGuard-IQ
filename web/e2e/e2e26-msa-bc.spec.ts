@@ -9,7 +9,7 @@ test.describe('E2E 26: bias study results and BC manufacturing validation', () =
     const site = state().siteId;
     const role = await admin.post<string>('/api/admin/roles', { name: `MSA engineer ${t}`, description: 'UI test', permissions: ['spc.view', 'spc.edit', 'calibration.view', 'calibration.edit'] });
     const u: User = { key: 'msa', email: `msa-${t}@qms.test`, password: 'msa-engineer-password-1', name: `Morgan Measure ${t}` };
-    const uid = await admin.post<string>('/api/admin/users', { email: u.email, displayName: u.name, password: u.password });
+    const uid = await admin.post<string>('/api/admin/users', { email: u.email, displayName: u.name, password: u.password, mustChangePassword: false });
     await admin.post(`/api/admin/users/${uid}/roles`, { roleId: role, siteId: site, departmentId: null });
     const api = await Api.as(u);
     const eq = await api.post<string | { id: string }>('/api/calibration/equipment', { name: unique('Height gauge'), siteId: site, calibrationIntervalDays: 365, nextDueOn: localDate(100) });

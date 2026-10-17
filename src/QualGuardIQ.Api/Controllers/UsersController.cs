@@ -15,11 +15,15 @@ namespace QualGuardIQ.Api.Controllers;
 [ApiController]
 [Route("api/admin/users")]
 [RequirePermission(Permissions.AdminUsers)]
-public sealed class UsersController(AppDbContext db, UserManager<ApplicationUser> users, ICurrentUser current, IClock clock, ISecurityEventLogger security) : ControllerBase
+public sealed class UsersController(AppDbContext db, UserManager<ApplicationUser> users, ICurrentUser current, IClock clock, ISecurityEventLogger security, SignInSecurityService mfa) : ControllerBase
 {
-    public sealed record UserDto(Guid Id, string Email, string DisplayName, bool IsActive, bool IsLockedOut, DateTimeOffset? LastSignInAt, IReadOnlyList<AssignmentDto> Roles);
+    public sealed record UserDto(Guid Id, string Email, string DisplayName, bool IsActive, bool IsLockedOut, DateTimeOffset? LastSignInAt, IReadOnlyList<AssignmentDto> Roles,
+        bool MfaEnabled = false, bool MustChangePassword = false, DateTimeOffset? PasswordChangedAt = null);
     public sealed record AssignmentDto(Guid Id, Guid RoleId, string RoleName, Guid? SiteId, Guid? DepartmentId);
-    public sealed record CreateUserRequest(string Email, string DisplayName, string Password);
+    /// <summary>MustChangePassword (default true) makes the first sign-in ask for a new password before anything else.</summary>
+    public sealed record CreateUserRequest(string Email, string DisplayName, string Password, bool? MustChangePassword = null);
+    public sealed record TemporaryPasswordRequest(string Password, bool MustChangePassword = true);
+    public sealed record ResetMfaRequest(string Reason);
     public sealed record AssignRoleRequest(Guid RoleId, Guid? SiteId, Guid? DepartmentId);
 
     public sealed class CreateUserValidator : AbstractValidator<CreateUserRequest>
@@ -28,7 +32,7 @@ public sealed class UsersController(AppDbContext db, UserManager<ApplicationUser
         {
             RuleFor(x => x.Email).NotEmpty().EmailAddress().MaximumLength(256);
             RuleFor(x => x.DisplayName).NotEmpty().MaximumLength(200);
-            RuleFor(x => x.Password).NotEmpty().MinimumLength(12).MaximumLength(256);
+            RuleFor(x => x.Password).NotEmpty().MaximumLength(256);
         }
     }
 
@@ -39,17 +43,18 @@ public sealed class UsersController(AppDbContext db, UserManager<ApplicationUser
         var assignments = await db.UserRoleAssignments.Include(a => a.Role).ToListAsync(ct);
         var now = clock.UtcNow;
         return list.Select(u => new UserDto(u.Id, u.Email!, u.DisplayName, u.IsActive, u.LockoutEnd > now, u.LastSignInAt,
-            assignments.Where(a => a.UserId == u.Id).Select(a => new AssignmentDto(a.Id, a.RoleId, a.Role!.Name, a.SiteId, a.DepartmentId)).ToList())).ToList();
+            assignments.Where(a => a.UserId == u.Id).Select(a => new AssignmentDto(a.Id, a.RoleId, a.Role!.Name, a.SiteId, a.DepartmentId)).ToList(),
+            u.MfaSecret != null, u.MustChangePassword, u.PasswordChangedAt)).ToList();
     }
 
     [HttpPost]
     public async Task<ActionResult<Guid>> Create(CreateUserRequest req, [FromServices] IValidator<CreateUserRequest> validator)
     {
         await validator.ValidateAndThrowAsync(req);
-        var user = new ApplicationUser { UserName = req.Email, Email = req.Email, EmailConfirmed = true, DisplayName = req.DisplayName, CreatedAt = clock.UtcNow };
+        var user = new ApplicationUser { UserName = req.Email, Email = req.Email, EmailConfirmed = true, DisplayName = req.DisplayName, CreatedAt = clock.UtcNow, MustChangePassword = req.MustChangePassword ?? true };
         var result = await users.CreateAsync(user, req.Password);
         if (!result.Succeeded) throw new AppException(string.Join(" ", result.Errors.Select(e => e.Description)));
-        await WriteAudit("Created", user, $"Created user {user.Email}");
+        await WriteAudit("Created", user, $"Created user {user.Email}{(user.MustChangePassword ? " with a temporary password (a new password is required at first sign-in)" : "")}");
         return Created($"api/admin/users/{user.Id}", user.Id);
     }
 
@@ -130,6 +135,35 @@ public sealed class UsersController(AppDbContext db, UserManager<ApplicationUser
         var user = await users.FindByIdAsync(id.ToString()) ?? throw new NotFoundException("User");
         await users.UpdateSecurityStampAsync(user);
         await security.LogAsync("SessionsRevoked", true, user.Id, user.Email, $"By {current.UserName}");
+        return NoContent();
+    }
+
+    /// <summary>Sets a password for the user (a temporary one by default: the next sign-in must choose a new password). Ends all of their sessions.</summary>
+    [HttpPost("{id:guid}/temporary-password")]
+    public async Task<IActionResult> SetTemporaryPassword(Guid id, TemporaryPasswordRequest req)
+    {
+        var user = await users.FindByIdAsync(id.ToString()) ?? throw new NotFoundException("User");
+        var token = await users.GeneratePasswordResetTokenAsync(user);
+        var result = await users.ResetPasswordAsync(user, token, req.Password ?? "");
+        if (!result.Succeeded) throw new AppException(string.Join(" ", result.Errors.Select(e => e.Description)));
+        user.MustChangePassword = req.MustChangePassword;
+        await users.UpdateAsync(user);
+        await users.SetLockoutEndDateAsync(user, null);
+        await users.ResetAccessFailedCountAsync(user);
+        await security.LogAsync("TemporaryPasswordSet", true, user.Id, user.Email, $"By {current.UserName}{(req.MustChangePassword ? "; change required at next sign-in" : "")}");
+        await WriteAudit("TemporaryPasswordSet", user, $"Set a {(req.MustChangePassword ? "temporary " : "")}password for {user.Email}; all of their sessions ended{(req.MustChangePassword ? " and a new password is required at next sign-in" : "")}");
+        return NoContent();
+    }
+
+    /// <summary>For a lost phone: removes the user's authenticator, recovery codes and trusted browsers and ends their sessions. If two-step verification is required for them, the next sign-in sets it up again.</summary>
+    [HttpPost("{id:guid}/reset-mfa")]
+    public async Task<IActionResult> ResetMfa(Guid id, ResetMfaRequest req)
+    {
+        if (string.IsNullOrWhiteSpace(req.Reason) || req.Reason.Trim().Length < 5) throw new AppException("Give the reason (at least 5 characters), for example how the person's identity was confirmed.");
+        if (id == current.UserId) throw new AppException("Use your own Security page to change your two-step verification.");
+        var user = await users.FindByIdAsync(id.ToString()) ?? throw new NotFoundException("User");
+        if (user.MfaSecret is null) throw new ConflictException("Two-step verification is not on for this user.");
+        await mfa.DisableAsync(user, current.UserName, req.Reason.Trim());
         return NoContent();
     }
 

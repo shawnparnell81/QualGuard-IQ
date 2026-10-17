@@ -52,9 +52,9 @@ public sealed class GapClosurePortalTests(TestApp app)
         var planned = await AuditAsync("Planned audit", a, false);
         var otherAudit = await AuditAsync("Other supplier audit", b, true);
 
-        await admin.PostOkAsync("/api/portal/admin/accounts", new { email = $"pa{tag}@sup.test", displayName = "Pat A", kind = "Supplier", partyId = a, password = "long-enough-password" });
-        await admin.PostOkAsync("/api/portal/admin/accounts", new { email = $"pa2{tag}@sup.test", displayName = "Quinn A", kind = "Supplier", partyId = a, password = "long-enough-password" });
-        await admin.PostOkAsync("/api/portal/admin/accounts", new { email = $"pb{tag}@sup.test", displayName = "Pat B", kind = "Supplier", partyId = b, password = "long-enough-password" });
+        await admin.PostOkAsync("/api/portal/admin/accounts", new { email = $"pa{tag}@sup.test", displayName = "Pat A", kind = "Supplier", partyId = a, password = "long-enough-password", mustChangePassword = false });
+        await admin.PostOkAsync("/api/portal/admin/accounts", new { email = $"pa2{tag}@sup.test", displayName = "Quinn A", kind = "Supplier", partyId = a, password = "long-enough-password", mustChangePassword = false });
+        await admin.PostOkAsync("/api/portal/admin/accounts", new { email = $"pb{tag}@sup.test", displayName = "Pat B", kind = "Supplier", partyId = b, password = "long-enough-password", mustChangePassword = false });
         var pa = await app.SignInAsync($"pa{tag}@sup.test", "long-enough-password");
         var pa2 = await app.SignInAsync($"pa2{tag}@sup.test", "long-enough-password");
         var pb = await app.SignInAsync($"pb{tag}@sup.test", "long-enough-password");

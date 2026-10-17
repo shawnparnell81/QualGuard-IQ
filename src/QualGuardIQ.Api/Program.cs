@@ -33,21 +33,26 @@ builder.Services.AddScoped<QualGuardIQ.Application.Security.ICallerRestriction, 
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
+var authOptions = builder.Configuration.GetSection(QualGuardIQ.Infrastructure.Security.AuthOptions.Section).Get<QualGuardIQ.Infrastructure.Security.AuthOptions>() ?? new();
 builder.Services.AddIdentityCore<ApplicationUser>(o =>
     {
-        o.Password.RequiredLength = 12;
+        // Password and lockout rules come from configuration (Auth:Password, Auth:Lockout); PolicyPasswordValidator adds the
+        // breached/common list, reuse history and email-name checks.
+        o.Password.RequiredLength = Math.Max(8, authOptions.Password.MinLength);
         o.Password.RequireNonAlphanumeric = false;
         o.Password.RequireUppercase = false;
         o.Password.RequireLowercase = false;
         o.Password.RequireDigit = false;
-        o.Lockout.MaxFailedAccessAttempts = 5;
-        o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(15);
+        o.Lockout.MaxFailedAccessAttempts = Math.Max(3, authOptions.Lockout.MaxFailedAttempts);
+        o.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(Math.Max(1, authOptions.Lockout.Minutes));
         o.Lockout.AllowedForNewUsers = true;
         o.User.RequireUniqueEmail = true;
     })
     .AddRoles<IdentityRole<Guid>>()
     .AddEntityFrameworkStores<AppDbContext>()
     .AddSignInManager()
+    .AddUserManager<QualGuardIQ.Infrastructure.Security.AppUserManager>()
+    .AddPasswordValidator<QualGuardIQ.Infrastructure.Security.PolicyPasswordValidator>()
     .AddDefaultTokenProviders()
     .AddClaimsPrincipalFactory<AppClaimsFactory>();
 
@@ -112,6 +117,8 @@ builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
 builder.Services.Configure<ForwardedHeadersOptions>(o => o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
 
 builder.Services.AddMemoryCache();
+// sends sign-in emails (reset links, change notices) queued by SignInSecurityService
+builder.Services.AddHostedService(sp => sp.GetRequiredService<QualGuardIQ.Infrastructure.Security.AuthMailQueue>());
 var app = builder.Build();
 
 if (app.Configuration.GetValue("Database:MigrateOnStartup", false))

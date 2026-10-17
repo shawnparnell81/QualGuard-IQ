@@ -11,7 +11,11 @@ export ASPNETCORE_ENVIRONMENT=Development
 export ASPNETCORE_URLS=${E2E_API_URL:-http://127.0.0.1:5081}
 export ConnectionStrings__Default="Host=$PGHOST;Port=$PGPORT;Database=$DB;Username=$PGUSER;Password=$PGPASSWORD"
 export Database__MigrateOnStartup=true
-export Seed__AdminEmail=e2e-admin@qms.test Seed__AdminPassword=e2e-admin-password Seed__AdminName="Test Administrator"
+export Seed__AdminEmail=e2e-admin@qms.test Seed__AdminPassword=test-console-pass-4271 Seed__AdminName="Test Administrator"
+export Seed__AdminMustChangePassword=false App__BaseUrl=${E2E_WEB_URL:-http://127.0.0.1:5174}
+# sign-in emails (password reset links) are written as .eml files for the tests to read
+export Email__PickupDirectory=${E2E_MAIL_DIR:-/tmp/qgiq-e2e-mail} Email__From=no-reply@qms.test
+rm -rf "${E2E_MAIL_DIR:-/tmp/qgiq-e2e-mail}"
 export RateLimits__LoginPerMinute=1000 RateLimits__RequestsPerMinute=100000
 export Storage__ServiceUrl=${E2E_S3_URL:-http://localhost:9000} Storage__AccessKey=${E2E_S3_KEY:-qgiqminio} Storage__SecretKey=${E2E_S3_SECRET:-qgiqminio-local-dev} Storage__Bucket=qms-e2e
 exec dotnet run --project src/QualGuardIQ.Api --no-launch-profile

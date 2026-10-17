@@ -41,8 +41,8 @@ test.describe('E2E 15: customer and supplier portals', () => {
     await admin.post(`/api/complaints/${answered}/investigation`, { investigation: 'Bench test.', rootCause: 'Groove finish out of specification.', correctiveAction: 'Finish check added.' });
     await admin.post(`/api/complaints/${answered}/response`, { response: `8D report ${t} sent with containment and root cause.`, sentOn: localDate() });
     const emailA = `cust-a-${t}@customer.test`;
-    await admin.post('/api/portal/admin/accounts', { email: emailA, displayName: 'Jo Ortiz', kind: 'Customer', partyId: a, password: PW });
-    await admin.post('/api/portal/admin/accounts', { email: `cust-b-${t}@customer.test`, displayName: 'Bo Other', kind: 'Customer', partyId: b, password: PW });
+    await admin.post('/api/portal/admin/accounts', { email: emailA, displayName: 'Jo Ortiz', kind: 'Customer', partyId: a, password: PW, mustChangePassword: false });
+    await admin.post('/api/portal/admin/accounts', { email: `cust-b-${t}@customer.test`, displayName: 'Bo Other', kind: 'Customer', partyId: b, password: PW, mustChangePassword: false });
 
     await portalSignIn(page, emailA, 'Customer');
     await expect(page.getByTestId('portal-party')).toHaveText(`ca Pumps ${t}`);
@@ -123,7 +123,7 @@ test.describe('E2E 15: customer and supplier portals', () => {
     await audit(`Process audit ${t}`, true);
     await audit(`Planned follow-up ${t}`, false);
     const emailA = `sup-a-${t}@supplier.test`;
-    await admin.post('/api/portal/admin/accounts', { email: emailA, displayName: 'Rae Hale', kind: 'Supplier', partyId: a, password: PW });
+    await admin.post('/api/portal/admin/accounts', { email: emailA, displayName: 'Rae Hale', kind: 'Supplier', partyId: a, password: PW, mustChangePassword: false });
 
     await portalSignIn(page, emailA, 'Supplier');
     await expect(page.getByTestId('portal-party')).toHaveText(`sa Castings ${t}`);

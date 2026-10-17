@@ -25,6 +25,7 @@ public sealed class TestApp : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Seed:ApplicationName", "QualGuard IQ");
         builder.UseSetting("Seed:AdminEmail", AdminEmail);
         builder.UseSetting("Seed:AdminPassword", AdminPassword);
+        builder.UseSetting("Seed:AdminMustChangePassword", "false");
         builder.UseSetting("RateLimits:LoginPerMinute", "1000");
         builder.UseSetting("RateLimits:RequestsPerMinute", "100000");
         builder.UseSetting("Storage:ServiceUrl", Environment.GetEnvironmentVariable("QMS_TEST_S3") ?? "http://localhost:9000");
@@ -72,7 +73,7 @@ public sealed class TestApp : WebApplicationFactory<Program>, IAsyncLifetime
     {
         var admin = await AdminAsync();
         var email = $"u{Guid.NewGuid():N}@test.local";
-        var userId = await (await admin.PostOkAsync("/api/admin/users", new { email, displayName = "Test " + email[..9], password = "long-enough-password" })).Content.ReadFromJsonAsync<Guid>();
+        var userId = await (await admin.PostOkAsync("/api/admin/users", new { email, displayName = "Test " + email[..9], password = "long-enough-password", mustChangePassword = false })).Content.ReadFromJsonAsync<Guid>();
         var roleId = await (await admin.PostOkAsync("/api/admin/roles", new { name = "R" + Guid.NewGuid().ToString("N"), description = (string?)null, permissions })).Content.ReadFromJsonAsync<Guid>();
         await admin.PostOkAsync($"/api/admin/users/{userId}/roles", new { roleId, siteId, departmentId });
         return (userId, await SignInAsync(email, "long-enough-password"));

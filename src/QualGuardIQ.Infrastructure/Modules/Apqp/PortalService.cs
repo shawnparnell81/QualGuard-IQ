@@ -14,7 +14,8 @@ using QualGuardIQ.Infrastructure.Services;
 
 namespace QualGuardIQ.Infrastructure.Modules.Apqp;
 
-public sealed record PortalAccountInput(string Email, string DisplayName, string Kind, Guid PartyId, string Password);
+/// <summary>MustChangePassword (default true): the password given here is temporary and the first sign-in asks for a new one.</summary>
+public sealed record PortalAccountInput(string Email, string DisplayName, string Kind, Guid PartyId, string Password, bool? MustChangePassword = null);
 public sealed record PortalAccountDto(Guid Id, string Email, string DisplayName, string Kind, Guid PartyId, string PartyName, bool IsActive, DateTimeOffset? LastSignInAt);
 public sealed record PortalMe(Guid UserId, string DisplayName, string Kind, Guid PartyId, string PartyName);
 public sealed record PortalResponseInput(string Body);
@@ -57,7 +58,7 @@ public sealed class PortalService(AppDbContext db, ICurrentUser current, UserMan
         if (r.Kind is not (Customer or Supplier)) throw new AppException("Portal kind is Customer or Supplier.");
         var exists = r.Kind == Customer ? await db.Customers.AnyAsync(c => c.Id == r.PartyId, ct) : await db.Suppliers.AnyAsync(s => s.Id == r.PartyId, ct);
         if (!exists) throw new AppException($"Select an existing {r.Kind.ToLowerInvariant()}.");
-        var u = new ApplicationUser { UserName = r.Email.Trim(), Email = r.Email.Trim(), EmailConfirmed = true, DisplayName = r.DisplayName.Trim(), CreatedAt = clock.UtcNow, PortalKind = r.Kind, PortalPartyId = r.PartyId };
+        var u = new ApplicationUser { UserName = r.Email.Trim(), Email = r.Email.Trim(), EmailConfirmed = true, DisplayName = r.DisplayName.Trim(), CreatedAt = clock.UtcNow, PortalKind = r.Kind, PortalPartyId = r.PartyId, MustChangePassword = r.MustChangePassword ?? true };
         var res = await users.CreateAsync(u, r.Password);
         if (!res.Succeeded) throw new AppException(string.Join(" ", res.Errors.Select(e => e.Description)));
         return u.Id;

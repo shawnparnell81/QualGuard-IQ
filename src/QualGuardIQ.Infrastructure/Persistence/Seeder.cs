@@ -59,6 +59,7 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
         foreach (var (code, name, url) in new[] { ("UPS", "UPS", "https://www.ups.com/track?tracknum={tracking}"), ("FEDEX", "FedEx", "https://www.fedex.com/fedextrack/?trknbr={tracking}"),
             ("DHL", "DHL", "https://www.dhl.com/en/express/tracking.html?AWB={tracking}") })
             if (!await db.Carriers.AnyAsync(c => c.Code == code, ct)) db.Carriers.Add(new Domain.Quality.Carrier { Code = code, Name = name, Kind = Domain.Quality.CarrierKind.Parcel, TrackingUrl = url });
+        if (!await db.SignInPolicies.AnyAsync(ct)) db.SignInPolicies.Add(new Domain.Security.SignInPolicy());
         await db.SaveChangesAsync(ct);
         await new Modules.Fai.AqlService(db, null!).SeedAsync(ct);
         await new Modules.Documents.DocumentTypeService(db).EnsureSeededAsync(ct);
@@ -68,7 +69,9 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
         var password = seed["AdminPassword"];
         if (!string.IsNullOrWhiteSpace(email) && !string.IsNullOrWhiteSpace(password) && await users.FindByEmailAsync(email) is null)
         {
-            var user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true, DisplayName = seed["AdminName"] ?? "Administrator", CreatedAt = DateTimeOffset.UtcNow };
+            // the configured first password is shared through deployment settings, so it is temporary unless Seed:AdminMustChangePassword is false
+            var user = new ApplicationUser { UserName = email, Email = email, EmailConfirmed = true, DisplayName = seed["AdminName"] ?? "Administrator", CreatedAt = DateTimeOffset.UtcNow,
+                MustChangePassword = !string.Equals(seed["AdminMustChangePassword"], "false", StringComparison.OrdinalIgnoreCase) };
             var result = await users.CreateAsync(user, password);
             if (!result.Succeeded)
                 throw new InvalidOperationException("Initial administrator could not be created: " + string.Join("; ", result.Errors.Select(e => e.Description)));
