@@ -10012,6 +10012,130 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/document-types:
+    get:
+      tags:
+        - DocumentTypes
+      description: Requires an authenticated user.
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            $ref: '#/components/schemas/DocumentKind'
+        - name: includeInactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentTypeDto'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentTypeDto'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DocumentTypeDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - DocumentTypes
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentTypeInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DocumentTypeInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DocumentTypeInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/DocumentTypeDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTypeDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTypeDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/document-types/{id}':
+    put:
+      tags:
+        - DocumentTypes
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DocumentTypeUpdate'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DocumentTypeUpdate'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DocumentTypeUpdate'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/DocumentTypeDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTypeDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/DocumentTypeDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/document-types/seed:
+    post:
+      tags:
+        - DocumentTypes
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/engineering/requirements:
     get:
       tags:
@@ -24953,6 +25077,43 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/organization/sites/accessible:
+    get:
+      tags:
+        - Organization
+      description: Requires an authenticated user.
+      parameters:
+        - name: permission
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccessibleSiteDto'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccessibleSiteDto'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccessibleSiteDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/organization/sites/{siteId}':
     put:
       tags:
@@ -29248,6 +29409,34 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/record-types:
+    get:
+      tags:
+        - RecordTypes
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecordTypeDto'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecordTypeDto'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecordTypeDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/reports:
     get:
       tags:
@@ -32370,6 +32559,23 @@ components:
           type:
             - 'null'
             - string
+    AccessibleSiteDto:
+      required:
+        - id
+        - code
+        - name
+        - timeZone
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        timeZone:
+          type: string
     AccessReview:
       type: object
       properties:
@@ -38776,6 +38982,82 @@ components:
           type: string
     DocumentStatus:
       type: integer
+    DocumentTypeDto:
+      required:
+        - id
+        - kind
+        - name
+        - description
+        - isSystem
+        - isActive
+        - sortOrder
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/DocumentKind'
+        name:
+          type: string
+        description:
+          type:
+            - 'null'
+            - string
+        isSystem:
+          type: boolean
+        isActive:
+          type: boolean
+        sortOrder:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    DocumentTypeInput:
+      required:
+        - kind
+        - name
+        - description
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/DocumentKind'
+        name:
+          type: string
+        description:
+          type:
+            - 'null'
+            - string
+        sortOrder:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+          default: 0
+    DocumentTypeUpdate:
+      required:
+        - name
+        - description
+        - isActive
+        - sortOrder
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type:
+            - 'null'
+            - string
+        isActive:
+          type: boolean
+        sortOrder:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     DomainQuality:
       required:
         - domainKey
@@ -46740,6 +47022,16 @@ components:
           format: date
     RecordSource:
       type: integer
+    RecordTypeDto:
+      required:
+        - type
+        - label
+      type: object
+      properties:
+        type:
+          type: string
+        label:
+          type: string
     RecoveryObjective:
       type: object
       properties:
@@ -48361,6 +48653,10 @@ components:
             - 'null'
             - string
           format: uuid
+        recordTypeLabel:
+          type:
+            - 'null'
+            - string
     RtvCreditInput:
       required:
         - creditAmount
@@ -54264,6 +54560,7 @@ tags:
   - name: Complaints
   - name: Configuration
   - name: Documents
+  - name: DocumentTypes
   - name: Engineering
   - name: QualityOs
   - name: Knowledge
@@ -54310,6 +54607,7 @@ tags:
   - name: Calibration
   - name: Records
   - name: Files
+  - name: RecordTypes
   - name: Risks
   - name: Roles
   - name: Users

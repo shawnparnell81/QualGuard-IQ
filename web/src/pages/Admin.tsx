@@ -13,6 +13,7 @@ import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
 import { fmtDateTime } from '../components/Status';
 import { mono } from '../theme';
+import { useTypeLabel } from '../components/Kit';
 
 const mod = modules.find((m) => m.key === 'admin')!;
 interface Site { id: string; code: string; name: string; address?: string | null; timeZone: string; isArchived: boolean; departments: { id: string; code: string; name: string }[] }
@@ -203,7 +204,7 @@ export function SitesPage() {
 interface Step { order: number; name: string; requiredPermission: string; signatureMeaning: string }
 interface Route { id: string; recordType: string; name: string; version: number; preventSelfApproval: boolean; steps: Step[] }
 export function RoutesPage() {
-  const qc = useQueryClient();
+  const qc = useQueryClient(); const typeLabel = useTypeLabel();
   const routes = useQuery({ queryKey: ['routes'], queryFn: () => get<Route[]>('/api/admin/config/approval-routes') });
   const catalog = useQuery({ queryKey: ['perm-catalog'], queryFn: () => get<string[]>('/api/admin/roles/permissions') });
   const [edit, setEdit] = useState<Route | null>(null);
@@ -213,14 +214,14 @@ export function RoutesPage() {
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Approval routes' }]} title="Approval routes">
       <Typography color="text.secondary" sx={{ mb: 2 }}>Each step is signed by someone holding the step's permission for the record's site. Changing a route creates a new version; approvals already in progress finish on the version they started with.</Typography>
       <DataTable data={routes.data ?? []} onRowClick={(r) => { setError(null); setEdit(structuredClone(r)); }} columns={[
-        { header: 'Record type', accessorKey: 'recordType', cell: (c) => <span style={{ fontFamily: mono }}>{c.getValue()}</span> },
+        { header: 'Record type', accessorKey: 'recordType', cell: (c) => typeLabel(c.getValue() as string) },
         { header: 'Name', accessorKey: 'name' },
         { header: 'Version', accessorKey: 'version' },
         { header: 'Steps', accessorKey: 'steps', cell: (c) => (c.getValue() as Step[]).map((s) => s.name).join(' → ') },
         { header: 'Self-approval', accessorKey: 'preventSelfApproval', cell: (c) => (c.getValue() ? 'Blocked' : 'Allowed') },
       ]} />
       <Dialog open={!!edit} onClose={() => setEdit(null)} fullWidth maxWidth="md">
-        <DialogTitle>Route for {edit?.recordType}</DialogTitle>
+        <DialogTitle>Route for {typeLabel(edit?.recordType)}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
           <Err e={error} />
           <TextField label="Name" value={edit?.name ?? ''} onChange={(e) => setEdit({ ...edit!, name: e.target.value })} />

@@ -64,6 +64,7 @@ const Search = lazy(() => import('./pages/Search').then((m) => ({ default: m.Sea
 const DocumentDetail = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentDetail })));
 const DocumentList = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentList })));
 const DocumentNew = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentNew })));
+const DocumentTypesPage = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentTypesPage })));
 const FormRecordDetail = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordDetail })));
 const FormRecordList = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordList })));
 const FormRecordNew = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordNew })));
@@ -359,6 +360,7 @@ export function App() {
               <Route path="/platform/recovery" element={<RecoveryCenter />} />
               <Route path="/platform/marketplace" element={<Marketplace />} />
               <Route path="/documents/content" element={<ContentLibrary />} />
+              <Route path="/documents/types" element={<DocumentTypesPage />} />
               <Route path="/governance" element={<Part11Readiness />} />
               <Route path="/governance/retention" element={<RetentionPage />} />
               <Route path="/governance/continuity" element={<ContinuityPage />} />

@@ -28,6 +28,8 @@ public interface IRecordRegistry
     /// <summary>Loads the record and throws 403 when the current user may not edit it.</summary>
     Task<RecordInfo> RequireEditAsync(string type, Guid id, CancellationToken ct = default);
     bool IsKnownType(string type);
+    /// <summary>Every registered record type identifier.</summary>
+    IReadOnlyCollection<string> KnownTypes { get; }
 }
 
 public interface ISearchIndexer

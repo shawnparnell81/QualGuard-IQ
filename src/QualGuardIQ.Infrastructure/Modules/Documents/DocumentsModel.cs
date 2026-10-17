@@ -9,9 +9,19 @@ public partial class AppDbContext
 {
     public DbSet<ControlledDocument> Documents => Set<ControlledDocument>();
     public DbSet<DocumentRevision> DocumentRevisions => Set<DocumentRevision>();
+    public DbSet<DocumentTypeDefinition> DocumentTypes => Set<DocumentTypeDefinition>();
 
     private static void ConfigureDocuments(ModelBuilder b)
     {
+        b.Entity<DocumentTypeDefinition>(e =>
+        {
+            e.ToTable("document_types");
+            e.Property(x => x.Name).HasMaxLength(60).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(500);
+            e.Property(x => x.SeedKey).HasMaxLength(60);
+            e.HasIndex(x => new { x.Kind, x.Name }).IsUnique();
+            e.HasIndex(x => new { x.Kind, x.SeedKey }).IsUnique().HasFilter("\"SeedKey\" IS NOT NULL");
+        });
         b.Entity<ControlledDocument>(e =>
         {
             e.ToTable("documents");

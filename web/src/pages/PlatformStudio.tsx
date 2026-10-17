@@ -6,7 +6,7 @@ import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { mono } from '../theme';
 import { mod } from './Enterprise';
 import { useAuth } from '../auth';
-import { useUsers } from '../components/Kit';
+import { useTypeLabel, useUsers } from '../components/Kit';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const P = () => mod('platform');
@@ -18,7 +18,7 @@ interface WfRoute { id?: string; recordType: string; name: string; version?: num
 
 /** No-code workflow designer on the shared approval engine: stages run in sequence, steps within a stage run in parallel, and conditions make steps apply only to matching records. */
 export function WorkflowDesigner() {
-  const qc = useQueryClient();
+  const qc = useQueryClient(); const typeLabel = useTypeLabel();
   const routes = useQuery({ queryKey: ['routes'], queryFn: () => get<WfRoute[]>('/api/admin/config/approval-routes') });
   const corporate = (routes.data ?? []).filter((r) => !r.siteId);
   const [type, setType] = useState<string>('');
@@ -43,7 +43,7 @@ export function WorkflowDesigner() {
   const runPreview = async () => { setError(null); try { setPreview(await get<any[]>(`/api/admin/config/approval-routes/${current}/preview/${previewId.trim()}`)); } catch (e) { setError((e as Error).message); } };
   return (
     <ModuleWorkspace module={P()} crumbs={crumbs('Workflow designer')} title="Workflow designer"
-      tabs={corporate.map((r) => ({ value: r.recordType, label: r.recordType }))} tab={current} onTab={(t) => { setType(t); setPreview(null); setEditing(null); }}
+      tabs={corporate.map((r) => ({ value: r.recordType, label: typeLabel(r.recordType) }))} tab={current} onTab={(t) => { setType(t); setPreview(null); setEditing(null); }}
       actions={<Button variant="contained" disabled={!draft} onClick={save}>Publish new version</Button>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {saved && <Alert severity="success" sx={{ mb: 2 }}>{saved}</Alert>}
@@ -72,7 +72,7 @@ export function WorkflowDesigner() {
         </Box>
         <Paper sx={{ p: 2, mt: 2 }}>
           <Typography variant="h3" sx={{ mb: 1 }}>Dry run</Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Enter a {current} record id to see which steps the live version would apply to it.</Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>Enter a {typeLabel(current)} record id to see which steps the live version would apply to it.</Typography>
           <Stack direction="row" gap={1}><TextField size="small" label="Record id" value={previewId} onChange={(e) => setPreviewId(e.target.value)} sx={{ minWidth: 360 }} /><Button onClick={runPreview} disabled={!previewId.trim()}>Preview route</Button></Stack>
           {preview && <Stack direction="row" gap={1} sx={{ mt: 1, flexWrap: 'wrap' }}>{preview.map((p, i) => <Chip key={i} color={p.applies ? 'success' : 'default'} variant={p.applies ? 'filled' : 'outlined'} label={`${p.step}: ${p.applies ? 'applies' : 'skipped'}`} />)}</Stack>}
         </Paper>
@@ -234,7 +234,7 @@ const blankRule = { name: '', recordType: 'Ncr', kind: 0, trigger: 'record.creat
 
 /** Business rule engine: rules read as sentences (WHEN … AND … THEN …) in four lanes; a builder dialog, a dry run against a record, and the firing log. */
 export function RulesStudio() {
-  const qc = useQueryClient(); const [tab, setTab] = useState('rules');
+  const qc = useQueryClient(); const typeLabel = useTypeLabel(); const [tab, setTab] = useState('rules');
   const rules = useQuery({ queryKey: ['rules'], queryFn: () => get<any[]>('/api/platform/rules') });
   const firings = useQuery({ queryKey: ['rule-firings'], enabled: tab === 'log', queryFn: () => get<any[]>('/api/platform/rules/firings') });
   const modules = useQuery({ queryKey: ['platform-modules'], queryFn: () => get<any[]>('/api/platform/modules') });
@@ -249,7 +249,7 @@ export function RulesStudio() {
     try { if (edit.id) await put(`/api/platform/rules/${edit.id}`, body); else await post('/api/platform/rules', body); setEdit(null); qc.invalidateQueries({ queryKey: ['rules'] }); } catch (e) { setError((e as Error).message); }
   };
   const sentence = (r: any) => <>
-    <b>WHEN</b> {r.recordType}{r.kind === 3 ? <> {r.trigger}</> : r.kind === 2 ? <> waits {r.afterHours} h for approval</> : <> is submitted</>}
+    <b>WHEN</b> {typeLabel(r.recordType)}{r.kind === 3 ? <> {r.trigger}</> : r.kind === 2 ? <> waits {r.afterHours} h for approval</> : <> is submitted</>}
     {r.conditions.map((c: Cond, i: number) => <span key={i}> <b>{i === 0 ? 'AND' : 'AND'}</b> {c.field} {opLabel[c.operator]} {c.value}</span>)}
     {' '}<b>THEN</b> {ruleKinds[r.kind].verb} {r.kind === 0 ? `“${r.message}”` : r.targetPermission}{r.kind === 1 ? ` (due in ${r.dueDays} d)` : ''}</>;
   return (
@@ -265,7 +265,7 @@ export function RulesStudio() {
             {(rules.data ?? []).filter((r) => r.kind === k.k).length === 0 && <Typography variant="caption" color="text.secondary">No rules.</Typography>}</Stack></Box>)}
       </Box>}
       {tab === 'log' && <Stack gap={.75}>{(firings.data ?? []).map((f) => <Paper key={f.id} sx={{ p: 1, display: 'flex', gap: 2 }}><Typography variant="caption" sx={{ minWidth: 150 }}>{new Date(f.firedAt).toLocaleString()}</Typography>
-        <Chip size="small" label={f.recordType} /><Typography variant="body2">{(rules.data ?? []).find((r) => r.id === f.ruleId)?.name ?? 'rule'} — {f.outcome}</Typography></Paper>)}
+        <Chip size="small" label={typeLabel(f.recordType)} /><Typography variant="body2">{(rules.data ?? []).find((r) => r.id === f.ruleId)?.name ?? 'rule'} — {f.outcome}</Typography></Paper>)}
         {firings.data?.length === 0 && <Typography color="text.secondary">No rule has fired yet.</Typography>}</Stack>}
       <Dialog open={!!edit} onClose={() => setEdit(null)} fullWidth maxWidth="md"><DialogTitle>{edit?.id ? 'Edit rule' : 'New rule'}</DialogTitle>
         {edit && <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
@@ -273,7 +273,7 @@ export function RulesStudio() {
           <TextField label="Rule name" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
           <Stack direction="row" gap={1}>{ruleKinds.map((k) => <Chip key={k.k} label={k.label} color={edit.kind === k.k ? 'primary' : 'default'} onClick={() => setEdit({ ...edit, kind: k.k })} />)}</Stack>
           <Stack direction="row" gap={1} alignItems="center"><Typography sx={{ fontWeight: 700 }}>WHEN</Typography>
-            <TextField select size="small" label="Record type" value={edit.recordType} onChange={(e) => setEdit({ ...edit, recordType: e.target.value, conditions: [{ field: '', operator: 'equals', value: '' }] })} sx={{ minWidth: 200 }}>{(types.length ? types : [edit.recordType]).map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>
+            <TextField select size="small" label="Record type" value={edit.recordType} onChange={(e) => setEdit({ ...edit, recordType: e.target.value, conditions: [{ field: '', operator: 'equals', value: '' }] })} sx={{ minWidth: 200 }}>{(types.length ? types : [edit.recordType]).map((t) => <MenuItem key={t} value={t}>{typeLabel(t)}</MenuItem>)}</TextField>
             {edit.kind === 3 && <TextField select size="small" label="Event" value={edit.trigger} onChange={(e) => setEdit({ ...edit, trigger: e.target.value })} sx={{ minWidth: 200 }}>{triggers.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>}
             {edit.kind === 2 && <TextField size="small" type="number" label="waits (hours)" value={edit.afterHours} onChange={(e) => setEdit({ ...edit, afterHours: e.target.value })} sx={{ width: 140 }} />}
             {edit.kind < 2 && <Typography>is submitted for approval</Typography>}</Stack>
@@ -294,7 +294,7 @@ export function RulesStudio() {
         <DialogActions>{edit?.id && <Button color="error" onClick={async () => { await del(`/api/platform/rules/${edit.id}`); setEdit(null); qc.invalidateQueries({ queryKey: ['rules'] }); }}>Delete</Button>}<Button onClick={() => setEdit(null)}>Cancel</Button><Button variant="contained" onClick={save}>Save rule</Button></DialogActions></Dialog>
       <Dialog open={!!testing} onClose={() => setTesting(null)} fullWidth maxWidth="sm"><DialogTitle>Dry run: {testing?.name}</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
-          <Stack direction="row" gap={1}><TextField size="small" label={`${testing?.recordType} record id`} value={testId} onChange={(e) => setTestId(e.target.value)} sx={{ flex: 1 }} />
+          <Stack direction="row" gap={1}><TextField size="small" label={`${typeLabel(testing?.recordType)} record id`} value={testId} onChange={(e) => setTestId(e.target.value)} sx={{ flex: 1 }} />
             <Button onClick={async () => { try { setTestRes(await get(`/api/platform/rules/${testing.id}/test/${testId.trim()}`)); } catch (e) { setTestRes({ error: (e as Error).message }); } }}>Run</Button></Stack>
           {testRes?.error && <Alert severity="error">{testRes.error}</Alert>}
           {testRes?.conditions && <><Stack gap={.5}>{testRes.conditions.map((c: any, i: number) => <Typography key={i} variant="body2">{c.holds ? '✓' : '✗'} {c.field} {opLabel[c.operator]} {c.value} <Typography component="span" variant="caption">(actual: {c.actual ?? 'empty'})</Typography></Typography>)}</Stack>

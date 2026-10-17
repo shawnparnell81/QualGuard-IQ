@@ -12,7 +12,7 @@ namespace QualGuardIQ.Api.Controllers;
 
 [ApiController]
 [Route("api/organization")]
-public sealed class OrganizationController(AppDbContext db) : ControllerBase
+public sealed class OrganizationController(AppDbContext db, QualGuardIQ.Application.Security.IAccessService access, QualGuardIQ.Application.Abstractions.ICurrentUser current) : ControllerBase
 {
     public sealed record BrandingDto(string ApplicationName, string OrganizationName, string? PrimaryColor);
     public sealed record SettingsDto(string ApplicationName, string OrganizationName, string? PrimaryColor, string TimeZone, bool LoginHistoryEnabled, uint RowVersion);
@@ -83,6 +83,26 @@ public sealed class OrganizationController(AppDbContext db) : ControllerBase
         (await db.Sites.Include(s => s.Departments).AsNoTracking().OrderBy(s => s.Code).ToListAsync(ct))
         .Select(s => new SiteDto(s.Id, s.Code, s.Name, s.Address, s.TimeZone, s.IsArchived,
             s.Departments.OrderBy(d => d.Code).Select(d => new DepartmentDto(d.Id, d.Code, d.Name, d.IsArchived)).ToList())).ToList();
+
+    public sealed record AccessibleSiteDto(Guid Id, string Code, string Name, string TimeZone);
+
+    /// <summary>
+    /// Active sites where the signed-in user holds a permission (used by the shared site picker). A department-level grant
+    /// makes its site selectable; the owning service still checks the exact site and department when the record is saved.
+    /// </summary>
+    [HttpGet("sites/accessible")]
+    [Authorize]
+    public async Task<IReadOnlyList<AccessibleSiteDto>> AccessibleSites([FromQuery] string permission, [FromQuery] string? q, CancellationToken ct)
+    {
+        if (string.IsNullOrWhiteSpace(permission) || !Permissions.All.Contains(permission)) throw new AppException("Unknown permission.");
+        var scope = await access.GetScopeAsync(current.UserId!.Value, permission, ct);
+        if (scope.IsEmpty) return [];
+        var ids = scope.SiteIds.Concat(scope.DepartmentPairs.Select(p => p.Site)).Distinct().ToList();
+        var query = db.Sites.AsNoTracking().Where(s => !s.IsArchived);
+        if (!scope.AllSites) query = query.Where(s => ids.Contains(s.Id));
+        if (!string.IsNullOrWhiteSpace(q)) { var t = q.Trim().ToLower(); query = query.Where(s => s.Name.ToLower().Contains(t) || s.Code.ToLower().Contains(t)); }
+        return await query.OrderBy(s => s.Name).Take(200).Select(s => new AccessibleSiteDto(s.Id, s.Code, s.Name, s.TimeZone)).ToListAsync(ct);
+    }
 
     [HttpPost("sites")]
     [RequirePermission(Permissions.AdminOrganization)]

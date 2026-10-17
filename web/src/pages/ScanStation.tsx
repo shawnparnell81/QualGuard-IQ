@@ -7,9 +7,10 @@ import { get, post } from '../api';
 import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { useLookup } from '../components/Kit';
-import { fmtDateTime, localDate } from '../components/Status';
+import { localDate } from '../components/Status';
 import { mono } from '../theme';
 import { newRequestId, postOrQueue, useOfflineQueue } from '../offline';
+import { SyncBanner } from '../components/SyncBanner';
 import { ScanField, StockBadge, stockStatusLabel, useLocations, type StockRow } from '../warehouse/common';
 import { qty } from './Warehouse';
 
@@ -55,20 +56,10 @@ export function ScanStation() {
           {flow === 'ship' && <ShipFlow key="s" />}
           {(flow === 'trace' || flow === 'lookup') && <TraceFlow key="t" onAction={(a, code) => setP({ flow: a, item: code })} />}
         </Paper>
-        <QueuePanel q={q} />
+        <SyncBanner q={q} />
       </Box>
     </ModuleWorkspace>
   );
-}
-
-function QueuePanel({ q }: { q: ReturnType<typeof useOfflineQueue> }) {
-  if (!q.items.length) return null;
-  return <Paper sx={{ p: 2, mt: 2, borderLeft: 5, borderColor: 'warning.main' }}>
-    <Stack direction="row" justifyContent="space-between" alignItems="center"><Typography sx={{ fontWeight: 700 }}>Waiting to post ({q.items.length})</Typography><Button size="small" disabled={!q.online} onClick={() => q.flush()}>Post now</Button></Stack>
-    {q.items.map((i) => <Stack key={i.id} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.75, borderTop: 1, borderColor: 'divider' }}>
-      <Box><Typography variant="body2">{i.label}</Typography><Typography variant="caption" color={i.error ? 'error' : 'text.secondary'}>{i.error ? `Refused: ${i.error}` : `Scanned ${fmtDateTime(i.at)}`}</Typography></Box>
-      {i.error && <Button size="small" color="inherit" onClick={() => q.discard(i.id)}>Discard</Button>}</Stack>)}
-  </Paper>;
 }
 
 const strip = (code: string, prefix: string) => (code.toUpperCase().startsWith(prefix) ? code.slice(prefix.length) : code).trim();

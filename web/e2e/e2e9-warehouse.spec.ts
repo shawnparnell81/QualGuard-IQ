@@ -67,9 +67,37 @@ test.describe('E2E 9: warehouse, scan station and shipping', () => {
     await page.getByRole('spinbutton').fill('8');
     await button(page, /^Move$/).click();
     await expect(page.getByText(/saved on this device/)).toBeVisible();
-    await expect(page.getByText('Waiting to post (1)')).toBeVisible();
+    await expect(page.getByTestId('sync-pending')).toContainText('Saved locally — 1 pending sync (offline)');
+    // Back online but the API is unreachable: the item stays local, survives a refresh, and is not cleared early.
+    await page.route('**/api/warehouse/moves/scan', (r) => r.abort('internetdisconnected'));
     await context.setOffline(false);
-    await expect(page.getByText('Waiting to post (1)')).toHaveCount(0, { timeout: 20_000 });
+    await page.reload();
+    await expect(page.getByTestId('sync-pending')).toContainText('Saved locally — 1 pending sync');
+    await page.getByRole('button', { name: 'Sync now' }).click();
+    await expect(page.getByTestId('sync-pending')).toContainText('1 pending sync');
+    await expect(page.getByTestId('sync-done')).toHaveCount(0);
+    // Connection restored: the server accepts it once and the local-only banner clears.
+    await page.unroute('**/api/warehouse/moves/scan');
+    await page.getByRole('button', { name: 'Sync now' }).click();
+    await expect(page.getByTestId('sync-done')).toContainText('Synchronized — the server accepted 1 item', { timeout: 20_000 });
+    await expect(page.getByTestId('sync-pending')).toHaveCount(0);
+    // Stock that is no longer there when the queued move reaches the server is a conflict for a person to review, kept apart from the pending items.
+    await context.setOffline(true);
+    await page.getByLabel('Scan lot, serial or part').fill(`QG:LOT:${lot}`);
+    await page.keyboard.press('Enter');
+    await page.getByLabel('Scan source location').fill(`QG:LOC:${w.b1.code}`);
+    await page.keyboard.press('Enter');
+    await page.getByLabel('Scan destination location').fill(`QG:LOC:${w.b2.code}`);
+    await page.keyboard.press('Enter');
+    await page.getByRole('spinbutton').fill('999');
+    await button(page, /^Move$/).click();
+    await context.setOffline(false); // the online event starts the sync by itself
+    await expect(page.getByTestId('sync-conflict')).toContainText('Conflict requires review (1)', { timeout: 20_000 });
+    await expect(page.getByTestId('sync-conflict')).toContainText('is available at');
+    await expect(page.getByTestId('sync-pending')).toHaveCount(0);
+    await expect(page.getByTestId('sync-done')).toHaveCount(0); // no stale "synchronized" message for the refused item
+    await page.getByRole('button', { name: 'Reviewed — remove' }).click();
+    await expect(page.getByTestId('sync-conflict')).toHaveCount(0);
 
     const stock = await api.get<{ locationCode: string; onHand: number }[]>(`/api/warehouse/stock?partId=${w.partId}`);
     expect(stock.find((s) => s.locationCode === w.b2.code)?.onHand).toBe(8);

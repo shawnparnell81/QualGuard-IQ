@@ -15,18 +15,18 @@ namespace QualGuardIQ.Api.Controllers;
 [ApiController]
 [Route("api/admin/config")]
 [RequirePermission(Permissions.AdminOrganization)]
-public sealed class ConfigurationController(AppDbContext db, IRecordRegistry records, RecordConditions conditions, WorkflowService workflow) : ControllerBase
+public sealed class ConfigurationController(AppDbContext db, IRecordRegistry records, RecordConditions conditions, WorkflowService workflow, RecordTypeLabels labels) : ControllerBase
 {
     public sealed record StepDto(int Order, string Name, string RequiredPermission, string SignatureMeaning, Guid? RequiredSkillId = null, bool RequireMfa = false,
         int? Stage = null, string? ConditionField = null, string? ConditionOperator = null, string? ConditionValue = null, int? EscalateAfterHours = null, string? EscalationPermission = null);
-    public sealed record RouteDto(Guid Id, string RecordType, string Name, int Version, bool PreventSelfApproval, IReadOnlyList<StepDto> Steps, Guid? SiteId = null);
+    public sealed record RouteDto(Guid Id, string RecordType, string Name, int Version, bool PreventSelfApproval, IReadOnlyList<StepDto> Steps, Guid? SiteId = null, string? RecordTypeLabel = null);
     public sealed record SaveRouteRequest(string Name, bool PreventSelfApproval, IReadOnlyList<StepDto> Steps);
     public sealed record SaveFieldRequest(string RecordType, string Key, string Label, CustomFieldType FieldType, bool IsRequired, List<string>? Options, int SortOrder);
 
     [HttpGet("approval-routes")]
     public async Task<IEnumerable<RouteDto>> Routes(CancellationToken ct) =>
         (await db.ApprovalRoutes.AsNoTracking().Include(r => r.Steps).Where(r => r.IsActive).OrderBy(r => r.RecordType).ThenBy(r => r.SiteId).ToListAsync(ct))
-        .Select(r => new RouteDto(r.Id, r.RecordType, r.Name, r.Version, r.PreventSelfApproval, r.Steps.OrderBy(s => s.Stage).ThenBy(s => s.Order).Select(s => new StepDto(s.Order, s.Name, s.RequiredPermission, s.SignatureMeaning, s.RequiredSkillId, s.RequireMfa, s.Stage, s.ConditionField, s.ConditionOperator, s.ConditionValue, s.EscalateAfterHours, s.EscalationPermission)).ToList(), r.SiteId));
+        .Select(r => new RouteDto(r.Id, r.RecordType, r.Name, r.Version, r.PreventSelfApproval, r.Steps.OrderBy(s => s.Stage).ThenBy(s => s.Order).Select(s => new StepDto(s.Order, s.Name, s.RequiredPermission, s.SignatureMeaning, s.RequiredSkillId, s.RequireMfa, s.Stage, s.ConditionField, s.ConditionOperator, s.ConditionValue, s.EscalateAfterHours, s.EscalationPermission)).ToList(), r.SiteId, labels.For(r.RecordType)));
 
     /// <summary>Replaces a route's steps. Requests already in progress keep the step numbers they started with.</summary>
     [HttpPut("approval-routes/{recordType}")]
@@ -35,7 +35,7 @@ public sealed class ConfigurationController(AppDbContext db, IRecordRegistry rec
         if (siteId is { } sid && !await db.Sites.AnyAsync(x => x.Id == sid, ct)) throw new NotFoundException("Site");
         foreach (var s in req.Steps.Where(s => s.RequiredSkillId != null))
             if (!await db.Skills.AnyAsync(k => k.Id == s.RequiredSkillId, ct)) throw new AppException($"Step '{s.Name}' needs an existing skill or qualification.");
-        if (!records.IsKnownType(recordType)) throw new NotFoundException($"Record type '{recordType}'");
+        if (!records.IsKnownType(recordType)) throw new NotFoundException("Record type");
         if (req.Steps.Count is 0 or > 20) throw new AppException("A route needs 1 to 20 steps.");
         if (req.Steps.Select(s => s.Order).Distinct().Count() != req.Steps.Count) throw new AppException("Step order numbers must be unique.");
         foreach (var s in req.Steps)
@@ -72,8 +72,8 @@ public sealed class ConfigurationController(AppDbContext db, IRecordRegistry rec
     [HttpGet("workflow-designer/fields/{recordType}")]
     public IActionResult DesignerFields(string recordType)
     {
-        if (!records.IsKnownType(recordType)) throw new NotFoundException($"Record type '{recordType}'");
-        return Ok(new { fields = conditions.FieldsOf(recordType).Select(f => new { f.Name, f.Type, f.Options }), operators = RecordConditions.Operators, permissions = Permissions.All.Where(p => p.EndsWith(".approve") || p.EndsWith(".admin") || p.EndsWith(".edit")).Order() });
+        if (!records.IsKnownType(recordType)) throw new NotFoundException("Record type");
+        return Ok(new { recordType, label = labels.For(recordType), fields = conditions.FieldsOf(recordType).Select(f => new { f.Name, f.Type, f.Options }), operators = RecordConditions.Operators, permissions = Permissions.All.Where(p => p.EndsWith(".approve") || p.EndsWith(".admin") || p.EndsWith(".edit")).Order() });
     }
 
     /// <summary>Shows which steps of the active route would apply to an existing record, stage by stage (dry run; nothing is submitted).</summary>

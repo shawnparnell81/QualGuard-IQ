@@ -39,6 +39,7 @@ public static class DependencyInjection
 
         // Shared engines
         services.AddScoped<IRecordRegistry, RecordRegistry>();
+        services.AddSingleton(new RecordTypeLabels(config.GetSection("RecordTypeLabels").GetChildren().Where(c => c.Value is not null).ToDictionary(c => c.Key, c => c.Value!)));
         services.AddScoped<ISearchIndexer, SearchIndexer>();
         services.AddScoped<SearchService>();
         services.AddScoped<INotifier, Notifier>();
@@ -58,6 +59,7 @@ public static class DependencyInjection
 
         // Document control and drawings
         services.AddScoped<DocumentService>();
+        services.AddScoped<DocumentTypeService>();
         foreach (var (kind, docType, revType) in new[]
         {
             (DocumentKind.Document, DocumentRecordTypes.Document, DocumentRecordTypes.DocumentRevision),

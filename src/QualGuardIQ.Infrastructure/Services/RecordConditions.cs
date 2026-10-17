@@ -11,7 +11,7 @@ namespace QualGuardIQ.Infrastructure.Services;
 /// Shared condition evaluation used by the workflow designer (conditional and decision-tree steps) and the business rule engine.
 /// Fields are read from the record itself, so a condition can use any stored field of the record type without code.
 /// </summary>
-public sealed class RecordConditions(AppDbContext db, IRecordRegistry records)
+public sealed class RecordConditions(AppDbContext db, IRecordRegistry records, RecordTypeLabels labels)
 {
     public static readonly string[] Operators = Conditions.Operators;
 
@@ -58,7 +58,7 @@ public sealed class RecordConditions(AppDbContext db, IRecordRegistry records)
     public void Validate(string recordType, Condition c)
     {
         if (!Operators.Contains(c.Operator)) throw new AppException($"Unknown operator '{c.Operator}'.");
-        if (FieldsOf(recordType).All(f => !string.Equals(f.Name, c.Field, StringComparison.OrdinalIgnoreCase))) throw new AppException($"'{c.Field}' is not a field of {recordType}.");
+        if (FieldsOf(recordType).All(f => !string.Equals(f.Name, c.Field, StringComparison.OrdinalIgnoreCase))) throw new AppException($"'{c.Field}' is not a field of {labels.For(recordType)}.");
         if (c.Operator is not ("isEmpty" or "isNotEmpty") && string.IsNullOrWhiteSpace(c.Value)) throw new AppException($"The condition on {c.Field} needs a value.");
     }
 }

@@ -93,6 +93,8 @@ export function DocumentNew({ kind }: { kind: Kind }) {
   const nav = useNavigate();
   const [error, setError] = useState<string | null>(null);
   const sites = useQuery({ queryKey: ['sites'], queryFn: () => get<Site[]>('/api/organization/sites') });
+  const library = useQuery({ queryKey: ['document-types', kind], queryFn: () => get<{ name: string }[]>(`/api/document-types?kind=${kind}`) });
+  const typeNames = library.data ? library.data.map((t) => t.name) : c.types;
   const { register, control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<CreateForm>({
     resolver: zodResolver(createSchema), defaultValues: { title: '', documentType: '', siteId: '', departmentId: '', reviewIntervalMonths: 24, initialRevision: 'A', changeSummary: 'Initial release' },
   });
@@ -111,7 +113,7 @@ export function DocumentNew({ kind }: { kind: Kind }) {
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Title" sx={{ gridColumn: '1 / -1' }} {...register('title')} error={!!errors.title} helperText={errors.title?.message} />
         <Controller name="documentType" control={control} render={({ field }) => (
-          <TextField select label="Type" {...field} error={!!errors.documentType} helperText={errors.documentType?.message}>{c.types.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>)} />
+          <TextField select label="Type" {...field} error={!!errors.documentType} helperText={errors.documentType?.message}>{typeNames.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>)} />
         <TextField label="Review interval (months)" type="number" {...register('reviewIntervalMonths')} error={!!errors.reviewIntervalMonths} />
         <Controller name="siteId" control={control} render={({ field }) => (
           <TextField select label="Site" {...field} error={!!errors.siteId} helperText={errors.siteId?.message}>
@@ -258,5 +260,47 @@ function DraftEditor({ rev, onSaved, formTemplate }: { rev: Rev; onSaved: () => 
         }}>Save draft</Button></Box>
       </Stack>
     </Paper>
+  );
+}
+
+interface DocType { id: string; kind: Kind; name: string; description: string | null; isSystem: boolean; isActive: boolean; sortOrder: number }
+const kindNames = ['Documents', 'Drawings', 'Form templates'];
+/** Governed document type library: shipped types (seeded once, never duplicated) plus your own; rename or retire without losing history. */
+export function DocumentTypesPage() {
+  const qc = useQueryClient();
+  const [kind, setKind] = useState<Kind>(0);
+  const q = useQuery({ queryKey: ['document-types-admin', kind], queryFn: () => get<DocType[]>(`/api/document-types?kind=${kind}&includeInactive=true`) });
+  const [edit, setEdit] = useState<Partial<DocType> | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const save = async () => {
+    setError(null);
+    try {
+      if (edit!.id) await put(`/api/document-types/${edit!.id}`, { name: edit!.name, description: edit!.description || null, isActive: edit!.isActive ?? true, sortOrder: edit!.sortOrder ?? 0 });
+      else await post('/api/document-types', { kind, name: edit!.name, description: edit!.description || null });
+      setEdit(null); qc.invalidateQueries({ queryKey: ['document-types-admin'] }); qc.invalidateQueries({ queryKey: ['document-types'] });
+    } catch (e) { setError((e as Error).message); }
+  };
+  return (
+    <ModuleWorkspace module={modules.find((m) => m.key === 'documents')!} crumbs={[{ label: 'Document types' }]} title="Document type library"
+      tabs={kindNames.map((l, i) => ({ value: String(i), label: l }))} tab={String(kind)} onTab={(t) => setKind(Number(t) as Kind)}
+      actions={<Button variant="contained" onClick={() => { setError(null); setEdit({ name: '', description: '' }); }}>Add type</Button>}>
+      <Typography color="text.secondary" sx={{ mb: 2 }}>Renaming a type renames it on every document filed under it. Retired types stay on existing documents but cannot be chosen for new ones.</Typography>
+      <DataTable data={q.data ?? []} onRowClick={(r) => { setError(null); setEdit({ ...r }); }} columns={[
+        { header: 'Type', accessorKey: 'name' },
+        { header: 'Source', accessorKey: 'isSystem', cell: (c) => (c.getValue() ? 'Shipped' : 'Your organization') },
+        { header: 'State', accessorKey: 'isActive', cell: (c) => (c.getValue() ? 'In use' : 'Retired') },
+        { header: 'Description', accessorKey: 'description' },
+      ]} />
+      <Dialog open={!!edit} onClose={() => setEdit(null)} fullWidth maxWidth="sm">
+        <DialogTitle>{edit?.id ? 'Edit document type' : `New ${kindNames[kind].toLowerCase()} type`}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          {error && <Alert severity="error">{error}</Alert>}
+          <TextField label="Name" value={edit?.name ?? ''} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+          <TextField label="Description" value={edit?.description ?? ''} onChange={(e) => setEdit({ ...edit, description: e.target.value })} />
+          {edit?.id && <FormControlLabel control={<Checkbox checked={edit.isActive ?? true} onChange={(e) => setEdit({ ...edit, isActive: e.target.checked })} />} label="In use for new documents" />}
+        </DialogContent>
+        <DialogActions><Button onClick={() => setEdit(null)}>Cancel</Button><Button variant="contained" disabled={!edit?.name?.trim()} onClick={save}>Save</Button></DialogActions>
+      </Dialog>
+    </ModuleWorkspace>
   );
 }

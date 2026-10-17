@@ -61,6 +61,7 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
             if (!await db.Carriers.AnyAsync(c => c.Code == code, ct)) db.Carriers.Add(new Domain.Quality.Carrier { Code = code, Name = name, Kind = Domain.Quality.CarrierKind.Parcel, TrackingUrl = url });
         await db.SaveChangesAsync(ct);
         await new Modules.Fai.AqlService(db, null!).SeedAsync(ct);
+        await new Modules.Documents.DocumentTypeService(db).EnsureSeededAsync(ct);
 
         var email = seed["AdminEmail"];
         var password = seed["AdminPassword"];
