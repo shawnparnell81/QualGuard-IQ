@@ -47929,6 +47929,64 @@ components:
           type:
             - 'null'
             - string
+        help:
+          type:
+            - 'null'
+            - string
+        placeholder:
+          type:
+            - 'null'
+            - string
+        width:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        decimals:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        maxLength:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        nominal:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        resultLabels:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        accept:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        columns:
+          type:
+            - 'null'
+            - array
+          items:
+            $ref: '#/components/schemas/FormField'
+        sourceLocation:
+          type:
+            - 'null'
+            - string
     FormPreviewInput:
       required:
         - fieldsJson

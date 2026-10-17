@@ -72,9 +72,9 @@ public sealed class FormsController(AppDbContext db, FormService forms, ModuleSu
     [HttpGet("records/{id:guid}")]
     public async Task<object> Get(Guid id, CancellationToken ct)
     {
-        var (r, fields, values) = await forms.GetAsync(id, ct);
+        var (r, def, values) = await forms.GetAsync(id, ct);
         var editable = r.Status is FormRecordStatus.Draft or FormRecordStatus.Rejected && await m.CanAsync(Permissions.FormsEdit, r.SiteId, r.DepartmentId, ct);
-        return new { r.Id, r.Number, r.Title, r.TemplateId, r.TemplateNumber, r.TemplateRevision, r.Status, r.SiteId, r.SubmittedAt, r.RowVersion, Fields = fields, Values = values, CanEdit = editable };
+        return new { r.Id, r.Number, r.Title, r.TemplateId, r.TemplateNumber, r.TemplateRevision, r.Status, r.SiteId, r.SubmittedAt, r.RowVersion, Fields = def.Fields, Definition = def, Values = values, CanEdit = editable };
     }
 
     [HttpPut("records/{id:guid}")]

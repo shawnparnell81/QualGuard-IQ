@@ -38,12 +38,12 @@ public sealed class FormService(AppDbContext db, ModuleSupport m, INumberingServ
         return rec;
     }
 
-    public async Task<(FormRecord Record, List<FormField> Fields, Dictionary<string, string?> Values)> GetAsync(Guid id, CancellationToken ct)
+    public async Task<(FormRecord Record, FormDefinition Definition, Dictionary<string, string?> Values)> GetAsync(Guid id, CancellationToken ct)
     {
         await m.ViewAsync(RecordType, id, ct);
         var rec = await db.FormRecords.AsNoTracking().FirstAsync(r => r.Id == id, ct);
         var schema = await db.DocumentRevisions.Where(r => r.Id == rec.TemplateRevisionId).Select(r => r.FieldSchema).FirstAsync(ct);
-        return (rec, FormSchema.Parse(schema!), JsonSerializer.Deserialize<Dictionary<string, string?>>(rec.ValuesJson) ?? []);
+        return (rec, FormDefinitions.Parse(schema!), JsonSerializer.Deserialize<Dictionary<string, string?>>(rec.ValuesJson) ?? []);
     }
 
     public async Task<Dictionary<string, string?>> SaveAsync(Guid id, Dictionary<string, string?> values, uint rowVersion, CancellationToken ct)
@@ -52,7 +52,7 @@ public sealed class FormService(AppDbContext db, ModuleSupport m, INumberingServ
         var rec = await db.FormRecords.FirstAsync(r => r.Id == id, ct);
         if (rec.Status is not (FormRecordStatus.Draft or FormRecordStatus.Rejected)) throw new AppException("Only draft records can be changed.", 409);
         var fields = await FieldsAsync(rec, ct);
-        var normalized = FormSchema.Apply(fields, values, requireComplete: false);
+        var normalized = FormDefinitions.Apply(fields, values, requireComplete: false);
         db.Entry(rec).Property(r => r.RowVersion).OriginalValue = rowVersion;
         rec.ValuesJson = JsonSerializer.Serialize(normalized);
         await db.SaveChangesAsync(ct);
@@ -66,7 +66,7 @@ public sealed class FormService(AppDbContext db, ModuleSupport m, INumberingServ
         if (rec.Status is not (FormRecordStatus.Draft or FormRecordStatus.Rejected)) throw new ConflictException("This record was already submitted.");
         var fields = await FieldsAsync(rec, ct);
         var values = JsonSerializer.Deserialize<Dictionary<string, string?>>(rec.ValuesJson) ?? [];
-        rec.ValuesJson = JsonSerializer.Serialize(FormSchema.Apply(fields, values, requireComplete: true));
+        rec.ValuesJson = JsonSerializer.Serialize(FormDefinitions.Apply(fields, values, requireComplete: true));
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         rec.Status = FormRecordStatus.Submitted;
         rec.SubmittedAt = m.Now;
@@ -93,6 +93,6 @@ public sealed class FormService(AppDbContext db, ModuleSupport m, INumberingServ
         await db.SaveChangesAsync(ct);
     }
 
-    private async Task<List<FormField>> FieldsAsync(FormRecord rec, CancellationToken ct) =>
-        FormSchema.Parse((await db.DocumentRevisions.Where(r => r.Id == rec.TemplateRevisionId).Select(r => r.FieldSchema).FirstAsync(ct))!);
+    private async Task<FormDefinition> FieldsAsync(FormRecord rec, CancellationToken ct) =>
+        FormDefinitions.Parse((await db.DocumentRevisions.Where(r => r.Id == rec.TemplateRevisionId).Select(r => r.FieldSchema).FirstAsync(ct))!);
 }
