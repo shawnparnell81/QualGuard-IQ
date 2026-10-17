@@ -1802,12 +1802,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Code")
-                        .IsUnique();
-
                     b.HasIndex("DepartmentId");
 
-                    b.HasIndex("SiteId");
+                    b.HasIndex("SiteId", "Code")
+                        .IsUnique();
 
                     b.ToTable("skills", "qms");
                 });

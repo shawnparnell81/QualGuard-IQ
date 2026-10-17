@@ -56,7 +56,7 @@ public sealed class WorkforceController(WorkforceService svc, QualificationServi
     [HttpGet("certifications")] [RequirePermission(Permissions.TrainingView)] public Task<List<EmployeeCertification>> Certifications([FromQuery] Guid? userId, CancellationToken ct) => svc.CertificationsAsync(userId, ct);
     [HttpPost("certifications/{id:guid}/revoke")] public async Task<IActionResult> Revoke(Guid id, ReasonRequest r, CancellationToken ct) { await svc.RevokeAsync(id, r.Reason, ct); return NoContent(); }
 
-    [HttpGet("matrix")] [RequirePermission(Permissions.TrainingView)]
+    [HttpGet("skills-matrix")] [RequirePermission(Permissions.TrainingView)]
     public Task<SkillsMatrix> Matrix([FromQuery] Guid siteId, [FromQuery] Guid? departmentId, [FromQuery] Guid? workCenterId, CancellationToken ct) => svc.MatrixAsync(siteId, departmentId, workCenterId, ct);
     /// <summary>Qualification gap report for a site, department or production line.</summary>
     [HttpGet("gaps")] [RequirePermission(Permissions.TrainingView)]

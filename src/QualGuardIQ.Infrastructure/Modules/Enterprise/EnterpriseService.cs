@@ -203,6 +203,7 @@ public sealed class EnterpriseService(AppDbContext db, ModuleSupport m, INumberi
     public async Task<object> WarRoomAsync(Guid siteId, CancellationToken ct)
     {
         if (!await db.Sites.AnyAsync(s => s.Id == siteId, ct)) throw new NotFoundException("Site");
+        await m.RequireAsync(Permissions.EnterpriseView, siteId, null, ct);
         var metrics = (await SiteMetricsAsync([siteId], ct)).Single();
         var ncrs = await m.CanAsync(Permissions.NcrView, siteId, null, ct)
             ? await db.Ncrs.AsNoTracking().Where(x => x.SiteId == siteId && x.Status != NcrStatus.Closed && x.Status != NcrStatus.Cancelled).OrderBy(x => x.CreatedAt).Take(8).Select(x => new { x.Id, x.Number, x.Title, Status = x.Status.ToString(), x.DueOn, Url = "/ncr/" + x.Id }).ToListAsync(ct) : [];

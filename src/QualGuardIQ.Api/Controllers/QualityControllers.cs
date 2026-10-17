@@ -1,3 +1,4 @@
+using QualGuardIQ.Application.Abstractions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -331,6 +332,19 @@ public sealed class AuditsController(AppDbContext db, AuditService audits, Modul
 
     [HttpPost("{id:guid}/reporting")]
     public async Task<IActionResult> Reporting(Guid id, TextRequest r, CancellationToken ct) { await audits.MoveToReportingAsync(id, r.Text, ct); return NoContent(); }
+
+    /// <summary>Raises a CAPA from an audit finding (linked both ways); the finding can be verified once that CAPA is closed.</summary>
+    [HttpPost("findings/{id:guid}/capa")]
+    public async Task<object> FindingCapa(Guid id, NcrsController.CreateCapaFromNcr r, [FromServices] CapaService capas, CancellationToken ct)
+    {
+        await m.EditAsync(AuditService.FindingType, id, ct);
+        var f = await db.AuditFindings.FirstAsync(x => x.Id == id, ct);
+        if (f.Status is FindingStatus.Verified or FindingStatus.Closed) throw new ConflictException("The finding is already verified.");
+        var c = await capas.CreateAsync(new CreateCapaRequest(string.IsNullOrWhiteSpace(r.Title) ? $"Audit finding {f.Number}" : r.Title, string.IsNullOrWhiteSpace(r.ProblemStatement) ? f.Statement : r.ProblemStatement,
+            "Corrective", "Audit", f.SiteId, f.DepartmentId, r.OwnerId), ct, (AuditService.FindingType, f.Id));
+        if (f.Status == FindingStatus.Open) { f.Status = FindingStatus.ActionPlanned; await db.SaveChangesAsync(ct); }
+        return new { c.Id, c.Number };
+    }
 
     [HttpPost("findings/{id:guid}/verify")]
     public async Task<IActionResult> VerifyFinding(Guid id, TextRequest r, CancellationToken ct) { await audits.VerifyFindingAsync(id, r.Text, ct); return NoContent(); }
