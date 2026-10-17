@@ -64,7 +64,7 @@ public partial class AppDbContext
         });
         b.Entity<Skill>(e =>
         {
-            e.ToTable("skills"); e.HasIndex(x => x.Code).IsUnique();
+            e.ToTable("skills"); e.HasIndex(x => new { x.SiteId, x.Code }).IsUnique();
             e.Property(x => x.Code).HasMaxLength(40); e.Property(x => x.Name).HasMaxLength(200);
             SiteRefs(e);
         });

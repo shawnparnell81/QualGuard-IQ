@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using QualGuardIQ.Application.Abstractions;
@@ -18,7 +19,7 @@ public sealed record AssignRequest(List<Guid> UserIds, DateOnly? DueOn);
 /// <summary>Runs after a trainee signs off an assignment (curricula use it to grant qualifications and certifications).</summary>
 public interface ITrainingCompletedHandler { Task OnCompletedAsync(TrainingAssignment assignment, CancellationToken ct); }
 
-public sealed class TrainingService(AppDbContext db, ModuleSupport m, INumberingService numbers, INotifier notifier, UserManager<ApplicationUser> users, IEnumerable<ITrainingCompletedHandler> completed) : IRevisionReleasedHandler
+public sealed class TrainingService(AppDbContext db, ModuleSupport m, INumberingService numbers, INotifier notifier, UserManager<ApplicationUser> users, IServiceProvider services) : IRevisionReleasedHandler
 {
     public const string RecordType = "TrainingCourse";
 
@@ -109,7 +110,8 @@ public sealed class TrainingService(AppDbContext db, ModuleSupport m, INumbering
         a.CompletionNotes = notes?.Trim();
         a.ExpiresOn = c.ValidityMonths is { } v ? (await m.TodayAsync(a.SiteId, ct)).AddMonths(v) : null;
         await db.SaveChangesAsync(ct);
-        foreach (var h in completed) await h.OnCompletedAsync(a, ct);
+        // resolved at call time: handlers (e.g. WorkforceService) depend on TrainingService themselves
+        foreach (var h in services.GetServices<ITrainingCompletedHandler>()) await h.OnCompletedAsync(a, ct);
     }
 
     /// <summary>Retraining: when a revision of a linked document is released, everyone who completed earlier training gets a new assignment.</summary>

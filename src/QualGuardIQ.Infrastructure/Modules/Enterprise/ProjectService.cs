@@ -154,7 +154,10 @@ public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingS
     /// <summary>E-signed phase gate. Go needs every deliverable of the phase done or not applicable; Conditional needs notes and carries the open items forward.</summary>
     public async Task GateAsync(Guid id, GateInput r, CancellationToken ct)
     {
-        var p = await EditProjectAsync(id, ct);
+        // Gate reviewers need view + approve; they do not need edit rights on the project.
+        await m.ViewAsync(ProjectType, id, ct);
+        var p = await db.QualityProjects.FirstAsync(x => x.Id == id, ct);
+        if (p.Status is QualityProjectStatus.Completed or QualityProjectStatus.Cancelled) throw new ConflictException($"The project is {p.Status}.");
         await m.RequireAsync(Permissions.ApqpApprove, p.SiteId, p.DepartmentId, ct);
         var open = await db.ProjectDeliverables.Where(d => d.ProjectId == id && d.Phase == p.CurrentPhase && d.Status == DeliverableStatus.Open).Select(d => d.Name).ToListAsync(ct);
         if (r.Decision == GateDecision.Go && open.Count > 0) throw new AppException($"Phase {p.CurrentPhase} still has open deliverables: {string.Join(", ", open)}.");

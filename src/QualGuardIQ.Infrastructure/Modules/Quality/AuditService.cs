@@ -120,8 +120,15 @@ public sealed class AuditService(AppDbContext db, ModuleSupport m, INumberingSer
         if (f.Status is FindingStatus.Verified or FindingStatus.Closed) throw new ConflictException("This finding is already verified.");
         ModuleSupport.Required(notes, "Verification notes", 4000);
         var isNc = f.FindingType is Domain.Quality.FindingType.MajorNonconformity or Domain.Quality.FindingType.MinorNonconformity;
-        if (isNc && !await db.ActionItems.AnyAsync(x => x.SourceType == FindingType && x.SourceId == findingId && x.Status != Domain.Shared.ActionStatus.Cancelled, ct))
-            throw new AppException("A nonconformity needs at least one corrective action.");
+        // A nonconformity is answered by corrective actions on the finding, or (with none) by a CAPA raised from it, which must then be closed.
+        var hasActions = await db.ActionItems.AnyAsync(x => x.SourceType == FindingType && x.SourceId == findingId && x.Status != Domain.Shared.ActionStatus.Cancelled, ct);
+        if (isNc && !hasActions)
+        {
+            var capaIds = await db.RecordLinks.Where(l => l.FromType == FindingType && l.FromId == findingId && l.ToType == "Capa").Select(l => l.ToId).ToListAsync(ct);
+            if (capaIds.Count == 0) throw new AppException("A nonconformity needs at least one corrective action.");
+            if (await db.Capas.AnyAsync(c => capaIds.Contains(c.Id) && c.Status != CapaStatus.Closed, ct))
+                throw new AppException("The CAPA raised from this finding must be closed (effectiveness verified) first.");
+        }
         if (!await actions.AllClosedAsync(FindingType, findingId, ct)) throw new AppException("All corrective actions must be completed and verified first.");
         f.VerificationNotes = notes.Trim();
         f.Status = FindingStatus.Verified;

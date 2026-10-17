@@ -138,7 +138,8 @@ public sealed class WorkforceService(AppDbContext db, ModuleSupport m, INumberin
         ModuleSupport.Required(r.Code, "Code", 40); ModuleSupport.Required(r.Name, "Name", 200);
         if (r.MinimumAudits is < 0 or > 100) throw new AppException("Minimum audits must be between 0 and 100.");
         await ValidateCoursesAsync(r.CourseIds ?? [], ct);
-        if (await db.Skills.AnyAsync(s => s.Code == r.Code.Trim(), ct)) throw new ConflictException("That skill code already exists.");
+        var code = r.Code.Trim().ToUpperInvariant();
+        if (await db.Skills.AnyAsync(s => s.Code == code && s.SiteId == r.SiteId, ct)) throw new ConflictException("That skill code already exists at this site.");
         var s = new Skill { Code = r.Code.Trim().ToUpperInvariant(), Name = r.Name.Trim(), Kind = r.Kind, SiteId = r.SiteId, DepartmentId = r.DepartmentId, CourseIds = r.CourseIds ?? [],
             RequiresCertification = r.RequiresCertification, AuditTypes = r.AuditTypes ?? [], MinimumAudits = r.MinimumAudits };
         db.Skills.Add(s);
