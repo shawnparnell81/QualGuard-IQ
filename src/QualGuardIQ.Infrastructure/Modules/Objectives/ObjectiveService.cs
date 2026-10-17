@@ -11,7 +11,7 @@ namespace QualGuardIQ.Infrastructure.Modules.Objectives;
 
 public sealed record ObjectiveInput(string Title, string? Description, Guid SiteId, Guid? DepartmentId, string? Process, Guid? OwnerId, string MetricName, string MetricDefinition, string DataSource,
     string? Unit, KpiDirection Direction, KpiFrequency Frequency, decimal? Baseline, decimal Target, decimal Warning, decimal Critical, bool TriggerActionOnCritical, string? ActionPlan,
-    DateOnly StartsOn, DateOnly? EndsOn, uint RowVersion = 0);
+    DateOnly StartsOn, DateOnly? EndsOn, uint RowVersion = 0, KpiLevel Level = KpiLevel.Site, Guid? OrgUnitId = null);
 public sealed record MeasurementInput(DateOnly PeriodStart, decimal? Value, string? Notes);
 
 /// <summary>
@@ -70,7 +70,7 @@ public sealed class ObjectiveService(AppDbContext db, ModuleSupport m, INumberin
         // Thresholds must be ordered in the direction of improvement: target better than warning boundary, warning better than critical.
         var ordered = r.Direction == KpiDirection.HigherIsBetter ? r.Target >= r.Warning && r.Warning >= r.Critical : r.Target <= r.Warning && r.Warning <= r.Critical;
         if (!ordered) throw new AppException(r.Direction == KpiDirection.HigherIsBetter ? "For higher-is-better metrics use target ≥ warning ≥ critical." : "For lower-is-better metrics use target ≤ warning ≤ critical.");
-        o.Title = r.Title.Trim(); o.Description = T(r.Description); o.Process = T(r.Process); o.MetricName = r.MetricName.Trim(); o.MetricDefinition = r.MetricDefinition.Trim(); o.DataSource = source;
+        o.Title = r.Title.Trim(); o.Description = T(r.Description); o.Process = T(r.Process); o.MetricName = r.MetricName.Trim(); o.Level = r.Level; o.OrgUnitId = r.Level is KpiLevel.Corporate or KpiLevel.Regional ? r.OrgUnitId : null; o.MetricDefinition = r.MetricDefinition.Trim(); o.DataSource = source;
         o.Unit = T(r.Unit) ?? KpiCalculator.Find(source)?.Unit; o.Direction = r.Direction; o.Frequency = r.Frequency; o.Baseline = r.Baseline; o.Target = r.Target; o.Warning = r.Warning; o.Critical = r.Critical;
         o.TriggerActionOnCritical = r.TriggerActionOnCritical; o.ActionPlan = T(r.ActionPlan); o.StartsOn = r.StartsOn; o.EndsOn = r.EndsOn;
     }

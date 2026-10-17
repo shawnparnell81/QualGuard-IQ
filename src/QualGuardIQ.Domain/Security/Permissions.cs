@@ -154,6 +154,19 @@ public static class Permissions
     /// <summary>Retention policies and decisions, business continuity exercises.</summary>
     public const string GovernanceView = "governance.view";
     public const string GovernanceEdit = "governance.edit";
+    /// <summary>Requirements, traceability, design reviews, design FMEA links, product configuration and BOM quality.</summary>
+    public const string EngineeringView = "engineering.view";
+    public const string EngineeringEdit = "engineering.edit";
+    /// <summary>Approve design reviews and approve requirement revisions.</summary>
+    public const string EngineeringApprove = "engineering.approve";
+    /// <summary>Quality knowledge base, root-cause library and playbooks.</summary>
+    public const string KnowledgeView = "knowledge.view";
+    public const string KnowledgeEdit = "knowledge.edit";
+    /// <summary>Business processes, maturity assessments and benchmarking.</summary>
+    public const string ProcessView = "process.view";
+    public const string ProcessEdit = "process.edit";
+    /// <summary>Security reviews, privileged access reviews, access certification and deployment history (organization-wide).</summary>
+    public const string SecurityReview = "security.review";
     /// <summary>Public API clients (keys and OAuth client credentials) and notification channels.</summary>
     public const string ApiAdmin = "api.admin";
 
@@ -166,6 +179,6 @@ public static class Permissions
     /// <summary>Permissions that only make sense organization-wide (never site-scoped).</summary>
     public static readonly IReadOnlySet<string> GlobalOnly = new HashSet<string>
     {
-        AdminUsers, AdminRoles, AdminOrganization, SecurityLogView, ApiAdmin
+        AdminUsers, AdminRoles, AdminOrganization, SecurityLogView, ApiAdmin, SecurityReview
     };
 }

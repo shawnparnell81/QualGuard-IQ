@@ -113,6 +113,10 @@ public class BomLine : Entity, IAudited
     public decimal Quantity { get; set; }
     public string? Operation { get; set; }
     public RecordSource Source { get; set; }
+    /// <summary>Engineering (as designed) or manufacturing (as built) BOM.</summary>
+    public Domain.Enterprise.BomType BomType { get; set; }
+    public string? ComponentRevision { get; set; }
+    public Guid? SupplierId { get; set; }
     public string AuditLabel => $"BOM line";
 }
 

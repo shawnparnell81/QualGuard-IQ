@@ -190,7 +190,7 @@ public class CompliancePackActivation : Entity, IAudited
 }
 
 // ---------- validation ----------
-public enum ValidationKind { Process = 0, Equipment = 1, Software = 2, TestMethod = 3 }
+public enum ValidationKind { Process = 0, Equipment = 1, Software = 2, TestMethod = 3, DesignVerification = 4, DesignValidation = 5 }
 public enum ValidationStatus { Planning = 0, ProtocolApproval = 1, Execution = 2, ResultsApproval = 3, Released = 4, Cancelled = 5 }
 
 public class ValidationProject : Entity, IAudited, ISiteScoped

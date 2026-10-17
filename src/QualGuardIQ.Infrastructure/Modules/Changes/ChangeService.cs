@@ -10,7 +10,7 @@ using QualGuardIQ.Infrastructure.Services;
 namespace QualGuardIQ.Infrastructure.Modules.Changes;
 
 public sealed record ChangeRequestInput(string Title, string ChangeType, string Reason, string? Justification, string? CurrentCondition, string? ProposedCondition, Guid SiteId, Guid? DepartmentId, Guid? OwnerId,
-    DateOnly? PlannedEffectiveOn, decimal? CostImpact, string? ScheduleImpact, string? ImplementationPlan, string? ValidationPlan, string? CommunicationPlan, uint RowVersion = 0);
+    DateOnly? PlannedEffectiveOn, decimal? CostImpact, string? ScheduleImpact, string? ImplementationPlan, string? ValidationPlan, string? CommunicationPlan, uint RowVersion = 0, ChangeClass Class = ChangeClass.ChangeRequest);
 public sealed record RiskImpactInput(string RiskAssessment, Severity Risk, string ImpactAnalysis, uint RowVersion);
 public sealed record ChangeItemInput(string Category, string Description, string? RequiredAction, string? RecordType, Guid? RecordId);
 public sealed record CompleteItemInput(string Notes, string? EvidenceType, Guid? EvidenceId);
@@ -51,7 +51,7 @@ public sealed class ChangeService(AppDbContext db, ModuleSupport m, INumberingSe
         if (r.CostImpact is < -1_000_000_000 or > 1_000_000_000) throw new AppException("Cost impact is out of range.");
         c.Title = r.Title.Trim(); c.ChangeType = r.ChangeType.Trim(); c.Reason = r.Reason.Trim(); c.Justification = Opt(r.Justification, 4000); c.CurrentCondition = Opt(r.CurrentCondition, 10000);
         c.ProposedCondition = Opt(r.ProposedCondition, 10000); c.PlannedEffectiveOn = r.PlannedEffectiveOn; c.CostImpact = r.CostImpact; c.ScheduleImpact = Opt(r.ScheduleImpact, 1000);
-        c.ImplementationPlan = Opt(r.ImplementationPlan, 10000); c.ValidationPlan = Opt(r.ValidationPlan, 4000); c.CommunicationPlan = Opt(r.CommunicationPlan, 4000);
+        c.ImplementationPlan = Opt(r.ImplementationPlan, 10000); c.ValidationPlan = Opt(r.ValidationPlan, 4000); c.CommunicationPlan = Opt(r.CommunicationPlan, 4000); c.Class = r.Class;
     }
 
     public async Task UpdateAsync(Guid id, ChangeRequestInput r, CancellationToken ct)
@@ -110,6 +110,7 @@ public sealed class ChangeService(AppDbContext db, ModuleSupport m, INumberingSe
         var c = await LoadEditAsync(id, ct);
         if (c.Status != ChangeStatus.Draft) throw new ConflictException("Only a draft change can be submitted.");
         if (c.RiskAssessment is null || c.ImpactAnalysis is null) throw new AppException("Complete the risk assessment and impact analysis before submitting.");
+        if (c.Class is ChangeClass.Engineering or ChangeClass.Product or ChangeClass.Process && string.IsNullOrWhiteSpace(c.ValidationPlan)) throw new AppException($"A {c.Class.ToString().ToLowerInvariant()} change needs a validation plan before submitting.");
         if (c.ProposedCondition is null) throw new AppException("Describe the proposed condition before submitting.");
         if (!await db.ChangeItems.AnyAsync(x => x.ChangeId == id, ct)) throw new AppException("Identify at least one affected item before submitting.");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
