@@ -26199,6 +26199,230 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/governance/data/domains:
+    get:
+      tags:
+        - DataGovernance
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/governance/data/domains/{key}':
+    put:
+      tags:
+        - DataGovernance
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataDomainInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DataDomainInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DataDomainInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/governance/data/rules:
+    get:
+      tags:
+        - DataGovernance
+      description: 'Requires permission: `masterdata.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataQualityRule'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataQualityRule'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DataQualityRule'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - DataGovernance
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DataRuleInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DataRuleInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DataRuleInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/governance/data/rules/{id}':
+    delete:
+      tags:
+        - DataGovernance
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/governance/data/quality/{key}':
+    get:
+      tags:
+        - DataGovernance
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/DomainQuality'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DomainQuality'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/DomainQuality'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/governance/data/quality/run:
+    post:
+      tags:
+        - DataGovernance
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DomainQuality'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DomainQuality'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DomainQuality'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/governance/data/changes:
+    get:
+      tags:
+        - DataGovernance
+      description: Requires an authenticated user.
+      parameters:
+        - name: domain
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MasterDataChange'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MasterDataChange'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MasterDataChange'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - DataGovernance
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MasterChangeInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/MasterChangeInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/MasterChangeInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/forms/templates/effective:
     get:
       tags:
@@ -37080,6 +37304,104 @@ components:
           type:
             - 'null'
             - string
+    DataClassification:
+      type: integer
+    DataDomainInput:
+      required:
+        - stewardId
+        - ownerId
+        - classification
+        - description
+      type: object
+      properties:
+        stewardId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ownerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        classification:
+          $ref: '#/components/schemas/DataClassification'
+        description:
+          type:
+            - 'null'
+            - string
+    DataQualityRule:
+      type: object
+      properties:
+        domainKey:
+          type: string
+        field:
+          type: string
+        ruleType:
+          $ref: '#/components/schemas/DataRuleType'
+        parameter:
+          type:
+            - 'null'
+            - string
+        blocking:
+          type: boolean
+        enabled:
+          type: boolean
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    DataRuleInput:
+      required:
+        - domainKey
+        - field
+        - ruleType
+        - parameter
+        - blocking
+      type: object
+      properties:
+        domainKey:
+          type: string
+        field:
+          type: string
+        ruleType:
+          $ref: '#/components/schemas/DataRuleType'
+        parameter:
+          type:
+            - 'null'
+            - string
+        blocking:
+          type: boolean
+        enabled:
+          type: boolean
+          default: true
+    DataRuleType:
+      type: integer
     DatasetPage:
       required:
         - dataset
@@ -37107,6 +37429,28 @@ components:
         - Text
         - Boolean
         - Visual
+    DataViolation:
+      required:
+        - recordId
+        - record
+        - field
+        - rule
+        - value
+      type: object
+      properties:
+        recordId:
+          type: string
+          format: uuid
+        record:
+          type: string
+        field:
+          type: string
+        rule:
+          type: string
+        value:
+          type:
+            - 'null'
+            - string
     DecisionCode:
       enum:
         - Approved
@@ -37793,6 +38137,46 @@ components:
           type: string
     DocumentStatus:
       type: integer
+    DomainQuality:
+      required:
+        - domainKey
+        - records
+        - failingRecords
+        - violations
+        - compliance
+        - sample
+      type: object
+      properties:
+        domainKey:
+          type: string
+        records:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        failingRecords:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        violations:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        compliance:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        sample:
+          type: array
+          items:
+            $ref: '#/components/schemas/DataViolation'
     DraftRevisionRequest:
       required:
         - samplingPlan
@@ -41109,6 +41493,96 @@ components:
           type:
             - 'null'
             - string
+    MasterChangeInput:
+      required:
+        - domainKey
+        - recordId
+        - changes
+        - reason
+      type: object
+      properties:
+        domainKey:
+          type: string
+        recordId:
+          type: string
+          format: uuid
+        changes:
+          type: object
+          additionalProperties:
+            type: string
+        reason:
+          type: string
+    MasterChangeStatus:
+      type: integer
+    MasterDataChange:
+      type: object
+      properties:
+        number:
+          type: string
+        domainKey:
+          type: string
+        recordId:
+          type: string
+          format: uuid
+        recordLabel:
+          type: string
+        changes:
+          type: object
+          additionalProperties:
+            type: string
+        previous:
+          type: object
+          additionalProperties:
+            type: string
+        reason:
+          type: string
+        status:
+          $ref: '#/components/schemas/MasterChangeStatus'
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        requestedById:
+          type: string
+          format: uuid
+        appliedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     MasterStatus:
       type: integer
     MatrixCell:
@@ -52926,6 +53400,7 @@ tags:
   - name: Designer
   - name: FormLibrary
   - name: Rules
+  - name: DataGovernance
   - name: Forms
   - name: Ncrs
   - name: Capas
