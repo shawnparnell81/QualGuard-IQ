@@ -210,7 +210,7 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
               {kind === 2 && !draftEditable && rev.fieldSchema && <SchemaPreview schema={rev.fieldSchema} />}
             </Stack>
           )}
-          {tab === 'files' && <FilesPanel type={c.revType} id={rev.id} canEdit={draftEditable} />}
+          {tab === 'files' && <FilesPanel type={c.revType} id={rev.id} canEdit={draftEditable} onChanged={refresh} />}
           {tab === 'approvals' && <ApprovalsPanel type={c.revType} id={rev.id} />}
           {tab === 'actions' && <ActionsPanel type={c.docType} id={d.id} canEdit={d.canEdit} />}
           {tab === 'links' && <LinksPanel type={c.docType} id={d.id} canEdit={d.canEdit} />}

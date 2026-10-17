@@ -19,7 +19,7 @@ const base = (type: string, id: string) => `/api/records/${type}/${id}`;
 
 interface FileRow { id: string; fileName: string; sizeBytes: number; sha256: string; version: number; isLocked: boolean; isArchived: boolean; createdAt: string; contentType: string }
 
-export function FilesPanel({ type, id, canEdit }: { type: string; id: string; canEdit: boolean }) {
+export function FilesPanel({ type, id, canEdit, onChanged }: { type: string; id: string; canEdit: boolean; onChanged?: () => void }) {
   const qc = useQueryClient();
   const [history, setHistory] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +32,7 @@ export function FilesPanel({ type, id, canEdit }: { type: string; id: string; ca
     form.append('file', f);
     form.append('classification', '0');
     if (replaceId.current) form.append('replacesId', replaceId.current);
-    try { await api('POST', `${base(type, id)}/files`, form); qc.invalidateQueries({ queryKey: ['files', type, id] }); }
+    try { await api('POST', `${base(type, id)}/files`, form); qc.invalidateQueries({ queryKey: ['files', type, id] }); onChanged?.(); }
     catch (e) { setError((e as Error).message); }
     replaceId.current = null;
   };
@@ -49,7 +49,7 @@ export function FilesPanel({ type, id, canEdit }: { type: string; id: string; ca
     { header: '', id: 'act', cell: (c) => canEdit && !c.row.original.isLocked && !c.row.original.isArchived ? (
       <Stack direction="row">
         <Button size="small" onClick={() => { replaceId.current = c.row.original.id; input.current?.click(); }}>New version</Button>
-        <IconButton size="small" aria-label="Remove file" onClick={async () => { await post(`/api/files/${c.row.original.id}/archive`); qc.invalidateQueries({ queryKey: ['files', type, id] }); }}><DeleteOutline fontSize="small" /></IconButton>
+        <IconButton size="small" aria-label="Remove file" onClick={async () => { await post(`/api/files/${c.row.original.id}/archive`); qc.invalidateQueries({ queryKey: ['files', type, id] }); onChanged?.(); }}><DeleteOutline fontSize="small" /></IconButton>
       </Stack>) : null },
   ];
   return (
