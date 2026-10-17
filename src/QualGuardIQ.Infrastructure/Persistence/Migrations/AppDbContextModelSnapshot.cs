@@ -3395,6 +3395,30 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("record_tags", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Shared.ReminderLog", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("SentAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.ToTable("ReminderLogs", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Shared.SearchEntry", b =>
                 {
                     b.Property<string>("RecordType")

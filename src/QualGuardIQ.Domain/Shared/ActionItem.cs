@@ -85,3 +85,11 @@ public class SearchEntry
     public string? PermissionDepartmentKey { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 }
+
+/// <summary>One row per reminder sent, so the daily reminder job never repeats the same reminder.</summary>
+public class ReminderLog
+{
+    public long Id { get; set; }
+    public string Key { get; set; } = "";
+    public DateTimeOffset SentAt { get; set; }
+}

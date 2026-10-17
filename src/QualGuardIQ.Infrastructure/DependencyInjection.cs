@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddScoped<INumberingService, NumberingService>();
         services.AddScoped<Seeder>();
         services.AddScoped<ISiteCalendar, SiteCalendar>();
+        services.AddScoped<Jobs.ReminderJob>();
 
         // Shared engines
         services.AddScoped<IRecordRegistry, RecordRegistry>();
