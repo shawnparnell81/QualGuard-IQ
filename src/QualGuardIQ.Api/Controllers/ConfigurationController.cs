@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using QualGuardIQ.Api.Auth;
 using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Application.Records;
+using QualGuardIQ.Application.Rules;
 using QualGuardIQ.Domain.Security;
 using QualGuardIQ.Domain.Shared;
 using QualGuardIQ.Infrastructure.Persistence;

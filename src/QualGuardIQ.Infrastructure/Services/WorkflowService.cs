@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Application.Records;
+using QualGuardIQ.Application.Rules;
 using QualGuardIQ.Application.Security;
 using QualGuardIQ.Domain.Shared;
 using QualGuardIQ.Infrastructure.Identity;

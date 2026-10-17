@@ -57,3 +57,16 @@ public sealed class DesignerController(DesignerService svc) : ControllerBase
     [HttpPost("searches")] public async Task<object> SaveSearch(SavedSearchInput r, CancellationToken ct) => new { (await svc.SaveSearchAsync(r, ct)).Id };
     [HttpDelete("searches/{id:guid}")] public async Task<IActionResult> DeleteSearch(Guid id, CancellationToken ct) { await svc.DeleteSearchAsync(id, ct); return NoContent(); }
 }
+
+/// <summary>Form designer platform: reusable component library (versioned, published), dynamic-rule preview.</summary>
+[ApiController, Authorize, Route("api/forms/library")]
+public sealed class FormLibraryController(FormLibraryService svc) : ControllerBase
+{
+    [HttpGet] public Task<List<FormComponent>> List(CancellationToken ct) => svc.ListAsync(ct);
+    [HttpPost] public async Task<object> Create(FormComponentInput r, CancellationToken ct) => new { (await svc.CreateAsync(r, ct)).Id };
+    [HttpPut("{id:guid}")] public async Task<IActionResult> Update(Guid id, FormComponentInput r, CancellationToken ct) { await svc.UpdateAsync(id, r, ct); return NoContent(); }
+    [HttpPost("{id:guid}/publish")] public async Task<IActionResult> Publish(Guid id, CancellationToken ct) { await svc.PublishAsync(id, ct); return NoContent(); }
+    [HttpPost("{id:guid}/new-version")] public async Task<object> NewVersion(Guid id, CancellationToken ct) => new { (await svc.NewVersionAsync(id, ct)).Id };
+    [HttpGet("{id:guid}/insert")] public Task<List<QualGuardIQ.Application.Forms.FormField>> Insert(Guid id, [FromQuery] string? prefix, CancellationToken ct) => svc.InsertAsync(id, prefix, ct);
+    [HttpPost("preview"), RequirePermission(Permissions.FormsView)] public FormPreviewResult Preview(FormPreviewInput r) => FormLibraryService.Preview(r);
+}
