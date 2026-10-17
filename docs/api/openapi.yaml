@@ -34057,6 +34057,492 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/template-library:
+    get:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: view
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: categoryId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: module
+          in: query
+          schema:
+            type: string
+        - name: industryPack
+          in: query
+          schema:
+            type: string
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: departmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: ownerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/DocumentStatus'
+        - name: source
+          in: query
+          schema:
+            $ref: '#/components/schemas/TemplateSource'
+        - name: favorites
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: desc
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CatalogPage'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CatalogPage'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CatalogPage'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/template-library/categories:
+    get:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryDto'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryDto'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CategoryDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CreateCategoryRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: uuid
+            application/json:
+              schema:
+                type: string
+                format: uuid
+            text/json:
+              schema:
+                type: string
+                format: uuid
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/template-library/{id}/classification':
+    put:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClassifyRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ClassifyRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ClassifyRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/template-library/{id}/favorite':
+    put:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FavoriteRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/FavoriteRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/FavoriteRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/template-library/{id}/clone':
+    post:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloneRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CloneRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CloneRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: uuid
+            application/json:
+              schema:
+                type: string
+                format: uuid
+            text/json:
+              schema:
+                type: string
+                format: uuid
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/template-library/{id}/restore':
+    post:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/template-library/{id}/compare':
+    get:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/RevisionCompare'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RevisionCompare'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/RevisionCompare'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/template-library/{id}/usage':
+    get:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/UsageDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UsageDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/UsageDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/template-library/{id}/history':
+    get:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoryDto'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoryDto'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/HistoryDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/template-library/views:
+    get:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedViewDto'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedViewDto'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SavedViewDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveViewRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SaveViewRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SaveViewRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: uuid
+            application/json:
+              schema:
+                type: string
+                format: uuid
+            text/json:
+              schema:
+                type: string
+                format: uuid
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/template-library/views/{viewId}':
+    delete:
+      tags:
+        - TemplateLibrary
+      description: Requires an authenticated user.
+      parameters:
+        - name: viewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/admin/users:
     get:
       tags:
@@ -42073,6 +42559,176 @@ components:
           type: string
     CarrierVerification:
       type: integer
+    CatalogItem:
+      required:
+        - id
+        - number
+        - title
+        - category
+        - categoryId
+        - module
+        - industryPack
+        - siteCode
+        - ownerName
+        - ownerId
+        - status
+        - currentRevision
+        - currentRevisionStatus
+        - effectiveRevision
+        - effectiveDate
+        - reviewDate
+        - source
+        - confidentiality
+        - favorite
+        - lastUsed
+        - usage
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        title:
+          type: string
+        category:
+          type:
+            - 'null'
+            - string
+        categoryId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        module:
+          type:
+            - 'null'
+            - string
+        industryPack:
+          type:
+            - 'null'
+            - string
+        siteCode:
+          type: string
+        ownerName:
+          type: string
+        ownerId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/DocumentStatus'
+        currentRevision:
+          type:
+            - 'null'
+            - string
+        currentRevisionStatus:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/RevisionStatus'
+        effectiveRevision:
+          type:
+            - 'null'
+            - string
+        effectiveDate:
+          type:
+            - 'null'
+            - string
+          format: date
+        reviewDate:
+          type:
+            - 'null'
+            - string
+          format: date
+        source:
+          $ref: '#/components/schemas/TemplateSource'
+        confidentiality:
+          type: string
+        favorite:
+          type: boolean
+        lastUsed:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        usage:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    CatalogPage:
+      required:
+        - items
+        - total
+        - page
+        - pageSize
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/CatalogItem'
+        total:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        page:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        pageSize:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    CategoryDto:
+      required:
+        - id
+        - code
+        - name
+        - parentId
+        - moduleKey
+        - industryPackKey
+        - isSystem
+        - isActive
+        - count
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        parentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        moduleKey:
+          type:
+            - 'null'
+            - string
+        industryPackKey:
+          type:
+            - 'null'
+            - string
+        isSystem:
+          type: boolean
+        isActive:
+          type: boolean
+        count:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     CertificationInput:
       required:
         - userId
@@ -42633,6 +43289,40 @@ components:
             - $ref: '#/components/schemas/ErpValidationGate'
     Classification:
       type: integer
+    ClassifyRequest:
+      required:
+        - categoryId
+        - moduleKey
+        - industryPack
+        - description
+        - confidentiality
+        - retentionPolicyId
+      type: object
+      properties:
+        categoryId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        moduleKey:
+          type:
+            - 'null'
+            - string
+        industryPack:
+          type:
+            - 'null'
+            - string
+        description:
+          type:
+            - 'null'
+            - string
+        confidentiality:
+          type: string
+        retentionPolicyId:
+          type:
+            - 'null'
+            - string
+          format: uuid
     CloneRequest:
       required:
         - changedBalloons
@@ -43990,6 +44680,29 @@ components:
             - 'null'
             - string
           format: uuid
+    CreateCategoryRequest:
+      required:
+        - name
+        - parentId
+        - moduleKey
+        - description
+      type: object
+      properties:
+        name:
+          type: string
+        parentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        moduleKey:
+          type:
+            - 'null'
+            - string
+        description:
+          type:
+            - 'null'
+            - string
     CreateCourseRequest:
       required:
         - title
@@ -47788,6 +48501,13 @@ components:
           type:
             - 'null'
             - string
+    FavoriteRequest:
+      required:
+        - favorite
+      type: object
+      properties:
+        favorite:
+          type: boolean
     FieldCheck:
       type: object
       properties:
@@ -47811,6 +48531,26 @@ components:
         operator:
           type: string
         value:
+          type:
+            - 'null'
+            - string
+    FieldDiff:
+      required:
+        - key
+        - change
+        - before
+        - after
+      type: object
+      properties:
+        key:
+          type: string
+        change:
+          type: string
+        before:
+          type:
+            - 'null'
+            - string
+        after:
           type:
             - 'null'
             - string
@@ -48847,6 +49587,28 @@ components:
             - integer
             - string
           format: int32
+    HistoryDto:
+      required:
+        - at
+        - user
+        - action
+        - description
+        - reason
+      type: object
+      properties:
+        at:
+          type: string
+          format: date-time
+        user:
+          type: string
+        action:
+          type: string
+        description:
+          type: string
+        reason:
+          type:
+            - 'null'
+            - string
     HistoryItem:
       required:
         - occurredAt
@@ -59117,6 +59879,21 @@ components:
             - string
         changeSummary:
           type: string
+    RevisionCompare:
+      required:
+        - from
+        - to
+        - fields
+      type: object
+      properties:
+        from:
+          type: string
+        to:
+          type: string
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FieldDiff'
     RevisionDto:
       required:
         - id
@@ -59333,6 +60110,20 @@ components:
             - string
     RevisionStatus:
       type: integer
+    RevisionUsage:
+      required:
+        - revision
+        - records
+      type: object
+      properties:
+        revision:
+          type: string
+        records:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     ReworkCompleteInput:
       required:
         - laborHours
@@ -60527,6 +61318,23 @@ components:
           type:
             - 'null'
             - string
+    SavedViewDto:
+      required:
+        - id
+        - name
+        - settings
+        - isDefault
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        settings:
+          type: string
+        isDefault:
+          type: boolean
     SaveFieldRequest:
       required:
         - recordType
@@ -60811,6 +61619,19 @@ components:
             - integer
             - string
           format: uint32
+    SaveViewRequest:
+      required:
+        - name
+        - settings
+        - isDefault
+      type: object
+      properties:
+        name:
+          type: string
+        settings:
+          type: string
+        isDefault:
+          type: boolean
     ScanContext:
       required:
         - match
@@ -64760,6 +65581,8 @@ components:
           type: boolean
         canApprove:
           type: boolean
+    TemplateSource:
+      type: integer
     TemplateUpdate:
       required:
         - name
@@ -65583,6 +66406,35 @@ components:
           type:
             - 'null'
             - string
+    UsageDto:
+      required:
+        - records
+        - open
+        - lastUsed
+        - byRevision
+      type: object
+      properties:
+        records:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        open:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        lastUsed:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        byRevision:
+          type: array
+          items:
+            $ref: '#/components/schemas/RevisionUsage'
     UserDto:
       required:
         - id
@@ -67143,6 +67995,7 @@ tags:
   - name: SignInPolicy
   - name: Sso
   - name: SsoAdmin
+  - name: TemplateLibrary
   - name: Users
   - name: Warehouse
   - name: Receiving
