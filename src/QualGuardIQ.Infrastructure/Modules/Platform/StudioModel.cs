@@ -12,6 +12,8 @@ public partial class AppDbContext
     public DbSet<DataQualityRule> DataQualityRules => Set<DataQualityRule>();
     public DbSet<DataQualitySnapshot> DataQualitySnapshots => Set<DataQualitySnapshot>();
     public DbSet<MasterDataChange> MasterDataChanges => Set<MasterDataChange>();
+    public DbSet<BackupRecord> BackupRecords => Set<BackupRecord>();
+    public DbSet<RecoveryObjective> RecoveryObjectives => Set<RecoveryObjective>();
 
     private static void ConfigureStudio(ModelBuilder b)
     {
@@ -43,5 +45,12 @@ public partial class AppDbContext
             e.Property(x => x.Reason).HasMaxLength(2000); Json(e, x => x.Changes); Json(e, x => x.Previous);
             e.HasIndex(x => x.Number); e.HasIndex(x => new { x.DomainKey, x.RecordId });
         });
+        b.Entity<BackupRecord>(e =>
+        {
+            e.ToTable("backup_records"); e.Property(x => x.Label).HasMaxLength(200); e.Property(x => x.Location).HasMaxLength(1000); e.Property(x => x.Method).HasMaxLength(200);
+            e.Property(x => x.Sha256).HasMaxLength(64); e.Property(x => x.Fingerprint).HasColumnType("jsonb"); e.Property(x => x.VerificationNotes).HasMaxLength(4000);
+            e.HasIndex(x => new { x.Kind, x.CompletedAt });
+        });
+        b.Entity<RecoveryObjective>(e => { e.ToTable("recovery_objectives"); e.Property(x => x.Scenario).HasMaxLength(200); e.HasIndex(x => x.Scenario).IsUnique(); });
     }
 }

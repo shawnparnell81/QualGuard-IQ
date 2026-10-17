@@ -125,3 +125,37 @@ public class MasterDataChange : Entity, IAudited, ISiteScoped
     public DateTimeOffset? AppliedAt { get; set; }
     public string AuditLabel => $"master data change {Number}";
 }
+
+public enum BackupKind { Database = 0, FileStore = 1, Configuration = 2 }
+public enum BackupState { Succeeded = 0, Failed = 1 }
+public enum BackupVerification { NotVerified = 0, Passed = 1, Failed = 2 }
+
+/// <summary>A backup taken by the backup tooling (scripts/backup.sh) and registered with the disaster recovery center.</summary>
+public class BackupRecord : Entity, IAudited
+{
+    public BackupKind Kind { get; set; }
+    public string Label { get; set; } = "";
+    public string Location { get; set; } = "";
+    public string Method { get; set; } = "";
+    public DateTimeOffset StartedAt { get; set; }
+    public DateTimeOffset CompletedAt { get; set; }
+    public long SizeBytes { get; set; }
+    public string? Sha256 { get; set; }
+    public BackupState State { get; set; }
+    /// <summary>Schema version and row counts captured at backup time; the verify script compares a restored copy against it.</summary>
+    public string? Fingerprint { get; set; }
+    public BackupVerification Verification { get; set; }
+    public DateTimeOffset? VerifiedAt { get; set; }
+    public string? VerificationNotes { get; set; }
+    public string AuditLabel => $"backup {Label}";
+}
+
+/// <summary>Recovery objective for a disaster scenario: target recovery time and data loss, and the controlled procedure document that describes the recovery.</summary>
+public class RecoveryObjective : Entity, IAudited
+{
+    public string Scenario { get; set; } = "";
+    public int RtoMinutes { get; set; }
+    public int RpoMinutes { get; set; }
+    public Guid? ProcedureDocumentId { get; set; }
+    public string AuditLabel => $"recovery objective {Scenario}";
+}

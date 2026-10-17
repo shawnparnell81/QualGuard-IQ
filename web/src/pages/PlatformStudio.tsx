@@ -381,3 +381,90 @@ export function DataGovernance() {
     </ModuleWorkspace>
   );
 }
+
+const backupKinds = ['Database', 'File store', 'Configuration']; const backupStates = ['Succeeded', 'Failed'];
+const verifyLabels = ['Not verified', 'Restore passed', 'Restore failed'];
+const fmtSize = (b: number) => (b >= 1 << 30 ? `${(b / (1 << 30)).toFixed(1)} GB` : b >= 1 << 20 ? `${(b / (1 << 20)).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} KB`);
+const ago = (iso?: string | null) => { if (!iso) return 'never'; const h = (Date.now() - new Date(iso).getTime()) / 36e5; return h < 1 ? `${Math.max(1, Math.round(h * 60))} min ago` : h < 48 ? `${Math.round(h)} h ago` : `${Math.round(h / 24)} days ago`; };
+
+/** Recovery center: what can be restored, how recently, whether a restore was proven, and whether each disaster scenario meets its RTO/RPO with a controlled procedure. */
+export function RecoveryCenter() {
+  const qc = useQueryClient();
+  const status = useQuery({ queryKey: ['dr-status'], queryFn: () => get<any>('/api/platform/dr/status') });
+  const backups = useQuery({ queryKey: ['dr-backups'], queryFn: () => get<any[]>('/api/platform/dr/backups') });
+  const docs = useQuery({ queryKey: ['docs-procedures'], queryFn: () => get<{ items: any[] }>('/api/documents?kind=0&pageSize=200') });
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [reg, setReg] = useState<any | null>(null); const [ver, setVer] = useState<any | null>(null); const [obj, setObj] = useState<any | null>(null);
+  const run = async (fn: () => Promise<unknown>, ok: string) => { setMsg(null); try { await fn(); setMsg({ ok: true, text: ok }); qc.invalidateQueries({ queryKey: ['dr-status'] }); qc.invalidateQueries({ queryKey: ['dr-backups'] }); return true; } catch (e) { setMsg({ ok: false, text: (e as Error).message }); return false; } };
+  const fromManifest = (text: string) => {
+    try { const m = JSON.parse(text); setReg({ ...reg, manifest: text, kind: 0, label: m.label ?? reg.label, method: 'pg_dump custom format (scripts/backup.sh)', startedAt: m.database?.startedAt ?? reg.startedAt, completedAt: m.database?.completedAt ?? reg.completedAt, sizeBytes: m.database?.sizeBytes ?? reg.sizeBytes, sha256: m.database?.sha256 ?? '', fingerprint: m.fingerprint ?? null }); }
+    catch { setReg({ ...reg, manifest: text }); }
+  };
+  const s = status.data;
+  const newReg = () => { const now = new Date().toISOString().slice(0, 16); setReg({ manifest: '', kind: 0, label: '', location: '', method: '', startedAt: now, completedAt: now, sizeBytes: 0, sha256: '', state: 0, fingerprint: null }); };
+  const tiles: [string, any, string][] = s ? [['Database backup', s.lastDatabaseBackup, s.lastDatabaseBackup?.completedAt], ['File store backup', s.lastFileStoreBackup, s.lastFileStoreBackup?.completedAt], ['Proven restore', s.lastVerifiedBackup, s.lastVerifiedBackup?.verifiedAt], ['Recovery test', s.lastRecoveryTest, s.lastRecoveryTest?.performedAt]] : [];
+  return (
+    <ModuleWorkspace module={P()} crumbs={crumbs('Recovery center')} title="Backup & disaster recovery"
+      actions={<Stack direction="row" gap={1}><Button onClick={() => setObj({ scenario: '', rtoMinutes: 240, rpoMinutes: 1440, procedureDocumentId: '' })}>Add scenario</Button><Button variant="contained" onClick={newReg}>Register backup</Button></Stack>}>
+      {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
+      {s && <Paper sx={{ p: 2, mb: 2, borderLeft: 6, borderColor: s.recoverable ? 'success.main' : 'warning.main' }}>
+        <Typography variant="h3">{s.recoverable ? 'Recoverable: every scenario meets its objectives' : `${s.gaps.length} recoverability gap${s.gaps.length === 1 ? '' : 's'}`}</Typography>
+        {s.gaps.length > 0 && <Box component="ul" sx={{ m: 0, mt: 1, pl: 2.5 }}>{s.gaps.map((g: string) => <li key={g}><Typography variant="body2">{g}</Typography></li>)}</Box>}
+      </Paper>}
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1.5, mb: 2 }}>
+        {tiles.map(([label, v, at]) => <Paper key={label} variant="outlined" sx={{ p: 1.5 }}>
+          <Typography variant="overline" color="text.secondary">{label}</Typography>
+          <Typography variant="h3" sx={{ color: v ? 'text.primary' : 'error.main' }}>{ago(at)}</Typography>
+          <Typography variant="caption" sx={{ fontFamily: mono }}>{v?.label ?? v?.number ?? '—'}</Typography></Paper>)}
+      </Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '3fr 2fr' }, gap: 2 }}>
+        <Paper sx={{ p: 2 }}><Typography variant="h3" sx={{ mb: 1 }}>Backup ledger</Typography>
+          {(backups.data ?? []).map((b) => <Stack key={b.id} direction="row" gap={1.5} alignItems="center" sx={{ py: 1, borderBottom: 1, borderColor: 'divider' }}>
+            <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: b.state === 0 ? (b.verification === 1 ? 'success.main' : 'info.main') : 'error.main' }} />
+            <Box sx={{ flex: 1, minWidth: 0 }}><Typography sx={{ fontFamily: mono }}>{b.label}</Typography>
+              <Typography variant="caption" color="text.secondary">{backupKinds[b.kind]} · {fmtSize(b.sizeBytes)} · {new Date(b.completedAt).toLocaleString()} · {b.method}</Typography>
+              {b.sha256 && <Typography variant="caption" sx={{ display: 'block', fontFamily: mono }} color="text.secondary">sha256 {b.sha256.slice(0, 16)}…</Typography>}</Box>
+            <Chip size="small" label={b.state === 0 ? verifyLabels[b.verification] : backupStates[b.state]} color={b.state !== 0 || b.verification === 2 ? 'error' : b.verification === 1 ? 'success' : 'default'} variant="outlined" />
+            {b.state === 0 && b.verification === 0 && <Button size="small" onClick={() => setVer({ id: b.id, label: b.label, passed: true, notes: '' })}>Record restore test</Button>}</Stack>)}
+          {backups.data?.length === 0 && <Typography color="text.secondary">No backups registered yet. Run scripts/backup.sh and register its manifest here.</Typography>}
+        </Paper>
+        <Paper sx={{ p: 2 }}><Typography variant="h3" sx={{ mb: 1 }}>Disaster scenarios</Typography>
+          {(s?.objectives ?? []).map((o: any) => <Paper key={o.id} variant="outlined" sx={{ p: 1.5, mb: 1, borderColor: o.met ? 'success.main' : 'warning.main' }}>
+            <Stack direction="row" alignItems="center" gap={1}><Typography sx={{ flex: 1, fontWeight: 600 }}>{o.scenario}</Typography>
+              <Chip size="small" label={`RTO ${o.rtoMinutes / 60 >= 1 ? `${o.rtoMinutes / 60} h` : `${o.rtoMinutes} min`}`} /><Chip size="small" label={`RPO ${o.rpoMinutes / 60 >= 1 ? `${o.rpoMinutes / 60} h` : `${o.rpoMinutes} min`}`} />
+              <Button size="small" onClick={() => setObj({ id: o.id, scenario: o.scenario, rtoMinutes: o.rtoMinutes, rpoMinutes: o.rpoMinutes, procedureDocumentId: o.procedureDocumentId ?? '' })}>Edit</Button></Stack>
+            <Typography variant="caption" color="text.secondary">Procedure: {o.procedure ?? 'none linked'}</Typography>
+            {o.issues.map((i: string) => <Typography key={i} variant="body2" color="warning.dark">• {i}</Typography>)}</Paper>)}
+          {s?.objectives?.length === 0 && <Typography color="text.secondary">Define each scenario you must recover from (server loss, storage loss, site loss) with its time and data-loss targets.</Typography>}
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1 }}>Recovery tests are recorded under Governance › Business continuity.</Typography>
+        </Paper>
+      </Box>
+      <Dialog open={!!reg} onClose={() => setReg(null)} fullWidth maxWidth="sm"><DialogTitle>Register a backup</DialogTitle>
+        {reg && <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          <TextField label="Paste manifest.json from scripts/backup.sh (optional)" multiline minRows={2} value={reg.manifest} onChange={(e) => fromManifest(e.target.value)} InputProps={{ sx: { fontFamily: mono, fontSize: 12 } }} />
+          <Stack direction="row" gap={1}><TextField select label="Kind" value={reg.kind} onChange={(e) => setReg({ ...reg, kind: Number(e.target.value) })} sx={{ flex: 1 }}>{backupKinds.map((k, i) => <MenuItem key={k} value={i}>{k}</MenuItem>)}</TextField>
+            <TextField select label="Outcome" value={reg.state} onChange={(e) => setReg({ ...reg, state: Number(e.target.value) })} sx={{ flex: 1 }}>{backupStates.map((k, i) => <MenuItem key={k} value={i}>{k}</MenuItem>)}</TextField></Stack>
+          <TextField label="Label" value={reg.label} onChange={(e) => setReg({ ...reg, label: e.target.value })} />
+          <TextField label="Location" value={reg.location} onChange={(e) => setReg({ ...reg, location: e.target.value })} />
+          <TextField label="Method" value={reg.method} onChange={(e) => setReg({ ...reg, method: e.target.value })} />
+          <Stack direction="row" gap={1}><TextField type="datetime-local" label="Started" InputLabelProps={{ shrink: true }} value={String(reg.startedAt).slice(0, 16)} onChange={(e) => setReg({ ...reg, startedAt: e.target.value })} sx={{ flex: 1 }} />
+            <TextField type="datetime-local" label="Completed" InputLabelProps={{ shrink: true }} value={String(reg.completedAt).slice(0, 16)} onChange={(e) => setReg({ ...reg, completedAt: e.target.value })} sx={{ flex: 1 }} /></Stack>
+          <Stack direction="row" gap={1}><TextField type="number" label="Size (bytes)" value={reg.sizeBytes} onChange={(e) => setReg({ ...reg, sizeBytes: Number(e.target.value) })} sx={{ flex: 1 }} />
+            <TextField label="SHA-256" value={reg.sha256} onChange={(e) => setReg({ ...reg, sha256: e.target.value })} sx={{ flex: 2 }} InputProps={{ sx: { fontFamily: mono, fontSize: 12 } }} /></Stack>
+          {reg.fingerprint && <Typography variant="caption" color="text.secondary">Fingerprint captured: {Object.keys(reg.fingerprint.counts ?? {}).length} tables, migration {reg.fingerprint.migration}</Typography>}</DialogContent>}
+        <DialogActions><Button onClick={() => setReg(null)}>Cancel</Button><Button variant="contained" onClick={async () => { const { manifest: _m, ...body } = reg; void _m; if (await run(() => post('/api/platform/dr/backups', { ...body, startedAt: new Date(body.startedAt).toISOString(), completedAt: new Date(body.completedAt).toISOString(), sha256: body.sha256 || null }), 'Backup registered.')) setReg(null); }}>Register</Button></DialogActions></Dialog>
+      <Dialog open={!!ver} onClose={() => setVer(null)} fullWidth maxWidth="xs"><DialogTitle>Restore test: {ver?.label}</DialogTitle>
+        {ver && <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          <Typography variant="body2" color="text.secondary">Run scripts/verify-backup.sh against this backup. It restores into a scratch database and compares the schema version and row counts with the manifest.</Typography>
+          <TextField select label="Result" value={ver.passed ? 1 : 0} onChange={(e) => setVer({ ...ver, passed: e.target.value === '1' })}><MenuItem value={1}>Passed</MenuItem><MenuItem value={0}>Failed</MenuItem></TextField>
+          <TextField label="Script output / notes" multiline minRows={2} value={ver.notes} onChange={(e) => setVer({ ...ver, notes: e.target.value })} /></DialogContent>}
+        <DialogActions><Button onClick={() => setVer(null)}>Cancel</Button><Button variant="contained" onClick={async () => { if (await run(() => post(`/api/platform/dr/backups/${ver.id}/verify`, { passed: ver.passed, notes: ver.notes }), 'Restore test recorded.')) setVer(null); }}>Record</Button></DialogActions></Dialog>
+      <Dialog open={!!obj} onClose={() => setObj(null)} fullWidth maxWidth="xs"><DialogTitle>{obj?.id ? 'Edit scenario' : 'Add disaster scenario'}</DialogTitle>
+        {obj && <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          <TextField label="Scenario" value={obj.scenario} onChange={(e) => setObj({ ...obj, scenario: e.target.value })} />
+          <Stack direction="row" gap={1}><TextField type="number" label="RTO (minutes)" value={obj.rtoMinutes} onChange={(e) => setObj({ ...obj, rtoMinutes: Number(e.target.value) })} /><TextField type="number" label="RPO (minutes)" value={obj.rpoMinutes} onChange={(e) => setObj({ ...obj, rpoMinutes: Number(e.target.value) })} /></Stack>
+          <TextField select label="Recovery procedure (controlled document)" value={obj.procedureDocumentId} onChange={(e) => setObj({ ...obj, procedureDocumentId: e.target.value })}><MenuItem value="">None</MenuItem>{(docs.data?.items ?? []).map((d: any) => <MenuItem key={d.id} value={d.id}>{d.number} {d.title}</MenuItem>)}</TextField></DialogContent>}
+        <DialogActions><Button onClick={() => setObj(null)}>Cancel</Button><Button variant="contained" onClick={async () => { const body = { scenario: obj.scenario, rtoMinutes: obj.rtoMinutes, rpoMinutes: obj.rpoMinutes, procedureDocumentId: obj.procedureDocumentId || null }; if (await run(() => (obj.id ? put(`/api/platform/dr/objectives/${obj.id}`, body) : post('/api/platform/dr/objectives', body)), 'Scenario saved.')) setObj(null); }}>Save</Button></DialogActions></Dialog>
+    </ModuleWorkspace>
+  );
+}

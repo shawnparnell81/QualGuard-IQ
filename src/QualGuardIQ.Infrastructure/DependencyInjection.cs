@@ -78,6 +78,7 @@ public static class DependencyInjection
         services.AddScoped<Modules.Platform.FormLibraryService>();
         services.AddScoped<Modules.Platform.RuleEngine>();
         services.AddScoped<Modules.Platform.DataGovernanceService>();
+        services.AddScoped<Modules.Platform.RecoveryService>();
         services.AddScoped<IRecordTypeProvider>(sp => new Modules.Quality.QualityRecordProvider<Domain.Platform.MasterDataChange>(sp.GetRequiredService<AppDbContext>(), Modules.Platform.DataGovernanceService.ChangeType, Permissions.MasterDataView, Permissions.MasterDataEdit,
             x => (x.Number, $"{x.DomainKey} {x.RecordLabel}: {string.Join(", ", x.Changes.Keys)}", x.Status.ToString(), $"/platform/governance?change={x.Id}", x.Status != Domain.Platform.MasterChangeStatus.Draft)));
         services.AddScoped<IApprovalHandler>(sp => new Modules.Quality.DelegateApprovalHandler(Modules.Platform.DataGovernanceService.ChangeType,

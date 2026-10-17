@@ -98,3 +98,17 @@ public sealed class DataGovernanceController(DataGovernanceService svc) : Contro
     [HttpGet("changes")] public Task<List<MasterDataChange>> Changes([FromQuery] string? domain, CancellationToken ct) => svc.ChangesAsync(domain, ct);
     [HttpPost("changes")] public async Task<object> RequestChange(MasterChangeInput r, CancellationToken ct) { var c = await svc.RequestAsync(r, ct); return new { c.Id, c.Number }; }
 }
+
+/// <summary>Disaster recovery center: backups, recovery objectives and procedures, recoverability status, restore fingerprint.</summary>
+[ApiController, Authorize, Route("api/platform/dr"), RequirePermission(Permissions.PlatformAdmin)]
+public sealed class RecoveryController(RecoveryService svc) : ControllerBase
+{
+    [HttpGet("status")] public Task<object> Status(CancellationToken ct) => svc.StatusAsync(ct);
+    [HttpGet("fingerprint")] public Task<object> Fingerprint(CancellationToken ct) => svc.FingerprintAsync(ct);
+    [HttpGet("backups")] public Task<List<BackupRecord>> Backups(CancellationToken ct) => svc.BackupsAsync(ct);
+    [HttpPost("backups")] public async Task<object> Register(BackupInput r, CancellationToken ct) => new { (await svc.RegisterAsync(r, ct)).Id };
+    [HttpPost("backups/{id:guid}/verify")] public async Task<IActionResult> Verify(Guid id, BackupVerifyInput r, CancellationToken ct) { await svc.VerifyAsync(id, r, ct); return NoContent(); }
+    [HttpGet("objectives")] public Task<List<RecoveryObjective>> Objectives(CancellationToken ct) => svc.ObjectivesAsync(ct);
+    [HttpPost("objectives")] public async Task<object> AddObjective(ObjectiveInput r, CancellationToken ct) => new { (await svc.SaveObjectiveAsync(null, r, ct)).Id };
+    [HttpPut("objectives/{id:guid}")] public async Task<IActionResult> UpdateObjective(Guid id, ObjectiveInput r, CancellationToken ct) { await svc.SaveObjectiveAsync(id, r, ct); return NoContent(); }
+}

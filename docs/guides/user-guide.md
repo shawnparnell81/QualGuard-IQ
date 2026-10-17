@@ -1,0 +1,48 @@
+# User guide
+
+## Finding your way
+
+- The **teal bar** across the top lists the modules you have access to (Documents, Quality Events, Audits, Training,
+  Equipment, Suppliers, Inspection and so on). Modules you have no permission for are not shown.
+- Inside a module, the **side menu** lists its areas (for example *Nonconformances*, *CAPA*, *Dashboards*), and each
+  record opens with **tabs** (details, actions, attachments, links, approvals, history).
+- **My work** (Platform › My workspace) collects everything waiting for you: approvals, actions, training, reviews.
+- Global search finds records by number, title and text across every module you can see.
+
+Dates such as "due" and "overdue" follow the time zone of the record's site.
+
+## Working a record
+
+1. Create the record from the module's side menu. A number is assigned on save (for example `NCR-000123`).
+2. Fill in the fields. Required fields are marked; some fields appear or become required only when another field has
+   a certain value (for example a *Containment detail* field when *Containment required* is *Yes*).
+3. Add attachments, comments, linked records and actions from the record's tabs.
+4. Use the buttons at the top of the record to move it forward. A button appears only when you are allowed to take that
+   step and the record is ready for it.
+
+## Approvals and electronic signatures
+
+- When a record is submitted, the approval route for that record type decides who signs. Routes can have several
+  **stages**; all steps in a stage are open at the same time and the next stage opens when they are all signed.
+- Some steps apply only to certain records (for example a *Quality manager* step only for Critical NCRs). The approval
+  tab shows exactly which steps apply to the record.
+- To sign, open the record, choose **Approve** or **Reject**, and re-enter your password (and MFA code where
+  required). Your signature records your name, the date and time, and the meaning (for example *Approved*).
+- You cannot approve a record you submitted when the route prevents self-approval.
+- Steps that wait too long are escalated to the people named on the route; you will receive a notification.
+
+## Controlled forms
+
+Forms are filled in from Documents › Forms. Only effective form revisions can be filled. Calculated fields, checks
+(for example *measured value must not exceed the upper limit*) and conditional sections are applied when you save;
+if a check fails, the message tells you which field to correct.
+
+## Master data change requests
+
+If you hold *master data edit*, open Platform › Data governance, pick the domain (Part, Product, Supplier, Customer,
+Site, Equipment) and choose **Request change** or **Propose fix** on a data quality violation. The change is applied only
+after the data steward approves it; the master record's history shows the old and new values.
+
+## Notifications
+
+Notifications appear under the bell icon and, when email is configured, by email. They link straight to the record.

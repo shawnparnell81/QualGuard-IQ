@@ -26423,6 +26423,194 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/platform/dr/status:
+    get:
+      tags:
+        - Recovery
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/dr/fingerprint:
+    get:
+      tags:
+        - Recovery
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/dr/backups:
+    get:
+      tags:
+        - Recovery
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BackupRecord'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BackupRecord'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BackupRecord'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Recovery
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackupInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/BackupInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/BackupInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/dr/backups/{id}/verify':
+    post:
+      tags:
+        - Recovery
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BackupVerifyInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/BackupVerifyInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/BackupVerifyInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/dr/objectives:
+    get:
+      tags:
+        - Recovery
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecoveryObjective'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecoveryObjective'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecoveryObjective'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Recovery
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectiveInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ObjectiveInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ObjectiveInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/dr/objectives/{id}':
+    put:
+      tags:
+        - Recovery
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ObjectiveInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ObjectiveInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ObjectiveInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/forms/templates/effective:
     get:
       tags:
@@ -33819,6 +34007,139 @@ components:
       type: integer
     AuditStatus:
       type: integer
+    BackupInput:
+      required:
+        - kind
+        - label
+        - location
+        - method
+        - startedAt
+        - completedAt
+        - sizeBytes
+        - sha256
+        - state
+        - fingerprint
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/BackupKind'
+        label:
+          type: string
+        location:
+          type: string
+        method:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        sizeBytes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        sha256:
+          type:
+            - 'null'
+            - string
+        state:
+          $ref: '#/components/schemas/BackupState'
+        fingerprint:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonElement'
+    BackupKind:
+      type: integer
+    BackupRecord:
+      type: object
+      properties:
+        kind:
+          $ref: '#/components/schemas/BackupKind'
+        label:
+          type: string
+        location:
+          type: string
+        method:
+          type: string
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+        sizeBytes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        sha256:
+          type:
+            - 'null'
+            - string
+        state:
+          $ref: '#/components/schemas/BackupState'
+        fingerprint:
+          type:
+            - 'null'
+            - string
+        verification:
+          $ref: '#/components/schemas/BackupVerification'
+        verifiedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        verificationNotes:
+          type:
+            - 'null'
+            - string
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    BackupState:
+      type: integer
+    BackupVerification:
+      type: integer
+    BackupVerifyInput:
+      required:
+        - passed
+        - notes
+      type: object
+      properties:
+        passed:
+          type: boolean
+        notes:
+          type: string
     BalloonDrawing:
       required:
         - id
@@ -45903,6 +46224,57 @@ components:
           format: date
     RecordSource:
       type: integer
+    RecoveryObjective:
+      type: object
+      properties:
+        scenario:
+          type: string
+        rtoMinutes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        rpoMinutes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        procedureDocumentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     RelatedRecord:
       required:
         - type
@@ -53401,6 +53773,7 @@ tags:
   - name: FormLibrary
   - name: Rules
   - name: DataGovernance
+  - name: Recovery
   - name: Forms
   - name: Ncrs
   - name: Capas
