@@ -103,6 +103,12 @@ public static class DependencyInjection
         s.AddScoped<Modules.Complaints.ComplaintService>();
         s.AddScoped<Modules.Risks.RiskService>();
         s.AddScoped<Modules.Reports.ReportService>();
+        s.AddScoped<Modules.Fai.AqlService>();
+        s.AddScoped<Modules.Fai.FaiService>();
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Fai.FaiService.RecordType,
+            (id, ct) => sp.GetRequiredService<Modules.Fai.FaiService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Fai.FaiService>().OnRejectedAsync(id, c, ct)));
+        P<FaiRecord>(Modules.Fai.FaiService.RecordType, Permissions.FaiView, Permissions.FaiEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/fai/{x.Id}", x.Status is FaiStatus.PendingApproval or FaiStatus.Approved or FaiStatus.Closed or FaiStatus.Cancelled));
+        P<AqlInspection>(Modules.Fai.AqlService.RecordType, Permissions.InspectionView, Permissions.InspectionEdit, x => (x.InspectionNumber, $"AQL sampling {x.InspectionNumber}", x.Status.ToString(), $"/fai/aql/{x.Id}", x.Status != AqlInspectionStatus.Sampling));
         s.AddScoped<MaintenanceService>();
         s.AddScoped<Modules.Objectives.KpiCalculator>();
         s.AddScoped<Modules.Objectives.ObjectiveService>();

@@ -273,7 +273,14 @@ public sealed class InspectionService(AppDbContext db, ModuleSupport m, INumberi
         var results = await db.InspectionResults.Where(r => r.InspectionId == id).ToListAsync(ct);
         var missing = charIds.Count(c => results.All(r => r.CharacteristicId != c));
         if (missing > 0) throw new AppException($"{missing} characteristic(s) have no result yet.");
-        i.Status = results.All(r => r.Pass) ? InspectionStatus.Passed : InspectionStatus.Failed;
+        var aql = await db.AqlInspections.AsNoTracking().FirstOrDefaultAsync(a => a.InspectionId == id && a.Status != AqlInspectionStatus.Cancelled, ct);
+        if (aql is not null)
+        {
+            // AQL lots are decided by the configured plan; acceptance is impossible once rejection criteria are met.
+            if (aql.Status != AqlInspectionStatus.Decided) throw new AppException("Evaluate the AQL sample until the sampling plan reaches a decision.");
+            i.Status = aql.OverallResult == AqlDecision.Accept && results.All(r => r.Pass || r.Kind == CharacteristicKind.Attribute) ? InspectionStatus.Passed : InspectionStatus.Failed;
+        }
+        else i.Status = results.All(r => r.Pass) ? InspectionStatus.Passed : InspectionStatus.Failed;
         i.CompletedAt = m.Now;
         await db.SaveChangesAsync(ct);
     }
