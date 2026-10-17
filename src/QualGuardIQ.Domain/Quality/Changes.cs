@@ -6,11 +6,15 @@ public enum ChangeStatus { Draft = 0, InReview = 1, Approved = 2, Implementation
 public enum ChangeItemStatus { Open = 0, Completed = 1, Waived = 2 }
 
 /// <summary>Change request / engineering change. Categories and types are free text so any industry can use it.</summary>
+public enum ChangeClass { ChangeRequest = 0, Engineering = 1, Product = 2, Process = 3, Supplier = 4 }
+
 public class ChangeRequest : Entity, IAudited, ISiteScoped
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
     public string ChangeType { get; set; } = "";
+    /// <summary>Governance class: change request, engineering, product, process or supplier change.</summary>
+    public ChangeClass Class { get; set; }
     public Guid RequesterId { get; set; }
     public Guid OwnerId { get; set; }
     public Guid SiteId { get; set; }

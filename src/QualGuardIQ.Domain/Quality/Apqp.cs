@@ -41,9 +41,13 @@ public class ProcessFlowStep : Entity
 
 public enum ActionPriority { Low = 0, Medium = 1, High = 2 }
 
+/// <summary>Process FMEA or design FMEA (same lines, ratings and action priority; design lines hold product functions).</summary>
+public enum FmeaType { Process = 0, Design = 1 }
+
 public class Pfmea : ApqpDocument
 {
     public Guid? ProcessFlowId { get; set; }
+    public FmeaType Type { get; set; }
 }
 
 /// <summary>One failure-mode line. RPN = S×O×D; action priority from the AIAG-VDA table (see PfmeaMath).</summary>

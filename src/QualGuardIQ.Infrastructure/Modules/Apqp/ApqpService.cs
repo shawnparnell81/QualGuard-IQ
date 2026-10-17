@@ -11,7 +11,7 @@ using QualGuardIQ.Infrastructure.Services;
 namespace QualGuardIQ.Infrastructure.Modules.Apqp;
 
 public sealed record ApqpHeaderInput(string Title, Guid SiteId, Guid? DepartmentId, Guid? ProductId, Guid? PartId, string? PartRevision, Guid? OwnerId,
-    ControlPlanPhase Phase = ControlPlanPhase.Production, string? ProductFamily = null, Guid? PfmeaId = null, Guid? ProcessFlowId = null, Guid? SupplierId = null, Guid? ProcessOwnerId = null);
+    ControlPlanPhase Phase = ControlPlanPhase.Production, string? ProductFamily = null, Guid? PfmeaId = null, Guid? ProcessFlowId = null, Guid? SupplierId = null, Guid? ProcessOwnerId = null, FmeaType FmeaType = FmeaType.Process);
 public sealed record FlowStepInput(int Sequence, string Name, string StepType, string? Inputs, string? Outputs, Guid? OwnerId, Guid? WorkInstructionId, Guid? InspectionPlanId);
 public sealed record PfmeaLineInput(int StepSequence, string ProcessFunction, string FailureMode, string FailureEffect, string FailureCause, string? PreventionControls, string? DetectionControls,
     int Severity, int Occurrence, int Detection, string? SpecialCharacteristic, string? RecommendedAction, Guid? ResponsibleId, DateOnly? DueOn,
@@ -74,7 +74,7 @@ public sealed class ApqpService(AppDbContext db, ModuleSupport m, INumberingServ
         if (r.OwnerId is { } o) d.OwnerId = o;
         switch (d)
         {
-            case Pfmea f: f.ProcessFlowId = r.ProcessFlowId; break;
+            case Pfmea f: f.ProcessFlowId = r.ProcessFlowId; f.Type = r.FmeaType; break;
             case ControlPlan c:
                 c.Phase = r.Phase; c.ProductFamily = r.ProductFamily?.Trim(); c.PfmeaId = r.PfmeaId; c.ProcessFlowId = r.ProcessFlowId;
                 c.SupplierId = r.SupplierId; c.ProcessOwnerId = r.ProcessOwnerId; break;
@@ -83,6 +83,7 @@ public sealed class ApqpService(AppDbContext db, ModuleSupport m, INumberingServ
 
     async Task CheckRefsAsync(ApqpHeaderInput r, string type, CancellationToken ct)
     {
+        if (type == PfmeaType && r.FmeaType == FmeaType.Design && r.ProductId is null && r.PartId is null) throw new AppException("A design FMEA needs the product or part it analyzes.");
         if (type == PlanType && r.Phase == ControlPlanPhase.Supplier && r.SupplierId is null) throw new AppException("A supplier control plan needs the supplier.");
         if (r.ProcessFlowId is { } f && !await db.ProcessFlows.AnyAsync(x => x.Id == f, ct)) throw new AppException("Select an existing process flow.");
         if (r.PfmeaId is { } p && !await db.Pfmeas.AnyAsync(x => x.Id == p, ct)) throw new AppException("Select an existing PFMEA.");
@@ -304,7 +305,7 @@ public sealed class ApqpService(AppDbContext db, ModuleSupport m, INumberingServ
         ApqpDocument d = src switch
         {
             ProcessFlow => new ProcessFlow(),
-            Pfmea p => new Pfmea { ProcessFlowId = p.ProcessFlowId },
+            Pfmea p => new Pfmea { ProcessFlowId = p.ProcessFlowId, Type = p.Type },
             ControlPlan c => new ControlPlan { Phase = c.Phase, ProductFamily = c.ProductFamily, PfmeaId = c.PfmeaId, ProcessFlowId = c.ProcessFlowId, SupplierId = c.SupplierId, ProcessOwnerId = c.ProcessOwnerId },
             _ => throw new AppException("Unknown APQP document type.")
         };

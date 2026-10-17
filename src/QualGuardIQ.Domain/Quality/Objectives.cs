@@ -3,6 +3,7 @@ using QualGuardIQ.Domain.Common;
 namespace QualGuardIQ.Domain.Quality;
 
 public enum ObjectiveStatus { Draft = 0, PendingApproval = 1, Active = 2, Achieved = 3, Retired = 4 }
+public enum KpiLevel { Corporate = 0, Regional = 1, Site = 2, Department = 3 }
 public enum KpiDirection { HigherIsBetter = 0, LowerIsBetter = 1 }
 public enum KpiFrequency { Monthly = 0, Quarterly = 1, Yearly = 2 }
 public enum KpiRating { OnTarget = 0, Warning = 1, Critical = 2 }
@@ -18,6 +19,10 @@ public class QualityObjective : Entity, IAudited, ISiteScoped
     public string? Process { get; set; }
     public Guid OwnerId { get; set; }
     public ObjectiveStatus Status { get; set; }
+
+    /// <summary>Corporate, regional, site or department KPI; corporate and regional KPIs roll up through the organization tree.</summary>
+    public KpiLevel Level { get; set; } = KpiLevel.Site;
+    public Guid? OrgUnitId { get; set; }
 
     public string MetricName { get; set; } = "";
     public string MetricDefinition { get; set; } = "";
@@ -73,6 +78,10 @@ public class ManagementReview : Entity, IAudited, ISiteScoped, IContentLock
     /// <summary>JSON snapshot of inputs compiled from system records.</summary>
     public string? Inputs { get; set; }
     public DateTimeOffset? InputsCompiledAt { get; set; }
+    /// <summary>Assistant-generated summaries; held as a draft until a person approves them (never auto-approved).</summary>
+    public string? AssistantDraft { get; set; }
+    public Guid? AssistantDraftApprovedById { get; set; }
+    public DateTimeOffset? AssistantDraftApprovedAt { get; set; }
     /// <summary>JSON object: input topic → discussion notes.</summary>
     public string? Discussion { get; set; }
     public string? ResourceNeeds { get; set; }

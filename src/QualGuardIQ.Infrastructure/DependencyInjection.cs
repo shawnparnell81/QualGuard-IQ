@@ -71,6 +71,7 @@ public static class DependencyInjection
         AddQuality(services);
         AddIntegration(services, config);
         AddEnterprise(services);
+        AddEngineering(services);
         return services;
     }
 
@@ -208,6 +209,25 @@ public static class DependencyInjection
         P<Domain.Enterprise.ContinuityExercise>(Modules.Enterprise.GovernanceService.ContinuityType, Permissions.GovernanceView, Permissions.GovernanceEdit, x => (x.Number, x.Title, x.Result.ToString(), $"/governance/continuity/{x.Id}", x.Result != Domain.Enterprise.ContinuityResult.Planned));
         s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Enterprise.ValidationService.RecordType,
             (id, ct) => sp.GetRequiredService<Modules.Enterprise.ValidationService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Enterprise.ValidationService>().OnRejectedAsync(id, c, ct)));
+    }
+
+    /// <summary>Prompt 7: engineering quality, knowledge, enterprise intelligence, advisor, security governance.</summary>
+    private static void AddEngineering(IServiceCollection s)
+    {
+        s.AddScoped<Modules.Engineering.EngineeringService>();
+        s.AddScoped<Modules.Engineering.IntelligenceService>();
+        s.AddScoped<Modules.Engineering.KnowledgeService>();
+        s.AddScoped<Modules.Engineering.SecurityGovernanceService>();
+        s.AddScoped<Modules.Engineering.AdvisorService>();
+        void P<T>(string type, string view, string edit, Func<T, (string, string, string, string, bool)> d) where T : QualGuardIQ.Domain.Common.Entity, QualGuardIQ.Domain.Common.ISiteScoped =>
+            s.AddScoped<IRecordTypeProvider>(sp => new QualityRecordProvider<T>(sp.GetRequiredService<AppDbContext>(), type, view, edit, d));
+        P<Domain.Enterprise.ProductRequirement>(Modules.Engineering.EngineeringService.RequirementType, Permissions.EngineeringView, Permissions.EngineeringEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/engineering/requirements/{x.Id}", x.Status == Domain.Enterprise.RequirementStatus.Obsolete));
+        P<Domain.Enterprise.DesignReview>(Modules.Engineering.EngineeringService.ReviewType, Permissions.EngineeringView, Permissions.EngineeringEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/engineering/reviews/{x.Id}", x.Status is Domain.Enterprise.DesignReviewStatus.Approved or Domain.Enterprise.DesignReviewStatus.PendingApproval or Domain.Enterprise.DesignReviewStatus.Cancelled));
+        P<Domain.Enterprise.KnowledgeArticle>(Modules.Engineering.KnowledgeService.KnowledgeType, Permissions.KnowledgeView, Permissions.KnowledgeEdit, x => (x.Number, x.Title, x.Published ? "Published" : "Draft", $"/knowledge/{x.Id}", false));
+        P<Domain.Enterprise.BusinessProcess>(Modules.Engineering.KnowledgeService.ProcessType, Permissions.ProcessView, Permissions.ProcessEdit, x => (x.Code, x.Name, "Active", $"/processes/{x.Id}", false));
+        P<Domain.Enterprise.MaturityAssessment>(Modules.Engineering.KnowledgeService.MaturityType, Permissions.ProcessView, Permissions.ProcessEdit, x => (x.Number, $"Maturity: {x.SubjectName}", x.Overall.ToString("0.00"), $"/processes/maturity?id={x.Id}", true));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Engineering.EngineeringService.ReviewType,
+            (id, ct) => sp.GetRequiredService<Modules.Engineering.EngineeringService>().OnReviewApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Engineering.EngineeringService>().OnReviewRejectedAsync(id, c, ct)));
     }
 
     private static void AddIntegration(IServiceCollection s, IConfiguration config)
