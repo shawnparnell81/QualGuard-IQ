@@ -44,6 +44,8 @@ public class Notification
     public bool EmailRequested { get; set; }
     public DateTimeOffset? EmailSentAt { get; set; }
     public int EmailAttempts { get; set; }
+    /// <summary>Report artifact attached to the email copy (scheduled report delivery).</summary>
+    public Guid? AttachmentId { get; set; }
 }
 
 public enum CustomFieldType { Text = 0, Number = 1, Date = 2, Boolean = 3, Choice = 4 }

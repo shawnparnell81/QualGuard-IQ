@@ -28482,6 +28482,488 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/reports/distribution/schedules:
+    get:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: all
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DistributionScheduleRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DistributionScheduleRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DistributionScheduleRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DistributionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DistributionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DistributionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/reports/distribution/schedules/{id}':
+    get:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/DistributionScheduleRow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DistributionScheduleRow'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/DistributionScheduleRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DistributionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DistributionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DistributionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    delete:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/reports/distribution/schedules/{id}/pause':
+    post:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PauseInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PauseInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PauseInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/reports/distribution/schedules/{id}/resume':
+    post:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/reports/distribution/schedules/{id}/run':
+    post:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/DistributionRow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DistributionRow'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/DistributionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/reports/distribution/schedules/{id}/history':
+    get:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DistributionRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DistributionRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DistributionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/reports/distribution/policy:
+    get:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ReportDeliveryPolicy'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDeliveryPolicy'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ReportDeliveryPolicy'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PolicyInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PolicyInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ReportDeliveryPolicy'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReportDeliveryPolicy'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ReportDeliveryPolicy'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/reports/distribution/files/{id}':
+    get:
+      tags:
+        - ReportDistribution
+      description: 'Requires permission: `reports.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/enterprise/board-editions:
+    get:
+      tags:
+        - BoardEdition
+      description: 'Requires permission: `enterprise.view` (site/department scoped).'
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EditionRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EditionRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/EditionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/enterprise/board-editions/{kind}':
+    post:
+      tags:
+        - BoardEdition
+      description: 'Requires permission: `enterprise.view` (site/department scoped).'
+      parameters:
+        - name: kind
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/EditionRow'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EditionRow'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/EditionRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/enterprise/board-editions/{id}':
+    get:
+      tags:
+        - BoardEdition
+      description: 'Requires permission: `enterprise.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/enterprise/board-editions/{id}/pdf':
+    get:
+      tags:
+        - BoardEdition
+      description: 'Requires permission: `enterprise.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/enterprise/board-editions/{id}/approve':
+    post:
+      tags:
+        - BoardEdition
+      description: 'Requires permission: `enterprise.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditionDecision'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/EditionDecision'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/EditionDecision'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/enterprise/board-editions/{id}/reject':
+    post:
+      tags:
+        - BoardEdition
+      description: 'Requires permission: `enterprise.view` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EditionDecision'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/EditionDecision'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/EditionDecision'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/forms/templates/effective:
     get:
       tags:
@@ -43081,6 +43563,280 @@ components:
             - number
             - string
           format: double
+    DistributionInput:
+      required:
+        - name
+        - source
+        - savedReportId
+        - boardReportKind
+        - cron
+        - timeZone
+        - recipients
+        - recipientRoleIds
+        - deliveryMode
+      type: object
+      properties:
+        name:
+          type: string
+        source:
+          $ref: '#/components/schemas/ReportScheduleSource'
+        savedReportId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        boardReportKind:
+          type:
+            - 'null'
+            - string
+        cron:
+          type: string
+        timeZone:
+          type: string
+        recipients:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+            format: uuid
+        recipientRoleIds:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+            format: uuid
+        deliveryMode:
+          $ref: '#/components/schemas/ReportDeliveryMode'
+        generateDraftEdition:
+          type: boolean
+          default: false
+        maxAttempts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+          default: 3
+    DistributionOutcome:
+      type: integer
+    DistributionRow:
+      required:
+        - id
+        - trigger
+        - attempt
+        - status
+        - deliveryMode
+        - startedAt
+        - completedAt
+        - recipients
+        - delivered
+        - excluded
+        - error
+        - note
+        - editionId
+        - editionVersion
+        - artifactId
+        - nextAttemptAt
+        - recipientDetail
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        trigger:
+          $ref: '#/components/schemas/DistributionTrigger'
+        attempt:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        status:
+          $ref: '#/components/schemas/DistributionStatus'
+        deliveryMode:
+          $ref: '#/components/schemas/ReportDeliveryMode'
+        startedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        recipients:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        delivered:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        excluded:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        error:
+          type:
+            - 'null'
+            - string
+        note:
+          type:
+            - 'null'
+            - string
+        editionId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        editionVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        artifactId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        nextAttemptAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        recipientDetail:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecipientRow'
+    DistributionScheduleRow:
+      required:
+        - id
+        - name
+        - source
+        - savedReportId
+        - report
+        - boardReportKind
+        - cron
+        - timeZone
+        - recipients
+        - recipientRoleIds
+        - deliveryMode
+        - generateDraftEdition
+        - maxAttempts
+        - paused
+        - pausedAt
+        - pauseReason
+        - nextRunAt
+        - lastRunAt
+        - lastStatus
+        - failedAttempts
+        - retryAt
+        - ownerId
+        - owner
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type:
+            - 'null'
+            - string
+        source:
+          $ref: '#/components/schemas/ReportScheduleSource'
+        savedReportId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        report:
+          type:
+            - 'null'
+            - string
+        boardReportKind:
+          type:
+            - 'null'
+            - string
+        cron:
+          type: string
+        timeZone:
+          type: string
+        recipients:
+          type: array
+          items:
+            type: string
+            format: uuid
+        recipientRoleIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+        deliveryMode:
+          $ref: '#/components/schemas/ReportDeliveryMode'
+        generateDraftEdition:
+          type: boolean
+        maxAttempts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        paused:
+          type: boolean
+        pausedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        pauseReason:
+          type:
+            - 'null'
+            - string
+        nextRunAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        lastRunAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        lastStatus:
+          type:
+            - 'null'
+            - string
+        failedAttempts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        retryAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        ownerId:
+          type: string
+          format: uuid
+        owner:
+          type:
+            - 'null'
+            - string
+    DistributionStatus:
+      type: integer
+    DistributionTrigger:
+      type: integer
     DocFooter:
       type: object
       properties:
@@ -43521,6 +44277,77 @@ components:
             - integer
             - string
           format: uint32
+    EditionDecision:
+      required:
+        - notes
+      type: object
+      properties:
+        notes:
+          type: string
+    EditionRow:
+      required:
+        - id
+        - kind
+        - version
+        - title
+        - status
+        - generatedAt
+        - generatedBy
+        - scopeAllSites
+        - scopeSites
+        - approvedAt
+        - approvedBy
+        - notes
+        - confidential
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        kind:
+          type: string
+        version:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        title:
+          type: string
+        status:
+          $ref: '#/components/schemas/EditionStatus'
+        generatedAt:
+          type: string
+          format: date-time
+        generatedBy:
+          type:
+            - 'null'
+            - string
+        scopeAllSites:
+          type: boolean
+        scopeSites:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        approvedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        approvedBy:
+          type:
+            - 'null'
+            - string
+        notes:
+          type:
+            - 'null'
+            - string
+        confidential:
+          type: boolean
+    EditionStatus:
+      type: integer
     EmployeeCertification:
       type: object
       properties:
@@ -50041,6 +50868,15 @@ components:
           type:
             - 'null'
             - string
+    PauseInput:
+      required:
+        - reason
+      type: object
+      properties:
+        reason:
+          type:
+            - 'null'
+            - string
     PerformanceRequest:
       required:
         - periodStart
@@ -50649,6 +51485,46 @@ components:
           format: int32
     PlaybookTrigger:
       type: integer
+    PolicyInput:
+      required:
+        - attachmentsEnabled
+        - allowPdf
+        - allowXlsx
+        - allowCsv
+        - allowConfidential
+        - maxAttachmentBytes
+        - retentionDays
+        - allowedEmailDomains
+      type: object
+      properties:
+        attachmentsEnabled:
+          type: boolean
+        allowPdf:
+          type: boolean
+        allowXlsx:
+          type: boolean
+        allowCsv:
+          type: boolean
+        allowConfidential:
+          type: boolean
+        maxAttachmentBytes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        retentionDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        allowedEmailDomains:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
     PoLineInput:
       required:
         - lineNumber
@@ -53400,6 +54276,33 @@ components:
             - 'null'
             - string
           format: uuid
+    RecipientRow:
+      required:
+        - userId
+        - name
+        - outcome
+        - reason
+        - downloadedAt
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+        name:
+          type:
+            - 'null'
+            - string
+        outcome:
+          $ref: '#/components/schemas/DistributionOutcome'
+        reason:
+          type:
+            - 'null'
+            - string
+        downloadedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
     RecordCalibrationRequest:
       required:
         - performedOn
@@ -53707,6 +54610,66 @@ components:
           type: string
         usesDates:
           type: boolean
+    ReportDeliveryMode:
+      type: integer
+    ReportDeliveryPolicy:
+      type: object
+      properties:
+        attachmentsEnabled:
+          type: boolean
+        allowPdf:
+          type: boolean
+        allowXlsx:
+          type: boolean
+        allowCsv:
+          type: boolean
+        allowConfidential:
+          type: boolean
+        maxAttachmentBytes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        retentionDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        allowedEmailDomains:
+          type: array
+          items:
+            type: string
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     ReportFormat:
       type: integer
     ReportFormatCode:
@@ -53812,26 +54775,84 @@ components:
     ReportSchedule:
       type: object
       properties:
+        name:
+          type:
+            - 'null'
+            - string
+        source:
+          $ref: '#/components/schemas/ReportScheduleSource'
         savedReportId:
-          type: string
+          type:
+            - 'null'
+            - string
           format: uuid
+        boardReportKind:
+          type:
+            - 'null'
+            - string
         cron:
+          type: string
+        timeZone:
           type: string
         recipients:
           type: array
           items:
             type: string
             format: uuid
+        recipientRoleIds:
+          type: array
+          items:
+            type: string
+            format: uuid
         format:
           $ref: '#/components/schemas/ReportFormat'
+        deliveryMode:
+          $ref: '#/components/schemas/ReportDeliveryMode'
+        generateDraftEdition:
+          type: boolean
+        maxAttempts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
         enabled:
           type: boolean
+        pausedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        pausedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        pauseReason:
+          type:
+            - 'null'
+            - string
         nextRunAt:
           type:
             - 'null'
             - string
           format: date-time
         lastRunAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        lastStatus:
+          type:
+            - 'null'
+            - string
+        failedAttempts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        retryAt:
           type:
             - 'null'
             - string
@@ -53868,6 +54889,8 @@ components:
             - integer
             - string
           format: uint32
+    ReportScheduleSource:
+      type: integer
     ReprintInput:
       required:
         - reason
@@ -56123,6 +57146,8 @@ components:
             - string
         shared:
           type: boolean
+        confidential:
+          type: boolean
         ownerId:
           type: string
           format: uuid
@@ -56217,6 +57242,9 @@ components:
             - string
         shared:
           type: boolean
+        confidential:
+          type: boolean
+          default: false
     SavedReportKind:
       type: integer
     SavedReportRun:
@@ -62612,6 +63640,8 @@ tags:
   - name: DataGovernance
   - name: Recovery
   - name: Marketplace
+  - name: ReportDistribution
+  - name: BoardEdition
   - name: Forms
   - name: Ncrs
   - name: Capas

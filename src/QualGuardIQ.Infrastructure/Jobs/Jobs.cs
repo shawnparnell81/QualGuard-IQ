@@ -8,11 +8,11 @@ using QualGuardIQ.Infrastructure.Persistence;
 
 namespace QualGuardIQ.Infrastructure.Jobs;
 
-/// <summary>Identity used for audit entries written by background jobs.</summary>
-public sealed class SystemCurrentUser : ICurrentUser
+/// <summary>Identity used for audit entries written by background jobs (or the run-as identity of a scheduled run's scope).</summary>
+public sealed class SystemCurrentUser(QualGuardIQ.Infrastructure.Services.RunAsContext runAs) : ICurrentUser
 {
-    public Guid? UserId => null;
-    public string UserName => "System";
+    public Guid? UserId => runAs.UserId;
+    public string UserName => runAs.UserName ?? "System";
     public string? IpAddress => null;
     public string? CorrelationId => null;
 }
@@ -40,7 +40,15 @@ public sealed class NotificationEmailJob(AppDbContext db, IConfiguration config,
             try
             {
                 var body = $"{n.Body}\n\n{(n.Link is null ? "" : baseUrl + n.Link)}".Trim();
-                await smtp.SendMailAsync(new MailMessage(from, to, $"[{appName}] {n.Title}", body), ct);
+                using var msg = new MailMessage(from, to, $"[{appName}] {n.Title}", body);
+                if (n.AttachmentId is not null)
+                {
+                    // report files are only mailed over TLS and only while the retention period lasts; otherwise the recipient uses the link
+                    var file = smtp.EnableSsl ? await QualGuardIQ.Infrastructure.Modules.Platform.ReportDistributionService.EmailAttachmentAsync(db, n.AttachmentId, DateTimeOffset.UtcNow, ct) : null;
+                    if (file?.Data is { } data) msg.Attachments.Add(new Attachment(new MemoryStream(data), file.FileName, file.ContentType));
+                    else msg.Body += "\n\nThe attached file was not included in this email (TLS is off or the file expired). Open the link above to view the report.";
+                }
+                await smtp.SendMailAsync(msg, ct);
                 n.EmailSentAt = DateTimeOffset.UtcNow;
             }
             catch (SmtpException e) { log.LogWarning(e, "Email for notification {Id} failed", n.Id); }
@@ -102,9 +110,10 @@ public sealed class PlatformEventJob(QualGuardIQ.Infrastructure.Modules.Platform
 }
 
 /// <summary>Every 5 minutes: send due scheduled reports.</summary>
-public sealed class ReportScheduleJob(QualGuardIQ.Infrastructure.Modules.Platform.DesignerService designer)
+public sealed class ReportScheduleJob(QualGuardIQ.Infrastructure.Modules.Platform.ReportDistributionService distribution)
 {
-    public Task RunAsync(CancellationToken ct) => designer.RunSchedulesAsync(ct);
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 1200)]
+    public Task RunAsync(CancellationToken ct) => distribution.RunDueAsync(ct);
 }
 
 /// <summary>Every 15 minutes: escalate approval stages waiting beyond their designed escalation time.</summary>

@@ -13,7 +13,7 @@ using QualGuardIQ.Infrastructure.Services;
 namespace QualGuardIQ.Infrastructure.Modules.Platform;
 
 public sealed record SavedReportInput(string Name, string ReportKey, SavedReportKind Kind, List<string>? Columns, Guid? SiteId, int? RangeDays, string? FilterColumn, string? FilterValue,
-    string? RowField, string? ColumnField, string? ValueField, bool Shared);
+    string? RowField, string? ColumnField, string? ValueField, bool Shared, bool Confidential = false);
 public sealed record ScheduleInput(Guid SavedReportId, string Cron, List<Guid> Recipients, ReportFormat Format, bool Enabled = true);
 public sealed record DashboardInput(string Name, List<DashboardWidget> Widgets, bool Shared, bool IsHome);
 public sealed record SavedSearchInput(string Name, string Text, string? RecordType);
@@ -53,7 +53,7 @@ public sealed class DesignerService(AppDbContext db, ModuleSupport m, ReportServ
     {
         x.Name = r.Name.Trim(); x.ReportKey = r.ReportKey; x.Kind = r.Kind; x.Columns = r.Columns ?? []; x.SiteId = r.SiteId; x.RangeDays = r.RangeDays;
         x.FilterColumn = string.IsNullOrWhiteSpace(r.FilterColumn) ? null : r.FilterColumn; x.FilterValue = r.FilterValue?.Trim();
-        x.RowField = r.RowField; x.ColumnField = r.ColumnField; x.ValueField = string.IsNullOrWhiteSpace(r.ValueField) ? null : r.ValueField; x.Shared = r.Shared;
+        x.RowField = r.RowField; x.ColumnField = r.ColumnField; x.ValueField = string.IsNullOrWhiteSpace(r.ValueField) ? null : r.ValueField; x.Shared = r.Shared; x.Confidential = r.Confidential;
     }
 
     public async Task<SavedReport> CreateReportAsync(SavedReportInput r, CancellationToken ct)
@@ -127,21 +127,6 @@ public sealed class DesignerService(AppDbContext db, ModuleSupport m, ReportServ
     {
         var s = await db.ReportSchedules.FirstOrDefaultAsync(x => x.Id == id && x.OwnerId == m.UserId, ct) ?? throw new NotFoundException("Schedule");
         db.ReportSchedules.Remove(s); await db.SaveChangesAsync(ct);
-    }
-
-    /// <summary>Background: sends due scheduled reports. Recipients get a link and open the report under their own permissions (no data is mailed).</summary>
-    public async Task<int> RunSchedulesAsync(CancellationToken ct)
-    {
-        var due = await db.ReportSchedules.Where(s => s.Enabled && s.NextRunAt <= clock.UtcNow).Take(200).ToListAsync(ct);
-        foreach (var s in due)
-        {
-            var rep = await db.SavedReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == s.SavedReportId, ct);
-            if (rep is null) { s.Enabled = false; continue; }
-            await notifier.NotifyAsync(s.Recipients, $"Scheduled report: {rep.Name}", $"Open the report to view the latest data ({s.Format}). Data follows your own access rights.", new RecordInfo("SavedReport", rep.Id, Guid.Empty, null, rep.Name, rep.Name, null, Permissions.ReportsView, Permissions.ReportsView, $"/platform/reports/{rep.Id}"), true, ct);
-            s.LastRunAt = clock.UtcNow; s.NextRunAt = CronSchedule.Parse(s.Cron).Next(clock.UtcNow);
-        }
-        await db.SaveChangesAsync(ct);
-        return due.Count;
     }
 
     // ---------- dashboards ----------

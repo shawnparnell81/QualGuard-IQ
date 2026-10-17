@@ -134,3 +134,40 @@ public sealed class MarketplaceController(MarketplaceService svc) : ControllerBa
     [HttpPost("licensing/keys/{id:guid}/retire")] public async Task<IActionResult> RetireKey(Guid id, CancellationToken ct) { await svc.SetKeyStatusAsync(id, LicenseKeyStatus.Retired, ct); return NoContent(); }
     [HttpPost("licensing/keys/{id:guid}/revoke")] public async Task<IActionResult> RevokeKey(Guid id, CancellationToken ct) { await svc.SetKeyStatusAsync(id, LicenseKeyStatus.Revoked, ct); return NoContent(); }
 }
+
+/// <summary>Scheduled report distribution (saved reports and board reports), delivery policy, board report editions and delivered report files.</summary>
+[ApiController, Authorize, Route("api/reports/distribution"), RequirePermission(Permissions.ReportsView)]
+public sealed class ReportDistributionController(ReportDistributionService svc) : ControllerBase
+{
+    [HttpGet("schedules")] public Task<List<DistributionScheduleRow>> Schedules([FromQuery] bool all, CancellationToken ct) => svc.SchedulesAsync(all, ct);
+    [HttpGet("schedules/{id:guid}")] public Task<DistributionScheduleRow> Schedule(Guid id, CancellationToken ct) => svc.ScheduleAsync(id, ct);
+    [HttpPost("schedules")] public async Task<object> Create(DistributionInput r, CancellationToken ct) => new { Id = await svc.CreateAsync(r, ct) };
+    [HttpPut("schedules/{id:guid}")] public async Task<IActionResult> Update(Guid id, DistributionInput r, CancellationToken ct) { await svc.UpdateAsync(id, r, ct); return NoContent(); }
+    [HttpDelete("schedules/{id:guid}")] public async Task<IActionResult> Delete(Guid id, CancellationToken ct) { await svc.DeleteAsync(id, ct); return NoContent(); }
+    [HttpPost("schedules/{id:guid}/pause")] public async Task<IActionResult> Pause(Guid id, PauseInput r, CancellationToken ct) { await svc.PauseAsync(id, r, ct); return NoContent(); }
+    [HttpPost("schedules/{id:guid}/resume")] public async Task<IActionResult> Resume(Guid id, CancellationToken ct) { await svc.ResumeAsync(id, ct); return NoContent(); }
+    [HttpPost("schedules/{id:guid}/run")] public Task<DistributionRow> RunNow(Guid id, CancellationToken ct) => svc.RunNowAsync(id, ct);
+    [HttpGet("schedules/{id:guid}/history")] public Task<List<DistributionRow>> History(Guid id, CancellationToken ct) => svc.HistoryAsync(id, ct);
+
+    [HttpGet("policy")] public Task<ReportDeliveryPolicy> Policy(CancellationToken ct) => svc.PolicyAsync(ct);
+    [HttpPut("policy")] public Task<ReportDeliveryPolicy> SavePolicy(PolicyInput r, CancellationToken ct) => svc.SavePolicyAsync(r, ct);
+
+    [HttpGet("files/{id:guid}")]
+    public async Task<IActionResult> File(Guid id, CancellationToken ct)
+    {
+        var (data, name, type) = await svc.ArtifactAsync(id, ct);
+        Response.Headers.CacheControl = "private, no-store";
+        return File(data, type, name);
+    }
+}
+
+[ApiController, Authorize, Route("api/enterprise/board-editions"), RequirePermission(Permissions.EnterpriseView)]
+public sealed class BoardEditionController(ReportDistributionService svc) : ControllerBase
+{
+    [HttpGet] public Task<List<EditionRow>> List([FromQuery] string? kind, CancellationToken ct) => svc.EditionsAsync(kind, ct);
+    [HttpPost("{kind}")] public Task<EditionRow> Generate(string kind, CancellationToken ct) => svc.GenerateEditionAsync(kind, ct);
+    [HttpGet("{id:guid}")] public Task<object> Get(Guid id, CancellationToken ct) => svc.EditionAsync(id, ct);
+    [HttpGet("{id:guid}/pdf")] public async Task<IActionResult> Pdf(Guid id, CancellationToken ct) { Response.Headers.CacheControl = "private, no-store"; return File(await svc.EditionPdfAsync(id, ct), "application/pdf", $"board-edition-{id}.pdf"); }
+    [HttpPost("{id:guid}/approve")] public async Task<IActionResult> Approve(Guid id, EditionDecision r, CancellationToken ct) { await svc.DecideEditionAsync(id, true, r, ct); return NoContent(); }
+    [HttpPost("{id:guid}/reject")] public async Task<IActionResult> Reject(Guid id, EditionDecision r, CancellationToken ct) { await svc.DecideEditionAsync(id, false, r, ct); return NoContent(); }
+}
