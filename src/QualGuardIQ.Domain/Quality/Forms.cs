@@ -19,10 +19,14 @@ public class FormRecord : Entity, IAudited, ISiteScoped, IContentLock
     public string ValuesJson { get; set; } = "{}";
     public DateTimeOffset? SubmittedAt { get; set; }
     public Guid? SubmittedById { get; set; }
+    public Guid? OwnerId { get; set; }
+    public DateTimeOffset? ApprovedAt { get; set; }
+    public DateTimeOffset? ClosedAt { get; set; }
+    public Guid? RetentionPolicyId { get; set; }
     public string AuditLabel => $"form record {Number}";
     public string StatusProperty => nameof(Status);
     public bool IsLockedState(object? s) => s is FormRecordStatus.Submitted or FormRecordStatus.Approved;
-    public IReadOnlyCollection<string> MutableWhenLocked { get; } = [nameof(Status)];
+    public IReadOnlyCollection<string> MutableWhenLocked { get; } = [nameof(Status), nameof(ApprovedAt), nameof(ClosedAt)];
 }
 
 /// <summary>
@@ -50,4 +54,25 @@ public class FormSignature : Entity, IAudited
     public DateTimeOffset? InvalidatedAt { get; set; }
     public string? InvalidatedReason { get; set; }
     public string AuditLabel => $"signature '{Label}' on form record";
+}
+
+
+/// <summary>
+/// Typed copy of one value of a form record (TECH 2 "Completed form value"), kept in step with the record's values for reporting and
+/// search. RowKey identifies table rows and repeated section items ("rows/3", "items/1"); scalar fields have none.
+/// </summary>
+public class FormRecordValue
+{
+    public long Id { get; set; }
+    public Guid FormRecordId { get; set; }
+    public Guid FieldId { get; set; }
+    public string? RowKey { get; set; }
+    /// <summary>text, number, date, boolean, json or file.</summary>
+    public string ValueType { get; set; } = "text";
+    public string? TextValue { get; set; }
+    public decimal? NumericValue { get; set; }
+    public DateTimeOffset? DateValue { get; set; }
+    public bool? BooleanValue { get; set; }
+    public string? JsonValue { get; set; }
+    public Guid? FileId { get; set; }
 }

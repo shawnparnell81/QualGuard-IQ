@@ -18,7 +18,8 @@ import { SignDialog } from '../components/SignDialog';
 import { mono } from '../theme';
 import { FieldBuilder, SchemaPreview, parseFields, serializeFields, type FieldDef } from './FormBuilder';
 import { FormView } from '../forms/FormView';
-import { isV2, parseDefinition } from '../forms/definition';
+import { FormDesigner, cleanDefinition, upgradeToV2 } from '../forms/FormDesigner';
+import { isV2, parseDefinition, type FormDef } from '../forms/definition';
 
 type Kind = 0 | 1 | 2;
 const cfg = (kind: Kind) => kind === 2
@@ -246,24 +247,44 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
 }
 
 function DraftEditor({ rev, onSaved, formTemplate }: { rev: Rev; onSaved: () => void; formTemplate?: boolean }) {
-  const v2 = isV2(rev.fieldSchema);
-  const [fields, setFields] = useState<FieldDef[]>(() => (v2 ? [] : parseFields(rev.fieldSchema)));
+  const [designer, setDesigner] = useState(() => isV2(rev.fieldSchema));
+  const [designing, setDesigning] = useState(false);
+  const [def, setDef] = useState<FormDef>(() => upgradeToV2(parseDefinition(rev.fieldSchema)));
+  const [fields, setFields] = useState<FieldDef[]>(() => (isV2(rev.fieldSchema) ? [] : parseFields(rev.fieldSchema)));
   const [summary, setSummary] = useState(rev.changeSummary);
   const [eff, setEff] = useState(rev.effectiveDate ?? '');
   const [training, setTraining] = useState(rev.trainingRequired);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const schema = () => (!formTemplate ? undefined : designer ? JSON.stringify(cleanDefinition(def)) : serializeFields(fields));
   return (
-    <Paper sx={{ p: 2, maxWidth: 720 }}>
+    <Paper sx={{ p: 2, maxWidth: formTemplate && designer ? 'none' : 720 }}>
       <Typography variant="h3" sx={{ mb: 1.5 }}>Draft revision {rev.revision}</Typography>
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 1.5 }}>{msg.text}</Alert>}
       <Stack gap={2}>
-        <TextField label="Change summary" multiline minRows={2} value={summary} onChange={(e) => setSummary(e.target.value)} />
-        <TextField label="Effective date (blank = on approval)" type="date" value={eff} onChange={(e) => setEff(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 280 }} />
-        <FormControlLabel control={<Checkbox checked={training} onChange={(e) => setTraining(e.target.checked)} />} label="Training required when released" />
-        {formTemplate && !v2 && <FieldBuilder fields={fields} onChange={setFields} />}
-        {formTemplate && v2 && <Paper variant="outlined" sx={{ p: 2 }}><FormView def={parseDefinition(rev.fieldSchema)} values={{}} onChange={() => {}} readOnly /></Paper>}
+        <Stack direction={{ xs: 'column', md: 'row' }} gap={2} alignItems={{ md: 'center' }}>
+          <TextField label="Change summary" multiline minRows={2} value={summary} onChange={(e) => setSummary(e.target.value)} sx={{ flex: 1, maxWidth: 680 }} />
+          <TextField label="Effective date (blank = on approval)" type="date" value={eff} onChange={(e) => setEff(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 280 }} />
+          <FormControlLabel control={<Checkbox checked={training} onChange={(e) => setTraining(e.target.checked)} />} label="Training required when released" />
+        </Stack>
+        {formTemplate && !designer && <>
+          <FieldBuilder fields={fields} onChange={setFields} />
+          <Box><Button size="small" variant="outlined" onClick={() => { setDef(upgradeToV2(parseDefinition(serializeFields(fields)))); setDesigner(true); setDesigning(true); }}>Use the sectioned designer</Button>
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>Adds sections, tables, signature blocks and page setup; the fields above are kept.</Typography></Box>
+        </>}
+        {formTemplate && designer && <>
+          <Box><Button variant="contained" onClick={() => setDesigning(true)}>Open designer</Button>
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>{def.sections.length} sections, {def.fields.length} fields, {def.tables.length} tables, {def.signatures.length} signature blocks. Save the draft after designing.</Typography></Box>
+          {def.fields.length + def.tables.length > 0 && <Paper variant="outlined" sx={{ p: 2 }}><FormView def={def} values={{}} onChange={() => {}} readOnly /></Paper>}
+          <Dialog open={designing} fullScreen onClose={() => setDesigning(false)} aria-labelledby="designer-title">
+            <Stack direction="row" alignItems="center" gap={2} sx={{ px: 2, py: 1, borderBottom: 1, borderColor: 'divider' }}>
+              <Typography id="designer-title" variant="h3" sx={{ flex: 1 }}>Form designer: revision {rev.revision}</Typography>
+              <Button variant="contained" onClick={() => setDesigning(false)}>Done</Button>
+            </Stack>
+            <Box sx={{ p: 2, overflow: 'auto' }}><FormDesigner value={def} onChange={setDef} /></Box>
+          </Dialog>
+        </>}
         <Box><Button variant="outlined" onClick={async () => {
-          try { await put(`/api/documents/revisions/${rev.id}`, { changeSummary: summary, effectiveDate: eff || null, trainingRequired: training, rowVersion: rev.rowVersion, fieldSchema: formTemplate && !v2 ? serializeFields(fields) : undefined }); setMsg({ ok: true, text: 'Saved.' }); onSaved(); }
+          try { await put(`/api/documents/revisions/${rev.id}`, { changeSummary: summary, effectiveDate: eff || null, trainingRequired: training, rowVersion: rev.rowVersion, fieldSchema: schema() }); setMsg({ ok: true, text: 'Saved.' }); onSaved(); }
           catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
         }}>Save draft</Button></Box>
       </Stack>

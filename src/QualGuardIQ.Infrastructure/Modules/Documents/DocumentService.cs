@@ -43,7 +43,7 @@ public sealed record UpdateRevisionRequest(string ChangeSummary, DateOnly? Effec
 
 public sealed class DocumentService(
     AppDbContext db, IAccessService access, ICurrentUser current, INumberingService numbers, IRecordRegistry records,
-    WorkflowService workflow, ISearchIndexer search, INotifier notifier, IClock clock, IEnumerable<IRevisionReleasedHandler> released, ISiteCalendar calendar, DocumentTypeService types)
+    WorkflowService workflow, ISearchIndexer search, INotifier notifier, IClock clock, IEnumerable<IRevisionReleasedHandler> released, ISiteCalendar calendar, DocumentTypeService types, FormDefinitionProjector projector)
 {
     private Task<DateOnly> TodayAsync(Guid siteId, CancellationToken ct) => calendar.TodayAsync(siteId, ct);
 
@@ -109,6 +109,7 @@ public sealed class DocumentService(
         {
             Application.Forms.FormDefinitions.Parse(req.FieldSchema);
             rev.FieldSchema = req.FieldSchema;
+            await projector.SyncAsync(rev, ct);
         }
         await db.SaveChangesAsync(ct);
     }
@@ -126,6 +127,7 @@ public sealed class DocumentService(
         var rev = new DocumentRevision { DocumentId = doc.Id, Revision = next, Sequence = last.Sequence + 1, Status = RevisionStatus.Draft, ChangeSummary = changeSummary.Trim(), TrainingRequired = last.TrainingRequired, FieldSchema = last.FieldSchema };
         db.DocumentRevisions.Add(rev);
         await db.SaveChangesAsync(ct);
+        if (doc.Kind == DocumentKind.FormTemplate) { await projector.SyncAsync(rev, ct); await db.SaveChangesAsync(ct); }
         return rev;
     }
 
@@ -139,6 +141,7 @@ public sealed class DocumentService(
         {
             if (string.IsNullOrWhiteSpace(rev.FieldSchema)) throw new AppException("Define the form fields before submitting for approval.");
             Application.Forms.FormDefinitions.Parse(rev.FieldSchema);
+            await projector.SyncAsync(rev, ct);
         }
         else if (!await db.Attachments.AnyAsync(a => a.OwnerType == type && a.OwnerId == rev.Id && !a.IsArchived, ct))
             throw new AppException("Attach the controlled file before submitting for approval.");
@@ -154,6 +157,7 @@ public sealed class DocumentService(
         var rev = await db.DocumentRevisions.Include(r => r.Document).FirstAsync(r => r.Id == revisionId, ct);
         rev.Status = RevisionStatus.Approved;
         rev.ApprovedAt = clock.UtcNow;
+        rev.ApprovedById = current.UserId;
         var today = await TodayAsync(rev.Document!.SiteId, ct);
         rev.EffectiveDate ??= today;
         if (rev.EffectiveDate < today) rev.EffectiveDate = today;

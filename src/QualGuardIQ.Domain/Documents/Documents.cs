@@ -27,7 +27,23 @@ public class ControlledDocument : Entity, IAudited, ISiteScoped, IArchivable
     public DateTimeOffset? ArchivedAt { get; set; }
     public List<DocumentRevision> Revisions { get; set; } = [];
     public string AuditLabel => $"{Kind} {Number}";
+
+    // ---- Enterprise template catalog (TECH 2 "Template catalog"): category, module, industry pack, description, confidentiality, retention
+    public Guid? CategoryId { get; set; }
+    /// <summary>QMS module the template belongs to (forms, document-control, calibration, ...).</summary>
+    public string? ModuleKey { get; set; }
+    /// <summary>Industry pack the template came from (automotive, aerospace, medical-device, electronics, manufacturing).</summary>
+    public string? IndustryPack { get; set; }
+    public string? Description { get; set; }
+    /// <summary>Confidentiality marking: Public, Internal, Confidential or Restricted.</summary>
+    public string Confidentiality { get; set; } = "Internal";
+    public Guid? RetentionPolicyId { get; set; }
+    /// <summary>How the template was created: native, converted from a file, installed from a package, or cloned.</summary>
+    public TemplateSource Source { get; set; }
+    public Guid? ClonedFromId { get; set; }
 }
+
+public enum TemplateSource { Native = 0, Excel = 1, Word = 2, Csv = 3, Pdf = 4, Package = 5, Clone = 6 }
 
 public class DocumentRevision : Entity, IAudited, IContentLock
 {
@@ -45,12 +61,28 @@ public class DocumentRevision : Entity, IAudited, IContentLock
     public bool TrainingRequired { get; set; }
     /// <summary>Form templates only: JSON field definitions. Frozen with the revision.</summary>
     public string? FieldSchema { get; set; }
+
+    // ---- Template revision details (TECH 2 "Template revision")
+    public TemplateSource SourceType { get; set; }
+    /// <summary>Preserved original file (attachment) the revision was converted from.</summary>
+    public Guid? SourceFileId { get; set; }
+    /// <summary>Native file kept with the revision (for example the workbook a template is maintained in).</summary>
+    public Guid? NativeFileId { get; set; }
+    /// <summary>Derived preview (regenerated, so it may change after approval).</summary>
+    public Guid? PreviewFileId { get; set; }
+    /// <summary>Form schema version of <see cref="FieldSchema"/> (1 = field list, 2 = sectioned definition).</summary>
+    public int SchemaVersion { get; set; } = 1;
+    /// <summary>Version of the print renderer the revision was approved against.</summary>
+    public int RenderingVersion { get; set; } = 1;
+    public string? ChangeReason { get; set; }
+    public DateOnly? ReviewDate { get; set; }
+    public Guid? ApprovedById { get; set; }
     public string AuditLabel => $"revision {Revision} of {Document?.Number ?? DocumentId.ToString()}";
 
     public string StatusProperty => nameof(Status);
     public bool IsLockedState(object? originalStatus) => originalStatus is RevisionStatus s && s >= RevisionStatus.Approved;
     public IReadOnlyCollection<string> MutableWhenLocked { get; } =
-        [nameof(Status), nameof(SupersededOn), nameof(ObsoletedAt), nameof(ObsoleteReason)];
+        [nameof(Status), nameof(SupersededOn), nameof(ObsoletedAt), nameof(ObsoleteReason), nameof(PreviewFileId)];
 }
 
 /// <summary>
