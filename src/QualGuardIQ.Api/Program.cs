@@ -43,7 +43,17 @@ builder.Services.AddIdentityCore<ApplicationUser>(o =>
     .AddDefaultTokenProviders()
     .AddClaimsPrincipalFactory<AppClaimsFactory>();
 
-builder.Services.AddAuthentication(IdentityConstants.ApplicationScheme)
+// Browser sessions use the Identity cookie; API clients may instead send "Authorization: Bearer <token>"
+// issued by POST /api/auth/token. A policy scheme picks one per request, so the cookie flow is unchanged.
+const string AuthSelector = "qms.auth";
+builder.Services.AddAuthentication(AuthSelector)
+    .AddPolicyScheme(AuthSelector, "Cookie or bearer", o => o.ForwardDefaultSelector = ctx =>
+        ctx.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) ? IdentityConstants.BearerScheme : IdentityConstants.ApplicationScheme)
+    .AddBearerToken(IdentityConstants.BearerScheme, o =>
+    {
+        o.BearerTokenExpiration = TimeSpan.FromMinutes(builder.Configuration.GetValue("Auth:BearerTokenMinutes", 30));
+        o.RefreshTokenExpiration = TimeSpan.FromHours(builder.Configuration.GetValue("Auth:RefreshTokenHours", 8));
+    })
     .AddIdentityCookies(c => c.ApplicationCookie!.Configure(o =>
     {
         o.Cookie.Name = "qms.session";
@@ -108,12 +118,16 @@ app.Use(async (ctx, next) =>
     await next();
 });
 app.UseAuthentication();
+app.UseMiddleware<BearerValidation>();
 app.UseRateLimiter();
 
 // CSRF: every state-changing API call must carry the antiforgery header.
 app.Use(async (ctx, next) =>
 {
-    if (ctx.Request.Path.StartsWithSegments("/api") && !HttpMethods.IsGet(ctx.Request.Method) && !HttpMethods.IsHead(ctx.Request.Method) && !HttpMethods.IsOptions(ctx.Request.Method))
+    // Bearer requests carry no ambient credentials, so CSRF does not apply to them (or to obtaining a token).
+    var bearer = ctx.Request.Headers.Authorization.ToString().StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)
+        || ctx.Request.Path.StartsWithSegments("/api/auth/token");
+    if (!bearer && ctx.Request.Path.StartsWithSegments("/api") && !HttpMethods.IsGet(ctx.Request.Method) && !HttpMethods.IsHead(ctx.Request.Method) && !HttpMethods.IsOptions(ctx.Request.Method))
     {
         var af = ctx.RequestServices.GetRequiredService<IAntiforgery>();
         if (!await af.IsRequestValidAsync(ctx))
