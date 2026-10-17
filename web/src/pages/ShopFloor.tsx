@@ -102,7 +102,8 @@ export function WorkOrderList() {
 
 function SitePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const sites = useSites();
-  return <TextField select label="Site" value={value} onChange={(e) => onChange(e.target.value)}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
+  const active = (sites.data ?? []).filter((s) => !s.isArchived);
+  return <TextField select label="Site" value={value} onChange={(e) => onChange(e.target.value)}>{value && !active.some((s) => s.id === value) && <MenuItem value={value}>{sites.isLoading ? 'Loading…' : 'Archived site'}</MenuItem>}{active.map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
 }
 
 export function WorkOrderNew() {

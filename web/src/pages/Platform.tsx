@@ -54,7 +54,7 @@ export function ActivityStream() {
       <Box sx={{ borderLeft: 2, borderColor: 'divider', pl: 2 }}>{(q.data ?? []).map((e) => <Box key={e.id} sx={{ mb: 1.5, position: 'relative' }}>
         <Box sx={{ position: 'absolute', left: -21, top: 6, width: 8, height: 8, borderRadius: '50%', bgcolor: e.type.includes('approved') ? 'success.main' : e.type.includes('rejected') ? 'error.main' : 'primary.main' }} />
         <Typography variant="caption" color="text.secondary">{fmtDateTime(e.at ?? e.occurredAt)} · {e.userName ?? 'system'} · <span style={{ fontFamily: mono }}>{e.type}</span></Typography>
-        <Typography variant="body2">{e.recordType && <Chip size="small" label={e.recordType} sx={{ mr: 1 }} />}{e.description}</Typography></Box>)}
+        <Typography component="div" variant="body2">{e.recordType && <Chip size="small" label={e.recordType} sx={{ mr: 1 }} />}{e.description}</Typography></Box>)}
         {q.data?.length === 0 && <Typography color="text.secondary">No activity you can see yet.</Typography>}</Box>
     </ModuleWorkspace>
   );

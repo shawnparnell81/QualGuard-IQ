@@ -119,7 +119,7 @@ function SchedulesTab({ all }: { all: boolean }) {
         <Paper key={s.id} sx={{ p: 1.5 }} data-testid="schedule-card">
           <Stack direction={{ xs: 'column', md: 'row' }} gap={1} alignItems={{ md: 'center' }}>
             <Box sx={{ flex: 1 }}>
-              <Typography sx={{ fontWeight: 600 }}>{s.name ?? s.report ?? 'Schedule'} {s.paused ? <Chip size="small" label="Paused" sx={{ ml: 1 }} /> : null}</Typography>
+              <Typography component="div" sx={{ fontWeight: 600 }}>{s.name ?? s.report ?? 'Schedule'} {s.paused ? <Chip size="small" label="Paused" sx={{ ml: 1 }} /> : null}</Typography>
               <Typography variant="body2" color="text.secondary">{s.source === 0 ? s.report : boardKinds.find((b) => b[0] === s.boardReportKind)?.[1]} · {s.cron} ({s.timeZone}) · {deliveryModes[s.deliveryMode]} · {s.recipients.length} people, {s.recipientRoleIds.length} groups{all && s.owner ? ` · owner ${s.owner}` : ''}</Typography>
               <Typography variant="body2">{s.paused ? `Paused ${fmtDateTime(s.pausedAt)}${s.pauseReason ? ` — ${s.pauseReason}` : ''}` : `Next run ${fmtDateTime(s.nextRunAt)}`}{s.retryAt ? ` · retry ${fmtDateTime(s.retryAt)}` : ''}{s.lastStatus ? ` · last: ${s.lastStatus}` : ''}</Typography>
             </Box>
