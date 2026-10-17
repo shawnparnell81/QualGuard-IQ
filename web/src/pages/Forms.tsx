@@ -13,7 +13,9 @@ import { ApprovalsPanel, AttachmentsAndHistory } from '../components/RecordTabs'
 import { Facts, useRunner, useSites } from '../components/Kit';
 import { SignDialog } from '../components/SignDialog';
 import { useWork } from '../work';
-import { FormRenderer, type FieldDef } from './FormBuilder';
+import { type FieldDef } from './FormBuilder';
+import { FormView } from '../forms/FormView';
+import { parseDefinition, type FormDef } from '../forms/definition';
 import { mono } from '../theme';
 
 const mod = () => modules.find((m) => m.key === 'documents')!;
@@ -76,7 +78,7 @@ export function FormRecordNew() {
   );
 }
 
-interface FormDetail { id: string; number: string; title: string; templateId: string; templateNumber: string; templateRevision: string; status: number; submittedAt: string | null; rowVersion: number; fields: FieldDef[]; values: Record<string, string | null>; canEdit: boolean }
+interface FormDetail { id: string; number: string; title: string; templateId: string; templateNumber: string; templateRevision: string; status: number; submittedAt: string | null; rowVersion: number; siteId: string; fields: FieldDef[]; definition?: FormDef; values: Record<string, string | null>; canEdit: boolean }
 
 export function FormRecordDetail() {
   const { id } = useParams();
@@ -107,7 +109,7 @@ export function FormRecordDetail() {
       <Box sx={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 3 }}>
         <Facts items={[['Template', `${d.templateNumber} revision ${d.templateRevision}`], ['Status', formStatus[d.status]], ['Submitted', fmtDateTime(d.submittedAt)]]} />
         <Box sx={{ minWidth: 0 }}>
-          {tab === 'form' && <Paper sx={{ p: 3 }}><FormRenderer fields={d.fields} values={values} onChange={setValues} readOnly={!d.canEdit} /></Paper>}
+          {tab === 'form' && <Paper sx={{ p: 3 }}><FormView def={parseDefinition(d.definition ?? d.fields)} values={values} onChange={setValues} readOnly={!d.canEdit} recordType="FormRecord" recordId={d.id} siteId={d.siteId} /></Paper>}
           {tab === 'approvals' && <ApprovalsPanel type="FormRecord" id={d.id} />}
           {tab === 'more' && <AttachmentsAndHistory type="FormRecord" id={d.id} canEdit={d.canEdit} />}
         </Box>
