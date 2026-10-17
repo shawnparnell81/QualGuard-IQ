@@ -39,14 +39,13 @@ public sealed class NotificationEmailJob(AppDbContext db, IConfiguration config,
             if (!emails.TryGetValue(n.UserId, out var to) || string.IsNullOrWhiteSpace(to)) { n.EmailRequested = false; continue; }
             try
             {
-                var body = $"{n.Body}\n\n{(n.Link is null ? "" : baseUrl + n.Link)}".Trim();
-                using var msg = new MailMessage(from, to, $"[{appName}] {n.Title}", body);
+                using var msg = QualGuardIQ.Infrastructure.Services.BrandedEmail.Create(from, to, appName, n.Title, n.Body, n.Link is null ? null : baseUrl + n.Link);
                 if (n.AttachmentId is not null)
                 {
                     // report files are only mailed over TLS and only while the retention period lasts; otherwise the recipient uses the link
                     var file = smtp.EnableSsl ? await QualGuardIQ.Infrastructure.Modules.Platform.ReportDistributionService.EmailAttachmentAsync(db, n.AttachmentId, DateTimeOffset.UtcNow, ct) : null;
                     if (file?.Data is { } data) msg.Attachments.Add(new Attachment(new MemoryStream(data), file.FileName, file.ContentType));
-                    else msg.Body += "\n\nThe attached file was not included in this email (TLS is off or the file expired). Open the link above to view the report.";
+                    else QualGuardIQ.Infrastructure.Services.BrandedEmail.AppendNote(msg, "The attached file was not included in this email (TLS is off or the file expired). Open the link above to view the report.");
                 }
                 await smtp.SendMailAsync(msg, ct);
                 n.EmailSentAt = DateTimeOffset.UtcNow;
