@@ -146,5 +146,34 @@ public static class DependencyInjection
             (id, ct) => sp.GetRequiredService<SupplierService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<SupplierService>().OnRejectedAsync(id, c, ct)));
         s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(NcrService.RecordType,
             (id, ct) => sp.GetRequiredService<NcrService>().OnApprovedAsync(id, ct), (id, _, ct) => sp.GetRequiredService<NcrService>().OnRejectedAsync(id, ct)));
+        // Prompt 4: APQP, SPC/MSA, LPA, cost of quality, supplier development, analytics, portals.
+        s.AddScoped<Modules.Apqp.ApqpService>();
+        s.AddScoped<Modules.Apqp.SpcService>();
+        s.AddScoped<Modules.Apqp.MsaService>();
+        s.AddScoped<Modules.Apqp.LpaService>();
+        s.AddScoped<Modules.Apqp.CoqService>();
+        s.AddScoped<Modules.Apqp.SupplierDevelopmentService>();
+        s.AddScoped<Modules.Apqp.InsightsService>();
+        s.AddScoped<Modules.Apqp.PortalService>();
+        foreach (var t in new[] { Modules.Apqp.ApqpService.FlowType, Modules.Apqp.ApqpService.PfmeaType, Modules.Apqp.ApqpService.PlanType })
+            s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(t,
+                (id, ct) => sp.GetRequiredService<Modules.Apqp.ApqpService>().OnApprovedAsync(t, id, ct),
+                (id, c, ct) => sp.GetRequiredService<Modules.Apqp.ApqpService>().OnRejectedAsync(t, id, c, ct)));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Apqp.MsaService.RecordType,
+            (id, ct) => sp.GetRequiredService<Modules.Apqp.MsaService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Apqp.MsaService>().OnRejectedAsync(id, c, ct)));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Apqp.CoqService.ReworkType,
+            (id, ct) => sp.GetRequiredService<Modules.Apqp.CoqService>().OnReworkDecidedAsync(id, true, null, ct), (id, c, ct) => sp.GetRequiredService<Modules.Apqp.CoqService>().OnReworkDecidedAsync(id, false, c, ct)));
+        static string Doc(ApqpDocument d) => $"{d.Number} rev {d.Revision}";
+        static bool Locked(ApqpDocument d) => d.Status != ApqpStatus.Draft;
+        P<ProcessFlow>(Modules.Apqp.ApqpService.FlowType, Permissions.ApqpView, Permissions.ApqpEdit, x => (Doc(x), x.Title, x.Status.ToString(), $"/apqp/flows/{x.Id}", Locked(x)));
+        P<Pfmea>(Modules.Apqp.ApqpService.PfmeaType, Permissions.ApqpView, Permissions.ApqpEdit, x => (Doc(x), x.Title, x.Status.ToString(), $"/apqp/pfmea/{x.Id}", Locked(x)));
+        P<ControlPlan>(Modules.Apqp.ApqpService.PlanType, Permissions.ApqpView, Permissions.ApqpEdit, x => (Doc(x), x.Title, x.Status.ToString(), $"/apqp/plans/{x.Id}", Locked(x)));
+        P<SpcChart>(Modules.Apqp.SpcService.RecordType, Permissions.SpcView, Permissions.SpcEdit, x => (x.Number, x.Title, x.IsArchived ? "Archived" : "Active", $"/spc/{x.Id}", x.IsArchived));
+        P<MsaStudy>(Modules.Apqp.MsaService.RecordType, Permissions.SpcView, Permissions.SpcEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/spc/msa/{x.Id}", x.Status is MsaStatus.PendingApproval or MsaStatus.Approved));
+        P<LpaAudit>(Modules.Apqp.LpaService.RecordType, Permissions.LpaView, Permissions.LpaEdit, x => (x.Number, "Layered process audit due " + x.DueOn.ToString("yyyy-MM-dd"), x.Status.ToString(), $"/lpa/{x.Id}", x.Status == LpaStatus.Completed));
+        P<SupplierProgram>(Modules.Apqp.SupplierDevelopmentService.RecordType, Permissions.SuppliersView, Permissions.SuppliersEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/suppliers/programs/{x.Id}", x.Status is SupplierProgramStatus.Completed or SupplierProgramStatus.Cancelled));
+        P<ScrapEvent>(Modules.Apqp.CoqService.ScrapType, Permissions.CoqView, Permissions.CoqEdit, x => (x.Number, "Scrap: " + x.Reason, "Recorded", $"/coq/scrap?id={x.Id}", true));
+        P<ReworkOrder>(Modules.Apqp.CoqService.ReworkType, Permissions.CoqView, Permissions.CoqEdit, x => (x.Number, "Rework: " + (x.Instructions.Length > 80 ? x.Instructions[..80] : x.Instructions), x.Status.ToString(), $"/coq/rework/{x.Id}", x.Status is ReworkStatus.Validated or ReworkStatus.PendingApproval));
     }
 }
+

@@ -57,6 +57,7 @@ public sealed class UsersController(AppDbContext db, UserManager<ApplicationUser
     public async Task<ActionResult<Guid>> AssignRole(Guid id, AssignRoleRequest req, CancellationToken ct)
     {
         var user = await users.FindByIdAsync(id.ToString()) ?? throw new NotFoundException("User");
+        if (user.PortalKind is not null) throw new AppException("Portal accounts cannot hold staff roles; they only reach the external portal.");
         var role = await db.QmsRoles.Include(r => r.Permissions).FirstOrDefaultAsync(r => r.Id == req.RoleId, ct) ?? throw new NotFoundException("Role");
         if (req.DepartmentId is not null && req.SiteId is null) throw new AppException("A department scope requires a site.");
         if (req.SiteId is { } s && !await db.Sites.AnyAsync(x => x.Id == s, ct)) throw new NotFoundException("Site");
