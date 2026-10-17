@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process';
-import { test, expect } from '@playwright/test';
-import { Api, dialog, signIn, state, unique, users, type User } from './support';
+import { test, expect, request } from '@playwright/test';
+import { Api, WEB, choose, dialog, localDate, signIn, state, unique, users, type User } from './support';
 
 /** Gap-closure UI checks: shared site picker (LPA, cost of quality), friendly record type labels, document type library. */
 test.describe('E2E 14: gap closure', () => {
@@ -225,5 +225,62 @@ test.describe('E2E 14: gap closure', () => {
     await row.getByRole('button', { name: 'Retire' }).click();
     await expect(row).toContainText('Retired');
     await expect(page.getByText(priv.split('\n')[1])).toHaveCount(0);
+  });
+
+  test('an MES device is registered with scopes, sites and expiry, its secret shows once, and rotation and revocation take effect', async ({ page }) => {
+    const admin = await Api.as(users.admin);
+    const t = Date.now().toString(36);
+    const role = await admin.post<string>('/api/admin/roles', { name: `MES service ${t}`, description: 'UI test', permissions: ['production.edit', 'production.view'] });
+    const svc = await admin.post<string>('/api/admin/users', { email: `mes-${t}@qms.test`, displayName: `MES Line ${t}`, password: 'mes-service-password-1' });
+    await admin.post(`/api/admin/users/${svc}/roles`, { roleId: role, siteId: null, departmentId: null });
+
+    await signIn(page, users.admin);
+    await page.goto('/governance/api');
+    await page.getByRole('tab', { name: 'MES devices' }).click();
+    await expect(page.getByTestId('mes-auth-status')).toContainText('until Mes:RequireDeviceClients is set to true');
+    await page.getByRole('button', { name: 'Register MES device' }).click();
+    const d = dialog(page);
+    await d.getByLabel('Name').fill(`Press line PLC ${t}`);
+    await choose(page, 'Service user', `MES Line ${t}`);
+    await d.getByRole('button', { name: 'Create' }).click();
+    await expect(d.getByRole('alert')).toContainText('restricted to one or more sites');
+    await d.getByRole('combobox', { name: 'Sites (required)' }).click();
+    await page.getByRole('option', { name: /Test Plant/ }).click();
+    await page.keyboard.press('Escape');
+    await d.getByLabel(/Expires on/).fill(localDate(180));
+    await d.getByRole('button', { name: 'Create' }).click();
+    await expect(d).toHaveCount(0);
+    const shown = page.getByTestId('client-secret');
+    await expect(shown).toContainText('shown once');
+    const apiKey = (await shown.locator('b').nth(1).textContent())!.trim();
+    expect(apiKey).toMatch(/^qgm_[0-9a-f]{16}\./);
+
+    const device = await request.newContext({ baseURL: WEB, extraHTTPHeaders: { 'X-Api-Key': apiKey } });
+    const ev = (id: string, siteId = state().siteId) => ({ data: { source: `PLC-${t}`, eventId: id, kind: 'WorkOrder', siteId, payload: { number: `WO-${t}-${id}`, item: `P-${t}`, quantity: 5 } } });
+    expect((await device.post('/api/mes/events', ev('1'))).status()).toBe(200);
+    expect((await device.get('/api/ncrs')).status()).toBe(403);
+    await page.reload();
+    await page.getByRole('tab', { name: 'MES devices' }).click();
+    const row = page.getByRole('row').filter({ hasText: `Press line PLC ${t}` });
+    await expect(row).toContainText('production.edit');
+    await expect(row).toContainText('POST /api/mes/events');
+    await expect(row).toContainText('Active');
+    await expect(row).not.toContainText('Never');
+    await expect(page.getByText(apiKey.split('.')[1])).toHaveCount(0);
+
+    await row.getByRole('button', { name: 'Rotate' }).click();
+    await dialog(page).getByLabel(/Grace period/).fill('30');
+    await dialog(page).getByRole('button', { name: 'Rotate' }).click();
+    await expect(row).toContainText('old secret until');
+    expect((await device.post('/api/mes/events', ev('2'))).status()).toBe(200);
+
+    await row.getByRole('button', { name: 'Revoke' }).click();
+    await dialog(page).getByLabel('Reason').fill('Controller replaced');
+    await dialog(page).getByRole('button', { name: 'Revoke permanently' }).click();
+    await expect(row).toContainText('Revoked');
+    await expect(row).toContainText('Controller replaced');
+    await expect(row.getByRole('button', { name: 'Enable' })).toHaveCount(0);
+    expect((await device.post('/api/mes/events', ev('3'))).status()).toBe(401);
+    await device.dispose();
   });
 });

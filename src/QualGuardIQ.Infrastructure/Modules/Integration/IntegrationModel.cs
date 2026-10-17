@@ -93,6 +93,8 @@ public partial class AppDbContext
             e.ToTable("mes_events");
             e.HasIndex(x => new { x.Source, x.EventId }).IsUnique();
             e.Property(x => x.Payload).HasColumnType("jsonb");
+            e.Property(x => x.ClientId).HasMaxLength(60); e.Property(x => x.AuthMethod).HasMaxLength(20);
+            e.HasIndex(x => new { x.AuthMethod, x.ReceivedAt });
         });
         b.Entity<PurchaseOrder>(e =>
         {

@@ -31,6 +31,7 @@ public static class DependencyInjection
             o.UseNpgsql(cs, n => n.MigrationsHistoryTable("__ef_migrations", "qms"))
              .AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
         services.AddScoped<IAccessService, AccessService>();
+        Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddScoped<ICallerRestriction, NoCallerRestriction>(services);
         services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
         services.AddScoped<INumberingService, NumberingService>();
         services.AddScoped<Seeder>();

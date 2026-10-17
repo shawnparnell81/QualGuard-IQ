@@ -129,7 +129,7 @@ export function SchemaForm<S extends z.ZodType<FieldValues, FieldValues>>({ sche
 /** Small dialog with free-form inputs for a state transition. */
 export function StepDialog({ open, title, intro, inputs, confirm, onClose, onConfirm, danger }: {
   open: boolean; title: string; intro?: string; confirm: string; danger?: boolean;
-  inputs: { name: string; label: string; type?: 'text' | 'multiline' | 'date' | 'select' | 'password' | 'checkbox' | 'users' | 'site'; options?: [string | number, string][]; initial?: string; helper?: string; permission?: string }[];
+  inputs: { name: string; label: string; type?: 'text' | 'multiline' | 'date' | 'select' | 'multiselect' | 'password' | 'checkbox' | 'users' | 'site'; options?: [string | number, string][]; initial?: string; helper?: string; permission?: string }[];
   onClose: () => void; onConfirm: (v: Record<string, string>) => Promise<void>;
 }) {
   const [v, setV] = useState<Record<string, string>>({});
@@ -149,6 +149,10 @@ export function StepDialog({ open, title, intro, inputs, confirm, onClose, onCon
             ? <TextField key={i.name} select label={i.label} helperText={i.helper} value={val(i.name, i.initial).split(',').filter(Boolean)} slotProps={{ select: { multiple: true } }}
                 onChange={(e) => setV({ ...v, [i.name]: ([] as string[]).concat(e.target.value as unknown as string[]).join(',') })}>
                 {(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+            : i.type === 'multiselect'
+            ? <TextField key={i.name} select label={i.label} helperText={i.helper} value={val(i.name, i.initial).split(',').filter(Boolean)} slotProps={{ select: { multiple: true } }}
+                onChange={(e) => setV({ ...v, [i.name]: ([] as string[]).concat(e.target.value as unknown as string[]).join(',') })}>
+                {(i.options ?? []).map(([o, l]) => <MenuItem key={o} value={String(o)}>{l}</MenuItem>)}</TextField>
             : i.type === 'select'
             ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial)} onChange={(e) => setV({ ...v, [i.name]: e.target.value })}>{(i.options ?? []).map(([o, l]) => <MenuItem key={o} value={String(o)}>{l}</MenuItem>)}</TextField>
             : i.type === 'checkbox'

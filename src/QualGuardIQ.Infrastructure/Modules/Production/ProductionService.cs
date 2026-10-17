@@ -23,6 +23,8 @@ public sealed record PurchaseOrderInput(string Number, Guid SupplierId, DateOnly
 public sealed record PoLineInput(int LineNumber, Guid? PartId, string ItemNumber, string? Revision, decimal Quantity, DateOnly? DueOn);
 public sealed record RelatedRecord(string Type, Guid Id, string Number, string Title, string Status, string Url);
 public sealed record MesEventInput(string Source, string EventId, string Kind, Guid SiteId, JsonElement Payload);
+/// <summary>Who sent an MES event: a registered MES device, another API client, or a user session/token (kept until migration completes).</summary>
+public sealed record MesCaller(string? ClientId, string AuthMethod, bool RequireDeviceClients);
 public sealed record LiveMetric(string Key, string Label, decimal Value, string? Unit, decimal? Numerator, decimal? Denominator, string Url);
 public sealed record LiveMonitor(DateTimeOffset AsOf, List<LiveMetric> Metrics, List<RelatedRecord> OpenNcrs, List<object> SpcViolations, List<object> ScrapToday, int RefreshSeconds);
 
@@ -221,13 +223,15 @@ public sealed class ProductionService(AppDbContext db, ModuleSupport m, INumberi
     /// Real-time MES event (idempotent per source + event id). Kinds: WorkOrder (upsert with operations), Production,
     /// Downtime, Inspection, Parameter, Nonconformance. The caller is a service account with production.edit (and ncr.edit for NCRs).
     /// </summary>
-    public async Task<(bool Duplicate, object? Result)> MesEventAsync(MesEventInput r, CancellationToken ct)
+    public async Task<(bool Duplicate, object? Result)> MesEventAsync(MesEventInput r, CancellationToken ct, MesCaller? caller = null)
     {
+        caller ??= new MesCaller(null, "UserToken", false);
+        if (caller.RequireDeviceClients && caller.AuthMethod != "MesDevice") throw new ForbiddenException("MES events must be sent by a registered MES device client.");
         ModuleSupport.Required(r.Source, "Source", 100); ModuleSupport.Required(r.EventId, "Event id", 200);
         await m.RequireAsync(Permissions.ProductionEdit, r.SiteId, null, ct);
         if (await db.MesEvents.AnyAsync(x => x.Source == r.Source && x.EventId == r.EventId, ct)) return (true, null);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var ev = new MesEvent { Source = r.Source, EventId = r.EventId, Kind = r.Kind, Payload = r.Payload.GetRawText(), ReceivedAt = m.Now, SiteId = r.SiteId };
+        var ev = new MesEvent { Source = r.Source, EventId = r.EventId, Kind = r.Kind, Payload = r.Payload.GetRawText(), ReceivedAt = m.Now, SiteId = r.SiteId, ClientId = caller.ClientId, AuthMethod = caller.AuthMethod };
         db.MesEvents.Add(ev);
         await db.SaveChangesAsync(ct);
         var p = JsonNode.Parse(r.Payload.GetRawText()) as JsonObject ?? throw new AppException("Payload must be an object.");

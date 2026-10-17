@@ -29,6 +29,7 @@ builder.Host.UseSerilog((ctx, cfg) => cfg
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
+builder.Services.AddScoped<QualGuardIQ.Application.Security.ICallerRestriction, HttpCallerRestriction>();
 builder.Services.AddInfrastructure(builder.Configuration);
 builder.Services.AddValidatorsFromAssemblyContaining<Program>();
 
@@ -152,6 +153,7 @@ app.Use(async (ctx, next) =>
 app.UseAuthentication();
 app.UseMiddleware<BearerValidation>();
 app.UseMiddleware<PortalBoundary>();
+app.UseMiddleware<ApiClientGuard>();
 app.UseRateLimiter();
 
 // CSRF: every state-changing API call must carry the antiforgery header.
