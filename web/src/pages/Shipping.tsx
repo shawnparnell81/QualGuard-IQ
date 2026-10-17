@@ -220,8 +220,15 @@ function PickTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
 function PackTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
   const [kind, setKind] = useState('0'); const [parent, setParent] = useState(''); const [weight, setWeight] = useState('');
   const [take, setTake] = useState<Record<string, string>>({});
-  const packed = (lineId: string) => d.containers.flatMap((c) => c.items).filter((i) => i.lineId === lineId).reduce((a, i) => a + i.quantity, 0);
-  const remaining = d.lines.map((l) => ({ ...l, left: l.line.quantityPicked - packed(l.line.id) })).filter((l) => l.left > 0);
+  // Packing works per picked lot / serial: what was picked of each, less what is already in a container.
+  const items = d.containers.flatMap((c) => c.items);
+  const groups = new Map<string, { key: string; lineId: string; lotId?: string; serialId?: string; partNumber: string; ident: string; picked: number }>();
+  for (const p of d.picks.filter((x) => x.task.quantityPicked > 0)) {
+    const key = `${p.task.lineId}|${p.task.lotId ?? ''}|${p.task.serialId ?? ''}`;
+    const g = groups.get(key) ?? { key, lineId: p.task.lineId, lotId: p.task.lotId, serialId: p.task.serialId, partNumber: p.partNumber, ident: p.serialNumber ?? p.lotNumber ?? '', picked: 0 };
+    g.picked += p.task.quantityPicked; groups.set(key, g);
+  }
+  const remaining = [...groups.values()].map((g) => ({ ...g, left: g.picked - items.filter((i) => i.lineId === g.lineId && (i.serialNumber ?? i.lotNumber ?? '') === g.ident).reduce((a, i) => a + i.quantity, 0) })).filter((g) => g.left > 0);
   const tree = (pid?: string, depth = 0): React.ReactNode => d.containers.filter((c) => (c.container.parentId ?? undefined) === pid).map((c) => (
     <Box key={c.container.id} sx={{ ml: depth * 3, mb: 1, borderLeft: 3, borderColor: c.container.verified ? '#2E6B5E' : 'divider', pl: 1.5 }}>
       <Typography sx={{ fontWeight: 600 }}><span style={{ fontFamily: mono }}>QG:CTN:{c.container.number}</span> · {containerKinds[c.container.kind]}{c.container.weight != null ? ` · ${qty(c.container.weight)} kg` : ''}{c.container.verified && <Chip size="small" color="success" label="verified" sx={{ ml: 1 }} />}</Typography>
@@ -234,11 +241,11 @@ function PackTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
       <Stack direction="row" gap={1}><TextField select size="small" label="Container" value={kind} onChange={(e) => setKind(e.target.value)} sx={{ flex: 1 }}>{containerKinds.map((k, i) => <MenuItem key={k} value={String(i)}>{k}</MenuItem>)}</TextField>
         <TextField select size="small" label="Inside" value={parent} onChange={(e) => setParent(e.target.value)} sx={{ flex: 1 }}><MenuItem value="">Top level</MenuItem>{d.containers.map((c) => <MenuItem key={c.container.id} value={c.container.id}>{c.container.number}</MenuItem>)}</TextField>
         <TextField size="small" label="Weight kg" value={weight} onChange={(e) => setWeight(e.target.value)} sx={{ width: 110 }} /></Stack>
-      {remaining.map((l) => <Stack key={l.line.id} direction="row" gap={1} alignItems="center"><Typography sx={{ flex: 1, fontFamily: mono }}>{l.partNumber} <Typography component="span" variant="caption" color="text.secondary">({qty(l.left)} picked, unpacked)</Typography></Typography>
-        <TextField size="small" type="number" label="Qty" value={take[l.line.id] ?? ''} onChange={(e) => setTake({ ...take, [l.line.id]: e.target.value })} sx={{ width: 100 }} /></Stack>)}
+      {remaining.map((l) => <Stack key={l.key} direction="row" gap={1} alignItems="center"><Typography sx={{ flex: 1, fontFamily: mono }}>{l.partNumber} {l.ident} <Typography component="span" variant="caption" color="text.secondary">({qty(l.left)} picked, unpacked)</Typography></Typography>
+        <TextField size="small" type="number" label="Qty" value={take[l.key] ?? ''} onChange={(e) => setTake({ ...take, [l.key]: e.target.value })} sx={{ width: 100 }} /></Stack>)}
       {remaining.length === 0 && <Typography variant="body2" color="text.secondary">Every picked unit is packed. Empty containers (pallets) can still be added to nest cartons.</Typography>}
       <Button variant="contained" onClick={() => run(async () => { await post(`/api/shipping/shipments/${d.shipment.id}/containers`, { kind: Number(kind), parentId: parent || null, weight: weight ? Number(weight) : null,
-        items: remaining.filter((l) => Number(take[l.line.id]) > 0).map((l) => ({ lineId: l.line.id, lotId: null, serialId: null, quantity: Number(take[l.line.id]) })) }); setTake({}); setWeight(''); }, 'Container packed.')}>Pack</Button>
+        items: remaining.filter((l) => Number(take[l.key]) > 0).map((l) => ({ lineId: l.lineId, lotId: l.lotId ?? null, serialId: l.serialId ?? null, quantity: Number(take[l.key]) })) }); setTake({}); setWeight(''); }, 'Container packed.')}>Pack</Button>
     </Stack></Section>}
   </Box>;
 }

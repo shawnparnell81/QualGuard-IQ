@@ -80,12 +80,24 @@ function ReceiveFlow() {
   const [lot, setLot] = useState(''); const [n, setN] = useState('');
   const [dock, setDock] = useState<{ id: string; code: string; siteId: string } | null>(null);
   const [out, setOut] = useState<Outcome>(null);
-  const findPart = (code: string) => {
+  // Resolve from the cached lists first (works offline); fall back to the server when the cache is cold or stale.
+  const findPart = async (code: string) => {
+    setOut(null);
     const v = strip(code, 'QG:PART:').toUpperCase();
     const x = parts.data?.find((r) => (r.partNumber ?? r.number ?? '').toUpperCase() === v);
-    if (x) setPart({ id: x.id, label: `${x.partNumber ?? x.number} ${x.name ?? ''}` }); else setOut({ tone: 'error', text: `No part ${v}.` });
+    if (x) { setPart({ id: x.id, label: `${x.partNumber ?? x.number} ${x.name ?? ''}` }); return; }
+    const c = navigator.onLine ? await scan(code.toUpperCase().startsWith('QG:') ? code : `QG:PART:${code}`).catch(() => null) : null;
+    if (c?.match.kind === 'Part' && c.match.id) setPart({ id: c.match.id, label: `${c.match.number} ${c.match.detail ?? ''}` }); else setOut({ tone: 'error', text: `No part ${v}.` });
   };
-  const findLoc = (code: string) => { const v = strip(code, 'QG:LOC:').toUpperCase(); const l = locs.data?.find((r) => r.code.toUpperCase() === v); if (l) setDock({ id: l.id, code: l.code, siteId: l.siteId }); else setOut({ tone: 'error', text: `No location ${v}.` }); };
+  const findLoc = async (code: string) => {
+    setOut(null);
+    const v = strip(code, 'QG:LOC:').toUpperCase();
+    const l = locs.data?.find((r) => r.code.toUpperCase() === v);
+    if (l) { setDock({ id: l.id, code: l.code, siteId: l.siteId }); return; }
+    const c = navigator.onLine ? await scan(code.toUpperCase().startsWith('QG:') ? code : `QG:LOC:${code}`).catch(() => null) : null;
+    if (c?.match.kind === 'Location' && c.match.id) { const x = await get<{ id: string; code: string; siteId: string }>(`/api/warehouse/locations/${c.match.id}`); setDock({ id: x.id, code: x.code, siteId: x.siteId }); }
+    else setOut({ tone: 'error', text: `No location ${v}.` });
+  };
   const submit = async () => {
     setOut(null);
     const id = newRequestId();
