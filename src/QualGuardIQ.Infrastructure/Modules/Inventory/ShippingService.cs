@@ -16,7 +16,7 @@ public sealed record ShipmentInput(ShipmentKind Kind, Guid? CustomerId, Guid? Su
     string? ServiceLevel, string? Notes, Guid SiteId, Guid? DepartmentId, List<ShipmentLineInput> Lines);
 public sealed record PickConfirmInput(string? LocationCode, string? ItemCode, decimal Quantity, string? ClientRequestId = null, DateTimeOffset? DeviceTimestamp = null, bool Offline = false);
 public sealed record PackItemInput(Guid LineId, Guid? LotId, Guid? SerialId, decimal Quantity);
-public sealed record PackInput(ContainerKind Kind, Guid? ParentId, decimal? Weight, List<PackItemInput> Items);
+public sealed record PackInput(ContainerKind Kind, Guid? ParentId, decimal? Weight, List<PackItemInput> Items, decimal? LengthCm = null, decimal? WidthCm = null, decimal? HeightCm = null);
 public sealed record VerifyScan(string Code, decimal? Quantity);
 public sealed record VerifyInput(List<VerifyScan> Scans);
 public sealed record VerifyLine(Guid LineId, int LineNumber, string PartNumber, string? Revision, decimal Expected, decimal Verified);
@@ -177,7 +177,8 @@ public sealed partial class ShippingService(AppDbContext db, ModuleSupport m, IN
         var picks = await db.PickTasks.AsNoTracking().Where(x => x.ShipmentId == id && x.QuantityPicked > 0).ToListAsync(ct);
         var packed = await db.ContainerItems.AsNoTracking().Where(i => db.ShipmentContainers.Any(c => c.Id == i.ContainerId && c.ShipmentId == id)).ToListAsync(ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var c = new ShipmentContainer { ShipmentId = id, Number = await numbers.NextAsync(ContainerType, s.SiteId, ct), Kind = r.Kind, ParentId = r.ParentId, Weight = r.Weight };
+        if (r.Weight is < 0 || r.LengthCm is <= 0 or > 2000 || r.WidthCm is <= 0 or > 2000 || r.HeightCm is <= 0 or > 2000) throw new AppException("Weight and dimensions must be positive (dimensions up to 2,000 cm).");
+        var c = new ShipmentContainer { ShipmentId = id, Number = await numbers.NextAsync(ContainerType, s.SiteId, ct), Kind = r.Kind, ParentId = r.ParentId, Weight = r.Weight, LengthCm = r.LengthCm, WidthCm = r.WidthCm, HeightCm = r.HeightCm };
         db.ShipmentContainers.Add(c);
         foreach (var it in r.Items)
         {
@@ -269,6 +270,11 @@ public sealed partial class ShippingService(AppDbContext db, ModuleSupport m, IN
         var failed = (await ReleaseChecksAsync(s, ct)).Where(c => !c.Passed).ToList();
         if (failed.Count > 0) throw new ConflictException("Release blocked: " + string.Join(" ", failed.Select(c => $"{c.Label}: {c.Message}")));
         var carrier = await db.Carriers.AsNoTracking().FirstOrDefaultAsync(x => x.Id == r.CarrierId && x.Active, ct) ?? throw new AppException("Select an active carrier.");
+        // carrier labels created through a carrier connection fix the carrier and supply the tracking number
+        var labelled = await db.CarrierLabels.AsNoTracking().Where(x => x.ShipmentId == id && x.Status == CarrierLabelStatus.Active).Select(x => x.TrackingNumber).FirstOrDefaultAsync(ct) is not null;
+        if (labelled && s.CarrierId != carrier.Id) throw new ConflictException("The shipment has carrier labels for another carrier; ship with that carrier or void the labels.");
+        if (labelled && !string.IsNullOrWhiteSpace(r.TrackingNumber) && r.TrackingNumber.Trim() != s.TrackingNumber) throw new ConflictException($"The carrier label tracking number is {s.TrackingNumber}; void the labels to use another.");
+        r = r with { TrackingNumber = string.IsNullOrWhiteSpace(r.TrackingNumber) ? s.TrackingNumber : r.TrackingNumber };
         if (carrier.Kind == CarrierKind.Parcel && string.IsNullOrWhiteSpace(r.TrackingNumber)) throw new AppException("Enter the tracking number.");
         var conts = await db.ShipmentContainers.AsNoTracking().Where(x => x.ShipmentId == id).Select(x => x.Id).ToListAsync(ct);
         var items = await db.ContainerItems.AsNoTracking().Where(i => conts.Contains(i.ContainerId)).ToListAsync(ct);

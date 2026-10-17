@@ -175,6 +175,9 @@ public partial class AppDbContext
             e.HasOne<Carrier>().WithMany().HasForeignKey(x => x.CarrierId).OnDelete(R);
             e.HasIndex(x => new { x.AssignedPickerId, x.Status });
             e.HasIndex(x => new { x.AssignedVerifierId, x.Status });
+            e.Property(x => x.QuotedCharge).HasPrecision(18, 2); e.Property(x => x.CarrierServiceCode).HasMaxLength(60); e.Property(x => x.QuotedCurrency).HasMaxLength(3);
+            e.Property(x => x.ShipToCountry).HasMaxLength(2); e.Property(x => x.ShipToPostalCode).HasMaxLength(20); e.Property(x => x.AddressValidationNote).HasMaxLength(1000);
+            e.HasOne<CarrierConnection>().WithMany().HasForeignKey(x => x.CarrierConnectionId).OnDelete(R);
             UserReq(e, x => x.OwnerId); UserReq(e, x => x.AssignedPickerId); UserReq(e, x => x.AssignedVerifierId); UserReq(e, x => x.ValidatedById); SiteRefs(e);
         });
         b.Entity<ShipmentLine>(e =>
@@ -188,6 +191,7 @@ public partial class AppDbContext
         {
             e.ToTable("shipment_containers"); e.HasIndex(x => x.Number).IsUnique();
             e.Property(x => x.Weight).HasPrecision(18, 3);
+            e.Property(x => x.LengthCm).HasPrecision(10, 2); e.Property(x => x.WidthCm).HasPrecision(10, 2); e.Property(x => x.HeightCm).HasPrecision(10, 2);
             e.HasOne<Shipment>().WithMany().HasForeignKey(x => x.ShipmentId).OnDelete(C);
             e.HasOne<ShipmentContainer>().WithMany().HasForeignKey(x => x.ParentId).OnDelete(R);
         });
