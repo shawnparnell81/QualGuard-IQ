@@ -500,6 +500,18 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
         await notifier.NotifyAsync([x.InspectorId], $"FAI {x.Number} returned for correction", notes, await m.RecordAsync(RecordType, id, ct), ct: ct);
     }
 
+    /// <summary>An approver sends a pending FAI back for correction: a signed "not approved" decision on the shared request, then status Returned.</summary>
+    public async Task ReturnFromApprovalAsync(Guid id, string password, string notes, CancellationToken ct)
+    {
+        ModuleSupport.Required(notes, "Correction notes", 4000);
+        await m.ViewAsync(RecordType, id, ct);
+        var req = await PendingRequestAsync(id, ct);
+        await workflow.DecideAsync(req.Id, false, password, "Returned for correction: " + notes.Trim(), ct);
+        var x = await db.Fais.FirstAsync(f => f.Id == id, ct);
+        x.Status = FaiStatus.Returned; x.ReviewNotes = notes.Trim();
+        await db.SaveChangesAsync(ct);
+    }
+
     public async Task<ApprovalRequest> PendingRequestAsync(Guid id, CancellationToken ct) =>
         await db.ApprovalRequests.FirstOrDefaultAsync(r => r.RecordType == RecordType && r.RecordId == id && r.Status == ApprovalStatus.Pending, ct) ?? throw new ConflictException("The FAI has no pending approval.");
 

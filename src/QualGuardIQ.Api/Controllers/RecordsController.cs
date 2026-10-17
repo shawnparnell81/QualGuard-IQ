@@ -72,6 +72,30 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
         return new CommentDto(c.Id, c.AuthorName, c.Body, c.CreatedAt);
     }
 
+    /// <summary>Authors may correct or withdraw their own comments; both are written to the audit trail.</summary>
+    [HttpPut("comments/{commentId:guid}")]
+    public async Task<ActionResult<CommentDto>> EditComment(string type, Guid id, Guid commentId, AddCommentRequest req, CancellationToken ct)
+    {
+        var r = await records.RequireViewAsync(type, id, ct);
+        var c = await db.Comments.FirstOrDefaultAsync(x => x.Id == commentId && x.OwnerType == r.Type && x.OwnerId == r.Id, ct) ?? throw new NotFoundException("Comment");
+        if (c.AuthorId != current.UserId) throw new ForbiddenException("Only the author can edit a comment.");
+        if (string.IsNullOrWhiteSpace(req.Body) || req.Body.Length > 10000) throw new AppException("A comment of up to 10,000 characters is required.");
+        c.Body = req.Body.Trim();
+        await db.SaveChangesAsync(ct);
+        return new CommentDto(c.Id, c.AuthorName, c.Body, c.CreatedAt);
+    }
+
+    [HttpDelete("comments/{commentId:guid}")]
+    public async Task<IActionResult> DeleteComment(string type, Guid id, Guid commentId, CancellationToken ct)
+    {
+        var r = await records.RequireViewAsync(type, id, ct);
+        var c = await db.Comments.FirstOrDefaultAsync(x => x.Id == commentId && x.OwnerType == r.Type && x.OwnerId == r.Id, ct) ?? throw new NotFoundException("Comment");
+        if (c.AuthorId != current.UserId) throw new ForbiddenException("Only the author can delete a comment.");
+        db.Comments.Remove(c);
+        await db.SaveChangesAsync(ct);
+        return NoContent();
+    }
+
     /// <summary>Linked records the user cannot view are omitted.</summary>
     [HttpGet("links")]
     public async Task<IEnumerable<LinkDto>> Links(string type, Guid id, CancellationToken ct)
