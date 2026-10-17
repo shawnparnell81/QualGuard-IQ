@@ -17,7 +17,7 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
     public sealed record DocumentListItem(Guid Id, DocumentKind Kind, string Number, string Title, string DocumentType, DocumentStatus Status,
         string? CurrentRevision, DateOnly? EffectiveDate, string SiteCode, string? PartNumber, DateOnly? NextReviewDue, string OwnerName);
     public sealed record RevisionDto(Guid Id, string Revision, int Sequence, RevisionStatus Status, string ChangeSummary, DateOnly? EffectiveDate,
-        DateOnly? SupersededOn, DateTimeOffset? ApprovedAt, bool TrainingRequired, string? ObsoleteReason, uint RowVersion);
+        DateOnly? SupersededOn, DateTimeOffset? ApprovedAt, bool TrainingRequired, string? ObsoleteReason, uint RowVersion, string? FieldSchema = null);
     public sealed record DocumentDetail(Guid Id, DocumentKind Kind, string Number, string Title, string DocumentType, DocumentStatus Status, Guid SiteId,
         Guid? DepartmentId, Guid OwnerId, string OwnerName, int ReviewIntervalMonths, DateOnly? NextReviewDue, string? PartNumber, string? DrawingSize,
         int? SheetCount, uint RowVersion, IReadOnlyList<RevisionDto> Revisions, bool CanEdit, bool CanApprove);
@@ -70,7 +70,7 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
         return new DocumentDetail(d.Id, d.Kind, d.Number, d.Title, d.DocumentType, d.Status, d.SiteId, d.DepartmentId, d.OwnerId, owner, d.ReviewIntervalMonths,
             d.NextReviewDue, d.PartNumber, d.DrawingSize, d.SheetCount, d.RowVersion,
             d.Revisions.OrderByDescending(r => r.Sequence).Select(r => new RevisionDto(r.Id, r.Revision, r.Sequence, r.Status, r.ChangeSummary, r.EffectiveDate,
-                r.SupersededOn, r.ApprovedAt, r.TrainingRequired, r.ObsoleteReason, r.RowVersion)).ToList(),
+                r.SupersededOn, r.ApprovedAt, r.TrainingRequired, r.ObsoleteReason, r.RowVersion, r.FieldSchema)).ToList(),
             await access.CanAccessAsync(uid, edit, d.SiteId, d.DepartmentId, ct), await access.CanAccessAsync(uid, approve, d.SiteId, d.DepartmentId, ct));
     }
 
@@ -98,6 +98,6 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
     {
         var r = await docs.EffectiveOnAsync(id, on ?? DateOnly.FromDateTime(DateTime.UtcNow), ct);
         return r is null ? NotFound(new { title = "No revision was effective on that date." })
-            : Ok(new RevisionDto(r.Id, r.Revision, r.Sequence, r.Status, r.ChangeSummary, r.EffectiveDate, r.SupersededOn, r.ApprovedAt, r.TrainingRequired, r.ObsoleteReason, r.RowVersion));
+            : Ok(new RevisionDto(r.Id, r.Revision, r.Sequence, r.Status, r.ChangeSummary, r.EffectiveDate, r.SupersededOn, r.ApprovedAt, r.TrainingRequired, r.ObsoleteReason, r.RowVersion, r.FieldSchema));
     }
 }

@@ -16,16 +16,20 @@ import { ActionsPanel, ApprovalsPanel, CommentsPanel, CustomFieldsPanel, FilesPa
 import { useWork } from './Home';
 import { SignDialog } from '../components/SignDialog';
 import { mono } from '../theme';
+import { FieldBuilder, SchemaPreview, parseFields, serializeFields, type FieldDef } from './FormBuilder';
 
-type Kind = 0 | 1;
-const cfg = (kind: Kind) => kind === 1
+type Kind = 0 | 1 | 2;
+const cfg = (kind: Kind) => kind === 2
+  ? { module: modules.find((m) => m.key === 'documents')!, path: '/forms/templates', noun: 'form template', plural: 'Form templates', docType: 'FormTemplate', revType: 'FormTemplateRevision', edit: 'forms.edit',
+      types: ['Inspection Record', 'Checklist', 'Log', 'Report', 'Request'] }
+  : kind === 1
   ? { module: modules.find((m) => m.key === 'engineering')!, path: '/drawings', noun: 'drawing', plural: 'Drawings', docType: 'Drawing', revType: 'DrawingRevision', edit: 'drawings.edit',
       types: ['Assembly Drawing', 'Detail Drawing', 'Layout', 'Schematic', 'Specification Control Drawing'] }
   : { module: modules.find((m) => m.key === 'documents')!, path: '/documents', noun: 'document', plural: 'Documents', docType: 'Document', revType: 'DocumentRevision', edit: 'documents.edit',
       types: ['Policy', 'Manual', 'Procedure', 'Work Instruction', 'Specification', 'Form', 'Standard', 'Plan'] };
 
 interface ListItem { id: string; number: string; title: string; documentType: string; status: number; currentRevision: string | null; effectiveDate: string | null; siteCode: string; partNumber: string | null; nextReviewDue: string | null; ownerName: string }
-interface Rev { id: string; revision: string; sequence: number; status: number; changeSummary: string; effectiveDate: string | null; supersededOn: string | null; approvedAt: string | null; trainingRequired: boolean; rowVersion: number }
+interface Rev { id: string; revision: string; sequence: number; status: number; changeSummary: string; effectiveDate: string | null; supersededOn: string | null; approvedAt: string | null; trainingRequired: boolean; rowVersion: number; fieldSchema?: string | null }
 interface Detail { id: string; kind: Kind; number: string; title: string; documentType: string; status: number; siteId: string; ownerName: string; reviewIntervalMonths: number; nextReviewDue: string | null; partNumber: string | null; drawingSize: string | null; sheetCount: number | null; revisions: Rev[]; canEdit: boolean; canApprove: boolean; rowVersion: number }
 
 export function DocumentList({ kind }: { kind: Kind }) {
@@ -201,7 +205,8 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
           {tab === 'revisions' && (
             <Stack gap={2}>
               <DataTable data={d.revisions} columns={revCols} onRowClick={(r) => { setRevId(r.id); setTab('files'); }} />
-              {draftEditable && <DraftEditor rev={rev} onSaved={refresh} />}
+              {draftEditable && <DraftEditor rev={rev} onSaved={refresh} formTemplate={kind === 2} />}
+              {kind === 2 && !draftEditable && rev.fieldSchema && <SchemaPreview schema={rev.fieldSchema} />}
             </Stack>
           )}
           {tab === 'files' && <FilesPanel type={c.revType} id={rev.id} canEdit={draftEditable} />}
@@ -230,7 +235,8 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
   );
 }
 
-function DraftEditor({ rev, onSaved }: { rev: Rev; onSaved: () => void }) {
+function DraftEditor({ rev, onSaved, formTemplate }: { rev: Rev; onSaved: () => void; formTemplate?: boolean }) {
+  const [fields, setFields] = useState<FieldDef[]>(() => parseFields(rev.fieldSchema));
   const [summary, setSummary] = useState(rev.changeSummary);
   const [eff, setEff] = useState(rev.effectiveDate ?? '');
   const [training, setTraining] = useState(rev.trainingRequired);
@@ -243,8 +249,9 @@ function DraftEditor({ rev, onSaved }: { rev: Rev; onSaved: () => void }) {
         <TextField label="Change summary" multiline minRows={2} value={summary} onChange={(e) => setSummary(e.target.value)} />
         <TextField label="Effective date (blank = on approval)" type="date" value={eff} onChange={(e) => setEff(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} sx={{ width: 280 }} />
         <FormControlLabel control={<Checkbox checked={training} onChange={(e) => setTraining(e.target.checked)} />} label="Training required when released" />
+        {formTemplate && <FieldBuilder fields={fields} onChange={setFields} />}
         <Box><Button variant="outlined" onClick={async () => {
-          try { await put(`/api/documents/revisions/${rev.id}`, { changeSummary: summary, effectiveDate: eff || null, trainingRequired: training, rowVersion: rev.rowVersion }); setMsg({ ok: true, text: 'Saved.' }); onSaved(); }
+          try { await put(`/api/documents/revisions/${rev.id}`, { changeSummary: summary, effectiveDate: eff || null, trainingRequired: training, rowVersion: rev.rowVersion, fieldSchema: formTemplate ? serializeFields(fields) : undefined }); setMsg({ ok: true, text: 'Saved.' }); onSaved(); }
           catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
         }}>Save draft</Button></Box>
       </Stack>

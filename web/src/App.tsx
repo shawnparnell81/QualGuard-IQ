@@ -10,6 +10,11 @@ import { Home } from './pages/Home';
 import { MyWork } from './pages/MyWork';
 import { Search } from './pages/Search';
 import { DocumentDetail, DocumentList, DocumentNew } from './pages/Documents';
+import { FormRecordDetail, FormRecordList, FormRecordNew } from './pages/Forms';
+import { CapaDetail, CapaList, CapaNew, NcrDetail, NcrList, NcrNew } from './pages/Ncr';
+import { AuditDetail, AuditList, AuditNew, FindingDetail, FindingList } from './pages/Audits';
+import { CourseDetail, CourseList, CourseNew, MyTraining, TrainingMatrix } from './pages/Training';
+import { EquipmentDetail, EquipmentList, EquipmentNew, ImpactDetail } from './pages/Calibration';
 import { AdminHome, AuditPage, OrganizationPage, RolesPage, RoutesPage, SecurityPage, SitesPage, UsersPage } from './pages/Admin';
 
 export function App() {
@@ -41,6 +46,32 @@ export function App() {
               <Route path="/drawings" element={<DocumentList kind={1} />} />
               <Route path="/drawings/new" element={<DocumentNew kind={1} />} />
               <Route path="/drawings/:id" element={<DocumentDetail kind={1} />} />
+              <Route path="/forms/templates" element={<DocumentList kind={2} />} />
+              <Route path="/forms/templates/new" element={<DocumentNew kind={2} />} />
+              <Route path="/forms/templates/:id" element={<DocumentDetail kind={2} />} />
+              <Route path="/forms/records" element={<FormRecordList />} />
+              <Route path="/forms/records/new" element={<FormRecordNew />} />
+              <Route path="/forms/records/:id" element={<FormRecordDetail />} />
+              <Route path="/ncr" element={<NcrList />} />
+              <Route path="/ncr/new" element={<NcrNew />} />
+              <Route path="/ncr/:id" element={<NcrDetail />} />
+              <Route path="/capa" element={<CapaList />} />
+              <Route path="/capa/new" element={<CapaNew />} />
+              <Route path="/capa/:id" element={<CapaDetail />} />
+              <Route path="/audits" element={<AuditList />} />
+              <Route path="/audits/new" element={<AuditNew />} />
+              <Route path="/audits/findings" element={<FindingList />} />
+              <Route path="/audits/findings/:id" element={<FindingDetail />} />
+              <Route path="/audits/:id" element={<AuditDetail />} />
+              <Route path="/training" element={<MyTraining />} />
+              <Route path="/training/courses" element={<CourseList />} />
+              <Route path="/training/courses/new" element={<CourseNew />} />
+              <Route path="/training/courses/:id" element={<CourseDetail />} />
+              <Route path="/training/status" element={<TrainingMatrix />} />
+              <Route path="/calibration/equipment" element={<EquipmentList />} />
+              <Route path="/calibration/equipment/new" element={<EquipmentNew />} />
+              <Route path="/calibration/equipment/:id" element={<EquipmentDetail />} />
+              <Route path="/calibration/impact/:id" element={<ImpactDetail />} />
               <Route path="/admin" element={<AdminHome />} />
               <Route path="/admin/users" element={<UsersPage />} />
               <Route path="/admin/roles" element={<RolesPage />} />

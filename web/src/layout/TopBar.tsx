@@ -37,14 +37,15 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
           <Box sx={{ width: 26, height: 26, borderRadius: '6px', bgcolor: 'secondary.main', display: 'grid', placeItems: 'center', fontFamily: mono, fontWeight: 600, fontSize: 13 }}>
             {(brand?.applicationName ?? 'Q').slice(0, 1)}
           </Box>
-          <Typography sx={{ fontWeight: 600, letterSpacing: '0.01em' }}>{brand?.applicationName}</Typography>
+          <Typography sx={{ fontWeight: 600, letterSpacing: '0.01em', whiteSpace: 'nowrap' }}>{brand?.applicationName}</Typography>
         </Box>
         <Box component="nav" sx={{ display: 'flex', gap: 0.5, flexWrap: 'nowrap', overflowX: 'auto' }}>
           {visibleModules(can).map((m) => {
-            const active = loc.pathname.startsWith(m.basePath);
+            const roots = [m.basePath, ...m.sidebar.flatMap((i) => [i.path, ...(i.children ?? []).map((c) => c.path)])].map((x) => '/' + x.split(/[/?]/)[1]);
+            const active = roots.some((r) => loc.pathname === r || loc.pathname.startsWith(r + '/'));
             return (
               <Button key={m.key} component={RouterLink} to={m.basePath} startIcon={m.icon} color="inherit" size="small"
-                sx={{ px: 1.5, opacity: active ? 1 : 0.85, borderBottom: active ? '2px solid' : '2px solid transparent', borderColor: active ? 'secondary.light' : 'transparent', borderRadius: 0 }}>
+                sx={{ px: 1.25, whiteSpace: 'nowrap', flexShrink: 0, opacity: active ? 1 : 0.85, borderBottom: active ? '2px solid' : '2px solid transparent', borderColor: active ? 'secondary.light' : 'transparent', borderRadius: 0 }}>
                 {m.label}
               </Button>
             );
@@ -52,7 +53,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         </Box>
         <Box sx={{ flex: 1 }} />
         <Box component="form" onSubmit={(e) => { e.preventDefault(); if (q.trim()) nav(`/search?q=${encodeURIComponent(q.trim())}`); }}
-          sx={{ display: 'flex', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.12)', borderRadius: 1, px: 1, width: 280 }}>
+          sx={{ display: 'flex', alignItems: 'center', bgcolor: 'rgba(255,255,255,0.12)', borderRadius: 1, px: 1, width: 240, flexShrink: 0 }}>
           <SearchIcon fontSize="small" sx={{ opacity: 0.8 }} />
           <InputBase value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search records" sx={{ color: 'inherit', ml: 1, flex: 1, fontSize: 13 }} inputProps={{ 'aria-label': 'Search records' }} />
           <Tooltip title="Command palette"><Box component="button" type="button" onClick={onOpenPalette}

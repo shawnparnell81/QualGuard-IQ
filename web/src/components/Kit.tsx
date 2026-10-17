@@ -1,0 +1,127 @@
+import { useState, type ReactNode } from 'react';
+import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { useQuery } from '@tanstack/react-query';
+import { useForm, Controller, type FieldValues, type Path, type DefaultValues } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import type { z } from 'zod';
+import { get } from '../api';
+
+export interface Site { id: string; code: string; name: string; isArchived: boolean; departments: { id: string; code: string; name: string }[] }
+export const useSites = () => useQuery({ queryKey: ['sites'], queryFn: () => get<Site[]>('/api/organization/sites') });
+export const useUsers = () => useQuery({ queryKey: ['userlookup'], queryFn: () => get<{ id: string; displayName: string }[]>('/api/users/lookup') });
+
+/** Label/value list used in record side panels. */
+export function Facts({ items, children }: { items: [string, ReactNode][]; children?: ReactNode }) {
+  return (
+    <Paper sx={{ p: 2, alignSelf: 'start' }}>
+      <Typography variant="overline" color="text.secondary">Details</Typography>
+      {items.map(([k, v]) => (
+        <Box key={k} sx={{ py: 0.75, borderTop: 1, borderColor: 'divider' }}>
+          <Typography variant="caption" color="text.secondary">{k}</Typography>
+          <Typography variant="body2" component="div" sx={{ whiteSpace: 'pre-wrap' }}>{v ?? '—'}</Typography>
+        </Box>
+      ))}
+      {children}
+    </Paper>
+  );
+}
+
+export function Section({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
+  return (
+    <Paper sx={{ p: 2.5 }}>
+      <Stack direction="row" alignItems="center" sx={{ mb: 1.5 }}><Typography variant="h3" sx={{ flex: 1 }}>{title}</Typography>{action}</Stack>
+      {children}
+    </Paper>
+  );
+}
+
+export function Prose({ label, text }: { label: string; text?: string | null }) {
+  if (!text) return null;
+  return <Box sx={{ mb: 1.5 }}><Typography variant="caption" color="text.secondary">{label}</Typography><Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{text}</Typography></Box>;
+}
+
+/** Runs a mutation and keeps its error message for display. */
+export function useRunner(after: () => void) {
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const run = async (fn: () => Promise<unknown>) => {
+    setError(null); setBusy(true);
+    try { await fn(); after(); } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+  return { error, busy, run, setError };
+}
+
+export interface FieldSpec<T> { name: Path<T>; label: string; type?: 'text' | 'multiline' | 'number' | 'date' | 'select' | 'site' | 'department' | 'user'; options?: [string | number, string][]; full?: boolean; helper?: string }
+
+/** Create form driven by a Zod schema (validated with React Hook Form) and a field list. */
+export function SchemaForm<S extends z.ZodType<FieldValues, FieldValues>>({ schema, fields, defaults, submitLabel, onSubmit, onCancel }: {
+  schema: S; fields: FieldSpec<z.input<S>>[]; defaults: DefaultValues<z.input<S>>; submitLabel: string;
+  onSubmit: (v: z.output<S>) => Promise<void>; onCancel?: () => void;
+}) {
+  const sites = useSites();
+  const users = useUsers();
+  const [error, setError] = useState<string | null>(null);
+  const { control, handleSubmit, watch, formState: { errors, isSubmitting } } = useForm<z.input<S>, unknown, z.output<S>>({ resolver: zodResolver(schema as never) as never, defaultValues: defaults });
+  const site = sites.data?.find((s) => s.id === (watch('siteId' as Path<z.input<S>>) as unknown as string));
+  const submit = handleSubmit(async (v) => { setError(null); try { await onSubmit(v); } catch (e) { setError((e as Error).message); } });
+  return (
+    <Paper component="form" onSubmit={submit} sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
+      {fields.map((f) => (
+        <Controller key={f.name} name={f.name} control={control} render={({ field }) => {
+          const err = (errors as Record<string, { message?: string }>)[f.name as string];
+          const p = { ...field, value: field.value ?? '', label: f.label, error: !!err, helperText: err?.message ?? f.helper, sx: f.full || f.type === 'multiline' ? { gridColumn: '1 / -1' } : undefined };
+          switch (f.type) {
+            case 'multiline': return <TextField {...p} multiline minRows={3} />;
+            case 'number': return <TextField {...p} type="number" />;
+            case 'date': return <TextField {...p} type="date" slotProps={{ inputLabel: { shrink: true } }} />;
+            case 'select': return <TextField {...p} select>{(f.options ?? []).map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}</TextField>;
+            case 'site': return <TextField {...p} select>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
+            case 'department': return <TextField {...p} select disabled={!site}><MenuItem value="">None</MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.code} — {d.name}</MenuItem>)}</TextField>;
+            case 'user': return <TextField {...p} select><MenuItem value="">Me</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>;
+            default: return <TextField {...p} />;
+          }
+        }} />
+      ))}
+      <Stack direction="row" gap={1} sx={{ gridColumn: '1 / -1' }}>
+        <Button type="submit" variant="contained" disabled={isSubmitting}>{submitLabel}</Button>
+        {onCancel && <Button onClick={onCancel}>Cancel</Button>}
+      </Stack>
+    </Paper>
+  );
+}
+
+/** Small dialog with free-form inputs for a state transition. */
+export function StepDialog({ open, title, intro, inputs, confirm, onClose, onConfirm, danger }: {
+  open: boolean; title: string; intro?: string; confirm: string; danger?: boolean;
+  inputs: { name: string; label: string; type?: 'text' | 'multiline' | 'date' | 'select' | 'password' | 'checkbox'; options?: [string | number, string][]; initial?: string }[];
+  onClose: () => void; onConfirm: (v: Record<string, string>) => Promise<void>;
+}) {
+  const [v, setV] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+  const val = (n: string, i?: string) => v[n] ?? i ?? '';
+  return (
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm" TransitionProps={{ onEnter: () => { setV({}); setError(null); } }}>
+      <DialogTitle>{title}</DialogTitle>
+      <DialogContent>
+        {intro && <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{intro}</Typography>}
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Stack gap={2} sx={{ pt: 1 }}>
+          {inputs.map((i) => i.type === 'select'
+            ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial)} onChange={(e) => setV({ ...v, [i.name]: e.target.value })}>{(i.options ?? []).map(([o, l]) => <MenuItem key={o} value={String(o)}>{l}</MenuItem>)}</TextField>
+            : i.type === 'checkbox'
+              ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial ?? 'false')} onChange={(e) => setV({ ...v, [i.name]: e.target.value })}><MenuItem value="true">Yes</MenuItem><MenuItem value="false">No</MenuItem></TextField>
+              : <TextField key={i.name} label={i.label} type={i.type === 'date' ? 'date' : i.type === 'password' ? 'password' : 'text'} multiline={i.type === 'multiline'} minRows={i.type === 'multiline' ? 3 : undefined}
+                  value={val(i.name, i.initial)} onChange={(e) => setV({ ...v, [i.name]: e.target.value })} slotProps={i.type === 'date' ? { inputLabel: { shrink: true } } : undefined} />)}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" color={danger ? 'error' : 'primary'} onClick={async () => {
+          const all = Object.fromEntries(inputs.map((i) => [i.name, val(i.name, i.initial ?? (i.type === 'checkbox' ? 'false' : ''))]));
+          try { await onConfirm(all); onClose(); } catch (e) { setError((e as Error).message); }
+        }}>{confirm}</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
