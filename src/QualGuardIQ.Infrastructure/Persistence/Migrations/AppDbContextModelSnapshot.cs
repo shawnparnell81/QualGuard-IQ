@@ -14360,6 +14360,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
 
+                    b.Property<Guid?>("StepId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("StepName")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -14404,6 +14407,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("DueAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int?>("EscalatedStage")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("RecordId")
                         .HasColumnType("uuid");
 
@@ -14431,6 +14437,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid>("SiteId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("StageStartedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -14527,6 +14536,25 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ConditionField")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("ConditionOperator")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("ConditionValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("EscalateAfterHours")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EscalationPermission")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -14553,6 +14581,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<int>("Stage")
+                        .HasColumnType("integer");
 
                     b.HasKey("Id");
 

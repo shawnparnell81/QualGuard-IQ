@@ -673,6 +673,7 @@ export const modules: ModuleDef[] = [
       { label: 'Genealogy', path: '/platform/genealogy' },
       { label: 'Report designer', path: '/platform/reports', permission: 'reports.view' },
       { label: 'Dashboards', path: '/platform/dashboards', permission: 'reports.view' },
+      { label: 'Workflow designer', path: '/platform/workflows', permission: 'admin.organization' },
       { label: 'Webhooks', path: '/platform/webhooks', permission: 'platform.admin' },
       { label: 'System health', path: '/platform/health', permission: 'platform.admin' },
       { label: 'Security operations', path: '/platform/security', permission: 'security.review' },

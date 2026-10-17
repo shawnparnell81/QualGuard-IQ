@@ -9556,6 +9556,69 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/admin/config/workflow-designer/fields/{recordType}':
+    get:
+      tags:
+        - Configuration
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      parameters:
+        - name: recordType
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/admin/config/approval-routes/{recordType}/preview/{recordId}':
+    get:
+      tags:
+        - Configuration
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      parameters:
+        - name: recordType
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: recordId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PreviewStep'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PreviewStep'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PreviewStep'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/admin/config/approval-routes/{recordType}/sites/{siteId}':
     delete:
       tags:
@@ -42864,6 +42927,23 @@ components:
             - integer
             - string
           format: uint32
+    PreviewStep:
+      required:
+        - stage
+        - step
+        - applies
+      type: object
+      properties:
+        stage:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        step:
+          type: string
+        applies:
+          type: boolean
     ProblemDetails:
       required:
         - title
@@ -48983,6 +49063,36 @@ components:
         requireMfa:
           type: boolean
           default: false
+        stage:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        conditionField:
+          type:
+            - 'null'
+            - string
+        conditionOperator:
+          type:
+            - 'null'
+            - string
+        conditionValue:
+          type:
+            - 'null'
+            - string
+        escalateAfterHours:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        escalationPermission:
+          type:
+            - 'null'
+            - string
     StockRow:
       required:
         - id

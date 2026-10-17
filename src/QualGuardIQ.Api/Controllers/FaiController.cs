@@ -360,7 +360,7 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
                     d.Comment, prev, d.SignedAt, r.Id, d.StepOrder, d.Meaning, d.SignerName));
                 prev = d.SignedAt;
             }
-            if (r.Status == ApprovalStatus.Pending && steps.FirstOrDefault(s => s.RouteId == r.RouteId && s.Order == r.CurrentStep) is { } st)
+            if (r.Status == ApprovalStatus.Pending && steps.FirstOrDefault(s => s.RouteId == r.RouteId && s.Stage == r.CurrentStep) is { } st)
                 list.Add(new Approval(PendingStepId(r.Id, st.Order), st.Name, r.RequestedApproverId, ApprovalStatusCode.Pending, null, prev, null, r.Id, st.Order, st.SignatureMeaning,
                     r.RequestedApproverId is { } ra ? await db.Users.Where(u => u.Id == ra).Select(u => u.DisplayName).FirstOrDefaultAsync(ct) : null, r.DueAt));
         }

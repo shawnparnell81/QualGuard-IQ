@@ -16,7 +16,7 @@ namespace QualGuardIQ.Infrastructure.Services;
 /// </summary>
 public sealed class WorkflowService(
     AppDbContext db, IRecordRegistry records, IAccessService access, ICurrentUser current, INotifier notifier,
-    UserManager<ApplicationUser> users, IEnumerable<IApprovalHandler> handlers, IClock clock, ISecurityEventLogger security, QualGuardIQ.Infrastructure.Modules.Enterprise.QualificationService qualifications)
+    UserManager<ApplicationUser> users, IEnumerable<IApprovalHandler> handlers, IClock clock, ISecurityEventLogger security, QualGuardIQ.Infrastructure.Modules.Enterprise.QualificationService qualifications, RecordConditions conditions)
 {
     public async Task<ApprovalRequest> SubmitAsync(string recordType, Guid recordId, CancellationToken ct)
     {
@@ -29,10 +29,12 @@ public sealed class WorkflowService(
         if (await db.ApprovalRequests.AnyAsync(a => a.RecordType == record.Type && a.RecordId == record.Id && a.Status == ApprovalStatus.Pending, ct))
             throw new ConflictException("This record is already waiting for approval.");
 
+        var values = await conditions.ValuesAsync(record.Type, record.Id, ct);
+        var first = NextStage(route, int.MinValue, values) ?? throw new AppException("No step of the approval route applies to this record. An administrator must add an unconditional step.");
         var req = new ApprovalRequest
         {
             RecordType = record.Type, RecordId = record.Id, RecordNumber = record.Number, SiteId = record.SiteId, DepartmentId = record.DepartmentId,
-            RouteId = route.Id, SubmittedById = current.UserId!.Value, Status = ApprovalStatus.Pending, CurrentStep = route.Steps.Min(s => s.Order)
+            RouteId = route.Id, SubmittedById = current.UserId!.Value, Status = ApprovalStatus.Pending, CurrentStep = first, StageStartedAt = clock.UtcNow
         };
         db.ApprovalRequests.Add(req);
         await db.SaveChangesAsync(ct);
@@ -48,11 +50,13 @@ public sealed class WorkflowService(
         var record = await records.RequireViewAsync(req.RecordType, req.RecordId, ct);
         if (req.Status != ApprovalStatus.Pending) throw new ConflictException("This approval is no longer pending.");
         var route = await db.ApprovalRoutes.Include(r => r.Steps).FirstAsync(r => r.Id == req.RouteId, ct);
-        var step = route.Steps.Single(s => s.Order == req.CurrentStep);
+        var values = await conditions.ValuesAsync(req.RecordType, req.RecordId, ct);
+        var open = OpenSteps(route, req, values);
         var uid = current.UserId!.Value;
-
-        if (!await access.CanAccessAsync(uid, step.RequiredPermission, req.SiteId, req.DepartmentId, ct))
-            throw new ForbiddenException("You are not an approver for this step.");
+        ApprovalRouteStep? step = null;
+        foreach (var candidate in open)
+            if (await access.CanAccessAsync(uid, candidate.RequiredPermission, req.SiteId, req.DepartmentId, ct)) { step = candidate; break; }
+        if (step is null) throw new ForbiddenException("You are not an approver for this step.");
         if (route.PreventSelfApproval && req.SubmittedById == uid)
             throw new ForbiddenException("You cannot approve a record you submitted.");
         if (req.Decisions.Any(d => d.SignerId == uid))
@@ -89,7 +93,7 @@ public sealed class WorkflowService(
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         req.Decisions.Add(new ApprovalDecision
         {
-            RequestId = req.Id, StepOrder = step.Order, StepName = step.Name, SignerId = uid, SignerName = user.DisplayName,
+            RequestId = req.Id, StepOrder = step.Order, StepId = step.Id, StepName = step.Name, SignerId = uid, SignerName = user.DisplayName,
             Approved = approve, Meaning = approve ? step.SignatureMeaning : "Rejected", Comment = comment, SignedAt = clock.UtcNow, Verification = verification
         });
         var signed = req.Decisions[^1];
@@ -105,8 +109,13 @@ public sealed class WorkflowService(
         }
         else
         {
-            var next = route.Steps.Where(s => s.Order > step.Order).OrderBy(s => s.Order).FirstOrDefault();
-            if (next is null)
+            var stillOpen = open.Count(s => s.Id != step.Id);
+            var next = stillOpen > 0 ? (int?)req.CurrentStep : NextStage(route, req.CurrentStep, values);
+            if (stillOpen > 0)
+            {
+                await db.SaveChangesAsync(ct); // parallel stage: other signers still pending
+            }
+            else if (next is null)
             {
                 req.Status = ApprovalStatus.Approved;
                 req.CompletedAt = clock.UtcNow;
@@ -116,7 +125,8 @@ public sealed class WorkflowService(
             }
             else
             {
-                req.CurrentStep = next.Order;
+                req.CurrentStep = next.Value;
+                req.StageStartedAt = clock.UtcNow;
                 await db.SaveChangesAsync(ct);
                 await NotifyStepAsync(req, route, record, ct);
             }
@@ -154,20 +164,79 @@ public sealed class WorkflowService(
         foreach (var r in pending)
         {
             var route = routes[r.RouteId];
-            var step = route.Steps.Single(s => s.Order == r.CurrentStep);
             if (route.PreventSelfApproval && r.SubmittedById == uid) continue;
             if (r.Decisions.Any(d => d.SignerId == uid)) continue;
-            if (await access.CanAccessAsync(uid, step.RequiredPermission, r.SiteId, r.DepartmentId, ct)) result.Add((r, step.Name));
+            var stage = route.Steps.Where(s => s.Stage == r.CurrentStep).ToList();
+            if (stage.Any(s => s.ConditionField != null)) stage = OpenSteps(route, r, await conditions.ValuesAsync(r.RecordType, r.RecordId, ct));
+            else stage = stage.Where(s => !Signed(r, s)).ToList();
+            foreach (var step in stage)
+                if (await access.CanAccessAsync(uid, step.RequiredPermission, r.SiteId, r.DepartmentId, ct)) { result.Add((r, step.Name)); break; }
         }
         return result;
     }
 
     private async Task NotifyStepAsync(ApprovalRequest req, ApprovalRoute route, RecordInfo record, CancellationToken ct)
     {
-        var step = route.Steps.Single(s => s.Order == req.CurrentStep);
-        var approvers = (await access.UsersWithPermissionAsync(step.RequiredPermission, req.SiteId, req.DepartmentId, ct))
-            .Where(u => !(route.PreventSelfApproval && u == req.SubmittedById));
-        await notifier.NotifyAsync(approvers, $"Approval needed: {record.Number}", $"{step.Name} - {record.Title}", record, ct: ct);
+        var values = await conditions.ValuesAsync(req.RecordType, req.RecordId, ct);
+        foreach (var step in OpenSteps(route, req, values))
+        {
+            var approvers = (await access.UsersWithPermissionAsync(step.RequiredPermission, req.SiteId, req.DepartmentId, ct))
+                .Where(u => !(route.PreventSelfApproval && u == req.SubmittedById));
+            await notifier.NotifyAsync(approvers, $"Approval needed: {record.Number}", $"{step.Name} - {record.Title}", record, ct: ct);
+        }
+    }
+
+    public static bool Applies(ApprovalRouteStep s, IReadOnlyDictionary<string, object?> values) =>
+        s.ConditionField is null || RecordConditions.Matches(new Condition(s.ConditionField, s.ConditionOperator ?? "equals", s.ConditionValue), values);
+
+    static bool Signed(ApprovalRequest r, ApprovalRouteStep s) =>
+        r.Decisions.Any(d => d.Approved && (d.StepId == s.Id || (d.StepId == null && d.StepOrder == s.Order)));
+
+    /// <summary>Applicable steps of the current stage that still need a signature.</summary>
+    public static List<ApprovalRouteStep> OpenSteps(ApprovalRoute route, ApprovalRequest r, IReadOnlyDictionary<string, object?> values) =>
+        route.Steps.Where(s => s.Stage == r.CurrentStep && Applies(s, values) && !Signed(r, s)).OrderBy(s => s.Order).ToList();
+
+    /// <summary>The next stage after <paramref name="after"/> that has at least one applicable step; conditional stages that do not apply are skipped.</summary>
+    public static int? NextStage(ApprovalRoute route, int after, IReadOnlyDictionary<string, object?> values) =>
+        route.Steps.Where(s => s.Stage > after && Applies(s, values)).OrderBy(s => s.Stage).Select(s => (int?)s.Stage).FirstOrDefault();
+
+    /// <summary>Which steps would apply to a record, stage by stage (designer preview). Requires view access to the record.</summary>
+    public async Task<List<(int Stage, string Step, bool Applies)>> PreviewAsync(ApprovalRoute route, string recordType, Guid recordId, CancellationToken ct)
+    {
+        await records.RequireViewAsync(recordType, recordId, ct);
+        var values = await conditions.ValuesAsync(recordType, recordId, ct);
+        return route.Steps.OrderBy(s => s.Stage).ThenBy(s => s.Order).Select(s => (s.Stage, s.Name, Applies(s, values))).ToList();
+    }
+
+    /// <summary>Background: notifies the escalation group once per stage when a stage waits longer than its escalation time.</summary>
+    public async Task<int> EscalateAsync(CancellationToken ct)
+    {
+        var now = clock.UtcNow;
+        var pending = await db.ApprovalRequests.Include(r => r.Decisions).Where(r => r.Status == ApprovalStatus.Pending && r.StageStartedAt != null && (r.EscalatedStage == null || r.EscalatedStage != r.CurrentStep)).Take(500).ToListAsync(ct);
+        if (pending.Count == 0) return 0;
+        var routeIds = pending.Select(p => p.RouteId).Distinct().ToList();
+        var routes = await db.ApprovalRoutes.AsNoTracking().Include(r => r.Steps).Where(r => routeIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, ct);
+        var sent = 0;
+        foreach (var r in pending)
+        {
+            var due = routes[r.RouteId].Steps.Where(s => s.Stage == r.CurrentStep && s.EscalateAfterHours is > 0 && r.StageStartedAt!.Value.AddHours(s.EscalateAfterHours!.Value) <= now && !Signed(r, s)).ToList();
+            if (due.Count == 0) continue;
+            var record = await records.GetAsync(r.RecordType, r.RecordId, ct);
+            foreach (var s in due)
+            {
+                var who = await access.UsersWithPermissionAsync(s.EscalationPermission ?? s.RequiredPermission, r.SiteId, r.DepartmentId, ct);
+                await notifier.NotifyAsync(who, $"Escalation: {r.RecordNumber} waiting on '{s.Name}'", $"Pending more than {s.EscalateAfterHours} h - {record.Title}", record, ct: ct);
+            }
+            r.EscalatedStage = r.CurrentStep;
+            db.AuditEntries.Add(new Domain.Audit.AuditEntry
+            {
+                OccurredAt = now, UserName = "System", Action = "Escalated", EntityType = r.RecordType, EntityId = r.RecordId, SiteId = r.SiteId,
+                Description = $"System escalated approval of {r.RecordNumber}: stage {r.CurrentStep} ({string.Join(", ", due.Select(d => d.Name))}) pending beyond its escalation time"
+            });
+            sent++;
+        }
+        await db.SaveChangesAsync(ct);
+        return sent;
     }
 
     /// <summary>Binds the signature to its record: any later change to signer, meaning, time or record number breaks the hash.</summary>
