@@ -12,12 +12,12 @@ import { Facts, Section, StepDialog, useRunner, useSites } from '../components/K
 import { mono } from '../theme';
 
 const mod = modules.find((m) => m.key === 'integrations')!;
-export const erpEntities = ['Item', 'ItemRevision', 'Bom', 'Customer', 'Supplier', 'WorkCenter', 'Employee', 'ProductionOrder', 'Routing', 'PurchaseOrder', 'Receipt', 'Lot', 'Serial', 'InventoryBalance'];
+export const erpEntities = ['Item', 'ItemRevision', 'Bom', 'Customer', 'Supplier', 'WorkCenter', 'Employee', 'ProductionOrder', 'Routing', 'PurchaseOrder', 'Receipt', 'Lot', 'Serial', 'InventoryBalance', 'ProductionOrderLine', 'MachineCenter', 'ItemLedgerEntry', 'CapacityLedgerEntry', 'OutputJournalLine', 'ConsumptionJournalLine'];
 const syncMode = ['Disabled', 'Auto', 'Approval required'];
 const conflict = ['ERP wins', 'QMS wins', 'Manual'];
 const runStatus = ['Running', 'Succeeded', 'Failed', 'PartiallySucceeded'];
 export const changeStatus = ['Pending', 'PendingApproval', 'Applied', 'Rejected', 'Failed', 'Superseded'];
-const systems: [string, string][] = [['NetSuite', 'Oracle NetSuite'], ['Sap', 'SAP'], ['Oracle', 'Oracle Fusion Cloud SCM'], ['Dynamics', 'Microsoft Dynamics 365'], ['Acumatica', 'Acumatica'], ['Infor', 'Infor'], ['Epicor', 'Epicor Kinetic'], ['Plex', 'Plex Smart Manufacturing'], ['DelmiaWorks', 'DELMIAworks (IQMS)'], ['CustomRest', 'Generic REST'], ['CsvExchange', 'CSV exchange']];
+const systems: [string, string][] = [['NetSuite', 'Oracle NetSuite'], ['Sap', 'SAP'], ['Oracle', 'Oracle Fusion Cloud SCM'], ['Dynamics', 'Microsoft Dynamics 365'], ['Acumatica', 'Acumatica'], ['Infor', 'Infor'], ['Epicor', 'Epicor Kinetic'], ['Plex', 'Plex Smart Manufacturing'], ['DelmiaWorks', 'DELMIAworks (IQMS)'], ['BcManufacturing', 'Business Central manufacturing'], ['CustomRest', 'Generic REST'], ['CsvExchange', 'CSV exchange']];
 /** Wire values of the server's ErpSystem enum. */
 const sysCode: Record<string, number> = { NetSuite: 0, Sap: 1, Oracle: 2, Dynamics: 3, Acumatica: 4, Infor: 5, Epicor: 6, Plex: 7, DelmiaWorks: 8, CustomRest: 20, CsvExchange: 21 };
 const sysLabel = (s: string) => systems.find(([k]) => k === s)?.[1] ?? s;

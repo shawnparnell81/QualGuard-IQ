@@ -34,6 +34,7 @@ public sealed class ErpValidationService(AppDbContext db, ModuleSupport m, ErpAd
         [ErpSystem.Acumatica] = "ErpAdapterTests.Acumatica_uses_password_grant_with_api_scope_and_unwraps_value_fields",
         [ErpSystem.Plex] = "ErpAdapterTests.Plex_sends_the_connect_api_key_and_tenant_headers",
         [ErpSystem.DelmiaWorks] = "ErpAdapterTests.DelmiaWorks_logs_in_and_reads_the_cited_customers_path",
+        [ErpSystem.BcManufacturing] = "GapClosureBcManufacturingTests (extension API and web services fixtures, connection diagnostics, sync of orders, lines, machine centers, serials)",
         [ErpSystem.CustomRest] = "ManufacturingConnectivityTests (generic REST against a recorded handler)",
         [ErpSystem.CsvExchange] = "ErpAdapterTests.Csv_parser_handles_quotes_commas_and_newlines; EnterpriseTests CSV import",
     };
@@ -46,6 +47,7 @@ public sealed class ErpValidationService(AppDbContext db, ModuleSupport m, ErpAd
         [ErpSystem.Oracle] = ["Pod host"],
         [ErpSystem.Plex] = ["Paths", "Fields and paging", "Customer Id header"],
         [ErpSystem.DelmiaWorks] = ["Whole contract", "Login"],
+        [ErpSystem.BcManufacturing] = ["Extension", "Published pages", "Field names", "Keys"],
     };
 
     static readonly ChecklistStep[] Common =
@@ -76,6 +78,8 @@ public sealed class ErpValidationService(AppDbContext db, ModuleSupport m, ErpAd
         [ErpSystem.Acumatica] = [new("Acumatica connected application", "Create the connected application (resource owner password grant) and confirm the endpoint name and version.", null)],
         [ErpSystem.Plex] = [new("Plex developer portal", "Request Plex Connect API access through Plex support, then confirm each collection path and the tenant header against the portal.", ErpValidationGate.Assumption)],
         [ErpSystem.DelmiaWorks] = [new("DELMIAworks WebAPI", "Confirm the WebAPI is licensed, then set the login path, token header and every entity path from the licensed SDK help. Otherwise use a CSV exchange connection.", ErpValidationGate.Assumption)],
+        [ErpSystem.BcManufacturing] = [new("Business Central manufacturing source", "Choose CustomApi only if a manufacturing extension with API pages is installed (enter its apiPublisher, apiGroup, apiVersion); otherwise choose WebServices and publish the standard pages on the Web Services page. Grant the Entra application read permission sets for production orders, routings, work and machine centers, item and capacity ledger entries and the output/consumption journals.", null),
+            new("Business Central manufacturing mapping", "Run Test connection: it probes every entity in the entities option and lists unreachable pages and mapped fields missing from the sample row. Correct entitySet.<Entity>, idField.<Entity> and the field maps until the test passes, then confirm the assumptions.", ErpValidationGate.Assumption)],
         [ErpSystem.CustomRest] = [new("Generic REST", "Set url.<Entity> and field maps from the customer's API documentation; confirm paging and the since parameter.", null)],
         [ErpSystem.CsvExchange] = [new("CSV", "Agree the column layout with the customer and upload a small sample file after enabling; the first accepted upload records the read gate.", ErpValidationGate.Read)],
     };

@@ -68,7 +68,7 @@ public sealed class ManufacturingConnectivityTests(TestApp app)
         var w = await SetupAsync();
         var (_, viewer) = await app.CreateUserAsync([Permissions.IntegrationsView], w.Site);
         var adapters = await w.Eng.GetElAsync("/api/integrations/adapters");
-        Assert.Equal(11, adapters.GetArrayLength());
+        Assert.Equal(12, adapters.GetArrayLength());
         var ns = adapters.EnumerateArray().First(a => a.Str("system") == "NetSuite").GetProperty("editions")[0];
         Assert.NotEmpty(ns.GetProperty("unverified").EnumerateArray());
         Assert.Contains("UNVERIFIED", ns.Str("setupNotes"));

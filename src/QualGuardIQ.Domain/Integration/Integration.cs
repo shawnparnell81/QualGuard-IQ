@@ -3,10 +3,11 @@ using QualGuardIQ.Domain.Common;
 namespace QualGuardIQ.Domain.Integration;
 
 /// <summary>ERP products with an adapter. Editions select the vendor API family inside one adapter (see docs/integrations).</summary>
-public enum ErpSystem { NetSuite = 0, Sap = 1, Oracle = 2, Dynamics = 3, Acumatica = 4, Infor = 5, Epicor = 6, Plex = 7, DelmiaWorks = 8, CustomRest = 20, CsvExchange = 21 }
+public enum ErpSystem { NetSuite = 0, Sap = 1, Oracle = 2, Dynamics = 3, Acumatica = 4, Infor = 5, Epicor = 6, Plex = 7, DelmiaWorks = 8, BcManufacturing = 9, CustomRest = 20, CsvExchange = 21 }
 
 /// <summary>Canonical entities exchanged with ERP and MES systems; vendor names never reach the domain.</summary>
-public enum ErpEntity { Item = 0, ItemRevision = 1, Bom = 2, Customer = 3, Supplier = 4, WorkCenter = 5, Employee = 6, ProductionOrder = 7, Routing = 8, PurchaseOrder = 9, Receipt = 10, Lot = 11, Serial = 12, InventoryBalance = 13 }
+public enum ErpEntity { Item = 0, ItemRevision = 1, Bom = 2, Customer = 3, Supplier = 4, WorkCenter = 5, Employee = 6, ProductionOrder = 7, Routing = 8, PurchaseOrder = 9, Receipt = 10, Lot = 11, Serial = 12, InventoryBalance = 13,
+    ProductionOrderLine = 14, MachineCenter = 15, ItemLedgerEntry = 16, CapacityLedgerEntry = 17, OutputJournalLine = 18, ConsumptionJournalLine = 19 }
 
 public enum SyncDirection { Inbound = 0, Outbound = 1, TwoWay = 2 }
 /// <summary>Auto applies valid inbound changes; ApprovalRequired routes each change through the approval engine.</summary>
