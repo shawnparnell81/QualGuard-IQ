@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import InsightsOutlined from '@mui/icons-material/InsightsOutlined';
 import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
 import ArchitectureOutlined from '@mui/icons-material/ArchitectureOutlined';
 import AdminPanelSettingsOutlined from '@mui/icons-material/AdminPanelSettingsOutlined';
@@ -262,6 +263,18 @@ export const modules: ModuleDef[] = [
       ] },
       { label: 'Heat map', path: '/risks/matrix' },
       { label: 'Matrix settings', path: '/risks/settings', permission: 'admin.organization' },
+    ],
+  },
+  {
+    key: 'reports',
+    label: 'Reports',
+    description: 'Quality dashboard, report library and CSV export, scoped to your sites',
+    icon: <InsightsOutlined fontSize="small" />,
+    basePath: '/reports',
+    permissions: ['reports.view'],
+    sidebar: [
+      { label: 'Dashboard', path: '/reports' },
+      { label: 'Report library', path: '/reports/catalog' },
     ],
   },
   {
