@@ -57,5 +57,6 @@ public partial class AppDbContext
         ConfigureComplaints(b);
         ConfigureInspection(b);
         ConfigureChanges(b);
+        ConfigureRisks(b);
     }
 }

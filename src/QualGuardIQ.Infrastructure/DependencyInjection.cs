@@ -101,6 +101,11 @@ public static class DependencyInjection
         s.AddScoped<SupplierService>();
         s.AddScoped<SupplierQualityService>();
         s.AddScoped<Modules.Complaints.ComplaintService>();
+        s.AddScoped<Modules.Risks.RiskService>();
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Risks.RiskService.RecordType,
+            (id, ct) => sp.GetRequiredService<Modules.Risks.RiskService>().OnApprovedAsync(id, ct),
+            (id, c, ct) => sp.GetRequiredService<Modules.Risks.RiskService>().OnRejectedAsync(id, c, ct)));
+        P<RiskItem>(Modules.Risks.RiskService.RecordType, Permissions.RisksView, Permissions.RisksEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/risks/{x.Id}", x.Status is RiskStatus.Closed or RiskStatus.Cancelled or RiskStatus.PendingAcceptance));
         s.AddScoped<Modules.Inspection.InspectionService>();
         s.AddScoped<Modules.Changes.ChangeService>();
         P<ChangeRequest>(Modules.Changes.ChangeService.RecordType, Permissions.ChangesView, Permissions.ChangesEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/changes/{x.Id}", x.Status is ChangeStatus.Closed or ChangeStatus.Cancelled or ChangeStatus.InReview));

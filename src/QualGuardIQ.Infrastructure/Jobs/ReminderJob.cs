@@ -11,7 +11,7 @@ namespace QualGuardIQ.Infrastructure.Jobs;
 
 /// <summary>
 /// Daily due-date reminders across modules: actions, training, calibration, supplier certificates, supplier reviews,
-/// SCAR responses and document periodic reviews. Each reminder is sent once (tracked in ReminderLog);
+/// SCAR responses, document periodic reviews and risk reviews. Each reminder is sent once (tracked in ReminderLog);
 /// overdue items get a second, separate reminder.
 /// </summary>
 public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegistry registry, ISiteCalendar calendar, ILogger<ReminderJob> log)
@@ -51,6 +51,9 @@ public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegi
 
         foreach (var d in await db.Documents.Where(d => d.NextReviewDue != null && d.NextReviewDue <= soon).Select(d => new { d.Id, d.Number, d.Title, d.OwnerId, Due = d.NextReviewDue!.Value }).ToListAsync(ct))
             items.Add(($"doc-review:{d.Id}:{d.Due:yyyyMMdd}:{Phase(d.Due)}", d.OwnerId, $"Periodic review of {d.Number} {d.Title} {(d.Due < today ? "is overdue" : $"is due {d.Due:yyyy-MM-dd}")}", "Document", d.Id));
+
+        foreach (var r in await db.Risks.Where(r => r.Status != RiskStatus.Closed && r.Status != RiskStatus.Cancelled && r.ReviewDueOn <= soon).Select(r => new { r.Id, r.Number, r.Title, r.OwnerId, Due = r.ReviewDueOn }).ToListAsync(ct))
+            items.Add(($"risk-review:{r.Id}:{r.Due:yyyyMMdd}:{Phase(r.Due)}", r.OwnerId, $"Review of risk {r.Number} {r.Title} {(r.Due < today ? "is overdue" : $"is due {r.Due:yyyy-MM-dd}")}", "Risk", r.Id));
 
         if (items.Count == 0) return 0;
         var keys = items.Select(i => i.Key).ToList();
