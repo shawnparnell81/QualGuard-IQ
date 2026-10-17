@@ -19,6 +19,13 @@ Dates such as "due" and "overdue" follow the time zone of the record's site.
 - Sign in with your work email and password. If two-step verification is on for you, a second screen asks for the
   6-digit code from your authenticator app. Each step after the password stays open for 5 minutes; if it runs out the
   screen says so and you start again from your email and password.
+- **Sign in with your organization's account.** When your administrator turned on single sign-on, the sign-in page has
+  a **Sign in with …** button (for example *Sign in with Microsoft*). It takes you to your organization's sign-in page and
+  back. If your email domain must use it, the password form tells you so and highlights the button. Unless your
+  organization trusts the provider's own multi-factor sign-in, the app still asks for your authenticator code afterwards.
+
+  ![Sign in with single sign-on](../screenshots/sign-in/sign-in-40-sign-in-with-sso.png)
+  ![Code after single sign-on](../screenshots/sign-in/sign-in-41-sso-then-two-step-code.png)
 - **First sign-in or a temporary password.** When an administrator created your account or set a temporary password,
   you choose your own password before anything else opens.
 - **Password rules.** At least 12 characters (a few unrelated words work well), not a known breached or common
