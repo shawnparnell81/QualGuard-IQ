@@ -59,12 +59,12 @@ async function signInForm(page: Page, email: string, password: string) {
   await page.goto('/');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
 }
 async function signOut(page: Page) {
   await page.getByRole('button', { name: 'User menu' }).click();
   await page.getByRole('menuitem', { name: 'Sign out' }).click();
-  await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
 }
 const inApp = (page: Page) => expect(page.getByRole('button', { name: 'User menu' })).toBeVisible();
 
@@ -206,11 +206,11 @@ test('forgotten password: neutral answer, emailed single-use link, then the code
   await page.getByLabel('Confirm new password', { exact: true }).fill(next);
   await shot(page, 'sign-in-07-reset-new-password');
   await page.getByRole('button', { name: 'Save new password' }).click();
-  await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
   await expect(page).not.toHaveURL(/token=/);
   await page.getByLabel('Email').fill(person.email);
   await page.getByLabel('Password', { exact: true }).fill(next);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Two-step verification' })).toBeVisible();
   await page.getByLabel('Authentication code').fill(await code(mfaKey));
   await page.getByRole('button', { name: 'Verify' }).click();
@@ -259,7 +259,7 @@ test('a sign-in step that runs out says so and offers to start again', async ({ 
   await expect(page.getByText(/5 minutes/)).toBeVisible();
   await shot(page, 'sign-in-15-step-expired');
   await page.getByRole('button', { name: 'Start again' }).click();
-  await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
 });
 
 test('administrators: sign-in security policy, temporary password and 2-step reset', async ({ page }) => {
@@ -294,7 +294,7 @@ test.describe('phone', () => {
   test.use({ viewport: { width: 390, height: 844 } });
   test('sign-in and the code step fit a phone screen', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('button', { name: 'Sign in' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Sign in', exact: true })).toBeVisible();
     await shot(page, 'sign-in-30-phone-sign-in');
     const email = `pia.${stamp}@qms.test`; const pw = 'sapphire tunnel violin 3';
     await admin.post('/api/admin/users', { email, displayName: 'Pia Phone', password: pw, mustChangePassword: false });

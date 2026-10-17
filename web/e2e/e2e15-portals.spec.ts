@@ -8,7 +8,7 @@ async function portalSignIn(page: Page, email: string, kind: 'Customer' | 'Suppl
   await page.goto('/');
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(PW);
-  await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
   await expect(page.getByText(`${kind} portal`, { exact: true })).toBeVisible();
 }
 
