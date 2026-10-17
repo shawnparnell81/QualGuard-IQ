@@ -6,6 +6,7 @@ import ReportProblemOutlined from '@mui/icons-material/ReportProblemOutlined';
 import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined';
 import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
 import SpeedOutlined from '@mui/icons-material/SpeedOutlined';
+import LocalShippingOutlined from '@mui/icons-material/LocalShippingOutlined';
 
 export interface NavItem { label: string; path: string; permission?: string; children?: NavItem[] }
 export interface ModuleDef {
@@ -121,18 +122,41 @@ export const modules: ModuleDef[] = [
   {
     key: 'engineering',
     label: 'Products & Engineering',
-    description: 'Engineering drawings and controlled revisions',
+    description: 'Products, parts, customers, engineering drawings and revisions',
     icon: <ArchitectureOutlined fontSize="small" />,
-    basePath: '/drawings',
-    permissions: ['drawings.view'],
+    basePath: '/products',
+    permissions: ['drawings.view', 'masterdata.view'],
     sidebar: [
-      { label: 'Drawings', path: '/drawings', children: [
+      { label: 'Product records', path: '/products/items', permission: 'masterdata.view', children: [
+        { label: 'Products', path: '/products/items', permission: 'masterdata.view' },
+        { label: 'Parts', path: '/products/parts', permission: 'masterdata.view' },
+        { label: 'Customers', path: '/products/customers', permission: 'masterdata.view' },
+        { label: 'New part', path: '/products/parts/new', permission: 'masterdata.edit' },
+      ] },
+      { label: 'Drawings', path: '/drawings', permission: 'drawings.view', children: [
         { label: 'All drawings', path: '/drawings' },
         { label: 'Released', path: '/drawings?status=1' },
         { label: 'In work', path: '/drawings?status=0' },
         { label: 'Obsolete', path: '/drawings?status=2' },
       ] },
       { label: 'New drawing', path: '/drawings/new', permission: 'drawings.edit' },
+    ],
+  },
+  {
+    key: 'suppliers',
+    label: 'Suppliers',
+    description: 'Supplier register, qualification, approved scope, certifications and restrictions',
+    icon: <LocalShippingOutlined fontSize="small" />,
+    basePath: '/suppliers',
+    permissions: ['suppliers.view'],
+    sidebar: [
+      { label: 'Supplier register', path: '/suppliers', children: [
+        { label: 'All suppliers', path: '/suppliers' },
+        { label: 'Approved', path: '/suppliers?status=2' },
+        { label: 'Pending approval', path: '/suppliers?status=1' },
+        { label: 'Suspended', path: '/suppliers?status=4' },
+        { label: 'Add supplier', path: '/suppliers/new', permission: 'suppliers.edit' },
+      ] },
     ],
   },
   {
