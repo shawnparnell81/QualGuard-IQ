@@ -296,6 +296,22 @@ public sealed class TraceabilityService(AppDbContext db, ModuleSupport m, INumbe
         if (await m.TryScopeAsync(db.CustomerReturns.AsNoTracking(), Permissions.ReturnsView, ct) is { } rets)
             foreach (var r in await rets.Where(x => (x.PartId != null && partIds.Contains(x.PartId.Value)) || customerIds.Contains(x.CustomerId) || (x.LotNumber != null && lotNumbers.Contains(x.LotNumber)) || (x.SerialNumber != null && serialNumbers.Contains(x.SerialNumber))).Take(50).ToListAsync(ct))
                 related.Add(new("CustomerReturn", r.Id, r.Number, r.ReturnReason, r.Status.ToString(), $"/field/returns/{r.Id}", "Return"));
+        // warehouse records: receipts of the lots, holds, material review and returns to supplier
+        var tracedLots = matches.Where(x => x.Type == "Lot").Select(x => x.Id).ToList();
+        if (tracedLots.Count > 0 && await m.TryScopeAsync(db.Receipts.AsNoTracking(), Permissions.InventoryView, ct) is { } rcs)
+        {
+            foreach (var r in await rcs.Where(r => db.ReceiptLines.Any(l => l.ReceiptId == r.Id && l.LotId != null && tracedLots.Contains(l.LotId.Value))).Take(50).ToListAsync(ct))
+                related.Add(new("Receipt", r.Id, r.Number, $"{r.Kind} receipt {r.PurchaseOrderNumber} on {r.ReceivedOn:yyyy-MM-dd}".Replace("  ", " "), r.Status.ToString(), $"/warehouse/receipts/{r.Id}", "Receipt"));
+            if (await m.TryScopeAsync(db.InventoryHolds.AsNoTracking(), Permissions.InventoryView, ct) is { } hs)
+                foreach (var h in await hs.Where(h => h.LotId != null && tracedLots.Contains(h.LotId.Value)).Take(50).ToListAsync(ct))
+                    related.Add(new("InventoryHold", h.Id, h.Number, h.Reason, h.Status.ToString(), $"/warehouse/holds/{h.Id}", "Hold"));
+            if (await m.TryScopeAsync(db.MrbCases.AsNoTracking(), Permissions.InventoryView, ct) is { } mrb)
+                foreach (var c in await mrb.Where(c => c.LotId != null && tracedLots.Contains(c.LotId.Value)).Take(50).ToListAsync(ct))
+                    related.Add(new("MrbCase", c.Id, c.Number, $"Material review: {c.Disposition}", c.Status.ToString(), $"/warehouse/mrb/{c.Id}", "MRB"));
+            if (await m.TryScopeAsync(db.SupplierReturns.AsNoTracking(), Permissions.InventoryView, ct) is { } rtv)
+                foreach (var s in await rtv.Where(s => s.LotId != null && tracedLots.Contains(s.LotId.Value)).Take(50).ToListAsync(ct))
+                    related.Add(new("SupplierReturn", s.Id, s.Number, s.Reason, s.Status.ToString(), $"/warehouse/supplier-returns/{s.Id}", "Supplier return"));
+        }
         return new TraceSearchResult(q, matches, related.DistinctBy(x => (x.Type, x.Id)).ToList());
     }
 }

@@ -200,7 +200,7 @@ public sealed class InspectionService(AppDbContext db, ModuleSupport m, INumberi
         if (r.SampleSize is < 1) throw new AppException("Sample size must be at least 1.");
         if (r.SampleSize is { } ss && r.QuantityReceived is { } qr && ss > qr) throw new AppException("The sample size cannot exceed the quantity received.");
         if (r.CustomerId is { } cid && !await db.Customers.AnyAsync(c => c.Id == cid, ct)) throw new AppException("The customer does not exist.");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
         var i = new Domain.Quality.Inspection
         {
             Number = await numbers.NextAsync(RecordType, plan.SiteId, ct), InspectionType = plan.InspectionType, PlanId = plan.Id, PlanRevisionId = rev.Id, PlanRevision = rev.Revision,
@@ -219,7 +219,7 @@ public sealed class InspectionService(AppDbContext db, ModuleSupport m, INumberi
         db.Inspections.Add(i);
         await db.SaveChangesAsync(ct);
         await m.IndexAsync(RecordType, i.Id, Summary(i), ct);
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         return i;
     }
 
@@ -296,7 +296,7 @@ public sealed class InspectionService(AppDbContext db, ModuleSupport m, INumberi
         var desc = $"Inspection {i.Number} (plan rev {i.PlanRevision}) failed: " + string.Join("; ", failed.Select(f => f.Kind == CharacteristicKind.Variable
             ? $"{f.Characteristic} measured {f.Minimum:0.####}–{f.Maximum:0.####} {f.Unit} vs {f.LowerLimit:0.####}–{f.UpperLimit:0.####}"
             : $"{f.Characteristic}: {f.Defects} defect(s)"));
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
         var n = await ncrs.CreateAsync(new CreateNcrRequest(string.IsNullOrWhiteSpace(title) ? $"{i.InspectionType} inspection failure {i.PartNumber}".Trim() : title, desc, $"{i.InspectionType} inspection",
             i.SiteId, i.DepartmentId, null, i.PartNumber, i.LotNumber, i.QuantityReceived, i.InspectedOn, critical ? Severity.Major : Severity.Minor,
             new NcrDetails(i.ProductId, i.PartId, i.PartRevision, i.SupplierId, i.CustomerId, WorkOrder: i.WorkOrder, PurchaseOrder: i.PurchaseOrder, BatchNumber: i.BatchNumber, SerialNumber: i.SerialNumber,
@@ -304,7 +304,7 @@ public sealed class InspectionService(AppDbContext db, ModuleSupport m, INumberi
         i.NcrId = n.Id;
         db.RecordLinks.Add(new RecordLink { FromType = RecordType, FromId = id, ToType = NcrService.RecordType, ToId = n.Id, LinkType = "Nonconformance" });
         await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         return n;
     }
 

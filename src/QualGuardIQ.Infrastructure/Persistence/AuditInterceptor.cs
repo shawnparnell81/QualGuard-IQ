@@ -34,6 +34,8 @@ public sealed class AuditInterceptor(ICurrentUser user, IClock clock) : SaveChan
         var entries = ctx.ChangeTracker.Entries<Entity>()
             .Where(x => x.State is EntityState.Added or EntityState.Modified or EntityState.Deleted).ToList();
         var audits = new List<AuditEntry>();
+        foreach (var entry in entries.Where(x => x.Entity is IAppendOnly && x.State is EntityState.Modified or EntityState.Deleted))
+            throw new AppException($"{entry.Metadata.ClrType.Name} entries are append-only; post a correcting entry instead.", 409);
         foreach (var entry in entries.Where(x => x.Entity is IContentLock && x.State is EntityState.Modified or EntityState.Deleted))
         {
             var lockable = (IContentLock)entry.Entity;

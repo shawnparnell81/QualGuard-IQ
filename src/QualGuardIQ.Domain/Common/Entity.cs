@@ -31,3 +31,6 @@ public interface ISiteScoped
     Guid SiteId { get; }
     Guid? DepartmentId { get; }
 }
+
+/// <summary>Ledger records that can be added but never changed or deleted (corrections are new entries).</summary>
+public interface IAppendOnly { }

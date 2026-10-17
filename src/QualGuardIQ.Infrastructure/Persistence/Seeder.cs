@@ -55,6 +55,10 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
                         : [new ApprovalRouteStep { Order = 1, Name = "Approval", RequiredPermission = perm, SignatureMeaning = "Approved" }]
                 });
         }
+        // common parcel carriers; LTL and customer-arranged carriers are added by users
+        foreach (var (code, name, url) in new[] { ("UPS", "UPS", "https://www.ups.com/track?tracknum={tracking}"), ("FEDEX", "FedEx", "https://www.fedex.com/fedextrack/?trknbr={tracking}"),
+            ("DHL", "DHL", "https://www.dhl.com/en/express/tracking.html?AWB={tracking}") })
+            if (!await db.Carriers.AnyAsync(c => c.Code == code, ct)) db.Carriers.Add(new Domain.Quality.Carrier { Code = code, Name = name, Kind = Domain.Quality.CarrierKind.Parcel, TrackingUrl = url });
         await db.SaveChangesAsync(ct);
         await new Modules.Fai.AqlService(db, null!).SeedAsync(ct);
 
@@ -94,6 +98,9 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
         ("ReworkOrder", "Rework approval", Permissions.ReworkApprove),
         ("ErpChange", "ERP change approval", Permissions.IntegrationsApprove),
         ("Recall", "Recall closure", Permissions.RecallsApprove),
+        ("InventoryHold", "Hold release", Permissions.InventoryApprove),
+        ("MrbCase", "MRB disposition", Permissions.MrbApprove),
+        ("CycleCount", "Count variance approval", Permissions.InventoryApprove),
     ];
 
     /// <summary>Multi-step default routes (administrators can change steps and permissions).</summary>
@@ -103,6 +110,6 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
     [
         ("Document", "DOC-"), ("Drawing", "DWG-"), ("FormTemplate", "FT-"), ("FormRecord", "FR-"),
         ("Ncr", "NCR-"), ("Capa", "CAPA-"), ("Audit", "AUD-"), ("AuditFinding", "AF-"),
-        ("Equipment", "EQ-"), ("CalibrationEvent", "CAL-"), ("Action", "ACT-"), ("TrainingCourse", "TRN-"), ("ImpactAssessment", "IA-"), ("SupplierCorrectiveAction", "SCAR-"), ("Complaint", "CC-"), ("InspectionPlan", "IP-"), ("Inspection", "INS-"), ("ChangeRequest", "CHG-"), ("Risk", "RSK-"), ("MaintenanceEvent", "MNT-"), ("QualityObjective", "OBJ-"), ("ManagementReview", "MR-"), ("Fai", "FAI-"), ("AqlInspection", "AQL-"), ("ProcessFlow", "PF-"), ("Pfmea", "PFMEA-"), ("ControlPlan", "CP-"), ("SpcChart", "SPC-"), ("MsaStudy", "MSA-"), ("LpaAudit", "LPA-"), ("SupplierProgram", "SDP-"), ("ScrapEvent", "SCR-"), ("ReworkOrder", "RWK-"), ("ErpChange", "ERPC-"), ("Recall", "RCL-"), ("CustomerReturn", "RMA-"), ("WarrantyClaim", "WC-"), ("WorkOrder", "WO-"), ("Lot", "LOT-")
+        ("Equipment", "EQ-"), ("CalibrationEvent", "CAL-"), ("Action", "ACT-"), ("TrainingCourse", "TRN-"), ("ImpactAssessment", "IA-"), ("SupplierCorrectiveAction", "SCAR-"), ("Complaint", "CC-"), ("InspectionPlan", "IP-"), ("Inspection", "INS-"), ("ChangeRequest", "CHG-"), ("Risk", "RSK-"), ("MaintenanceEvent", "MNT-"), ("QualityObjective", "OBJ-"), ("ManagementReview", "MR-"), ("Fai", "FAI-"), ("AqlInspection", "AQL-"), ("ProcessFlow", "PF-"), ("Pfmea", "PFMEA-"), ("ControlPlan", "CP-"), ("SpcChart", "SPC-"), ("MsaStudy", "MSA-"), ("LpaAudit", "LPA-"), ("SupplierProgram", "SDP-"), ("ScrapEvent", "SCR-"), ("ReworkOrder", "RWK-"), ("ErpChange", "ERPC-"), ("Recall", "RCL-"), ("CustomerReturn", "RMA-"), ("WarrantyClaim", "WC-"), ("WorkOrder", "WO-"), ("Lot", "LOT-"), ("InventoryTransaction", "IT-"), ("Receipt", "RCV-"), ("InventoryHold", "HOLD-"), ("MrbCase", "MRB-"), ("SupplierReturn", "RTV-"), ("CycleCount", "CNT-"), ("StockTransfer", "TRF-"), ("Shipment", "SHP-"), ("ShipmentContainer", "PKG-")
     ];
 }

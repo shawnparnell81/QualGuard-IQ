@@ -24,6 +24,9 @@ public sealed class ModuleSupport(AppDbContext db, IAccessService access, ICurre
     public Task<bool> CanAsync(string permission, Guid siteId, Guid? departmentId, CancellationToken ct) =>
         access.CanAccessAsync(UserId, permission, siteId, departmentId, ct);
 
+    /// <summary>True when the user holds the permission at any site (for organization-wide lists such as carriers).</summary>
+    public async Task<bool> CanAnyAsync(string permission, CancellationToken ct) => !(await access.GetScopeAsync(UserId, permission, ct)).IsEmpty;
+
     public async Task ValidateLocationAsync(Guid siteId, Guid? departmentId, CancellationToken ct)
     {
         if (!await db.Sites.AnyAsync(s => s.Id == siteId && !s.IsArchived, ct)) throw new AppException("Select an active site.");

@@ -388,7 +388,7 @@ public sealed class AqlService(AppDbContext db, ModuleSupport m, INumberingServi
         var supplierId = r.SupplierId ?? i?.SupplierId;
         var rec = await RecommendAsync(supplierId, partId, ct);
         if (supplierId is { } sid && !await db.Suppliers.AnyAsync(x => x.Id == sid, ct)) throw new AppException("Select an existing supplier.");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
         var number = i?.Number ?? await (numbers ?? throw new InvalidOperationException("Numbering unavailable.")).NextAsync(RecordType, siteId, ct);
         var a = new AqlInspection
         {
@@ -412,7 +412,7 @@ public sealed class AqlService(AppDbContext db, ModuleSupport m, INumberingServi
             }
         }
         await db.SaveChangesAsync(ct);
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         return a;
     }
 
