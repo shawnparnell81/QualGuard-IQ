@@ -3,8 +3,9 @@ using QualGuardIQ.Domain.Quality;
 namespace QualGuardIQ.Infrastructure.Modules.Apqp;
 
 /// <summary>
-/// RPN = S × O × D. Action priority follows the AIAG-VDA FMEA handbook (2019) PFMEA AP table,
-/// looked up by severity band, occurrence band and detection band.
+/// RPN = S × O × D. Action priority follows the AIAG-VDA FMEA Handbook (2019), "Table AP – Action Priority for
+/// DFMEA and PFMEA", looked up by severity band, occurrence band and detection band. Checked against the published
+/// table for all 1000 combinations (ActionPriorityTableTests). The FMEA-MSR table is different and is not used here.
 /// </summary>
 public static class PfmeaMath
 {
