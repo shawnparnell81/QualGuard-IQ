@@ -24,6 +24,7 @@ namespace QualGuardIQ.Api.Controllers;
 public sealed class SsoController(SsoService sso, AppDbContext db, IConfiguration config, IWebHostEnvironment env) : ControllerBase
 {
     public const string RequestCookie = "qms.sso";
+    public const string BindingCookie = "qms.sso.done";
     public const string CallbackPath = "/api/auth/sso/callback";
     public sealed record ProviderButton(Guid Id, string DisplayName, IdentityProviderKind Kind);
 
@@ -57,7 +58,9 @@ public sealed class SsoController(SsoService sso, AppDbContext db, IConfiguratio
         var result = await sso.CallbackAsync(Request.Cookies[RequestCookie], state, code, error, errorDescription, ct);
         Response.Cookies.Delete(RequestCookie, new CookieOptions { Path = "/api/auth/sso" });
         if (result.Mode == SsoService.TestMode) return Redirect($"/admin/single-sign-on#tested={result.ProviderId}");
-        return result.CompletionToken is { } t ? Redirect("/#sso=" + Uri.EscapeDataString(t)) : Redirect("/#sso-error=" + result.ErrorCode);
+        if (result.CompletionToken is not { } t) return Redirect("/#sso-error=" + result.ErrorCode);
+        SetCookie(Response, Request, env, BindingCookie, result.Binding!, TimeSpan.FromMinutes(30));
+        return Redirect("/#sso=" + Uri.EscapeDataString(t));
     }
 
     public static string RedirectUri(IConfiguration config, IWebHostEnvironment env, HttpRequest req)
@@ -69,10 +72,13 @@ public sealed class SsoController(SsoService sso, AppDbContext db, IConfiguratio
     }
 
     public static void SetRequestCookie(HttpResponse res, HttpRequest req, IWebHostEnvironment env, string value) =>
+        SetCookie(res, req, env, RequestCookie, value, TimeSpan.FromMinutes(10));
+
+    static void SetCookie(HttpResponse res, HttpRequest req, IWebHostEnvironment env, string name, string value, TimeSpan life) =>
         // Lax, not Strict: the provider's redirect back is a cross-site top-level navigation, and the cookie must travel with it.
-        res.Cookies.Append(RequestCookie, value, new CookieOptions
+        res.Cookies.Append(name, value, new CookieOptions
         {
-            HttpOnly = true, SameSite = SameSiteMode.Lax, Path = "/api/auth/sso", MaxAge = TimeSpan.FromMinutes(10), IsEssential = true,
+            HttpOnly = true, SameSite = SameSiteMode.Lax, Path = "/api/auth/sso", MaxAge = life, IsEssential = true,
             Secure = !(env.IsDevelopment() || env.IsEnvironment("Testing")) || req.IsHttps,
         });
 }
