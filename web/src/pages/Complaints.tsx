@@ -114,7 +114,7 @@ export function ComplaintDetail() {
   const steps: [string, boolean][] = [['Containment', !!d.containment], ['Return evaluated', !d.returnExpected || !!d.returnEvaluation], ['Investigation', !!d.rootCause], ['Response sent', !!d.responseSentOn], ['Customer accepted', d.customerAccepted === true], ['Verified', !!d.verifiedAt], ['Closed', d.status === 4]];
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Complaints', to: '/complaints' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={complaintStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={complaintStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Case', value: 'case' }, { label: 'Return', value: 'return' }, { label: 'Linked records', value: 'links' }, { label: 'Actions', value: 'actions' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1} flexWrap="wrap">
         {a('contain') && <Button variant={d.containment ? 'outlined' : 'contained'} onClick={() => setDlg('contain')}>{d.containment ? 'Update containment' : 'Record containment'}</Button>}

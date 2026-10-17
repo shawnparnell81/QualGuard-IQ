@@ -143,7 +143,7 @@ export function PlanDetail() {
   const shown = tab === 'current' ? effective : tab === 'working' ? working : d.revisions.find((r) => r.id === tab);
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Inspection plans', to: '/inspection/plans' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span>{effective && <Chip size="small" label={`Rev ${effective.revision} effective`} color="success" variant="outlined" />}{d.isObsolete && <StatusChip status="Obsolete" />}</Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span>{effective && <Chip size="small" label={`Rev ${effective.revision} effective`} color="success" variant="outlined" />}{d.isObsolete && <StatusChip status="Obsolete" />}</Stack>}
       tabs={[{ label: effective ? `Effective (rev ${effective.revision})` : 'Effective', value: 'current' }, ...(working ? [{ label: `Rev ${working.revision} ${planRevStatus[working.status].toLowerCase()}`, value: 'working' }] : []),
         { label: 'Revision history', value: 'history' }, { label: 'Inspections', value: 'inspections' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
@@ -272,7 +272,7 @@ export function InspectionDetail() {
     equipmentId: entry[c.id].equipmentId || null, notes: entry[c.id].notes || null })) }));
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Inspections', to: '/inspection' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.inspectionType} inspection {d.partNumber ?? ''}</span><StatusChip status={inspectionStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.inspectionType} inspection {d.partNumber ?? ''}</span><StatusChip status={inspectionStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Results', value: 'results' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {editing && <Button variant="outlined" onClick={save}>Save results</Button>}
@@ -294,7 +294,7 @@ export function InspectionDetail() {
         <Box sx={{ minWidth: 0 }}>
           {tab === 'results' && <Section title="Characteristics">
             <Box sx={{ overflowX: 'auto' }}><Table size="small">
-              <TableHead><TableRow>{['#', 'Characteristic', 'Limits', editing ? 'Measured values / defects' : 'Result', 'Equipment', 'Notes', ''].map((h) => <TableCell key={h} sx={{ fontSize: 12 }}>{h}</TableCell>)}</TableRow></TableHead>
+              <TableHead><TableRow>{['#', 'Characteristic', 'Limits', editing ? 'Measured values / defects' : 'Result', 'Equipment', 'Notes'].map((h) => <TableCell key={h} sx={{ fontSize: 12 }}>{h}</TableCell>)}</TableRow></TableHead>
               <TableBody>{d.characteristics.map((c, i) => {
                 const r = c.result; const e = entry[c.id] ?? { values: '', defects: '', equipmentId: '', notes: '' };
                 const setE = (patch: Partial<typeof e>) => setEntry({ ...entry, [c.id]: { ...e, ...patch } });
@@ -305,12 +305,12 @@ export function InspectionDetail() {
                   <TableCell sx={{ minWidth: 200 }}>{editing ? (c.kind === 0
                     ? <TextField size="small" variant="standard" fullWidth placeholder="e.g. 12.00 12.01 11.99" value={e.values} onChange={(ev) => setE({ values: ev.target.value })} slotProps={{ htmlInput: { 'aria-label': `${c.name} values` } }} />
                     : <TextField size="small" variant="standard" type="number" placeholder="defects" value={e.defects} onChange={(ev) => setE({ defects: ev.target.value })} slotProps={{ htmlInput: { 'aria-label': `${c.name} defects` } }} />)
-                    : r ? (c.kind === 0 ? <span style={{ fontFamily: mono, fontSize: 13 }}>{r.values?.split(';').join('  ')}</span> : `${r.defects} defect(s)`) : '—'}</TableCell>
+                    : r ? <Stack direction="row" gap={1} alignItems="center"><Chip size="small" label={r.pass ? 'Pass' : 'Fail'} color={r.pass ? 'success' : 'error'} />{c.kind === 0 ? <span style={{ fontFamily: mono, fontSize: 13 }}>{r.values?.split(';').join('  ')}</span> : `${r.defects} defect(s)`}</Stack> : '—'}
+                    {editing && r && <Chip size="small" sx={{ mt: 0.5 }} label={r.pass ? 'Saved · pass' : 'Saved · fail'} color={r.pass ? 'success' : 'error'} variant="outlined" />}</TableCell>
                   <TableCell sx={{ minWidth: 170 }}>{editing ? <TextField size="small" variant="standard" select fullWidth value={e.equipmentId} onChange={(ev) => setE({ equipmentId: ev.target.value })} slotProps={{ htmlInput: { 'aria-label': `${c.name} equipment` } }}>
                       <MenuItem value="">{c.requiresEquipment ? '— choose —' : 'None'}</MenuItem>{(equipment.data ?? []).map((q2) => <MenuItem key={q2.id} value={q2.id}>{q2.number} {q2.name}</MenuItem>)}</TextField>
                     : r?.equipmentNumber ? <Tooltip title={`Calibration due ${fmtDate(r.equipmentCalibrationDueOn)}`}><span style={{ fontFamily: mono }}>{r.equipmentNumber}</span></Tooltip> : '—'}</TableCell>
                   <TableCell>{editing ? <TextField size="small" variant="standard" value={e.notes} onChange={(ev) => setE({ notes: ev.target.value })} /> : r?.notes ?? ''}</TableCell>
-                  <TableCell>{r ? <Chip size="small" label={r.pass ? 'Pass' : 'Fail'} color={r.pass ? 'success' : 'error'} /> : ''}</TableCell>
                 </TableRow>;
               })}</TableBody>
             </Table></Box>

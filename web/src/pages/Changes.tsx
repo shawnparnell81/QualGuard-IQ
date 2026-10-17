@@ -101,7 +101,7 @@ export function ChangeDetail() {
   const stageIdx = d.status === 1 ? 1 : d.status === 2 ? 2 : d.status === 3 ? 3 : d.status === 4 ? 4 : d.status === 5 ? 5 : d.status === 6 ? 6 : 0;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Changes', to: '/changes' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={changeStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={changeStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: `Affected items (${d.items.length})`, value: 'items' }, { label: 'Actions', value: 'actions' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1} flexWrap="wrap">
         {approval && <Button variant="contained" color="secondary" onClick={() => setSigning(true)}>Sign approval</Button>}

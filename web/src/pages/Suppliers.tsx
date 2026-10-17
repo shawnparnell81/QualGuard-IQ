@@ -107,7 +107,7 @@ export function SupplierDetail() {
   const today = localDate();
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Supplier register', to: '/suppliers' }, { label: d.code }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.code}</span><span>{d.legalName}</span><StatusChip status={supplierStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.code}</span><span>{d.legalName}</span><StatusChip status={supplierStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Contacts', value: 'contacts' }, { label: 'Certifications', value: 'certs' }, { label: 'Quality events', value: 'ncrs' }, { label: 'SCARs', value: 'scars' }, { label: 'Performance', value: 'perf' }, { label: 'Reviews', value: 'reviews' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {approval && <Button variant="contained" color="secondary" onClick={() => setSigning(true)}>Sign approval</Button>}
@@ -244,7 +244,7 @@ export function ScarDetail() {
   if (!d) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'Corrective action requests', to: '/suppliers/scar' }]} title="Loading">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Corrective action requests', to: '/suppliers/scar' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={scarStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={scarStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Response & review', value: 'response' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {d.allowed.includes('respond') && <Button variant="contained" onClick={() => setDlg('respond')}>Record supplier response</Button>}
