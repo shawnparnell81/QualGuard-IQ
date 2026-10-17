@@ -32395,6 +32395,88 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/files/{id}/renditions':
+    get:
+      tags:
+        - Files
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/VideoStatus'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoStatus'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/VideoStatus'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/files/{id}/renditions/retry':
+    post:
+      tags:
+        - Files
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/VideoStatus'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VideoStatus'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/VideoStatus'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/files/{id}/playback/{format}':
+    get:
+      tags:
+        - Files
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/VideoFormat'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/files/{id}/archive':
     post:
       tags:
@@ -56307,6 +56389,100 @@ components:
         customerApprovedOn:
           type: string
           format: date
+    RenditionRow:
+      required:
+        - id
+        - format
+        - status
+        - attempts
+        - queuedAt
+        - nextAttemptAt
+        - completedAt
+        - error
+        - sizeBytes
+        - durationSeconds
+        - width
+        - height
+        - videoCodec
+        - audioCodec
+        - sourceVideoCodec
+        - reused
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        format:
+          $ref: '#/components/schemas/VideoFormat'
+        status:
+          $ref: '#/components/schemas/RenditionStatus'
+        attempts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        queuedAt:
+          type: string
+          format: date-time
+        nextAttemptAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        completedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        error:
+          type:
+            - 'null'
+            - string
+        sizeBytes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int64
+        durationSeconds:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        width:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        height:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        videoCodec:
+          type:
+            - 'null'
+            - string
+        audioCodec:
+          type:
+            - 'null'
+            - string
+        sourceVideoCodec:
+          type:
+            - 'null'
+            - string
+        reused:
+          type: boolean
+    RenditionStatus:
+      type: integer
     ReportChart:
       required:
         - type
@@ -64419,6 +64595,28 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/VerifyLine'
+    VideoFormat:
+      type: integer
+    VideoStatus:
+      required:
+        - converterAvailable
+        - converter
+        - formats
+        - renditions
+      type: object
+      properties:
+        converterAvailable:
+          type: boolean
+        converter:
+          type: string
+        formats:
+          type: array
+          items:
+            $ref: '#/components/schemas/VideoFormat'
+        renditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RenditionRow'
     VoidLabelsInput:
       required:
         - reason

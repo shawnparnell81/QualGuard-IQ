@@ -127,6 +127,13 @@ public sealed class AiRetentionJob(QualGuardIQ.Infrastructure.Modules.Intelligen
     }
 }
 
+/// <summary>Every 2 minutes: convert queued videos into playback copies (waits without failing while no converter is configured).</summary>
+public sealed class VideoConversionJob(QualGuardIQ.Infrastructure.Modules.Video.VideoConversionService video)
+{
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 3600)]
+    public Task RunAsync(CancellationToken ct) => video.RunAsync(ct);
+}
+
 /// <summary>Every 5 minutes: send due scheduled reports.</summary>
 public sealed class ReportScheduleJob(QualGuardIQ.Infrastructure.Modules.Platform.ReportDistributionService distribution)
 {
