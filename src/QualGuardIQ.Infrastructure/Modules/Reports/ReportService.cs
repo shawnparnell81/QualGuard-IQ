@@ -14,7 +14,7 @@ using QualGuardIQ.Infrastructure.Persistence;
 
 namespace QualGuardIQ.Infrastructure.Modules.Reports;
 
-public sealed record ReportParams(DateOnly? From, DateOnly? To, Guid? SiteId, Guid? DepartmentId);
+public sealed record ReportParams(DateOnly? From, DateOnly? To, Guid? SiteId, Guid? DepartmentId, Guid? SupplierId = null, Guid? ProductId = null);
 public sealed record ReportColumn(string Key, string Label, string Type = "text");
 public sealed record ReportChart(string Type, string X, string[] Y);
 public sealed record ReportDefinition(string Key, string Title, string Category, string Permission, string Description, bool UsesDates);
@@ -70,6 +70,9 @@ public sealed class ReportService(AppDbContext db, ModuleSupport m, IAccessServi
         var s = await m.ScopeAsync(q, perm, ct);
         if (p.SiteId is { } site) s = s.Where(x => x.SiteId == site);
         if (p.DepartmentId is { } d) s = s.Where(x => x.DepartmentId == d);
+        // Supplier/product filters apply to the FAI and AQL reports.
+        if (p.SupplierId is { } su) s = s switch { IQueryable<FaiRecord> f => (IQueryable<T>)f.Where(x => x.SupplierId == su), IQueryable<AqlInspection> a => (IQueryable<T>)a.Where(x => x.SupplierId == su), _ => s };
+        if (p.ProductId is { } pr) s = s switch { IQueryable<FaiRecord> f => (IQueryable<T>)f.Where(x => x.ProductId == pr), IQueryable<AqlInspection> a => (IQueryable<T>)a.Where(x => x.ProductId == pr), _ => s };
         return s;
     }
 
@@ -342,7 +345,7 @@ public sealed class ReportService(AppDbContext db, ModuleSupport m, IAccessServi
         });
         Add("aql.lots", "AQL lot decisions", "AQL", Permissions.InspectionView, "AQL-sampled lots decided in the period.", true, async (p, f, t, ct) =>
         {
-            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => a.Status == AqlInspectionStatus.Decided && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
+            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => (a.Status == AqlInspectionStatus.Decided || a.Status == AqlInspectionStatus.Submitted || a.Status == AqlInspectionStatus.Approved || a.Status == AqlInspectionStatus.Closed) && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
             var rows = await q.OrderByDescending(a => a.InspectionDate).Select(a => new { a.Id, a.InspectionId, a.InspectionNumber, a.LotNumber, a.LotSize, a.SampleSize, a.InspectionLevel, a.AqlLevel, a.Severity, a.OverallResult, a.AcceptanceQuantity, a.RejectionQuantity, a.CriticalDefects, a.MajorDefects, a.MinorDefects, a.InspectionDate,
                 Supplier = db.Suppliers.Where(s => s.Id == a.SupplierId).Select(s => s.Code).FirstOrDefault() }).ToListAsync(ct);
             return ([C("number", "Inspection"), C("supplier", "Supplier"), C("lot", "Lot"), C("lotSize", "Lot size", "number"), C("sample", "Sample", "number"), C("level", "Level"), C("aql", "AQL", "number"), C("mode", "Mode"), C("ac", "Ac", "number"), C("re", "Re", "number"), C("critical", "Critical", "number"), C("major", "Major", "number"), C("minor", "Minor", "number"), C("result", "Result"), C("date", "Date", "datetime")],
@@ -351,7 +354,7 @@ public sealed class ReportService(AppDbContext db, ModuleSupport m, IAccessServi
         });
         Add("aql.summary", "AQL acceptance, rejection, defect rate and PPM by month", "AQL", Permissions.InspectionView, "Lot acceptance/rejection rates, defect rate and PPM of decided AQL lots.", true, async (p, f, t, ct) =>
         {
-            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => a.Status == AqlInspectionStatus.Decided && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
+            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => (a.Status == AqlInspectionStatus.Decided || a.Status == AqlInspectionStatus.Submitted || a.Status == AqlInspectionStatus.Approved || a.Status == AqlInspectionStatus.Closed) && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
             var rows = await q.Select(a => new { a.InspectionDate, a.OverallResult, a.SampleSize, D = a.CriticalDefects + a.MajorDefects + a.MinorDefects }).ToListAsync(ct);
             return ([C("month", "Month"), C("lots", "Lots", "number"), C("accepted", "Accepted", "number"), C("rejected", "Rejected", "number"), C("acceptanceRate", "Acceptance %", "number"), C("rejectionRate", "Rejection %", "number"), C("defectRate", "Defect rate %", "number"), C("ppm", "PPM", "number")],
                 Months(f, t, mo => { var x = rows.Where(r => r.InspectionDate.ToString("yyyy-MM") == mo).ToList(); var n = x.Count; var acc = x.Count(r => r.OverallResult == AqlDecision.Accept); var units = x.Sum(r => r.SampleSize); var d = x.Sum(r => r.D);
@@ -360,7 +363,7 @@ public sealed class ReportService(AppDbContext db, ModuleSupport m, IAccessServi
         });
         Add("aql.suppliers", "Supplier AQL performance and ranking", "AQL", Permissions.InspectionView, "Suppliers ranked by lot acceptance rate then PPM for lots decided in the period.", true, async (p, f, t, ct) =>
         {
-            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => a.SupplierId != null && a.Status == AqlInspectionStatus.Decided && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
+            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => a.SupplierId != null && (a.Status == AqlInspectionStatus.Decided || a.Status == AqlInspectionStatus.Submitted || a.Status == AqlInspectionStatus.Approved || a.Status == AqlInspectionStatus.Closed) && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
             var g = await q.GroupBy(a => a.SupplierId).Select(x => new { Id = x.Key, N = x.Count(), Acc = x.Count(a => a.OverallResult == AqlDecision.Accept), Units = x.Sum(a => a.SampleSize), D = x.Sum(a => a.CriticalDefects + a.MajorDefects + a.MinorDefects) }).ToListAsync(ct);
             var names = await db.Suppliers.AsNoTracking().Where(s => g.Select(x => x.Id).Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => s.Code + " " + s.LegalName, ct);
             var rows = g.Select(x => new { x, rate = Modules.Fai.AqlService.Rate(x.Acc, x.N), ppm = Modules.Fai.AqlService.Ppm(x.D, x.Units) }).OrderByDescending(x => x.rate).ThenBy(x => x.ppm)
@@ -377,7 +380,7 @@ public sealed class ReportService(AppDbContext db, ModuleSupport m, IAccessServi
         });
         Add("aql.ppm", "Supplier defect PPM trend", "AQL", Permissions.InspectionView, "Defect PPM by supplier and month (decided AQL lots).", true, async (p, f, t, ct) =>
         {
-            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => a.SupplierId != null && a.Status == AqlInspectionStatus.Decided && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
+            var q = (await Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, p, ct)).Where(a => a.SupplierId != null && (a.Status == AqlInspectionStatus.Decided || a.Status == AqlInspectionStatus.Submitted || a.Status == AqlInspectionStatus.Approved || a.Status == AqlInspectionStatus.Closed) && a.InspectionDate >= Utc(f) && a.InspectionDate < Utc(t.AddDays(1)));
             var rows = await q.Select(a => new { a.SupplierId, a.InspectionDate, a.SampleSize, D = a.CriticalDefects + a.MajorDefects + a.MinorDefects }).ToListAsync(ct);
             var names = await db.Suppliers.AsNoTracking().Where(s => rows.Select(r => r.SupplierId).Contains(s.Id)).ToDictionaryAsync(s => s.Id, s => s.Code, ct);
             var g = rows.GroupBy(r => (r.SupplierId, Month: r.InspectionDate.ToString("yyyy-MM"))).OrderBy(x => x.Key.Month)
