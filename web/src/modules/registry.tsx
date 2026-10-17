@@ -688,6 +688,7 @@ export const modules: ModuleDef[] = [
       { label: 'Data governance', path: '/platform/governance', permission: 'masterdata.view' },
       { label: 'Recovery center', path: '/platform/recovery', permission: 'platform.admin' },
       { label: 'Webhooks', path: '/platform/webhooks', permission: 'platform.admin' },
+      { label: 'SMS and push', path: '/platform/messaging', permission: 'api.admin' },
       { label: 'System health', path: '/platform/health', permission: 'platform.admin' },
       { label: 'Security operations', path: '/platform/security', permission: 'security.review' },
       { label: 'Modules', path: '/platform/modules', permission: 'platform.admin' },

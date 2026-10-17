@@ -326,6 +326,13 @@ stored data and revision and confirms it is identical.
 **Manifest** (Document templates → Manifest): choose the site, carrier and ship date to print the list of shipments
 for the driver to sign. Manifests are recorded like other documents.
 
+## Text and push notifications
+
+Open the account menu → **Text and push notifications** to receive a copy of your notifications by text message or
+on a device. Enter your mobile number in international format (for example +15551234567), confirm that you agree to
+receive messages and choose **Opt in**. Your organization decides which notifications are sent. Choose **Opt out**
+at any time; nothing further is sent to that address.
+
 ## Report schedules and board report distribution
 
 Open **Platform → Report schedules** to send a saved report or a board report on a regular schedule.
