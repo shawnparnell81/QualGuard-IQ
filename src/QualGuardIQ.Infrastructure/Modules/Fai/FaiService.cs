@@ -18,8 +18,14 @@ public sealed record FaiInput(string Title, FaiType Type, FaiReason Reason, Guid
     string? Process, Guid? SupplierId, Guid? CustomerId, Guid? ChangeId, Guid? InspectionPlanId, Guid? BaseFaiId, Guid SiteId, Guid? DepartmentId, string? LotNumber, string? BatchNumber,
     string? SerialNumber, DateOnly? ProductionDate, DateOnly? DueOn, Guid? InspectorId, Guid? ReviewerId, bool CustomerApprovalRequired, string? Comments, string? SupplierOverrideReason = null, uint RowVersion = 0);
 public sealed record CharacteristicInput2(int BalloonNumber, string Description, string? DrawingReference, CharacteristicClass Class, CharacteristicKind Kind, decimal? Nominal,
-    decimal? LowerTolerance, decimal? UpperTolerance, string? Units, string? InspectionMethod, string? RequirementSource, string? AcceptanceCriteria);
-public sealed record ResultInput2(decimal? MeasuredValue, string? Observation, bool? Pass, Guid? EquipmentId, string? Evidence, string? Notes);
+    decimal? LowerTolerance, decimal? UpperTolerance, string? Units, string? InspectionMethod, string? RequirementSource, string? AcceptanceCriteria, CharDataType? DataType = null)
+{
+    /// <summary>The data type wins over the kind when given: numeric = variable, everything else = attribute.</summary>
+    public CharacteristicKind EffectiveKind => DataType is { } d ? (d == CharDataType.Numeric ? CharacteristicKind.Variable : CharacteristicKind.Attribute) : Kind;
+    public CharDataType EffectiveDataType => DataType ?? (Kind == CharacteristicKind.Variable ? CharDataType.Numeric : CharDataType.Visual);
+}
+/// <summary>A result. NotApplicable needs a justification in Notes; Sequence, when given, must be the next sequence (optimistic check).</summary>
+public sealed record ResultInput2(decimal? MeasuredValue, string? Observation, bool? Pass, Guid? EquipmentId, string? Evidence, string? Notes, bool? BooleanValue = null, bool NotApplicable = false, int? Sequence = null);
 public sealed record BulkResult(Guid CharacteristicId, decimal? MeasuredValue, string? Observation, bool? Pass, Guid? EquipmentId, string? Evidence, string? Notes);
 public sealed record BalloonDrawingInput(Guid DrawingId, string? DrawingRevision, Guid? FileAttachmentId, bool ImportCharacteristics);
 public sealed record Accountability(int Total, int Inspected, int Passed, int Failed, int Open, List<int> Missing, List<int> Gaps, List<int> UnresolvedFailures, bool Complete);
@@ -163,7 +169,7 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
 
     private static FaiCharacteristic Def(FaiRecord x, FaiCharacteristic c) => new()
     {
-        FaiId = x.Id, FaiNumber = x.Number, BalloonNumber = c.BalloonNumber, Description = c.Description, DrawingReference = c.DrawingReference, Class = c.Class, Kind = c.Kind, Nominal = c.Nominal,
+        FaiId = x.Id, FaiNumber = x.Number, BalloonNumber = c.BalloonNumber, Description = c.Description, DrawingReference = c.DrawingReference, Class = c.Class, Kind = c.Kind, DataType = c.DataType, Nominal = c.Nominal,
         LowerTolerance = c.LowerTolerance, UpperTolerance = c.UpperTolerance, Units = c.Units, InspectionMethod = c.InspectionMethod, RequirementSource = c.RequirementSource, AcceptanceCriteria = c.AcceptanceCriteria
     };
 
@@ -173,7 +179,7 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
         foreach (var b in await db.DrawingBalloons.AsNoTracking().Where(b => b.DrawingId == drawingId && b.DrawingRevision == rev && !have.Contains(b.BalloonNumber)).ToListAsync(ct))
             db.FaiCharacteristics.Add(new FaiCharacteristic
             {
-                FaiId = x.Id, FaiNumber = x.Number, BalloonNumber = b.BalloonNumber, Description = b.Description, DrawingReference = b.DrawingReference, Class = b.Class, Kind = b.Kind, Nominal = b.Nominal,
+                FaiId = x.Id, FaiNumber = x.Number, BalloonNumber = b.BalloonNumber, Description = b.Description, DrawingReference = b.DrawingReference, Class = b.Class, Kind = b.Kind, DataType = b.Kind == CharacteristicKind.Variable ? CharDataType.Numeric : CharDataType.Visual, Nominal = b.Nominal,
                 LowerTolerance = b.LowerTolerance, UpperTolerance = b.UpperTolerance, Units = b.Units, InspectionMethod = b.InspectionMethod, RequirementSource = b.RequirementSource ?? $"Drawing {x.DrawingNumber} rev {rev}",
                 AcceptanceCriteria = b.AcceptanceCriteria
             });
@@ -190,7 +196,7 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
             decimal? nominal = c.Target ?? (c.LowerLimit is { } lo && c.UpperLimit is { } hi ? (lo + hi) / 2 : null);
             db.FaiCharacteristics.Add(new FaiCharacteristic
             {
-                FaiId = x.Id, FaiNumber = x.Number, BalloonNumber = ++n, Description = c.Name, Kind = c.Kind, Class = c.IsCritical ? CharacteristicClass.Critical : CharacteristicClass.Standard, Nominal = nominal,
+                FaiId = x.Id, FaiNumber = x.Number, BalloonNumber = ++n, Description = c.Name, Kind = c.Kind, DataType = c.Kind == CharacteristicKind.Variable ? CharDataType.Numeric : CharDataType.Visual, Class = c.IsCritical ? CharacteristicClass.Critical : CharacteristicClass.Standard, Nominal = nominal,
                 LowerTolerance = nominal is null || c.LowerLimit is null ? null : c.LowerLimit - nominal, UpperTolerance = nominal is null || c.UpperLimit is null ? null : c.UpperLimit - nominal,
                 Units = c.Unit, InspectionMethod = c.Method, RequirementSource = $"Inspection plan {rev.PlanNumber} rev {rev.Revision}", AcceptanceCriteria = c.Specification
             });
@@ -227,7 +233,7 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
         if (!Editable.Contains(x.Status)) throw new ConflictException("Characteristics cannot change in the FAI's current state.");
         var c = await db.FaiCharacteristics.FirstOrDefaultAsync(c => c.Id == charId && c.FaiId == id, ct) ?? throw new NotFoundException("Characteristic");
         if (r.BalloonNumber != c.BalloonNumber && await db.FaiCharacteristics.AnyAsync(o => o.FaiId == id && o.BalloonNumber == r.BalloonNumber, ct)) throw new ConflictException($"Balloon {r.BalloonNumber} already exists.");
-        if (await db.FaiCharacteristicResults.AnyAsync(v => v.CharacteristicId == charId, ct) && (r.Nominal != c.Nominal || r.LowerTolerance != c.LowerTolerance || r.UpperTolerance != c.UpperTolerance || r.Kind != c.Kind))
+        if (await db.FaiCharacteristicResults.AnyAsync(v => v.CharacteristicId == charId, ct) && (r.Nominal != c.Nominal || r.LowerTolerance != c.LowerTolerance || r.UpperTolerance != c.UpperTolerance || r.EffectiveKind != c.Kind || r.EffectiveDataType != c.DataType))
             throw new ConflictException("Requirements cannot change after measurements are recorded; delete the results first.");
         SetDef(c, r);
         await db.SaveChangesAsync(ct);
@@ -247,13 +253,13 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
     {
         if (r.BalloonNumber < 1) throw new AppException("Balloon numbers start at 1.");
         ModuleSupport.Required(r.Description, "Description", 4000);
-        if (r.Kind == CharacteristicKind.Variable)
+        if (r.EffectiveKind == CharacteristicKind.Variable)
         {
             if (r.Nominal is null || r.LowerTolerance is null || r.UpperTolerance is null) throw new AppException($"Balloon {r.BalloonNumber}: a variable characteristic needs nominal, lower and upper tolerance.");
             if (r.LowerTolerance > 0 || r.UpperTolerance < 0) throw new AppException($"Balloon {r.BalloonNumber}: tolerances are deviations from nominal (lower ≤ 0 ≤ upper).");
         }
         else if (string.IsNullOrWhiteSpace(r.AcceptanceCriteria)) throw new AppException($"Balloon {r.BalloonNumber}: an attribute characteristic needs acceptance criteria.");
-        c.BalloonNumber = r.BalloonNumber; c.Description = r.Description.Trim(); c.DrawingReference = T(r.DrawingReference, 250); c.Class = r.Class; c.Kind = r.Kind;
+        c.BalloonNumber = r.BalloonNumber; c.Description = r.Description.Trim(); c.DrawingReference = T(r.DrawingReference, 250); c.Class = r.Class; c.Kind = r.EffectiveKind; c.DataType = r.EffectiveDataType;
         c.Nominal = r.Nominal; c.LowerTolerance = r.LowerTolerance; c.UpperTolerance = r.UpperTolerance; c.Units = T(r.Units, 25); c.InspectionMethod = T(r.InspectionMethod, 255);
         c.RequirementSource = T(r.RequirementSource, 255); c.AcceptanceCriteria = T(r.AcceptanceCriteria, 4000);
     }
@@ -321,7 +327,14 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
         if (x.Status != FaiStatus.InProgress) throw new ConflictException("Start the inspection before recording results.");
         var c = await db.FaiCharacteristics.FirstOrDefaultAsync(c => c.Id == charId && c.FaiId == id, ct) ?? throw new NotFoundException("Characteristic");
         var res = new FaiCharacteristicResult { CharacteristicId = charId, FaiId = id, InspectorId = m.UserId, InspectionDate = m.Now, Evidence = T(r.Evidence, 1000), Notes = T(r.Notes, 2000) };
-        if (c.Kind == CharacteristicKind.Variable)
+        var next = (await db.FaiCharacteristicResults.Where(v => v.CharacteristicId == charId).MaxAsync(v => (int?)v.InspectionSequence, ct) ?? 0) + 1;
+        if (r.Sequence is { } seq && seq != next) throw new ConflictException($"Balloon {c.BalloonNumber}: the next result is sequence {next} (another result was recorded meanwhile).");
+        if (r.NotApplicable)
+        {
+            if (res.Notes is null) throw new AppException($"Balloon {c.BalloonNumber}: give the reason the characteristic is not applicable.");
+            res.PassFail = CharResult.NotApplicable; res.Observation = T(r.Observation, 1000);
+        }
+        else if (c.Kind == CharacteristicKind.Variable)
         {
             if (r.MeasuredValue is not { } v) throw new AppException($"Balloon {c.BalloonNumber}: enter the measured value.");
             res.MeasuredValue = v;
@@ -329,8 +342,12 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
         }
         else
         {
-            if (r.Pass is null) throw new AppException($"Balloon {c.BalloonNumber}: record pass or fail against the acceptance criteria.");
-            res.Observation = T(r.Observation, 1000); res.PassFail = r.Pass.Value ? CharResult.Pass : CharResult.Fail;
+            if (c.DataType == CharDataType.Boolean) res.BooleanValue = r.BooleanValue ?? r.Pass;
+            var pass = r.Pass ?? (c.DataType == CharDataType.Boolean ? r.BooleanValue : null);
+            if (pass is null) throw new AppException($"Balloon {c.BalloonNumber}: record pass or fail against the acceptance criteria.");
+            res.Observation = T(r.Observation, 1000);
+            if (c.DataType == CharDataType.Text && res.Observation is null) throw new AppException($"Balloon {c.BalloonNumber}: record the observed text.");
+            res.PassFail = pass.Value ? CharResult.Pass : CharResult.Fail;
         }
         if (r.EquipmentId is { } eqId)
         {
@@ -340,8 +357,8 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
             if (eq.RequiresCalibration && (eq.NextDueOn is null || eq.NextDueOn < today)) throw new AppException($"Equipment {eq.Number} is out of calibration.");
             res.InspectionEquipmentId = eq.Id; res.EquipmentNumber = eq.Number; res.EquipmentCalibrationDueOn = eq.NextDueOn;
         }
-        else if (c.Kind == CharacteristicKind.Variable) throw new AppException($"Balloon {c.BalloonNumber}: record the measuring equipment used.");
-        res.InspectionSequence = (await db.FaiCharacteristicResults.Where(v => v.CharacteristicId == charId).MaxAsync(v => (int?)v.InspectionSequence, ct) ?? 0) + 1;
+        else if (c.Kind == CharacteristicKind.Variable && !r.NotApplicable) throw new AppException($"Balloon {c.BalloonNumber}: record the measuring equipment used.");
+        res.InspectionSequence = next;
         db.FaiCharacteristicResults.Add(res);
         c.Result = res.PassFail; c.MeasuredValue = res.MeasuredValue; c.CarriedOver = false;
         await db.SaveChangesAsync(ct);
@@ -380,11 +397,11 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
         return await BulkResultsAsync(id, rows, ct);
     }
 
-    public async Task UpdateResultAsync(Guid id, Guid resultId, ResultInput2 r, CancellationToken ct)
+    public async Task<FaiCharacteristicResult> UpdateResultAsync(Guid id, Guid resultId, ResultInput2 r, CancellationToken ct)
     {
         var res = await LatestResultAsync(id, resultId, ct);
         // Corrections never overwrite: the correction is a new measurement and the old one stays in history.
-        await RecordResultAsync(id, res.CharacteristicId, r with { Notes = $"Correction of measurement #{res.InspectionSequence}: {r.Notes}".Trim() }, ct);
+        return await RecordResultAsync(id, res.CharacteristicId, r with { Sequence = null, Notes = $"Correction of measurement #{res.InspectionSequence}: {r.Notes}".Trim() }, ct);
     }
 
     public async Task DeleteResultAsync(Guid id, Guid resultId, CancellationToken ct)
@@ -420,7 +437,7 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
         var ncrIds = chars.Where(c => c.Result == CharResult.Fail && c.NcrId != null).Select(c => c.NcrId!.Value).ToList();
         var resolved = await db.Ncrs.AsNoTracking().Where(n => ncrIds.Contains(n.Id) && (n.Status == NcrStatus.Closed || n.Status == NcrStatus.DispositionApproved) && n.Disposition != Disposition.Scrap && n.Disposition != Disposition.ReturnToSupplier).Select(n => n.Id).ToListAsync(ct);
         var unresolved = chars.Where(c => c.Result == CharResult.Fail && (c.NcrId is null || !resolved.Contains(c.NcrId.Value))).Select(c => c.BalloonNumber).OrderBy(b => b).ToList();
-        var open = chars.Count(c => c.Result == CharResult.NotInspected);
+        var open = chars.Count(c => c.Result == CharResult.NotInspected); // not-applicable (with justification) counts as accounted for
         return new(chars.Count, chars.Count - open, chars.Count(c => c.Result == CharResult.Pass), chars.Count(c => c.Result == CharResult.Fail), open, missing, gaps, unresolved,
             chars.Count > 0 && open == 0 && missing.Count == 0 && gaps.Count == 0);
     }
@@ -590,7 +607,7 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
 
     // ---------- NCR / CAPA ----------
 
-    public async Task<Ncr> CreateNcrAsync(Guid id, IReadOnlyList<Guid>? characteristicIds, string? title, CancellationToken ct)
+    public async Task<Ncr> CreateNcrAsync(Guid id, IReadOnlyList<Guid>? characteristicIds, string? title, CancellationToken ct, string? description = null, Guid? ownerId = null)
     {
         var x = await LoadEditAsync(id, ct);
         var failed = await db.FaiCharacteristics.Where(c => c.FaiId == id && c.Result == CharResult.Fail && c.NcrId == null && (characteristicIds == null || characteristicIds.Count == 0 || characteristicIds.Contains(c.Id))).OrderBy(c => c.BalloonNumber).ToListAsync(ct);
@@ -599,7 +616,8 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
         var desc = $"FAI {x.Number} (part {x.PartNumber} rev {x.PartRevision}, drawing {x.DrawingNumber} rev {x.DrawingRevision}) failed: " +
             string.Join("; ", failed.Select(c => c.Kind == CharacteristicKind.Variable ? $"balloon {c.BalloonNumber} {c.Description} measured {c.MeasuredValue:0.####} vs {c.Nominal + c.LowerTolerance:0.####}–{c.Nominal + c.UpperTolerance:0.####} {c.Units}" : $"balloon {c.BalloonNumber} {c.Description} failed: {c.AcceptanceCriteria}"));
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var n = await ncrs.CreateAsync(new CreateNcrRequest(string.IsNullOrWhiteSpace(title) ? $"FAI failure {x.PartNumber}" : title, desc, "First article inspection", x.SiteId, x.DepartmentId, null, x.PartNumber, x.LotNumber,
+        if (!string.IsNullOrWhiteSpace(description)) desc = description.Trim() + "\n\n" + desc;
+        var n = await ncrs.CreateAsync(new CreateNcrRequest(string.IsNullOrWhiteSpace(title) ? $"FAI failure {x.PartNumber}" : title, desc, "First article inspection", x.SiteId, x.DepartmentId, ownerId, x.PartNumber, x.LotNumber,
             1, await m.TodayAsync(x.SiteId, ct), critical ? Severity.Major : Severity.Minor,
             new NcrDetails(x.ProductId, x.PartId, x.PartRevision, x.SupplierId, x.CustomerId, Process: x.Process, BatchNumber: x.BatchNumber, SerialNumber: x.SerialNumber, DetectionPoint: "First article inspection",
                 Requirement: string.Join("; ", failed.Select(c => $"balloon {c.BalloonNumber}: {c.RequirementSource}")))), ct);
@@ -610,10 +628,21 @@ public sealed class FaiService(AppDbContext db, ModuleSupport m, INumberingServi
         return n;
     }
 
-    public async Task<Capa> CreateCapaAsync(Guid id, string title, string problem, CancellationToken ct)
+    public async Task<Capa> CreateCapaAsync(Guid id, string title, string problem, CancellationToken ct, Guid? ownerId = null)
     {
         var x = await LoadEditAsync(id, ct);
-        return await capas.CreateAsync(new CreateCapaRequest(title, problem, "Corrective", "First article inspection", x.SiteId, x.DepartmentId, null), ct, (RecordType, id));
+        return await capas.CreateAsync(new CreateCapaRequest(title, problem, "Corrective", "First article inspection", x.SiteId, x.DepartmentId, ownerId), ct, (RecordType, id));
+    }
+
+    /// <summary>Assign (or change) the reviewer before submission; the reviewer must be active, hold fai.edit at the site and differ from the inspector.</summary>
+    public async Task AssignReviewerAsync(Guid id, Guid reviewerId, CancellationToken ct)
+    {
+        var x = await LoadEditAsync(id, ct);
+        if (x.Status is not (FaiStatus.Draft or FaiStatus.InProgress or FaiStatus.Returned)) throw new ConflictException("The reviewer can only change before submission.");
+        if (reviewerId == x.InspectorId) throw new AppException("The reviewer must be someone other than the inspector.");
+        await m.RequireActiveUserAsync(reviewerId, "reviewer", ct);
+        x.ReviewerId = reviewerId;
+        await db.SaveChangesAsync(ct);
     }
 
     // ---------- helpers ----------
