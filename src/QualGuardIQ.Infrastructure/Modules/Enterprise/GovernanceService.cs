@@ -35,7 +35,7 @@ public sealed record ApiClientCreated(Guid Id, string ClientId, string Secret, s
 
 /// <summary>Retention governance, business continuity exercises, scoped notification channels and broadcasts, public API clients and the Part 11 readiness check.</summary>
 public sealed class GovernanceService(AppDbContext db, ModuleSupport m, INumberingService numbers, IFileStorage storage, IHttpClientFactory http, INotifier notifier,
-    IOptions<IdentityOptions> identity, UserManager<ApplicationUser> users, RetentionEngine retention, ISecurityEventLogger security, QualGuardIQ.Application.Security.IAccessService access)
+    IOptions<IdentityOptions> identity, RetentionEngine retention, ISecurityEventLogger security, QualGuardIQ.Application.Security.IAccessService access)
 {
     public const string ContinuityType = "ContinuityExercise";
 

@@ -21,7 +21,7 @@ public sealed record DecisionInput(string Topic, string Decision);
 /// PendingApproval → Approved (immutable). Inputs are a frozen JSON snapshot so the historical review never changes
 /// when underlying records do.
 /// </summary>
-public sealed class ReviewService(AppDbContext db, ModuleSupport m, INumberingService numbers, WorkflowService workflow, ActionService actions, KpiCalculator calc, INotifier notifier)
+public sealed class ReviewService(AppDbContext db, ModuleSupport m, INumberingService numbers, WorkflowService workflow, KpiCalculator calc, INotifier notifier)
 {
     public const string RecordType = "ManagementReview";
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);

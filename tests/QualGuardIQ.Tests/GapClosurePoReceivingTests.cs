@@ -71,7 +71,7 @@ public sealed class GapClosurePoReceivingTests(TestApp app)
         var p1 = await PartAsync(w, "VB-", "C"); var p2 = await PartAsync(w, "SL-", "A");
         var poNo = "PO-" + w.Tag;
         var poId = (await (await w.Eng.PostOkAsync("/api/production/purchase-orders", new { number = poNo, supplierId = w.Supplier, orderedOn = Today.AddDays(-5), siteId = w.Site,
-            lines = new[] { new { lineNumber = 1, partId = (Guid?)p1, itemNumber = "VB-" + w.Tag, revision = "C", quantity = 100m, dueOn = (DateOnly?)Today }, new { lineNumber = 2, partId = (Guid?)p2, itemNumber = "SL-" + w.Tag, revision = (string?)"A", quantity = 50m, dueOn = (DateOnly?)Today } } })).JsonAsync()).Id();
+            lines = new[] { new { lineNumber = 1, partId = (Guid?)p1, itemNumber = "VB-" + w.Tag, revision = (string?)"C", quantity = 100m, dueOn = (DateOnly?)Today }, new { lineNumber = 2, partId = (Guid?)p2, itemNumber = "SL-" + w.Tag, revision = (string?)"A", quantity = 50m, dueOn = (DateOnly?)Today } } })).JsonAsync()).Id();
 
         // Scanned PO label resolves to the open lines with remaining and maximum quantity.
         var po = await w.Eng.GetElAsync($"/api/warehouse/receiving/po?number=QG:PO:{poNo}");

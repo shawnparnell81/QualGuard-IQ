@@ -69,7 +69,7 @@ public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegi
         foreach (var a in escalations)
         {
             var assignee = await db.Users.Where(u => u.Id == a.AssigneeId).Select(u => u.DisplayName).FirstOrDefaultAsync(ct);
-            items.Add(($"escalate:{a.Id}", a.CreatedById.Value, $"Escalation: action {a.Number} assigned to {assignee} is {today.DayNumber - a.DueDate.DayNumber} days overdue: {a.Title}", "Action", a.Id));
+            items.Add(($"escalate:{a.Id}", a.CreatedById!.Value, $"Escalation: action {a.Number} assigned to {assignee} is {today.DayNumber - a.DueDate.DayNumber} days overdue: {a.Title}", "Action", a.Id));
             a.EscalatedAt = DateTimeOffset.UtcNow;
         }
         if (escalations.Count > 0) await db.SaveChangesAsync(ct);

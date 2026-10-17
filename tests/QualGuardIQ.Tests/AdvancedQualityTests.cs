@@ -289,7 +289,7 @@ public sealed class AdvancedQualityTests(TestApp app)
         var ncr = await w.Eng.GetElAsync($"/api/ncrs/{ncrId}");
         Assert.Equal(w.PartId, ncr.Id("partId"));
         var detail = await w.Eng.GetElAsync($"/api/spc/{chartId}");
-        Assert.NotNull(detail.GetProperty("result").GetProperty("capability").GetProperty("cpk").GetDecimal());
+        Assert.Equal(System.Text.Json.JsonValueKind.Number, detail.GetProperty("result").GetProperty("capability").GetProperty("cpk").ValueKind);
 
         // CAPA from the NCR
         var capaId = (await (await w.Eng.PostOkAsync("/api/capas", new { title = "Bore drift on Mill 3", problemStatement = "SPC out of control on bore", capaType = "Corrective", source = "NCR", siteId = w.Site })).JsonAsync()).Id();
