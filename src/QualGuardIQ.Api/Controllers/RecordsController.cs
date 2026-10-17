@@ -259,6 +259,24 @@ public sealed class FilesController(AttachmentService files) : ControllerBase
     [HttpPost("{id:guid}/retention")]
     public async Task<IActionResult> Retain(Guid id, RetentionRequest r, CancellationToken ct) { await files.RetainAsync(id, r, ct); return NoContent(); }
 
+    /// <summary>Playback copies of a video: converter configuration, status, metadata and errors.</summary>
+    [HttpGet("{id:guid}/renditions")]
+    public Task<QualGuardIQ.Infrastructure.Modules.Video.VideoStatus> Renditions(Guid id, [FromServices] QualGuardIQ.Infrastructure.Modules.Video.VideoConversionService video, CancellationToken ct) => video.StatusAsync(id, ct);
+
+    /// <summary>Requeues failed conversions and queues missing formats (edit permission on the owning record).</summary>
+    [HttpPost("{id:guid}/renditions/retry")]
+    public Task<QualGuardIQ.Infrastructure.Modules.Video.VideoStatus> RetryRenditions(Guid id, [FromServices] QualGuardIQ.Infrastructure.Modules.Video.VideoConversionService video, CancellationToken ct) => video.RetryAsync(id, ct);
+
+    /// <summary>Streams a validated playback copy (same permission rules as the original, byte ranges for seeking).</summary>
+    [HttpGet("{id:guid}/playback/{format}")]
+    public async Task<IActionResult> Playback(Guid id, VideoFormat format, [FromServices] QualGuardIQ.Infrastructure.Modules.Video.VideoConversionService video, CancellationToken ct)
+    {
+        var (meta, content) = await video.OpenAsync(id, format, ct);
+        Response.Headers.CacheControl = "private, no-store";
+        Response.Headers["Content-Security-Policy"] = "default-src 'none'; sandbox";
+        return File(content, meta.ContentType ?? "video/mp4", enableRangeProcessing: true);
+    }
+
     [HttpPost("{id:guid}/archive")]
     public async Task<IActionResult> Archive(Guid id, CancellationToken ct)
     {

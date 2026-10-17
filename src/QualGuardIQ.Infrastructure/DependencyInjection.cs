@@ -310,6 +310,9 @@ public static class DependencyInjection
         s.AddSingleton<Modules.Intelligence.AiHttpProvider>();
         s.AddScoped<Modules.Intelligence.AiBoundaryService>();
         s.AddScoped<Jobs.AiRetentionJob>();
+        s.AddSingleton<Modules.Video.VideoConverterProvider>();
+        s.AddScoped<Modules.Video.VideoConversionService>();
+        s.AddScoped<Jobs.VideoConversionJob>();
         s.AddScoped<Services.RunAsContext>();
         s.AddScoped<Jobs.CarrierTrackingJob>();
         s.AddScoped<Modules.Production.ProductionService>();

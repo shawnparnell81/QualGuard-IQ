@@ -72,3 +72,41 @@ public class RecordTag
     public Guid OwnerId { get; set; }
     public Guid TagId { get; set; }
 }
+
+public enum VideoFormat { Mp4 = 0, WebM = 1 }
+public enum RenditionStatus { Queued = 0, Processing = 1, Succeeded = 2, Failed = 3 }
+
+/// <summary>
+/// Playback copy of an uploaded video (MP4 H.264/AAC, or WebM VP9/Opus where configured). The original attachment is never changed. A rendition
+/// is Succeeded only after the output has been probed and matches the source duration; otherwise it is retried and finally Failed, and the
+/// original stays available for download.
+/// </summary>
+public class VideoRendition : Entity, IAudited
+{
+    public Guid AttachmentId { get; set; }
+    public VideoFormat Format { get; set; }
+    public RenditionStatus Status { get; set; }
+    public int Attempts { get; set; }
+    public DateTimeOffset QueuedAt { get; set; }
+    public DateTimeOffset? NextAttemptAt { get; set; }
+    public DateTimeOffset? StartedAt { get; set; }
+    public DateTimeOffset? CompletedAt { get; set; }
+    /// <summary>Last failure, or why the rendition is waiting (for example no converter configured).</summary>
+    public string? Error { get; set; }
+    public string? StorageKey { get; set; }
+    public string? ContentType { get; set; }
+    public long? SizeBytes { get; set; }
+    public string? Sha256 { get; set; }
+    public decimal? DurationSeconds { get; set; }
+    public int? Width { get; set; }
+    public int? Height { get; set; }
+    public string? VideoCodec { get; set; }
+    public string? AudioCodec { get; set; }
+    /// <summary>Source metadata read by the probe.</summary>
+    public string? SourceVideoCodec { get; set; }
+    public decimal? SourceDurationSeconds { get; set; }
+    /// <summary>Another rendition with identical source content whose output was reused (no duplicate conversion).</summary>
+    public Guid? ReusedFromId { get; set; }
+    public string? Converter { get; set; }
+    public string AuditLabel => $"{Format} playback copy";
+}

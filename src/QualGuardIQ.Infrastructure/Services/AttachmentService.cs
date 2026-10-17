@@ -110,6 +110,9 @@ public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMa
         buffer.Position = 0;
         await storage.PutAsync(a.StorageKey, buffer, a.ContentType, ct);
         db.Attachments.Add(a);
+        if (isVideo) // playback copies are made in the background; the original is kept as uploaded
+            foreach (var f in Modules.Video.VideoConverterProvider.Formats(config))
+                db.VideoRenditions.Add(new VideoRendition { AttachmentId = a.Id, Format = f, QueuedAt = DateTimeOffset.UtcNow });
         await db.SaveChangesAsync(ct);
         return a;
     }
