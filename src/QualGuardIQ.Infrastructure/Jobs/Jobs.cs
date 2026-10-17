@@ -57,3 +57,24 @@ public sealed class DocumentReleaseJob(DocumentService docs, ILogger<DocumentRel
         if (n > 0) log.LogInformation("Released {Count} document revisions that reached their effective date", n);
     }
 }
+
+/// <summary>Runs due ERP syncs (every minute; each mapping has its own cron). One run at a time across workers.</summary>
+public sealed class ErpSyncJob(QualGuardIQ.Infrastructure.Modules.Integration.ErpSyncService sync)
+{
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 600)]
+    public Task RunAsync(CancellationToken ct) => sync.RunDueAsync(ct);
+}
+
+/// <summary>Evaluates active alert rules every 15 minutes.</summary>
+public sealed class AlertJob(QualGuardIQ.Infrastructure.Modules.Analytics.AlertService alerts)
+{
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 600)]
+    public Task RunAsync(CancellationToken ct) => alerts.EvaluateAsync(ct);
+}
+
+/// <summary>Writes due incremental dataset exports (NDJSON) to object storage.</summary>
+public sealed class DataExportJob(QualGuardIQ.Infrastructure.Modules.Analytics.DatasetService data)
+{
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 1800)]
+    public Task RunAsync(CancellationToken ct) => data.RunExportsAsync(ct);
+}

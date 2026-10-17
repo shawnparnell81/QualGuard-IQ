@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.DataProtection;
 using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Application.Security;
 using QualGuardIQ.Infrastructure.Persistence;
@@ -68,6 +69,7 @@ public static class DependencyInjection
             services.AddScoped<IApprovalHandler>(sp => new RevisionApprovalHandler(revType, () => sp.GetRequiredService<DocumentService>()));
         }
         AddQuality(services);
+        AddIntegration(services, config);
         return services;
     }
 
@@ -175,5 +177,47 @@ public static class DependencyInjection
         P<ScrapEvent>(Modules.Apqp.CoqService.ScrapType, Permissions.CoqView, Permissions.CoqEdit, x => (x.Number, "Scrap: " + x.Reason, "Recorded", $"/coq/scrap?id={x.Id}", true));
         P<ReworkOrder>(Modules.Apqp.CoqService.ReworkType, Permissions.CoqView, Permissions.CoqEdit, x => (x.Number, "Rework: " + (x.Instructions.Length > 80 ? x.Instructions[..80] : x.Instructions), x.Status.ToString(), $"/coq/rework/{x.Id}", x.Status is ReworkStatus.Validated or ReworkStatus.PendingApproval));
     }
-}
 
+    private static void AddIntegration(IServiceCollection s, IConfiguration config)
+    {
+        var dp = s.AddDataProtection().SetApplicationName("QualGuardIQ");
+        if (config["DataProtection:KeyPath"] is { Length: > 0 } keyPath) dp.PersistKeysToFileSystem(new System.IO.DirectoryInfo(keyPath));
+        s.AddSingleton<Modules.Integration.SecretProtector>();
+        s.AddSingleton<Modules.Integration.ErpHttpHandlerProvider>();
+        s.AddSingleton<Modules.Integration.Erp.ErpTokenCache>();
+        foreach (var a in new Modules.Integration.Erp.IErpAdapter[] { new Modules.Integration.Erp.NetSuiteAdapter(), new Modules.Integration.Erp.SapAdapter(), new Modules.Integration.Erp.OracleAdapter(),
+            new Modules.Integration.Erp.DynamicsAdapter(), new Modules.Integration.Erp.AcumaticaAdapter(), new Modules.Integration.Erp.InforAdapter(), new Modules.Integration.Erp.EpicorAdapter(),
+            new Modules.Integration.Erp.PlexAdapter(), new Modules.Integration.Erp.DelmiaWorksAdapter(), new Modules.Integration.Erp.CustomRestAdapter(), new Modules.Integration.Erp.CsvExchangeAdapter() })
+            s.AddSingleton(a);
+        s.AddSingleton<Modules.Integration.ErpAdapterRegistry>();
+        s.AddScoped<Modules.Integration.ErpSyncService>();
+        s.AddScoped<Jobs.ErpSyncJob>();
+        s.AddScoped<IRecordTypeProvider>(sp => new QualityRecordProvider<Domain.Integration.ErpChange>(sp.GetRequiredService<AppDbContext>(), Modules.Integration.ErpSyncService.ChangeType,
+            Permissions.IntegrationsView, Permissions.IntegrationsEdit, x => (x.Number, $"{x.Action} {x.Entity} {x.ExternalId}", x.Status.ToString(), $"/integrations/changes/{x.Id}", x.Status != Domain.Integration.ChangeQueueStatus.Pending)));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Integration.ErpSyncService.ChangeType,
+            (id, ct) => sp.GetRequiredService<Modules.Integration.ErpSyncService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Integration.ErpSyncService>().OnRejectedAsync(id, c, ct)));
+
+        s.AddScoped<Modules.Traceability.TraceabilityService>();
+        s.AddScoped<Modules.Traceability.RecallService>();
+        s.AddScoped<Modules.Traceability.ReturnService>();
+        s.AddScoped<Modules.Traceability.BarcodeService>();
+        s.AddScoped<Modules.Production.ProductionService>();
+        s.AddScoped<Modules.Analytics.KpiEngine>();
+        s.AddScoped<Modules.Analytics.CopilotService>();
+        s.AddScoped<Modules.Analytics.AlertService>();
+        s.AddScoped<Modules.Analytics.DatasetService>();
+        s.AddScoped<Jobs.AlertJob>();
+        s.AddScoped<Jobs.DataExportJob>();
+        void P<T>(string type, string view, string edit, Func<T, (string, string, string, string, bool)> d) where T : QualGuardIQ.Domain.Common.Entity, QualGuardIQ.Domain.Common.ISiteScoped =>
+            s.AddScoped<IRecordTypeProvider>(sp => new QualityRecordProvider<T>(sp.GetRequiredService<AppDbContext>(), type, view, edit, d));
+        P<Lot>(Modules.Traceability.TraceabilityService.LotType, Permissions.TraceView, Permissions.TraceEdit, x => (x.Number, $"{x.Kind} lot", x.Status.ToString(), $"/trace/lots/{x.Id}", false));
+        P<SerialUnit>(Modules.Traceability.TraceabilityService.SerialType, Permissions.TraceView, Permissions.TraceEdit, x => (x.SerialNumber, "Serial " + x.SerialNumber, x.Status.ToString(), $"/trace/serials/{x.Id}", false));
+        P<Recall>(Modules.Traceability.RecallService.RecordType, Permissions.RecallsView, Permissions.RecallsEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/trace/recalls/{x.Id}", x.Status is RecallStatus.PendingClosure or RecallStatus.Closed or RecallStatus.Cancelled));
+        P<CustomerReturn>(Modules.Traceability.ReturnService.ReturnType, Permissions.ReturnsView, Permissions.ReturnsEdit, x => (x.Number, x.ReturnReason.Length > 120 ? x.ReturnReason[..120] : x.ReturnReason, x.Status.ToString(), $"/trace/returns/{x.Id}", x.Status is ReturnStatus.Closed or ReturnStatus.Cancelled));
+        P<WarrantyClaim>(Modules.Traceability.ReturnService.WarrantyType, Permissions.ReturnsView, Permissions.ReturnsEdit, x => (x.Number, x.FailureMode, x.Status.ToString(), $"/trace/warranty/{x.Id}", x.Status is not (WarrantyClaimStatus.Submitted or WarrantyClaimStatus.UnderReview)));
+        P<WorkOrder>(Modules.Production.ProductionService.WorkOrderType, Permissions.ProductionView, Permissions.ProductionEdit, x => (x.Number, $"{x.ItemNumber} × {x.Quantity:0.##}", x.Status.ToString(), $"/production/work-orders/{x.Id}", x.Status is WorkOrderStatus.Closed or WorkOrderStatus.Cancelled));
+        P<PurchaseOrder>(Modules.Production.ProductionService.PurchaseOrderType, Permissions.ProductionView, Permissions.ProductionEdit, x => (x.Number, "Purchase order " + x.Number, x.Status.ToString(), $"/production/purchase-orders/{x.Id}", false));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Traceability.RecallService.RecordType,
+            (id, ct) => sp.GetRequiredService<Modules.Traceability.RecallService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Traceability.RecallService>().OnRejectedAsync(id, c, ct)));
+    }
+}
