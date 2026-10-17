@@ -25,6 +25,8 @@ public class ActionItem : Entity, IAudited, ISiteScoped
     public DateTimeOffset? VerifiedAt { get; set; }
     public Guid? VerifiedById { get; set; }
     public string? VerificationNotes { get; set; }
+    /// <summary>When the overdue action was escalated to the person who raised it.</summary>
+    public DateTimeOffset? EscalatedAt { get; set; }
     public string AuditLabel => $"action {Number}";
 }
 

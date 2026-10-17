@@ -56,6 +56,14 @@ public static class Permissions
     public const string ChangesApprove = "changes.approve";
     /// <summary>Record maintenance, repairs, breakdowns and qualification on equipment (viewing equipment needs calibration.view).</summary>
     public const string MaintenanceEdit = "maintenance.edit";
+    public const string ObjectivesView = "objectives.view";
+    public const string ObjectivesEdit = "objectives.edit";
+    /// <summary>Approve quality objectives and their targets.</summary>
+    public const string ObjectivesApprove = "objectives.approve";
+    public const string ReviewsView = "reviews.view";
+    public const string ReviewsEdit = "reviews.edit";
+    /// <summary>Approve management review records.</summary>
+    public const string ReviewsApprove = "reviews.approve";
     public const string RisksView = "risks.view";
     public const string RisksEdit = "risks.edit";
     /// <summary>Accept residual risk, reopen risks.</summary>

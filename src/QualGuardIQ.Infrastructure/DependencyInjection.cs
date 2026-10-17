@@ -103,6 +103,15 @@ public static class DependencyInjection
         s.AddScoped<Modules.Complaints.ComplaintService>();
         s.AddScoped<Modules.Risks.RiskService>();
         s.AddScoped<MaintenanceService>();
+        s.AddScoped<Modules.Objectives.KpiCalculator>();
+        s.AddScoped<Modules.Objectives.ObjectiveService>();
+        s.AddScoped<Modules.Objectives.ReviewService>();
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Objectives.ObjectiveService.RecordType,
+            (id, ct) => sp.GetRequiredService<Modules.Objectives.ObjectiveService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Objectives.ObjectiveService>().OnRejectedAsync(id, c, ct)));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Objectives.ReviewService.RecordType,
+            (id, ct) => sp.GetRequiredService<Modules.Objectives.ReviewService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Objectives.ReviewService>().OnRejectedAsync(id, c, ct)));
+        P<QualityObjective>(Modules.Objectives.ObjectiveService.RecordType, Permissions.ObjectivesView, Permissions.ObjectivesEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/objectives/{x.Id}", x.Status is ObjectiveStatus.PendingApproval or ObjectiveStatus.Achieved or ObjectiveStatus.Retired));
+        P<ManagementReview>(Modules.Objectives.ReviewService.RecordType, Permissions.ReviewsView, Permissions.ReviewsEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/reviews/{x.Id}", x.Status is ReviewStatus.PendingApproval or ReviewStatus.Approved or ReviewStatus.Cancelled));
         P<MaintenanceEvent>(MaintenanceService.EventType, Permissions.CalibrationView, Permissions.MaintenanceEdit, x => (x.Number, $"{x.Kind} maintenance", x.Kind.ToString(), $"/calibration/equipment/{x.EquipmentId}", true));
         s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Risks.RiskService.RecordType,
             (id, ct) => sp.GetRequiredService<Modules.Risks.RiskService>().OnApprovedAsync(id, ct),
