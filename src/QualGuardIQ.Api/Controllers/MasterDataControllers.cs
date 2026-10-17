@@ -73,8 +73,9 @@ public sealed class MasterDataController(AppDbContext db, MasterDataService svc,
         if (!string.IsNullOrWhiteSpace(q)) query = query.Where(x => EF.Functions.ILike(x.PartNumber + " " + x.Name + " " + (x.Material ?? ""), $"%{q.Trim()}%"));
         return await Paging.PageAsync(query.OrderBy(x => x.PartNumber).Select(x => new
         {
-            x.Id, x.PartNumber, x.Name, x.Revision, x.PartType, x.UnitOfMeasure, x.Status, x.HasSpecialCharacteristics,
+            x.Id, x.PartNumber, x.Name, x.Revision, x.PartType, x.UnitOfMeasure, x.Status, x.HasSpecialCharacteristics, x.ProductId,
             Product = db.Products.Where(p => p.Id == x.ProductId).Select(p => p.Number).FirstOrDefault(),
+            ProductName = db.Products.Where(p => p.Id == x.ProductId).Select(p => p.Name).FirstOrDefault(),
             SiteCode = db.Sites.Where(s => s.Id == x.SiteId).Select(s => s.Code).First()
         }), page, pageSize, ct);
     }
