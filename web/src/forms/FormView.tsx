@@ -245,10 +245,12 @@ export function GridTable({ t, value, onChange, ctx, compact }: { t: TableDef; v
 }
 
 function SignatureLine({ s, ctx }: { s: FormDef['signatures'][number]; ctx: Ctx }) {
-  const st = ctx.signatures?.find((x) => x.key === s.key);
+  const mine = (ctx.signatures ?? []).filter((x) => x.key === s.key);
+  const st = mine.find((x) => x.valid !== false);
+  const lapsed = !st ? mine.filter((x) => x.valid === false).at(-1) : undefined;
   const signed = !!st?.signedAt;
   return (
-    <Paper variant="outlined" sx={{ p: 1.5, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '160px 1fr auto' }, gap: 1.5, alignItems: 'center', borderLeft: 3, borderLeftColor: signed ? (st?.valid === false ? 'warning.main' : 'success.main') : 'divider' }}>
+    <Paper variant="outlined" sx={{ p: 1.5, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '160px 1fr auto' }, gap: 1.5, alignItems: 'center', borderLeft: 3, borderLeftColor: signed ? 'success.main' : lapsed ? 'warning.main' : 'divider' }} aria-label={`Signature ${s.label}`}>
       <Box>
         <Typography variant="body2" fontWeight={600}>{s.label}{s.required ? ' *' : ''}</Typography>
         <Typography variant="caption" color="text.secondary">{roleLabel[s.role] ?? s.role}</Typography>
@@ -256,11 +258,13 @@ function SignatureLine({ s, ctx }: { s: FormDef['signatures'][number]; ctx: Ctx 
       <Box sx={{ minWidth: 0 }}>
         {signed
           ? <><Typography variant="body2" sx={{ fontFamily: '"Segoe Script", "Brush Script MT", cursive', fontSize: 18, color: 'primary.dark' }}>{st!.signerName}</Typography>
-              <Typography variant="caption" color="text.secondary">{new Date(st!.signedAt!).toLocaleString()} · {st!.meaning ?? s.meaning}{st?.valid === false ? ' · signed content has changed, signature no longer valid' : ''}</Typography></>
-          : <><Box sx={{ borderBottom: 1, borderColor: 'text.disabled', height: 22, maxWidth: 360 }} /><Typography variant="caption" color="text.secondary">{s.meaning}</Typography></>}
+              <Typography variant="caption" color="text.secondary">{new Date(st!.signedAt!).toLocaleString()} · {st!.meaning ?? s.meaning}</Typography></>
+          : <><Box sx={{ borderBottom: 1, borderColor: 'text.disabled', height: 22, maxWidth: 360 }} /><Typography variant="caption" color="text.secondary">{s.meaning}</Typography>
+              {lapsed && <Typography variant="caption" color="warning.dark" sx={{ display: 'block' }}>Signed by {lapsed.signerName} on {new Date(lapsed.signedAt!).toLocaleString()}; the content changed afterwards, so it must be signed again.</Typography>}</>}
       </Box>
       {!signed && ctx.onSign && ctx.canSign?.(s.key) && <Button size="small" variant="outlined" onClick={() => ctx.onSign!(s.key)}>Sign</Button>}
-      {signed && <Chip size="small" color={st?.valid === false ? 'warning' : 'success'} label={st?.valid === false ? 'Invalidated' : 'Signed'} />}
+      {signed && <Chip size="small" color="success" label="Signed" />}
+      {!signed && lapsed && !(ctx.onSign && ctx.canSign?.(s.key)) && <Chip size="small" color="warning" label="Invalidated" />}
     </Paper>
   );
 }

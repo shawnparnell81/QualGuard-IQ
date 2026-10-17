@@ -212,6 +212,10 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
             <Stack gap={2}>
               <DataTable data={d.revisions} columns={revCols} onRowClick={(r) => { setRevId(r.id); setTab('files'); }} />
               {draftEditable && <DraftEditor rev={rev} onSaved={refresh} formTemplate={kind === 2} />}
+              {kind === 2 && rev.fieldSchema && <Stack direction="row" gap={1}>
+                <Button variant="outlined" size="small" href={`/api/forms/templates/revisions/${rev.id}/pdf?style=standardized`} target="_blank">Print rev {rev.revision}</Button>
+                {parseDefinition(rev.fieldSchema).layout && <Button variant="outlined" size="small" href={`/api/forms/templates/revisions/${rev.id}/pdf?style=original`} target="_blank">Print original look</Button>}
+              </Stack>}
               {kind === 2 && !draftEditable && rev.fieldSchema && (isV2(rev.fieldSchema) ? <Paper sx={{ p: 3 }}><FormView def={parseDefinition(rev.fieldSchema)} values={{}} onChange={() => {}} readOnly /></Paper> : <SchemaPreview schema={rev.fieldSchema} />)}
             </Stack>
           )}

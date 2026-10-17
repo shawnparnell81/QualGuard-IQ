@@ -49,3 +49,14 @@ export const post = <T = unknown,>(url: string, body?: unknown) => api<T>('POST'
 export const put = <T = unknown,>(url: string, body: unknown) => api<T>('PUT', url, body);
 export const del = <T = unknown,>(url: string) => api<T>('DELETE', url);
 export const resetCsrf = () => { csrf = null; };
+
+/** POST that returns a file (PDF previews and exports). Errors are read as problem details like other calls. */
+export async function postBlob(url: string, body: unknown): Promise<Blob> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': await ensureCsrf() };
+  const r = await fetch(url, { method: 'POST', headers, credentials: 'same-origin', body: JSON.stringify(body) });
+  if (!r.ok) {
+    const p = await r.json().catch(() => ({}));
+    throw new ApiError(r.status, p.title ?? `Request failed (${r.status})`, p.errors, p.code, p);
+  }
+  return r.blob();
+}
