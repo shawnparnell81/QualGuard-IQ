@@ -194,4 +194,28 @@ public sealed class PlatformDesignerTests(TestApp app)
         Assert.Contains(changes.EnumerateArray(), c => c.Id() == change.Id() && c.Int("status") == 2);
         await admin.DeleteAsync($"/api/governance/data/rules/{r1}"); await admin.DeleteAsync($"/api/governance/data/rules/{r2}");
     }
+
+    [Fact]
+    public async Task Recovery_center_tracks_backups_tests_and_procedures_and_reports_recoverability()
+    {
+        var admin = await app.AdminAsync();
+        var site = await app.CreateSiteAsync();
+        var (_, user) = await app.CreateUserAsync([Permissions.MasterDataView], site);
+        Assert.Equal(HttpStatusCode.Forbidden, (await user.GetAsync("/api/platform/dr/status")).StatusCode);
+        var fp = await admin.GetElAsync("/api/platform/dr/fingerprint");
+        Assert.True(fp.GetProperty("counts").GetProperty("audit_entries").GetInt64() > 0);
+        var now = DateTimeOffset.UtcNow;
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync("/api/platform/dr/backups", new { kind = 0, label = "bad", location = "/x", method = "pg_dump", startedAt = now, completedAt = now.AddMinutes(-5), sizeBytes = 1, sha256 = (string?)null, state = 0 })).StatusCode);
+        var dbBackup = (await (await admin.PostOkAsync("/api/platform/dr/backups", new { kind = 0, label = "nightly-db", location = "/backups/qgiq/database.dump", method = "pg_dump custom format", startedAt = now.AddMinutes(-3), completedAt = now.AddMinutes(-2), sizeBytes = 1048576, sha256 = new string('a', 64), state = 0, fingerprint = fp })).JsonAsync()).Id();
+        await admin.PostOkAsync("/api/platform/dr/backups", new { kind = 1, label = "nightly-files", location = "/backups/qgiq/files", method = "mc mirror", startedAt = now.AddMinutes(-3), completedAt = now.AddMinutes(-1), sizeBytes = 2048, sha256 = (string?)null, state = 0 });
+        var st = await admin.GetElAsync("/api/platform/dr/status");
+        Assert.False(st.GetProperty("recoverable").GetBoolean());
+        Assert.Contains(st.GetProperty("gaps").EnumerateArray(), g => g.GetString()!.Contains("test restore"));
+        Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/platform/dr/backups/{dbBackup}/verify", new { passed = true, notes = "verify-backup.sh PASS: checksum, migration and row counts match" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync("/api/platform/dr/objectives", new { scenario = "Database server loss " + Guid.NewGuid().ToString("N")[..4], rtoMinutes = 240, rpoMinutes = 1440, procedureDocumentId = (Guid?)null })).StatusCode);
+        st = await admin.GetElAsync("/api/platform/dr/status");
+        Assert.DoesNotContain(st.GetProperty("gaps").EnumerateArray(), g => g.GetString()!.Contains("test restore"));
+        Assert.Contains(st.GetProperty("objectives").EnumerateArray(), o => !o.GetProperty("met").GetBoolean() && o.GetProperty("issues").EnumerateArray().Any(i => i.GetString()!.Contains("procedure")));
+        Assert.Equal(JsonValueKind.Object, st.GetProperty("lastVerifiedBackup").ValueKind);
+    }
 }

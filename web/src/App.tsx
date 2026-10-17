@@ -14,7 +14,7 @@ import { CommandCenter, FactoryCenter, EnterpriseRiskMatrix, KpiFramework, Digit
 import { KnowledgeLibrary, KnowledgeDetail, Playbooks, ProcessMap, Maturity } from './pages/Knowledge';
 import { AdvisorChat, DocumentAssistant, AuditPrep } from './pages/Advisor';
 import { MyWorkspace, ActivityStream, QualityCalendar, Resources, Genealogy, ReportDesigner, DashboardDesigner, Webhooks, PlatformHealth, SecurityOps, ModuleRegistry } from './pages/Platform';
-import { WorkflowDesigner, FormDesigner, RulesStudio, DataGovernance } from './pages/PlatformStudio';
+import { WorkflowDesigner, FormDesigner, RulesStudio, DataGovernance, RecoveryCenter } from './pages/PlatformStudio';
 import { Login } from './pages/Login';
 
 const LiveMonitor = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.LiveMonitor })));
@@ -356,6 +356,7 @@ export function App() {
               <Route path="/platform/forms" element={<FormDesigner />} />
               <Route path="/platform/rules" element={<RulesStudio />} />
               <Route path="/platform/governance" element={<DataGovernance />} />
+              <Route path="/platform/recovery" element={<RecoveryCenter />} />
               <Route path="/governance" element={<Part11Readiness />} />
               <Route path="/governance/retention" element={<RetentionPage />} />
               <Route path="/governance/continuity" element={<ContinuityPage />} />

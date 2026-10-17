@@ -67,6 +67,10 @@ Compose includes a ClamAV daemon; the API scans every upload with it.
 
 Infected files are always rejected. Buckets and containers are private; files are served only through the API.
 
+## Guides
+
+User, administrator, deployment, recovery, API and architecture guides are in [`docs/guides`](docs/guides/README.md).
+
 ## Tests
 
 - Backend: `dotnet test` (uses `QMS_TEST_DB` or the local `qgiq_test` database; the test database is dropped and
