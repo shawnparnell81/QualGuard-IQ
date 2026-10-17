@@ -27,8 +27,6 @@ public sealed record PeriodQuery(DateOnly? From, DateOnly? To);
 /// sample and record defects, inspection.approve to disposition lots. Supplier analytics need suppliers.view on the supplier.
 /// </summary>
 [ApiController, Authorize, Route("api/v1/aql"), Tags("AQL Inspections")]
-[ProducesResponseType<ProblemDetails>(400, "application/problem+json"), ProducesResponseType<ProblemDetails>(404, "application/problem+json"), ProducesResponseType<ProblemDetails>(409, "application/problem+json"),
- ProducesResponseType<ProblemDetails>(422, "application/problem+json"), ProducesResponseType<ProblemDetails>(500, "application/problem+json")]
 public sealed class AqlController(AppDbContext db, AqlService svc, CapaService capas, ModuleSupport m) : ControllerBase
 {
     // ---------- Plans ----------
@@ -78,7 +76,7 @@ public sealed class AqlController(AppDbContext db, AqlService svc, CapaService c
         return await PlanDto(planId, ct);
     }
     /// <summary>Removes an unused draft; active or used plans are deactivated instead.</summary>
-    [HttpDelete("plans/{planId:guid}", Name = "deleteAqlPlan")] [RequirePermission(Permissions.AdminOrganization)] [Tags("AQL Plans")]
+    [HttpDelete("plans/{planId:guid}", Name = "deleteAqlPlan")] [ProducesResponseType(StatusCodes.Status204NoContent)] [RequirePermission(Permissions.AdminOrganization)] [Tags("AQL Plans")]
     public async Task<IActionResult> DeletePlan(Guid planId, CancellationToken ct) { await svc.DeletePlanAsync(planId, ct); return NoContent(); }
     /// <summary>Extension: create the next draft revision (future table revisions without application changes).</summary>
     [HttpPost("plans/{planId:guid}/revise")] [RequirePermission(Permissions.AdminOrganization)] [Tags("AQL Plans")] [ProducesResponseType<AQLPlan>(201)]
@@ -104,7 +102,7 @@ public sealed class AqlController(AppDbContext db, AqlService svc, CapaService c
     public async Task<ActionResult<AQLPlanDetail>> AddRow(Guid planId, AQLPlanDetailInput r, CancellationToken ct) => CreatedAtRoute("listAqlPlanRows", new { planId }, ToDto(await svc.AddRowAsync(planId, ToInput(r), ct)));
     [HttpPut("plans/{planId:guid}/levels/{levelId:guid}", Name = "updateAqlPlanRow")] [RequirePermission(Permissions.AdminOrganization)] [Tags("AQL Plans")]
     public async Task<AQLPlanDetail> UpdateRow(Guid planId, Guid levelId, AQLPlanDetailInput r, CancellationToken ct) => ToDto(await svc.UpdateRowAsync(planId, levelId, ToInput(r), ct));
-    [HttpDelete("plans/{planId:guid}/levels/{levelId:guid}", Name = "deleteAqlPlanRow")] [RequirePermission(Permissions.AdminOrganization)] [Tags("AQL Plans")]
+    [HttpDelete("plans/{planId:guid}/levels/{levelId:guid}", Name = "deleteAqlPlanRow")] [ProducesResponseType(StatusCodes.Status204NoContent)] [RequirePermission(Permissions.AdminOrganization)] [Tags("AQL Plans")]
     public async Task<IActionResult> DeleteRow(Guid planId, Guid levelId, CancellationToken ct) { await svc.DeleteRowAsync(planId, levelId, ct); return NoContent(); }
 
     /// <summary>Extension: the plan's sampling table pivoted by level and AQL.</summary>
@@ -257,7 +255,7 @@ public sealed class AqlController(AppDbContext db, AqlService svc, CapaService c
     [HttpPut("inspections/{inspectionId:guid}", Name = "updateAqlInspection")] [RequirePermission(Permissions.InspectionEdit)]
     public async Task<AQLInspection> Update(Guid inspectionId, AQLInspectionInput r, CancellationToken ct) { await svc.UpdateAsync(inspectionId, ToInput(r), ct); return await Dto(inspectionId, ct); }
     /// <summary>Cancels a lot that has not reached a decision (the record is kept).</summary>
-    [HttpDelete("inspections/{inspectionId:guid}", Name = "deleteAqlInspection")] [RequirePermission(Permissions.InspectionEdit)]
+    [HttpDelete("inspections/{inspectionId:guid}", Name = "deleteAqlInspection")] [ProducesResponseType(StatusCodes.Status204NoContent)] [RequirePermission(Permissions.InspectionEdit)]
     public async Task<IActionResult> Cancel(Guid inspectionId, CancellationToken ct) { await svc.CancelAsync(inspectionId, ct); return NoContent(); }
 
     private async Task Expect(AqlInspection a, long? v) { await Task.CompletedTask; if (v is { } e && e != a.RowVersion) throw new ConflictException("The lot was changed by someone else; reload it and try again."); }
@@ -302,24 +300,24 @@ public sealed class AqlController(AppDbContext db, AqlService svc, CapaService c
     [HttpPut("inspections/{inspectionId:guid}/defects/{defectId:guid}", Name = "updateInspectionDefect")] [RequirePermission(Permissions.InspectionEdit)] [Tags("Defects")]
     public async Task<InspectionDefect> UpdateDefect(Guid inspectionId, Guid defectId, InspectionDefectInput r, CancellationToken ct) =>
         await DefectDto(await svc.UpdateDefectAsync(inspectionId, defectId, new DefectInput(r.DefectCategoryId, r.QuantityFound, r.Description, r.SampleUnitNumber, r.AttachmentIds), ct), ct);
-    [HttpDelete("inspections/{inspectionId:guid}/defects/{defectId:guid}", Name = "deleteInspectionDefect")] [RequirePermission(Permissions.InspectionEdit)] [Tags("Defects")]
+    [HttpDelete("inspections/{inspectionId:guid}/defects/{defectId:guid}", Name = "deleteInspectionDefect")] [ProducesResponseType(StatusCodes.Status204NoContent)] [RequirePermission(Permissions.InspectionEdit)] [Tags("Defects")]
     public async Task<IActionResult> DeleteDefect(Guid inspectionId, Guid defectId, CancellationToken ct) { await svc.DeleteDefectAsync(inspectionId, defectId, ct); return NoContent(); }
 
     // ---------- NCR / CAPA / links ----------
 
     [HttpPost("inspections/{inspectionId:guid}/ncr", Name = "createNCRFromAql")] [RequirePermission(Permissions.NcrEdit)] [Tags("Integrations")] [ProducesResponseType<LinkedRecord>(201)]
-    public async Task<ActionResult<LinkedRecord>> CreateNcr(Guid inspectionId, CreateLinkedRecordRequest? r, CancellationToken ct)
+    public async Task<ActionResult<LinkedRecord>> CreateNcr(Guid inspectionId, CreateLinkedRecordRequest r, CancellationToken ct)
     {
-        var n = await svc.CreateNcrAsync(inspectionId, r?.Title, r?.Description, r?.OwnerId, ct);
+        var n = await svc.CreateNcrAsync(inspectionId, r.Title, r.Description, r.OwnerId, ct);
         return CreatedAtRoute("listAqlLinkedRecords", new { inspectionId }, new LinkedRecord(LinkedRecordTypeCode.NCR, n.Id, n.Number, "Nonconformance", n.Title));
     }
     [HttpPost("inspections/{inspectionId:guid}/capa", Name = "createCAPAFromAql")] [RequirePermission(Permissions.CapaEdit)] [Tags("Integrations")] [ProducesResponseType<LinkedRecord>(201)]
-    public async Task<ActionResult<LinkedRecord>> CreateCapa(Guid inspectionId, CreateLinkedRecordRequest? r, CancellationToken ct)
+    public async Task<ActionResult<LinkedRecord>> CreateCapa(Guid inspectionId, CreateLinkedRecordRequest r, CancellationToken ct)
     {
         var a = await svc.LoadAsync(inspectionId, true, ct);
-        var c = await capas.CreateAsync(new CreateCapaRequest(string.IsNullOrWhiteSpace(r?.Title) ? $"Corrective action for AQL lot {a.InspectionNumber}" : r.Title,
-            string.IsNullOrWhiteSpace(r?.Description) ? $"AQL lot {a.InspectionNumber} ({a.PlanLabel}): {a.Rationale ?? "corrective action required"}" : r.Description,
-            "Corrective", "AQL inspection", a.SiteId, a.DepartmentId, r?.OwnerId), ct, (AqlService.RecordType, a.Id));
+        var c = await capas.CreateAsync(new CreateCapaRequest(string.IsNullOrWhiteSpace(r.Title) ? $"Corrective action for AQL lot {a.InspectionNumber}" : r.Title,
+            string.IsNullOrWhiteSpace(r.Description) ? $"AQL lot {a.InspectionNumber} ({a.PlanLabel}): {a.Rationale ?? "corrective action required"}" : r.Description,
+            "Corrective", "AQL inspection", a.SiteId, a.DepartmentId, r.OwnerId), ct, (AqlService.RecordType, a.Id));
         return CreatedAtRoute("listAqlLinkedRecords", new { inspectionId }, new LinkedRecord(LinkedRecordTypeCode.CAPA, c.Id, c.Number, "Corrective action", c.Title));
     }
     private RecordsController Shared() { var c = ActivatorUtilities.CreateInstance<RecordsController>(HttpContext.RequestServices); c.ControllerContext = ControllerContext; return c; }
@@ -442,8 +440,6 @@ public sealed class AqlController(AppDbContext db, AqlService svc, CapaService c
 /// <summary>FAI and AQL dashboards and reports (v1): thin routes over the shared report engine (reports.view plus the module's view permission; scoped to the caller's sites).
 /// Dashboards and JSON reports return a MetricSeries; reports also export csv (the full table) and pdf. xlsx is not produced (400).</summary>
 [ApiController, Authorize, Route("api/v1"), Tags("Dashboards")]
-[ProducesResponseType<ProblemDetails>(400, "application/problem+json"), ProducesResponseType<ProblemDetails>(404, "application/problem+json"), ProducesResponseType<ProblemDetails>(409, "application/problem+json"),
- ProducesResponseType<ProblemDetails>(422, "application/problem+json"), ProducesResponseType<ProblemDetails>(500, "application/problem+json")]
 public sealed class FaiAqlReportsController(global::QualGuardIQ.Infrastructure.Modules.Reports.ReportService reports, AppDbContext db, ICurrentUser current, ModuleSupport m) : ControllerBase
 {
     private async Task<global::QualGuardIQ.Infrastructure.Modules.Reports.ReportResult> Run(string key, DateOnly? from, DateOnly? to, Guid? siteId, CancellationToken ct, Guid? supplierId = null, Guid? productId = null)

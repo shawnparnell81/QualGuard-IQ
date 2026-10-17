@@ -37,8 +37,6 @@ public sealed record FaiSummaryDto(Guid Id, string Number, string Title, FaiType
 /// come from the shared engines; bulk actions run the single-record action per id with the same gates.
 /// </summary>
 [ApiController, Authorize, Route("api/v1/fai"), Tags("FAI")]
-[ProducesResponseType<ProblemDetails>(400, "application/problem+json"), ProducesResponseType<ProblemDetails>(404, "application/problem+json"), ProducesResponseType<ProblemDetails>(409, "application/problem+json"),
- ProducesResponseType<ProblemDetails>(422, "application/problem+json"), ProducesResponseType<ProblemDetails>(500, "application/problem+json")]
 public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport m, AttachmentService files) : ControllerBase
 {
     // ---------- helpers ----------
@@ -228,13 +226,13 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
     }
 
     /// <summary>Deletes (cancels) a draft without results; history is never removed.</summary>
-    [HttpDelete("{faiId:guid}", Name = "deleteFai")] [RequirePermission(Permissions.FaiEdit)]
+    [HttpDelete("{faiId:guid}", Name = "deleteFai")] [ProducesResponseType(StatusCodes.Status204NoContent)] [RequirePermission(Permissions.FaiEdit)]
     public async Task<IActionResult> Delete(Guid faiId, CancellationToken ct) { await svc.CancelAsync(faiId, ct); return NoContent(); }
 
     [HttpPost("{faiId:guid}/copy")] [RequirePermission(Permissions.FaiEdit)] [ProducesResponseType<FAI>(201)]
-    public async Task<ActionResult<FAI>> Copy(Guid faiId, CopyRequest? r, CancellationToken ct) { var x = await svc.CopyAsync(faiId, r?.Type, ct); return CreatedAtRoute("getFai", new { faiId = x.Id }, await Dto(x.Id, ct)); }
+    public async Task<ActionResult<FAI>> Copy(Guid faiId, CopyRequest? r, CancellationToken ct) { var x = await svc.CopyAsync(faiId, r.Type, ct); return CreatedAtRoute("getFai", new { faiId = x.Id }, await Dto(x.Id, ct)); }
     [HttpPost("{faiId:guid}/clone")] [RequirePermission(Permissions.FaiEdit)] [ProducesResponseType<FAI>(201)]
-    public async Task<ActionResult<FAI>> Clone(Guid faiId, CloneRequest? r, CancellationToken ct) { var x = await svc.CloneAsync(faiId, r?.ChangedBalloons, ct); return CreatedAtRoute("getFai", new { faiId = x.Id }, await Dto(x.Id, ct)); }
+    public async Task<ActionResult<FAI>> Clone(Guid faiId, CloneRequest? r, CancellationToken ct) { var x = await svc.CloneAsync(faiId, r.ChangedBalloons, ct); return CreatedAtRoute("getFai", new { faiId = x.Id }, await Dto(x.Id, ct)); }
 
     // ---------- Workflow ----------
 
@@ -521,7 +519,7 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
     [HttpPut("{faiId:guid}/characteristics/{characteristicId:guid}", Name = "updateFaiCharacteristic")] [RequirePermission(Permissions.FaiEdit)] [Tags("FAI Characteristics")]
     public async Task<FAICharacteristic> UpdateCharacteristic(Guid faiId, Guid characteristicId, FAICharacteristicInput r, CancellationToken ct)
     { await svc.UpdateCharacteristicAsync(faiId, characteristicId, ToInput(r), ct); return await CharDto(faiId, characteristicId, ct); }
-    [HttpDelete("{faiId:guid}/characteristics/{characteristicId:guid}", Name = "deleteFaiCharacteristic")] [RequirePermission(Permissions.FaiEdit)] [Tags("FAI Characteristics")]
+    [HttpDelete("{faiId:guid}/characteristics/{characteristicId:guid}", Name = "deleteFaiCharacteristic")] [ProducesResponseType(StatusCodes.Status204NoContent)] [RequirePermission(Permissions.FaiEdit)] [Tags("FAI Characteristics")]
     public async Task<IActionResult> DeleteCharacteristic(Guid faiId, Guid characteristicId, CancellationToken ct) { await svc.DeleteCharacteristicAsync(faiId, characteristicId, ct); return NoContent(); }
 
     // ---------- Results ----------
@@ -571,7 +569,7 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
         var x = await svc.UpdateResultAsync(faiId, resultId, ToInput(r) with { Sequence = null }, ct);
         return await ResultDto(x, ct);
     }
-    [HttpDelete("{faiId:guid}/results/{resultId:guid}", Name = "deleteCharacteristicResult")] [RequirePermission(Permissions.FaiEdit)] [Tags("FAI Characteristics")]
+    [HttpDelete("{faiId:guid}/results/{resultId:guid}", Name = "deleteCharacteristicResult")] [ProducesResponseType(StatusCodes.Status204NoContent)] [RequirePermission(Permissions.FaiEdit)] [Tags("FAI Characteristics")]
     public async Task<IActionResult> DeleteResult(Guid faiId, Guid resultId, CancellationToken ct) { await svc.DeleteResultAsync(faiId, resultId, ct); return NoContent(); }
     /// <summary>Record many results; each row is validated exactly like a single result and reported individually.</summary>
     [HttpPost("{faiId:guid}/bulk-results")] [RequirePermission(Permissions.FaiEdit)]
@@ -622,7 +620,7 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
         var (meta, content) = await files.OpenAsync(attachmentId, ct);
         return File(content, meta.ContentType, meta.FileName);
     }
-    [HttpDelete("{faiId:guid}/attachments/{attachmentId:guid}", Name = "deleteFaiAttachment")] [RequirePermission(Permissions.FaiEdit)]
+    [HttpDelete("{faiId:guid}/attachments/{attachmentId:guid}", Name = "deleteFaiAttachment")] [ProducesResponseType(StatusCodes.Status204NoContent)] [RequirePermission(Permissions.FaiEdit)]
     public async Task<IActionResult> DeleteAttachment(Guid faiId, Guid attachmentId, CancellationToken ct)
     {
         if (!await db.Attachments.AnyAsync(a => a.Id == attachmentId && a.OwnerType == FaiService.RecordType && a.OwnerId == faiId, ct)) throw new NotFoundException("File");
@@ -642,21 +640,21 @@ public sealed class FaiController(AppDbContext db, FaiService svc, ModuleSupport
 
     /// <summary>Raise an NCR for failed characteristics without one (all by default; characteristicIds narrows it). title/description/ownerId default from the FAI.</summary>
     [HttpPost("{faiId:guid}/ncr", Name = "createNCRFromFai")] [RequirePermission(Permissions.NcrEdit)] [Tags("Integrations")] [ProducesResponseType<LinkedRecord>(201)]
-    public async Task<ActionResult<LinkedRecord>> CreateNcr(Guid faiId, CreateLinkedRecordRequest? r, CancellationToken ct)
+    public async Task<ActionResult<LinkedRecord>> CreateNcr(Guid faiId, CreateLinkedRecordRequest r, CancellationToken ct)
     {
-        var n = await svc.CreateNcrAsync(faiId, r?.CharacteristicIds, r?.Title, ct, r?.Description, r?.OwnerId);
+        var n = await svc.CreateNcrAsync(faiId, r.CharacteristicIds, r.Title, ct, r.Description, r.OwnerId);
         return CreatedAtRoute("listFaiLinkedRecords", new { faiId }, new LinkedRecord(LinkedRecordTypeCode.NCR, n.Id, n.Number, "Nonconformance", n.Title));
     }
     [HttpPost("{faiId:guid}/capa", Name = "createCAPAFromFai")] [RequirePermission(Permissions.CapaEdit)] [Tags("Integrations")] [ProducesResponseType<LinkedRecord>(201)]
-    public async Task<ActionResult<LinkedRecord>> CreateCapa(Guid faiId, CreateLinkedRecordRequest? r, CancellationToken ct)
+    public async Task<ActionResult<LinkedRecord>> CreateCapa(Guid faiId, CreateLinkedRecordRequest r, CancellationToken ct)
     {
         var x = await svc.LoadEditAsync(faiId, ct);
-        var title = string.IsNullOrWhiteSpace(r?.Title) ? $"Corrective action for FAI {x.Number}" : r.Title;
-        var c = await svc.CreateCapaAsync(faiId, title, string.IsNullOrWhiteSpace(r?.Description) ? $"FAI {x.Number} ({x.PartNumber} rev {x.PartRevision}) needs corrective action." : r.Description, ct, r?.OwnerId);
+        var title = string.IsNullOrWhiteSpace(r.Title) ? $"Corrective action for FAI {x.Number}" : r.Title;
+        var c = await svc.CreateCapaAsync(faiId, title, string.IsNullOrWhiteSpace(r.Description) ? $"FAI {x.Number} ({x.PartNumber} rev {x.PartRevision}) needs corrective action." : r.Description, ct, r.OwnerId);
         return CreatedAtRoute("listFaiLinkedRecords", new { faiId }, new LinkedRecord(LinkedRecordTypeCode.CAPA, c.Id, c.Number, "Corrective action", c.Title));
     }
     [HttpPost("{faiId:guid}/create-ncr")] [RequirePermission(Permissions.NcrEdit)] [Tags("Integrations")]
-    public Task<ActionResult<LinkedRecord>> CreateNcrLegacy(Guid faiId, CreateLinkedRecordRequest? r, CancellationToken ct) => CreateNcr(faiId, r, ct);
+    public Task<ActionResult<LinkedRecord>> CreateNcrLegacy(Guid faiId, CreateLinkedRecordRequest r, CancellationToken ct) => CreateNcr(faiId, r, ct);
 
 
     /// <summary>Records linked through the shared link engine (NCRs, CAPAs, changes, prior FAIs …) plus the header relationships (product, part, drawing, specification, supplier, customer, change, plan). Records the caller cannot view are omitted.</summary>
