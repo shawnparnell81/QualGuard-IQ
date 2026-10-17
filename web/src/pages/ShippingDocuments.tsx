@@ -118,13 +118,13 @@ function IssuedTable({ rows, title }: { rows: GeneratedRow[]; title: string }) {
     catch (e) { setRep({ ...rep, [id]: (e as Error).message }); }
   };
   return <Section title={title}>
-    <Table size="small" aria-label={title}><TableHead><TableRow><TableCell>Document</TableCell><TableCell>Reference</TableCell><TableCell>Template</TableCell><TableCell>Pages</TableCell><TableCell>Issued</TableCell><TableCell>SHA-256</TableCell><TableCell /></TableRow></TableHead>
+    <Box sx={{ overflowX: 'auto' }}><Table size="small" aria-label={title}><TableHead><TableRow><TableCell>Document</TableCell><TableCell>Reference</TableCell><TableCell>Template</TableCell><TableCell>Pages</TableCell><TableCell>Issued</TableCell><TableCell>SHA-256</TableCell><TableCell /></TableRow></TableHead>
       <TableBody>{rows.map((g) => <TableRow key={g.id}><TableCell>{docKinds[g.kind]}</TableCell><TableCell sx={{ fontFamily: mono }}>{g.reference}</TableCell>
         <TableCell>{g.builtIn ? 'Built-in layout' : `${g.templateCode} rev ${g.templateRevision}`}</TableCell><TableCell>{g.pages}</TableCell><TableCell>{fmtDateTime(g.generatedAt)}{g.generatedBy ? ` · ${g.generatedBy}` : ''}</TableCell>
         <TableCell sx={{ fontFamily: mono, fontSize: 12 }} title={g.pdfSha256}>{g.pdfSha256.slice(0, 12)}…</TableCell>
         <TableCell><Stack direction="row" gap={1} alignItems="center"><Button size="small" href={`/api/shipping/generated-documents/${g.id}`} target="_blank">Open</Button><Button size="small" onClick={() => reproduce(g.id)}>Reproduce</Button>
           {rep[g.id] && <Typography variant="caption" color={rep[g.id].endsWith('identical') ? 'success.main' : 'error'}>{rep[g.id]}</Typography>}</Stack></TableCell></TableRow>)}
-        {rows.length === 0 && <TableRow><TableCell colSpan={7}><Typography color="text.secondary">None issued yet.</Typography></TableCell></TableRow>}</TableBody></Table>
+        {rows.length === 0 && <TableRow><TableCell colSpan={7}><Typography color="text.secondary">None issued yet.</Typography></TableCell></TableRow>}</TableBody></Table></Box>
   </Section>;
 }
 

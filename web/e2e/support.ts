@@ -84,5 +84,7 @@ export async function shot(page: Page, name: string) {
   if (!dir) return;
   fs.mkdirSync(dir, { recursive: true });
   await page.waitForLoadState('networkidle').catch(() => undefined);
-  await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: true });
+  await page.evaluate(() => window.scrollTo(0, 0)); // the sticky top bar would otherwise sit mid-image
+  const wide = (page.viewportSize()?.width ?? 1440) >= 900; // phone captures keep the screen size
+  await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: wide });
 }

@@ -377,7 +377,7 @@ export function ReceiptDetailPage() {
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Receiving', to: '/warehouse/receipts' }, { label: r.number }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{r.number}</span><StatusChip status={receiptStatus[r.status]} /></Stack>}
       tabs={[{ label: 'Lines & inspection', value: 'lines' }, { label: 'Labels', value: 'labels' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 280px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Box>
           {tab === 'lines' && <Stack gap={1.5}>{d.data!.lines.map((x) => (
             <Paper key={x.line.id} variant="outlined" sx={{ p: 2, borderLeft: 5, borderLeftColor: x.line.status === 2 ? '#2E6B5E' : x.line.status === 1 ? '#B4842A' : x.line.status >= 3 ? '#A4473B' : 'divider' }}>
@@ -475,7 +475,7 @@ export function HoldDetail() {
         {can('inventory.edit') && d.status === 0 && <Button variant="outlined" component={RouterLink} to={`/warehouse/mrb/new?hold=${d.id}`}>Send to MRB</Button>}
         {can('inventory.edit') && d.status === 0 && <Button variant="contained" onClick={() => setRel(true)}>Request release</Button>}</Stack>}>
       {d.status === 1 && <Alert severity="info" sx={{ mb: 2 }}>Release is waiting for e-signed approval. Approvers see it in their approvals inbox.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 280px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Box>{tab === 'labels' ? <LabelPanel refType="InventoryHold" refId={d.id} siteId={d.siteId} types={[8, 9]} title="Hold and quarantine labels" /> : tab === 'scope' ? <DataTable data={stock.data ?? []} empty="No stock currently in scope."
           columns={[{ header: 'Part', accessorKey: 'partNumber', cell: mnum }, { header: 'Lot / serial', accessorFn: (r) => r.serialNumber ?? r.lotNumber ?? '', cell: mnum }, { header: 'Location', accessorKey: 'locationCode', cell: mnum },
             { header: 'Status', accessorKey: 'status', cell: (x) => <StockBadge status={x.getValue()} held={x.row.original.held} /> }, { header: 'On hand', accessorKey: 'onHand', cell: (x) => qty(x.getValue()) }]} />
@@ -564,7 +564,7 @@ export function MrbDetail() {
       tabs={[{ label: 'Case', value: 'case' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={can('inventory.edit') && (d.status === 0 || d.status === 3) && <Button variant="contained" onClick={() => setProp(true)}>Propose disposition</Button>}>
       <Chevrons steps={mrbSteps} at={mrbStep(d.status)} failed={d.status === 3 ? 'Proposal rejected' : d.status === 5 ? 'Cancelled' : undefined} />
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 300px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 300px' }, gap: 2 }}>
         <Box>
           {tab === 'case' && <Section title="Disposition">
             {d.disposition ? <Stack gap={1}><Typography variant="h6">{mrbDisp[d.disposition]}</Typography><Typography>{d.justification}</Typography>
@@ -624,7 +624,7 @@ export function RtvDetail() {
         {d.status === 1 && <Button variant="contained" onClick={() => setDlg('credit')}>Record credit</Button>}
         {(d.status === 1 || d.status === 2) && <Button variant="outlined" onClick={async () => { await post(`/api/warehouse/supplier-returns/${id}/close`, {}); refresh(); }}>Close</Button>}</Stack>}>
       <Chevrons steps={['Open', 'Shipped', 'Credited', 'Closed']} at={d.status <= 3 ? d.status : -1} failed={d.status === 4 ? 'Cancelled' : undefined} />
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 300px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 300px' }, gap: 2 }}>
         <Box>
           {tab === 'ret' && <Section title="Reason"><Typography>{d.reason}</Typography>
             <Stack direction="row" gap={1} sx={{ mt: 2 }}>{d.mrbCaseId && <Button component={RouterLink} to={`/warehouse/mrb/${d.mrbCaseId}`}>MRB case</Button>}{d.ncrId && <Button component={RouterLink} to={`/ncr/${d.ncrId}`}>NCR</Button>}</Stack></Section>}
@@ -802,7 +802,7 @@ export function TransferDetail() {
         {can('inventory.edit') && d.status === 0 && <Button variant="contained" onClick={() => setShip(true)}>Ship</Button>}
         {can('inventory.edit') && d.status === 1 && <Button variant="contained" onClick={async () => { await post(`/api/warehouse/transfers/${id}/receive`, { notes: '' }); refresh(); }}>Receive</Button>}</Stack>}>
       <Chevrons steps={['Open', 'In transit', 'Received']} at={d.status <= 2 ? d.status : -1} failed={d.status === 3 ? 'Cancelled' : undefined} />
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 300px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 300px' }, gap: 2 }}>
         <Box>
           {tab === 'custody' && <Custody url={`/api/warehouse/transfers/${id}/custody`} />}
           {tab === 'ledger' && <RefLedger refType="StockTransfer" refId={d.id} />}

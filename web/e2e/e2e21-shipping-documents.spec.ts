@@ -92,6 +92,7 @@ test.describe('E2E 21: shipping document templates', () => {
     await viewer.getByRole('link', { name: `PL${t}` }).click();
     await expect(button(viewer, 'New revision')).toHaveCount(0);
     await expect(button(viewer, 'Edit details')).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(1440); // nothing wider than the desktop
     await shot(page, '15-shipping-document-template');
   });
 });
