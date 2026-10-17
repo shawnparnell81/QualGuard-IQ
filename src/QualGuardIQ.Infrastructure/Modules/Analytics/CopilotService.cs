@@ -23,7 +23,7 @@ public sealed record ExecutiveSummary(string Period, string Text, List<string> H
 /// Quality assistant. Built-in, deterministic and permission-aware: questions are parsed into structured queries over the
 /// records the user can already view (TryScopeAsync), similarity uses TF-IDF cosine over NCR text, suggestions come from the
 /// root causes and actions of linked CAPAs on similar NCRs, and every estimate carries a confidence based on sample size.
-/// No external language model is called and no record is created, closed or approved.
+/// No external text-generation service is called and no record is created, closed or approved.
 /// </summary>
 public sealed class CopilotService(AppDbContext db, ModuleSupport m, KpiEngine kpis)
 {
