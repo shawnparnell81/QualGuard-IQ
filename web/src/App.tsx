@@ -67,6 +67,12 @@ const RiskNew = lazy(() => import('./pages/Risks').then((m) => ({ default: m.Ris
 const RiskDetail = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskDetail })));
 const RiskMatrix = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskMatrix })));
 const RiskSettingsPage = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskSettingsPage })));
+const ObjectiveList = lazy(() => import('./pages/Objectives').then((m) => ({ default: m.ObjectiveList })));
+const ObjectiveNew = lazy(() => import('./pages/Objectives').then((m) => ({ default: m.ObjectiveNew })));
+const ObjectiveDetail = lazy(() => import('./pages/Objectives').then((m) => ({ default: m.ObjectiveDetail })));
+const ReviewList = lazy(() => import('./pages/Reviews').then((m) => ({ default: m.ReviewList })));
+const ReviewNew = lazy(() => import('./pages/Reviews').then((m) => ({ default: m.ReviewNew })));
+const ReviewDetail = lazy(() => import('./pages/Reviews').then((m) => ({ default: m.ReviewDetail })));
 const ComplaintTrends = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintTrends })));
 const ScarList = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.ScarList })));
 const ScarDetail = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.ScarDetail })));
@@ -159,6 +165,12 @@ export function App() {
               <Route path="/inspection/plans/new" element={<PlanNew />} />
               <Route path="/inspection/plans/:id" element={<PlanDetail />} />
               <Route path="/inspection/:id" element={<InspectionDetail />} />
+              <Route path="/objectives" element={<ObjectiveList />} />
+              <Route path="/objectives/new" element={<ObjectiveNew />} />
+              <Route path="/objectives/:id" element={<ObjectiveDetail />} />
+              <Route path="/reviews" element={<ReviewList />} />
+              <Route path="/reviews/new" element={<ReviewNew />} />
+              <Route path="/reviews/:id" element={<ReviewDetail />} />
               <Route path="/risks" element={<RiskList />} />
               <Route path="/risks/new" element={<RiskNew />} />
               <Route path="/risks/matrix" element={<RiskMatrix />} />

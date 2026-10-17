@@ -9,6 +9,7 @@ import SpeedOutlined from '@mui/icons-material/SpeedOutlined';
 import LocalShippingOutlined from '@mui/icons-material/LocalShippingOutlined';
 import SupportAgentOutlined from '@mui/icons-material/SupportAgentOutlined';
 import GridViewOutlined from '@mui/icons-material/GridViewOutlined';
+import FlagOutlined from '@mui/icons-material/FlagOutlined';
 import RuleOutlined from '@mui/icons-material/RuleOutlined';
 import ChangeCircleOutlined from '@mui/icons-material/ChangeCircleOutlined';
 
@@ -221,6 +222,26 @@ export const modules: ModuleDef[] = [
         { label: 'Record complaint', path: '/complaints/new', permission: 'complaints.edit' },
       ] },
       { label: 'Trends', path: '/complaints/trends' },
+    ],
+  },
+  {
+    key: 'objectives',
+    label: 'Performance',
+    description: 'Quality objectives, KPIs with controlled calculations, and management reviews',
+    icon: <FlagOutlined fontSize="small" />,
+    basePath: '/objectives',
+    permissions: ['objectives.view', 'reviews.view'],
+    sidebar: [
+      { label: 'Objectives & KPIs', path: '/objectives', permission: 'objectives.view', children: [
+        { label: 'Active', path: '/objectives' },
+        { label: 'Drafts', path: '/objectives?view=0' },
+        { label: 'All', path: '/objectives?view=all' },
+        { label: 'New objective', path: '/objectives/new', permission: 'objectives.edit' },
+      ] },
+      { label: 'Management review', path: '/reviews', permission: 'reviews.view', children: [
+        { label: 'All reviews', path: '/reviews' },
+        { label: 'Schedule review', path: '/reviews/new', permission: 'reviews.edit' },
+      ] },
     ],
   },
   {
