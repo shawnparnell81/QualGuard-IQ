@@ -7,6 +7,7 @@ import { mono } from '../theme';
 import { mod } from './Enterprise';
 import { useAuth } from '../auth';
 import { useTypeLabel, useUsers } from '../components/Kit';
+import { VideoPlayer } from '../components/VideoPlayer';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const P = () => mod('platform');
@@ -618,7 +619,7 @@ export function ContentLibrary() {
         </Paper>
         {sel && <Paper sx={{ p: 2 }}>
           <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}><Typography variant="h3" sx={{ flex: 1 }}>{sel.fileName}</Typography><Button size="small" onClick={() => setSel(null)}>Close</Button></Stack>
-          {sel.kind === 'Video' && <Box component="video" key={sel.id} controls preload="metadata" src={`/api/files/${sel.id}?inline=true`} sx={{ width: '100%', maxHeight: 360, bgcolor: '#000', borderRadius: 1, mb: 1 }} />}
+          {sel.kind === 'Video' && <VideoPlayer key={sel.id} fileId={sel.id} fileName={sel.fileName} canEdit />}
           {sel.kind === 'Image' && <Box component="img" src={`/api/files/${sel.id}?inline=true`} alt={sel.fileName} sx={{ maxWidth: '100%', maxHeight: 360, borderRadius: 1, mb: 1 }} />}
           <Box sx={{ display: 'grid', gridTemplateColumns: '140px 1fr', rowGap: .5, mb: 2 }}>
             <Typography variant="caption" color="text.secondary">Record</Typography><Typography variant="body2"><a href={sel.ownerUrl}>{sel.ownerNumber}</a> {sel.ownerTitle}</Typography>

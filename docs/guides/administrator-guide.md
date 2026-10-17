@@ -125,3 +125,9 @@ features remain the default and the fallback. Drafts are off until the mode allo
 is enabled with a provider, and the provider has passed its connection test (external services also approved by a
 second person with `integrations.approve`). Restricted records are never sent, text is redacted, and every request
 is logged. See `docs/setup/generation-providers.md`.
+
+## Video playback copies
+
+Set `Video:FfmpegPath` (and optionally `Video:Formats=mp4,webm`) on the worker and API hosts to have uploaded videos
+converted into validated MP4 (and WebM) playback copies. The original is always kept. Without a converter, videos
+wait in the queue with that requirement shown in the content library. See `docs/setup/video-conversion.md`.
