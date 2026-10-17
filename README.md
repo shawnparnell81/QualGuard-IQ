@@ -10,7 +10,10 @@ The application and organization names are configuration (Organization settings,
 
 Document Control, Drawings (Products & Engineering), Controlled Forms, Nonconformances (NCR), CAPA, Audits,
 Training and Calibration, on shared engines for approvals with electronic signatures, actions, attachments,
-comments, record links, notifications, custom fields, search, numbering and the audit trail.
+comments, record links, tags, notifications, custom fields, search, numbering and the audit trail.
+
+Business dates (due dates, "today", overdue) follow each site's time zone (default `America/New_York`, set per site
+in Admin > Sites). Buttons for status changes are shown only when the server would allow the step.
 
 ## Layout
 
@@ -46,16 +49,33 @@ Requirements: .NET 10 SDK, PostgreSQL 18, MinIO.
 ```
 cd web
 npm install
-npm run dev        # http://localhost:5173, proxies /api to http://localhost:5080
+npm run dev        # http://localhost:5173, proxies /api to QGIQ_API_URL (default http://localhost:5080)
 ```
 
 ## Run with Docker
 
 Copy `.env.example` to `.env`, fill in every value, then `docker compose up --build`.
+Compose includes a ClamAV daemon; the API scans every upload with it.
+
+## File storage and malware scanning
+
+| Setting | Values |
+|---|---|
+| `Storage:Provider` | `S3` (default; MinIO locally, Amazon S3 by `ServiceUrl`/credentials) or `AzureBlob` (`Storage:ConnectionString`, `Storage:Container`) |
+| `MalwareScanning:Provider` | `None` (default, files marked NotScanned) or `ClamAV` (`MalwareScanning:ClamAV:Host`/`Port`, default 127.0.0.1:3310, or `Socket`) |
+| `MalwareScanning:AllowWhenUnavailable` | `false` (default): uploads are refused while the scanner cannot be reached |
+
+Infected files are always rejected. Buckets and containers are private; files are served only through the API.
 
 ## Tests
 
-`dotnet test` (uses `QMS_TEST_DB` or the local `qgiq_test` database; the test database is dropped and rebuilt).
+- Backend: `dotnet test` (uses `QMS_TEST_DB` or the local `qgiq_test` database; the test database is dropped and
+  rebuilt). Optional suites run when their service is configured: `QGIQ_CLAMAV=1` (clamd on 127.0.0.1:3310) and
+  `QMS_TEST_AZURE=UseDevelopmentStorage=true` (Azurite).
+- UI: `cd web && npx playwright install chromium && npm run test:e2e`. The run starts its own API on port 5081 against a
+  freshly created `qgiq_e2e` database (needs `psql` and a role allowed to create databases; see `web/e2e/serve-api.sh`
+  for the `E2E_*` settings) and a web dev server on port 5174. Set `E2E_CHROME` to use an installed Chrome.
+  The suite covers end-to-end flows 1-6, each as a permitted user and as read-only / unassigned users.
 
 ## Security model
 
