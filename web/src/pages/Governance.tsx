@@ -112,3 +112,60 @@ export function ApiAccessPage() {
     </ModuleWorkspace>
   );
 }
+
+/* ---------- security governance: access certification and deployments ---------- */
+const accessKinds = ['Security review', 'Risk assessment', 'Privileged access review', 'Access certification'];
+const deployScopes = ['Single plant', 'Multi-plant', 'Regional', 'Global'];
+const deployStatus = ['Planned', 'InProgress', 'Completed', 'RolledBack'];
+
+export function AccessReviews() {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ['access-reviews'], queryFn: () => get<any[]>('/api/security-governance/reviews') });
+  const [sel, setSel] = useState<string | null>(null); const [open, setOpen] = useState(false); const [done, setDone] = useState(false);
+  const det = useQuery({ queryKey: ['access-review', sel], enabled: !!sel, queryFn: () => get<any>(`/api/security-governance/reviews/${sel}`) });
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['access-reviews'] }); qc.invalidateQueries({ queryKey: ['access-review'] }); };
+  const r = useRunner(refresh);
+  const d = det.data;
+  return (
+    <ModuleWorkspace module={mod('governance')} crumbs={[{ label: 'Governance', to: '/governance' }, { label: 'Access reviews' }]} title="Access reviews and certification" actions={<Button variant="contained" onClick={() => setOpen(true)}>Start review</Button>}>
+      {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}
+      <Stack direction={{ xs: 'column', md: 'row' }} gap={2}>
+        <Stack gap={1} sx={{ width: { md: 300 } }}>{(q.data ?? []).map((a) => <Paper key={a.id} onClick={() => setSel(a.id)} sx={{ p: 1.25, cursor: 'pointer', borderLeft: 4, borderColor: sel === a.id ? 'primary.main' : a.status === 1 ? 'success.main' : 'warning.main' }}>
+          <Typography variant="caption" sx={{ fontFamily: mono }}>{a.number}</Typography><Typography variant="body2" sx={{ fontWeight: 600 }}>{a.title}</Typography><Typography variant="caption">{accessKinds[a.kind]} · {a.status === 1 ? 'Completed' : 'Open'}</Typography></Paper>)}
+          {q.data?.length === 0 && <Typography color="text.secondary">No reviews yet.</Typography>}</Stack>
+        <Box sx={{ flex: 1 }}>{d && <Section title={`${d.review.number} · ${d.kind}`} action={d.status === 'Open' ? <Button variant="contained" size="small" disabled={d.pending > 0} onClick={() => setDone(true)}>Complete ({d.pending} pending)</Button> : <Chip color="success" label="Completed" />}>
+          <DataTable data={d.items} empty="This review has no assignment snapshot."
+            columns={[{ header: 'User', accessorKey: 'userName' }, { header: 'Role', accessorKey: 'roleName' }, { header: 'Scope', accessorKey: 'scope' }, { header: 'Privileged', accessorKey: 'privileged', cell: (x) => (x.getValue() ? <Chip size="small" color="error" label="Privileged" /> : '') },
+              { header: 'Decision', id: 'd', cell: (x) => { const i = x.row.original as any; return d.status !== 'Open' ? ['Pending', 'Keep', 'Revoke'][i.decision] : <Stack direction="row" gap={0.5}>
+                <Button size="small" variant={i.decision === 1 ? 'contained' : 'outlined'} onClick={() => r.run(() => post(`/api/security-governance/reviews/${sel}/items/${i.id}`, { decision: 1, comment: null }))}>Keep</Button>
+                <Button size="small" color="error" variant={i.decision === 2 ? 'contained' : 'outlined'} onClick={() => { const c = window.prompt('Reason for revoking'); if (c) r.run(() => post(`/api/security-governance/reviews/${sel}/items/${i.id}`, { decision: 2, comment: c })); }}>Revoke</Button></Stack>; } }]} />
+        </Section>}</Box>
+      </Stack>
+      <StepDialog open={open} onClose={() => setOpen(false)} title="Start review" confirm="Start" intro="Access certification and privileged access reviews take a snapshot of current role assignments for keep / revoke decisions."
+        inputs={[{ name: 'title', label: 'Title' }, { name: 'kind', label: 'Kind', type: 'select', options: accessKinds.map((k, i) => [i, k]), initial: '3' }, { name: 'findings', label: 'Notes', type: 'multiline' }]}
+        onConfirm={async (v) => { const a = await post<any>('/api/security-governance/reviews', { title: v.title, kind: Number(v.kind), findings: v.findings || null }); refresh(); setSel(a.id); }} />
+      <StepDialog open={done} onClose={() => setDone(false)} title="Complete review" confirm="Complete and apply" danger intro="Revoked assignments are removed now, the users' sessions end, and every removal is written to the audit trail."
+        inputs={[{ name: 'text', label: 'Conclusion', type: 'multiline' }]} onConfirm={async (v) => { await post(`/api/security-governance/reviews/${sel}/complete`, { text: v.text || null }); refresh(); }} />
+    </ModuleWorkspace>
+  );
+}
+
+export function Deployments() {
+  const qc = useQueryClient(); const sites = useSites();
+  const q = useQuery({ queryKey: ['deployments'], queryFn: () => get<any[]>('/api/security-governance/deployments') });
+  const [open, setOpen] = useState(false);
+  const r = useRunner(() => qc.invalidateQueries({ queryKey: ['deployments'] }));
+  const next: Record<number, [number, string][]> = { 0: [[1, 'Start rollout']], 1: [[2, 'Mark complete'], [3, 'Roll back']] };
+  return (
+    <ModuleWorkspace module={mod('governance')} crumbs={[{ label: 'Governance', to: '/governance' }, { label: 'Deployments' }]} title="Release deployments" actions={<Button variant="contained" onClick={() => setOpen(true)}>Plan deployment</Button>}>
+      {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}
+      <DataTable data={q.data ?? []} empty="No deployments planned."
+        columns={[{ header: 'Number', accessorKey: 'number', cell: num }, { header: 'Version', accessorKey: 'version', cell: num }, { header: 'Scope', accessorKey: 'scope', cell: (x) => deployScopes[x.getValue()] }, { header: 'Sites', accessorKey: 'siteIds', cell: (x) => (x.getValue() as string[]).length },
+          { header: 'Planned', accessorKey: 'plannedOn', cell: (x) => fmtDate(x.getValue()) }, { header: 'Status', accessorKey: 'status', cell: (x) => <StatusChip status={deployStatus[x.getValue()]} /> },
+          { header: '', id: 'a', cell: (x) => (next[x.row.original.status] ?? []).map(([s, l]) => <Button key={s} size="small" onClick={() => r.run(() => post(`/api/security-governance/deployments/${x.row.original.id}/status`, { status: s, notes: null }))}>{l}</Button>) }]} />
+      <StepDialog open={open} onClose={() => setOpen(false)} title="Plan deployment" confirm="Plan"
+        inputs={[{ name: 'version', label: 'Version' }, { name: 'scope', label: 'Scope', type: 'select', options: deployScopes.map((s, i) => [i, s]), initial: '0' }, { name: 'site', label: 'Site (single plant / first site)', type: 'select', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) }, { name: 'on', label: 'Planned on', type: 'date' }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
+        onConfirm={async (v) => { await post('/api/security-governance/deployments', { version: v.version, scope: Number(v.scope), siteIds: v.site ? [v.site] : [], plannedOn: v.on || null, notes: v.notes || null }); qc.invalidateQueries({ queryKey: ['deployments'] }); }} />
+    </ModuleWorkspace>
+  );
+}
