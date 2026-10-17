@@ -19,6 +19,8 @@ public partial class AppDbContext
     public DbSet<MsaStudy> MsaStudies => Set<MsaStudy>();
     public DbSet<MsaMeasurement> MsaMeasurements => Set<MsaMeasurement>();
     public DbSet<MsaResultVersion> MsaResultVersions => Set<MsaResultVersion>();
+    public DbSet<MetricDenominatorConfig> MetricDenominators => Set<MetricDenominatorConfig>();
+    public DbSet<ProductionVolume> ProductionVolumes => Set<ProductionVolume>();
     public DbSet<LpaTemplate> LpaTemplates => Set<LpaTemplate>();
     public DbSet<LpaSchedule> LpaSchedules => Set<LpaSchedule>();
     public DbSet<LpaAudit> LpaAudits => Set<LpaAudit>();
@@ -136,6 +138,21 @@ public partial class AppDbContext
             e.HasOne<Equipment>().WithMany().HasForeignKey(x => x.EquipmentId).OnDelete(R);
             UserReq(e, x => x.OwnerId); SiteRefs(e);
         });
+        b.Entity<MetricDenominatorConfig>(e =>
+        {
+            e.ToTable("metric_denominators");
+            e.Property(x => x.Metric).HasMaxLength(60); e.Property(x => x.Sources).HasMaxLength(300);
+            e.HasIndex(x => new { x.Metric, x.SiteId }).IsUnique().AreNullsDistinct(false);
+            e.HasOne<Site>().WithMany().HasForeignKey(x => x.SiteId).OnDelete(R);
+        });
+        b.Entity<ProductionVolume>(e =>
+        {
+            e.ToTable("production_volumes");
+            e.Property(x => x.Quantity).HasPrecision(20, 6); e.Property(x => x.Notes).HasMaxLength(1000);
+            e.HasIndex(x => new { x.SiteId, x.PeriodStart });
+            e.ToTable(t => { t.HasCheckConstraint("ck_prodvol_qty", "\"Quantity\" >= 0"); t.HasCheckConstraint("ck_prodvol_period", "\"PeriodEnd\" >= \"PeriodStart\""); });
+            SiteRefs(e);
+        });
         b.Entity<MsaResultVersion>(e =>
         {
             e.ToTable("msa_result_versions");
@@ -239,6 +256,7 @@ public partial class AppDbContext
             e.HasIndex(x => new { x.Metric, x.PeriodType, x.PeriodStart, x.SiteId }).IsUnique().AreNullsDistinct(false);
             e.Property(x => x.Metric).HasMaxLength(60);
             e.Property(x => x.Value).HasPrecision(20, 6); e.Property(x => x.Numerator).HasPrecision(20, 6); e.Property(x => x.Denominator).HasPrecision(20, 6);
+            e.Property(x => x.DenominatorSource).HasMaxLength(120); e.Property(x => x.CalculationVersion).HasMaxLength(60);
         });
     }
 }

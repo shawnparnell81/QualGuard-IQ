@@ -382,7 +382,42 @@ public class QualityMetricFact : Entity
     public decimal Value { get; set; }
     public decimal? Numerator { get; set; }
     public decimal? Denominator { get; set; }
+    /// <summary>Where the denominator came from (for rate metrics), e.g. "MesProduction"; "Fallback:" prefix when a lower source was used.</summary>
+    public string? DenominatorSource { get; set; }
+    public string? CalculationVersion { get; set; }
     public DateTimeOffset ComputedAt { get; set; }
+}
+
+/// <summary>Volume sources a rate metric can divide by.</summary>
+public enum DenominatorSource { Produced = 0, Completed = 1, Received = 2, Inspected = 3, Shipped = 4, ManuallyApproved = 5, ErpProduction = 6, MesProduction = 7 }
+
+/// <summary>Which volume sources a rate metric uses, in order of preference (organization-wide when SiteId is null).</summary>
+public class MetricDenominatorConfig : Entity, IAudited
+{
+    public string Metric { get; set; } = "";
+    public Guid? SiteId { get; set; }
+    /// <summary>Comma-separated DenominatorSource names, most preferred first.</summary>
+    public string Sources { get; set; } = "";
+    /// <summary>When false only the first source is used; with no data the metric shows no value instead of falling back.</summary>
+    public bool AllowFallback { get; set; } = true;
+    public string AuditLabel => $"denominator for {Metric}";
+}
+
+public enum ProductionVolumeStatus { Pending = 0, Approved = 1, Rejected = 2 }
+
+/// <summary>A production volume entered by hand for a period (when neither MES nor ERP supplies it). Counts only once approved by a second person.</summary>
+public class ProductionVolume : Entity, IAudited, ISiteScoped
+{
+    public DateOnly PeriodStart { get; set; }
+    public DateOnly PeriodEnd { get; set; }
+    public decimal Quantity { get; set; }
+    public string? Notes { get; set; }
+    public ProductionVolumeStatus Status { get; set; }
+    public Guid? DecidedById { get; set; }
+    public DateTimeOffset? DecidedAt { get; set; }
+    public Guid SiteId { get; set; }
+    public Guid? DepartmentId { get; set; }
+    public string AuditLabel => $"production volume {PeriodStart:yyyy-MM-dd}..{PeriodEnd:yyyy-MM-dd}";
 }
 
 // ---------- External portals ----------

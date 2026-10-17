@@ -12,7 +12,11 @@ using QualGuardIQ.Infrastructure.Persistence;
 namespace QualGuardIQ.Infrastructure.Modules.Apqp;
 
 /// <summary>One dashboard metric: value (null when there is no data or no access), the counts behind it, and how it is defined.</summary>
-public sealed record Metric(string Key, string Label, decimal? Value, string Unit, decimal? Numerator, decimal? Denominator, string Definition, string? DrillUrl);
+public sealed record Metric(string Key, string Label, decimal? Value, string Unit, decimal? Numerator, decimal? Denominator, string Definition, string? DrillUrl,
+    string? DenominatorSource = null, string? DenominatorLabel = null, bool IsFallback = false, string? CalculationVersion = null);
+
+/// <summary>Resolved denominator for a rate metric: the source used, its quantity, whether it was a fallback, and a human label.</summary>
+public sealed record DenominatorChoice(DenominatorSource? Source, decimal Quantity, bool IsFallback, string Label);
 public sealed record GraphNode(string Type, Guid Id, string Number, string Title, string? Status, string Url, int Depth);
 public sealed record GraphEdge(string FromType, Guid FromId, string ToType, Guid ToId, string Label);
 
@@ -25,6 +29,122 @@ public sealed class InsightsService(AppDbContext db, ModuleSupport m, IAccessSer
     public static readonly string[] MetricKeys = ["fpy", "scrap_rate", "rework_rate", "defect_rate", "coq_total", "supplier_score", "audit_completion", "lpa_completion", "spc_in_control", "calibration_compliance", "training_compliance", "open_ncrs", "open_capas"];
 
     static decimal? Pct(decimal n, decimal d) => d <= 0 ? null : Math.Round(100m * n / d, 1, MidpointRounding.AwayFromZero);
+
+    /// <summary>Calculation version of the scrap and rework rates (version 1 divided by quantity inspected without saying so).</summary>
+    public const string RateCalculationVersion = "rate/2 (configurable denominator)";
+    /// <summary>Default preference: actual production volume first. Quantity inspected is never used unless an administrator configures it.</summary>
+    public static readonly DenominatorSource[] DefaultSources = [DenominatorSource.MesProduction, DenominatorSource.ErpProduction, DenominatorSource.Produced, DenominatorSource.Completed, DenominatorSource.ManuallyApproved];
+    public static readonly string[] RateMetrics = ["scrap_rate", "rework_rate"];
+    public static string SourceLabel(DenominatorSource s) => s switch
+    {
+        DenominatorSource.Produced => "quantity produced (all production counts)", DenominatorSource.Completed => "quantity completed on work orders",
+        DenominatorSource.Received => "quantity received", DenominatorSource.Inspected => "quantity inspected", DenominatorSource.Shipped => "quantity shipped",
+        DenominatorSource.ManuallyApproved => "approved manual production volume", DenominatorSource.ErpProduction => "ERP production quantity", _ => "MES production quantity"
+    };
+
+    public async Task<(DenominatorSource[] Sources, bool AllowFallback)> DenominatorConfigAsync(string metric, Guid? siteId, CancellationToken ct)
+    {
+        var rows = await db.MetricDenominators.AsNoTracking().Where(x => x.Metric == metric && (x.SiteId == siteId || x.SiteId == null)).ToListAsync(ct);
+        var row = rows.FirstOrDefault(x => x.SiteId == siteId && siteId != null) ?? rows.FirstOrDefault(x => x.SiteId == null);
+        if (row is null) return (DefaultSources, true);
+        var list = row.Sources.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(x => Enum.Parse<DenominatorSource>(x)).ToArray();
+        return (list.Length == 0 ? DefaultSources : list, row.AllowFallback);
+    }
+
+    /// <summary>Quantity for one volume source in the period (site-filtered when siteId is set; scoped by the caller's view permission when scoped).</summary>
+    public async Task<decimal> VolumeAsync(DenominatorSource src, bool scoped, Guid? siteId, DateOnly f, DateOnly t, CancellationToken ct)
+    {
+        var s = new Scoper(m, scoped, siteId);
+        var fTs = new DateTimeOffset(f.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero); var tTs = new DateTimeOffset(t.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        switch (src)
+        {
+            case DenominatorSource.Produced or DenominatorSource.ErpProduction or DenominatorSource.MesProduction:
+                var pe = await s.Q(db.ProductionEntries.AsNoTracking(), Permissions.ProductionView, ct);
+                if (pe is null) return 0;
+                pe = pe.Where(x => x.Kind == ProductionEntryKind.Production && x.FirstPass && x.RecordedAt >= fTs && x.RecordedAt < tTs);
+                if (src == DenominatorSource.ErpProduction) pe = pe.Where(x => x.Source == RecordSource.Erp);
+                if (src == DenominatorSource.MesProduction) pe = pe.Where(x => x.Source == RecordSource.Mes);
+                return await pe.SumAsync(x => (decimal?)(x.Good + x.Rejected + x.Scrapped), ct) ?? 0;
+            case DenominatorSource.Completed:
+                var wo = await s.Q(db.WorkOrders.AsNoTracking(), Permissions.ProductionView, ct);
+                if (wo is null) return 0;
+                return await wo.Where(x => (x.Status == WorkOrderStatus.Completed || x.Status == WorkOrderStatus.Closed) && x.UpdatedAt >= fTs && x.UpdatedAt < tTs).SumAsync(x => (decimal?)x.QuantityCompleted, ct) ?? 0;
+            case DenominatorSource.Received:
+                var rc = await s.Q(db.Receipts.AsNoTracking(), Permissions.InventoryView, ct);
+                if (rc is null) return 0;
+                var ids = rc.Where(x => x.ReceivedOn >= f && x.ReceivedOn <= t && x.Status != ReceiptStatus.Cancelled).Select(x => x.Id);
+                return await db.ReceiptLines.AsNoTracking().Where(l => ids.Contains(l.ReceiptId)).SumAsync(l => (decimal?)l.QuantityReceived, ct) ?? 0;
+            case DenominatorSource.Inspected:
+                var ins = await s.Q(db.Inspections.AsNoTracking(), Permissions.InspectionView, ct);
+                if (ins is null) return 0;
+                return await ins.Where(i => i.InspectedOn >= f && i.InspectedOn <= t && i.Status != InspectionStatus.InProgress && i.Status != InspectionStatus.Cancelled).SumAsync(i => (decimal?)i.QuantityReceived, ct) ?? 0;
+            case DenominatorSource.Shipped:
+                var sh = await s.Q(db.Shipments.AsNoTracking(), Permissions.ShippingView, ct);
+                if (sh is null) return 0;
+                var sids = sh.Where(x => x.ShippedAt >= fTs && x.ShippedAt < tTs && x.Status != ShipmentStatus.Cancelled).Select(x => x.Id);
+                return await db.ShipmentLines.AsNoTracking().Where(l => sids.Contains(l.ShipmentId)).SumAsync(l => (decimal?)l.Quantity, ct) ?? 0;
+            default:
+                var pv = await s.Q(db.ProductionVolumes.AsNoTracking(), Permissions.ProductionView, ct);
+                if (pv is null) return 0;
+                // Prorate approved manual volumes by the days that overlap the period.
+                var vols = await pv.Where(x => x.Status == ProductionVolumeStatus.Approved && x.PeriodStart <= t && x.PeriodEnd >= f).ToListAsync(ct);
+                return vols.Sum(v => { var days = v.PeriodEnd.DayNumber - v.PeriodStart.DayNumber + 1; var a = Math.Max(v.PeriodStart.DayNumber, f.DayNumber); var b = Math.Min(v.PeriodEnd.DayNumber, t.DayNumber); return Math.Round(v.Quantity * (b - a + 1) / days, 6); });
+        }
+    }
+
+    public static List<DenominatorSource> ParseSources(IEnumerable<string>? names) =>
+        (names ?? []).Select(n => Enum.TryParse<DenominatorSource>(n, true, out var v) && Enum.IsDefined(v) && !int.TryParse(n, out _) ? v
+            : throw new AppException($"Unknown volume source '{n}'. Use one of: {string.Join(", ", Enum.GetNames<DenominatorSource>())}.")).ToList();
+
+    public async Task SaveDenominatorAsync(string metric, Guid? siteId, IReadOnlyList<DenominatorSource> sources, bool allowFallback, CancellationToken ct)
+    {
+        if (!RateMetrics.Contains(metric)) throw new AppException($"Denominators are configurable for: {string.Join(", ", RateMetrics)}.");
+        if (sources.Count is 0 or > 8 || sources.Distinct().Count() != sources.Count) throw new AppException("List 1 to 8 different volume sources, most preferred first.");
+        if (siteId is { } sid && !await db.Sites.AnyAsync(x => x.Id == sid, ct)) throw new NotFoundException("Site");
+        var row = await db.MetricDenominators.FirstOrDefaultAsync(x => x.Metric == metric && x.SiteId == siteId, ct);
+        if (row is null) { row = new MetricDenominatorConfig { Metric = metric, SiteId = siteId }; db.MetricDenominators.Add(row); }
+        row.Sources = string.Join(",", sources); row.AllowFallback = allowFallback;
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<ProductionVolume> AddVolumeAsync(Guid siteId, DateOnly from, DateOnly to, decimal quantity, string? notes, CancellationToken ct)
+    {
+        await m.ValidateLocationAsync(siteId, null, ct);
+        await m.RequireAsync(Permissions.ProductionEdit, siteId, null, ct);
+        if (to < from) throw new AppException("The period ends before it starts.");
+        if (quantity < 0) throw new AppException("Quantity cannot be negative.");
+        var v = new ProductionVolume { SiteId = siteId, PeriodStart = from, PeriodEnd = to, Quantity = quantity, Notes = notes?.Trim(), Status = ProductionVolumeStatus.Pending };
+        db.ProductionVolumes.Add(v);
+        await db.SaveChangesAsync(ct);
+        return v;
+    }
+
+    /// <summary>A second person approves or rejects a manual volume; the person who entered it cannot.</summary>
+    public async Task DecideVolumeAsync(Guid id, bool approve, CancellationToken ct)
+    {
+        var v = await db.ProductionVolumes.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("Production volume");
+        await m.RequireAsync(Permissions.ProductionEdit, v.SiteId, v.DepartmentId, ct);
+        if (v.Status != ProductionVolumeStatus.Pending) throw new ConflictException("This volume has already been decided.");
+        if (v.CreatedById == m.UserId) throw new ForbiddenException("The person who entered a production volume cannot approve it.");
+        v.Status = approve ? ProductionVolumeStatus.Approved : ProductionVolumeStatus.Rejected; v.DecidedById = m.UserId; v.DecidedAt = m.Now;
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<List<ProductionVolume>> VolumesAsync(CancellationToken ct) =>
+        await (await m.ScopeAsync(db.ProductionVolumes.AsNoTracking(), Permissions.ProductionView, ct)).OrderByDescending(x => x.PeriodStart).Take(500).ToListAsync(ct);
+
+    /// <summary>Walks the configured sources in order and uses the first with volume. A lower source is labelled as a fallback; with none the rate has no value (no divide by zero).</summary>
+    public async Task<DenominatorChoice> ResolveDenominatorAsync(string metric, bool scoped, Guid? siteId, DateOnly f, DateOnly t, CancellationToken ct)
+    {
+        var (sources, allowFallback) = await DenominatorConfigAsync(metric, siteId, ct);
+        for (var i = 0; i < (allowFallback ? sources.Length : 1); i++)
+        {
+            var q = await VolumeAsync(sources[i], scoped, siteId, f, t, ct);
+            if (q > 0)
+                return new(sources[i], q, i > 0, i == 0 ? $"Denominator: {SourceLabel(sources[i])}" : $"Fallback denominator: {SourceLabel(sources[i])} (no {SourceLabel(sources[0])} in the period)");
+        }
+        return new(null, 0, false, $"No {string.Join(" / ", (allowFallback ? sources : sources.Take(1)).Select(SourceLabel))} recorded in the period, so the rate cannot be calculated.");
+    }
 
     sealed class Scoper(ModuleSupport m, bool scoped, Guid? site)
     {
@@ -48,14 +168,12 @@ public sealed class InsightsService(AppDbContext db, ModuleSupport m, IAccessSer
         string Qs(string path) => $"{path}?from={f:yyyy-MM-dd}&to={t:yyyy-MM-dd}" + (siteId is { } x ? $"&siteId={x}" : "");
 
         var ins = await s.Q(db.Inspections.AsNoTracking(), Permissions.InspectionView, ct);
-        decimal inspectedQty = 0;
         if (ins is null) list.Add(new("fpy", "First pass yield", null, "%", null, null, "No access to inspections.", null));
         else
         {
             var done = await ins.Where(i => i.InspectedOn >= f && i.InspectedOn <= t && i.Status != InspectionStatus.InProgress && i.Status != InspectionStatus.Cancelled)
                 .Select(i => new { i.Status, i.QuantityReceived }).ToListAsync(ct);
             var pass = done.Count(i => i.Status is InspectionStatus.Passed or InspectionStatus.Released);
-            inspectedQty = done.Sum(i => i.QuantityReceived ?? 0);
             list.Add(new("fpy", "First pass yield", Pct(pass, done.Count), "%", pass, done.Count, "Inspections passed or released first time ÷ inspections completed in the period.", Qs("/inspection")));
         }
         var scrapQ = await s.Q(db.ScrapEvents.AsNoTracking(), Permissions.CoqView, ct);
@@ -64,13 +182,17 @@ public sealed class InsightsService(AppDbContext db, ModuleSupport m, IAccessSer
         else
         {
             var q = await scrapQ.Where(x => x.ScrappedOn >= f && x.ScrappedOn <= t).SumAsync(x => (decimal?)x.Quantity, ct) ?? 0;
-            list.Add(new("scrap_rate", "Scrap rate", Pct(q, inspectedQty), "%", q, inspectedQty, "Quantity scrapped ÷ quantity inspected in the period.", Qs("/coq/scrap")));
+            var d = await ResolveDenominatorAsync("scrap_rate", scoped, siteId, f, t, ct);
+            list.Add(new("scrap_rate", "Scrap rate", Pct(q, d.Quantity), "%", q, d.Source is null ? null : d.Quantity, $"Quantity scrapped ÷ {(d.Source is { } ds ? SourceLabel(ds) : "production volume")} in the period. {d.Label}", Qs("/coq/scrap"),
+                d.Source?.ToString(), d.Label, d.IsFallback, RateCalculationVersion));
         }
         if (reworkQ is null) list.Add(new("rework_rate", "Rework rate", null, "%", null, null, "No access to cost of quality.", null));
         else
         {
             var q = await reworkQ.Where(x => x.CreatedAt >= fTs && x.CreatedAt < tTs && x.Status != ReworkStatus.Rejected).SumAsync(x => (decimal?)x.Quantity, ct) ?? 0;
-            list.Add(new("rework_rate", "Rework rate", Pct(q, inspectedQty), "%", q, inspectedQty, "Quantity on rework orders ÷ quantity inspected in the period.", Qs("/coq/rework")));
+            var d = await ResolveDenominatorAsync("rework_rate", scoped, siteId, f, t, ct);
+            list.Add(new("rework_rate", "Rework rate", Pct(q, d.Quantity), "%", q, d.Source is null ? null : d.Quantity, $"Quantity on rework orders ÷ {(d.Source is { } ds ? SourceLabel(ds) : "production volume")} in the period. {d.Label}", Qs("/coq/rework"),
+                d.Source?.ToString(), d.Label, d.IsFallback, RateCalculationVersion));
         }
         var aql = await s.Q(db.AqlInspections.AsNoTracking(), Permissions.InspectionView, ct);
         if (aql is null) list.Add(new("defect_rate", "Defect rate", null, "%", null, null, "No access to AQL inspections.", null));
@@ -286,6 +408,7 @@ public sealed class InsightsService(AppDbContext db, ModuleSupport m, IAccessSer
                 var fact = await db.QualityMetricFacts.FirstOrDefaultAsync(x => x.Metric == mt.Key && x.PeriodType == period && x.PeriodStart == start && x.SiteId == site, ct);
                 if (fact is null) { fact = new QualityMetricFact { Metric = mt.Key, PeriodType = period, PeriodStart = start, SiteId = site }; db.QualityMetricFacts.Add(fact); }
                 fact.Value = mt.Value.Value; fact.Numerator = mt.Numerator; fact.Denominator = mt.Denominator; fact.ComputedAt = m.Now;
+                fact.DenominatorSource = mt.DenominatorSource is null ? null : (mt.IsFallback ? "Fallback:" : "") + mt.DenominatorSource; fact.CalculationVersion = mt.CalculationVersion;
                 n++;
             }
         }
