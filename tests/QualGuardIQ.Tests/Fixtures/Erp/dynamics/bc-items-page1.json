@@ -1,0 +1,3 @@
+{"@odata.context":"…/$metadata#companies(…)/items","value":[
+ {"@odata.etag":"W/\"JzE5OzEn\"","id":"5d115c9c-44e3-ea11-bb43-000d3a2feca1","number":"1896-S","displayName":"ATHENS Desk","type":"Inventory","blocked":false,"baseUnitOfMeasureCode":"PCS","lastModifiedDateTime":"2026-10-05T07:00:00Z"}],
+ "@odata.nextLink":"https://api.businesscentral.dynamics.com/v2.0/tenant-1/production/api/v2.0/companies(c-1)/items?aid=FIN&$skiptoken=abc"}
