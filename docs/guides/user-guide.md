@@ -12,6 +12,67 @@
 
 Dates such as "due" and "overdue" follow the time zone of the record's site.
 
+## Signing in and keeping your account safe
+
+![Sign-in](../screenshots/sign-in/sign-in-01-sign-in.png)
+
+- Sign in with your work email and password. If two-step verification is on for you, a second screen asks for the
+  6-digit code from your authenticator app. Each step after the password stays open for 5 minutes; if it runs out the
+  screen says so and you start again from your email and password.
+- **First sign-in or a temporary password.** When an administrator created your account or set a temporary password,
+  you choose your own password before anything else opens.
+- **Password rules.** At least 12 characters (a few unrelated words work well), not a known breached or common
+  password, not containing your email name, and not one of your last 5 passwords. The rules are ticked off as you type.
+- **Wrong passwords or codes.** After 5 wrong attempts the account locks for 15 minutes. An administrator can unlock it
+  sooner.
+
+### Two-step verification
+
+Open the user menu (top right) › **Security**. Customer and supplier portal users find **Security** in the portal header.
+
+1. Choose **Set up two-step verification** and enter your password.
+2. Scan the QR code with an authenticator app (Microsoft Authenticator, Google Authenticator, 1Password, Authy and
+   others), or type the key shown under it.
+3. Enter the 6-digit code the app shows and choose **Turn on**.
+4. Save the 10 **recovery codes** (copy or download them). Each works once, for when your phone is not at hand. They
+   are shown only once.
+
+![Set up from the Security page](../screenshots/sign-in/sign-in-11-security-set-up-qr.png)
+![Recovery codes](../screenshots/sign-in/sign-in-12-recovery-codes.png)
+
+If your organization or one of your roles requires two-step verification, the set-up screen appears right after your
+password at the next sign-in, and **Turn off** is not available.
+
+At sign-in, enter the code, or choose **Can't use your app? Use a recovery code**. The Security page shows how many
+recovery codes are left; **New recovery codes** replaces them all (confirm with an app code). **Replace authenticator
+app** moves you to a new phone. **Turn off** needs your password and a current code.
+
+![Code at sign-in](../screenshots/sign-in/sign-in-02-authenticator-code.png)
+
+### Trusted browsers
+
+Tick **Trust this browser for 30 days** at the code step on a computer only you use, and that browser skips the code
+until the period ends. Never tick it on a shared or public computer. The Security page lists your trusted browsers
+(the one you are using is marked **This browser**); remove one, or **Remove all trusted browsers**. Changing your
+password, replacing your authenticator or turning two-step verification off also ends trust in every browser.
+
+![Trusted browsers](../screenshots/sign-in/sign-in-14-trusted-browsers.png)
+
+### Forgotten password
+
+On the sign-in screen choose **Forgot your password?**, enter your email and choose **Email me a reset link**. The
+link works once and for 45 minutes; a newer link replaces older ones. The screen gives the same answer whether or not
+the address has an account. After the new password is saved every signed-in session ends and you sign in again
+(two-step verification still applies). You also get an email whenever your password changes; if you didn't change it,
+tell your administrator.
+
+![Reset password](../screenshots/sign-in/sign-in-07-reset-new-password.png)
+
+**Change password** on the Security page needs your current password. Other signed-in sessions end; this one
+continues. **Sign-in history** (user menu) lists sign-ins, failed attempts and every change on this page.
+
+On a phone the sign-in screens fit the screen and the code field opens the number keypad.
+
 ## Working a record
 
 1. Create the record from the module's side menu. A number is assigned on save (for example `NCR-000123`).
