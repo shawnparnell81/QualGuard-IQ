@@ -453,7 +453,7 @@ export function SignInSecurityPage() {
           <Paper sx={{ p: 2.5 }} component="section" aria-labelledby="pol-trust">
             <Typography variant="h3" component="h2" id="pol-trust" sx={{ mb: 1 }}>Trusted browsers</Typography>
             <FormControlLabel control={<Switch checked={p.trustedDevicesEnabled} onChange={(e) => set({ trustedDevicesEnabled: e.target.checked })} />} label="Allow people to trust a browser" />
-            <TextField label="Days a browser stays trusted" type="number" size="small" sx={{ mt: 1, maxWidth: 240 }} disabled={!p.trustedDevicesEnabled}
+            <TextField label="Days a browser stays trusted" type="number" size="small" fullWidth sx={{ mt: 2, maxWidth: 280 }} disabled={!p.trustedDevicesEnabled}
               value={p.trustedDeviceDays} onChange={(e) => set({ trustedDeviceDays: Number(e.target.value) })}
               inputProps={{ min: 1, max: c.trustedDeviceMaxDays }} helperText={`1 to ${c.trustedDeviceMaxDays} days`} />
           </Paper>
