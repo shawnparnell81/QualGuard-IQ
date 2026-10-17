@@ -2,7 +2,7 @@
 
 Sources: `forms-import.md` (8 phases, "FI") and `forms-import-technical.md` (22 sections, "TECH"). Both are in scope; where they overlap
 the stricter requirement wins. Reference package (SQL, EF config, ERD, module tree incl. the Electronics pack) is used as a guide only:
-everything is rebuilt as EF Core code-first in the `public` schema, with real foreign keys to existing tables.
+everything is rebuilt as EF Core code-first in the application schema (`qms`, where every other table lives), not a separate `qg_templates` schema, with real foreign keys to existing tables.
 
 Build phases (see CHECKPOINT.md `## Forms/Import`):
 
