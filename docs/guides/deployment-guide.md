@@ -26,7 +26,7 @@
 | `Storage:Provider` | `S3` (MinIO or Amazon S3) or `AzureBlob` |
 | `MalwareScanning:Provider` | `None` or `ClamAV`; `MalwareScanning:AllowWhenUnavailable` defaults to `false` |
 | `Storage:MaxFileBytes`, `Storage:MaxVideoBytes` | Upload limits (defaults 100 MB and 1 GB); keep the reverse proxy limit (`client_max_body_size 1100m` in `deploy/nginx.conf`) at or above the video limit |
-| `Licensing:PublicKeyPem` | Publisher public key (PEM) used to verify marketplace licenses |
+| `Licensing:PublicKeyPem` | Publisher public key (PEM) used to verify marketplace licenses. This is the only licensing setting a deployment needs; the signing private key is held offline by the publisher (Shawn Parnell) and is never deployed |
 | `Seed:AdminEmail`, `Seed:AdminPassword` | First administrator, used only when no users exist |
 | `Seed:*` | Organization and application names for a new installation |
 

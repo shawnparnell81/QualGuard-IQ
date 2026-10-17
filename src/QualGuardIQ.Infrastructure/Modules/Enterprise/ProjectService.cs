@@ -181,15 +181,8 @@ public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingS
         (17, "Customer-specific requirements", null), (18, "Part submission warrant", null)
     ];
 
-    /// <summary>Submission requirement by level (S = submit, R = retain, * = as the customer requires). Level 4 is customer-defined; level 5 is reviewed at the supplier's site.</summary>
-    public static PpapRequirement RequirementFor(int level, int code) => level switch
-    {
-        1 => code is 18 or 13 ? PpapRequirement.Submit : PpapRequirement.Retain,
-        2 => code is 1 or 2 or 9 or 10 or 12 or 13 or 14 or 18 ? PpapRequirement.Submit : PpapRequirement.Retain,
-        3 => code is 15 or 16 ? PpapRequirement.Retain : code is 3 or 17 ? PpapRequirement.AsCustomerRequires : PpapRequirement.Submit,
-        4 => code == 18 ? PpapRequirement.Submit : PpapRequirement.AsCustomerRequires,
-        _ => code == 18 ? PpapRequirement.Submit : PpapRequirement.Retain
-    };
+    /// <summary>Submission requirement by level, from the AIAG PPAP Table 4.2 matrix in <see cref="PpapMatrix"/>.</summary>
+    public static PpapRequirement RequirementFor(int level, int code) => PpapMatrix.RequirementFor(level, code);
 
     public async Task<PpapSubmission> CreatePpapAsync(PpapInput r, CancellationToken ct)
     {
@@ -221,8 +214,11 @@ public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingS
         var s = await db.PpapSubmissions.AsNoTracking().FirstAsync(x => x.Id == id, ct);
         var els = await db.PpapElements.AsNoTracking().Where(e => e.SubmissionId == id).OrderBy(e => e.Code).ToListAsync(ct);
         var part = await db.Parts.AsNoTracking().Where(p => p.Id == s.PartId).Select(p => new { p.PartNumber, p.Name }).FirstOrDefaultAsync(ct);
-        return new { Submission = s, Status = s.Status.ToString(), Part = part, Elements = els.Select(e => new { e.Id, e.Code, e.Name, Requirement = e.Requirement.ToString(), Status = e.Status.ToString(), e.LinkedType, e.LinkedId, e.Notes,
-            SuggestedType = PpapElements.First(x => x.Code == e.Code).LinkType }) };
+        return new { Submission = s, Status = s.Status.ToString(), Part = part, Elements = els.Select(e => new { e.Id, e.Code, e.Name, Requirement = e.Requirement.ToString(), RequirementCode = PpapMatrix.CodeOf(e.Requirement),
+            Condition = PpapMatrix.Rows.First(x => x.ElementCode == e.Code).Condition, Status = e.Status.ToString(), e.LinkedType, e.LinkedId, e.Notes,
+            SuggestedType = PpapElements.First(x => x.Code == e.Code).LinkType }),
+            Matrix = PpapMatrix.Rows.Select(x => new { x.Key, x.ElementCode, x.Name, x.Condition, Levels = Enumerable.Range(1, 5).Select(x.CodeFor).ToArray() }),
+            Legend = PpapMatrix.Legend.Select(x => new { x.Code, x.Meaning }) };
     }
 
     public async Task UpdateElementAsync(Guid id, int code, PpapElementUpdate r, CancellationToken ct)
@@ -231,7 +227,7 @@ public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingS
         var s = await db.PpapSubmissions.FirstAsync(x => x.Id == id, ct);
         if (s.Status is not (PpapStatus.Draft or PpapStatus.Rejected)) throw new ConflictException($"The submission is {s.Status}.");
         var e = await db.PpapElements.FirstOrDefaultAsync(x => x.SubmissionId == id && x.Code == code, ct) ?? throw new NotFoundException("Element");
-        if (r.Status == PpapElementStatus.NotApplicable && e.Requirement == PpapRequirement.Submit && code == 18) throw new AppException("The part submission warrant is always required.");
+        if (r.Status == PpapElementStatus.NotApplicable && code == 18) throw new AppException("The part submission warrant is always required.");
         if (r.LinkedType is { Length: > 0 } t && r.LinkedId is { } lid)
         {
             var target = await records.RequireViewAsync(t, lid, ct);
@@ -250,7 +246,7 @@ public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingS
         await m.EditAsync(PpapType, id, ct);
         var s = await db.PpapSubmissions.FirstAsync(x => x.Id == id, ct);
         if (s.Status is not (PpapStatus.Draft or PpapStatus.Rejected)) throw new ConflictException($"The submission is {s.Status}.");
-        var missing = await db.PpapElements.Where(e => e.SubmissionId == id && e.Status == PpapElementStatus.Missing && (e.Requirement == PpapRequirement.Submit || e.Requirement == PpapRequirement.AsCustomerRequires)).Select(e => e.Code + " " + e.Name).ToListAsync(ct);
+        var missing = await db.PpapElements.Where(e => e.SubmissionId == id && e.Status == PpapElementStatus.Missing && (e.Code == 18 || e.Requirement == PpapRequirement.Submit || e.Requirement == PpapRequirement.SubmitOnRequest)).Select(e => e.Code + " " + e.Name).ToListAsync(ct);
         if (missing.Count > 0) throw new AppException("Elements still missing: " + string.Join("; ", missing));
         s.Status = PpapStatus.Submitted; s.SubmittedAt = m.Now;
         await db.SaveChangesAsync(ct);
