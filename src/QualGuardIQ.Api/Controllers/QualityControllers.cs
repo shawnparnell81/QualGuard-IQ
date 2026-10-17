@@ -74,7 +74,15 @@ public sealed class FormsController(AppDbContext db, FormService forms, ModuleSu
     {
         var (r, def, values) = await forms.GetAsync(id, ct);
         var editable = r.Status is FormRecordStatus.Draft or FormRecordStatus.Rejected && await m.CanAsync(Permissions.FormsEdit, r.SiteId, r.DepartmentId, ct);
-        return new { r.Id, r.Number, r.Title, r.TemplateId, r.TemplateNumber, r.TemplateRevision, r.Status, r.SiteId, r.SubmittedAt, r.RowVersion, Fields = def.Fields, Definition = def, Values = values, CanEdit = editable };
+        return new { r.Id, r.Number, r.Title, r.TemplateId, r.TemplateNumber, r.TemplateRevision, r.Status, r.SiteId, r.SubmittedAt, r.RowVersion, Fields = def.Fields, Definition = def, Values = values, CanEdit = editable,
+            Signatures = (await forms.SignaturesAsync(id, ct)).Select(s => new { s.Id, Key = s.SignatureKey, s.Label, s.Role, s.Meaning, s.SignerId, s.SignerName, s.SignedAt, s.Verification, s.Comment, Valid = !s.IsInvalidated, s.InvalidatedAt, s.InvalidatedReason }) };
+    }
+
+    [HttpPost("records/{id:guid}/signatures/{key}")]
+    public async Task<object> Sign(Guid id, string key, SignFormRequest req, CancellationToken ct)
+    {
+        var s = await forms.SignAsync(id, key, req, ct);
+        return new { s.Id, Key = s.SignatureKey, s.SignerName, s.SignedAt, s.Verification };
     }
 
     [HttpPut("records/{id:guid}")]

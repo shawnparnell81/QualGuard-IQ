@@ -24,3 +24,30 @@ public class FormRecord : Entity, IAudited, ISiteScoped, IContentLock
     public bool IsLockedState(object? s) => s is FormRecordStatus.Submitted or FormRecordStatus.Approved;
     public IReadOnlyCollection<string> MutableWhenLocked { get; } = [nameof(Status)];
 }
+
+/// <summary>
+/// An electronic signature applied to a signature block inside a form record. Bound to the exact content signed (ContentHash);
+/// any later change to the record's values invalidates it. Rows are never deleted: invalidated signatures stay as history.
+/// </summary>
+public class FormSignature : Entity, IAudited
+{
+    public Guid FormRecordId { get; set; }
+    public string SignatureKey { get; set; } = "";
+    public string Label { get; set; } = "";
+    public string Role { get; set; } = "";
+    public string Meaning { get; set; } = "";
+    public Guid SignerId { get; set; }
+    public string SignerName { get; set; } = "";
+    public DateTimeOffset SignedAt { get; set; }
+    /// <summary>"password" or "password+mfa".</summary>
+    public string Verification { get; set; } = "password";
+    public string? Comment { get; set; }
+    /// <summary>SHA-256 of the record's normalized values at signing time.</summary>
+    public string ContentHash { get; set; } = "";
+    /// <summary>SHA-256 over record, block, signer, meaning, time and content hash; recomputed by integrity checks.</summary>
+    public string SignatureHash { get; set; } = "";
+    public bool IsInvalidated { get; set; }
+    public DateTimeOffset? InvalidatedAt { get; set; }
+    public string? InvalidatedReason { get; set; }
+    public string AuditLabel => $"signature '{Label}' on form record";
+}

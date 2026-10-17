@@ -30353,6 +30353,42 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/forms/records/{id}/signatures/{key}':
+    post:
+      tags:
+        - Forms
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignFormRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SignFormRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SignFormRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/forms/records/{id}/submit':
     post:
       tags:
@@ -62232,6 +62268,23 @@ components:
       properties:
         address:
           $ref: '#/components/schemas/CarrierAddress'
+    SignFormRequest:
+      required:
+        - password
+        - mfaCode
+        - comment
+      type: object
+      properties:
+        password:
+          type: string
+        mfaCode:
+          type:
+            - 'null'
+            - string
+        comment:
+          type:
+            - 'null'
+            - string
     SignInDto:
       required:
         - occurredAt

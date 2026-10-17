@@ -11074,6 +11074,110 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("form_records", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FormSignature", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("FormRecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("InvalidatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("InvalidatedReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<bool>("IsInvalidated")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Meaning")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("SignatureHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .IsFixedLength();
+
+                    b.Property<string>("SignatureKey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTimeOffset>("SignedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SignerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SignerName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Verification")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SignerId");
+
+                    b.HasIndex("FormRecordId", "SignatureKey")
+                        .IsUnique()
+                        .HasFilter("NOT \"IsInvalidated\"");
+
+                    b.ToTable("form_signatures", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_form_signatures_invalidated", "(NOT \"IsInvalidated\" AND \"InvalidatedAt\" IS NULL) OR (\"IsInvalidated\" AND \"InvalidatedAt\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_form_signatures_verification", "\"Verification\" IN ('password', 'password+mfa')");
+                        });
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.GeneratedShippingDocument", b =>
                 {
                     b.Property<Guid>("Id")
@@ -21635,6 +21739,21 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasOne("QualGuardIQ.Domain.Documents.DocumentRevision", null)
                         .WithMany()
                         .HasForeignKey("TemplateRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.FormSignature", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Quality.FormRecord", null)
+                        .WithMany()
+                        .HasForeignKey("FormRecordId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("SignerId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
