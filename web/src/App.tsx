@@ -1,3 +1,4 @@
+import { ReportSchedules } from './pages/ReportSchedules';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
 import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material';
@@ -354,6 +355,7 @@ export function App() {
               <Route path="/platform/genealogy" element={<Genealogy />} />
               <Route path="/platform/reports" element={<ReportDesigner />} />
               <Route path="/platform/reports/:id" element={<ReportDesigner />} />
+              <Route path="/platform/report-schedules" element={<ReportSchedules />} />
               <Route path="/platform/dashboards" element={<DashboardDesigner />} />
               <Route path="/platform/webhooks" element={<Webhooks />} />
               <Route path="/platform/health" element={<PlatformHealth />} />

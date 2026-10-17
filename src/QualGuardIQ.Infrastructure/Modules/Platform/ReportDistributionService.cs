@@ -33,6 +33,7 @@ public sealed record PolicyInput(bool AttachmentsEnabled, bool AllowPdf, bool Al
 public sealed record EditionRow(Guid Id, string Kind, int Version, string Title, EditionStatus Status, DateTimeOffset GeneratedAt, string? GeneratedBy, bool ScopeAllSites, int ScopeSites, DateTimeOffset? ApprovedAt, string? ApprovedBy,
     string? Notes, bool Confidential);
 public sealed record EditionDecision(string Notes);
+public sealed record GroupRow(Guid Id, string Name, int Members);
 
 /// <summary>
 /// Scheduled distribution of saved reports and board reports: time zone aware cron, people and role groups, permission checks on every
@@ -71,6 +72,10 @@ public sealed class ReportDistributionService(AppDbContext db, ModuleSupport m, 
         ReportDeliveryMode.XlsxAttachment => p.AttachmentsEnabled && p.AllowXlsx,
         _ => p.AttachmentsEnabled && p.AllowCsv,
     };
+
+    /// <summary>Roles that can be chosen as recipient groups (names only; membership is resolved and permission-checked on each run).</summary>
+    public async Task<List<GroupRow>> GroupsAsync(CancellationToken ct) =>
+        await db.QmsRoles.AsNoTracking().OrderBy(r => r.Name).Select(r => new GroupRow(r.Id, r.Name, db.UserRoleAssignments.Where(a => a.RoleId == r.Id).Select(a => a.UserId).Distinct().Count())).ToListAsync(ct);
 
     // ---------- schedules ----------
     public static DateTimeOffset? NextInZone(string cron, string zoneId, DateTimeOffset fromUtc)

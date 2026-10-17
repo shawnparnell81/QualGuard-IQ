@@ -10,6 +10,7 @@ import { Section, StepDialog, useRunner, useTypeLabel, useUsers } from '../compo
 import { useAuth } from '../auth';
 import { mono } from '../theme';
 import { mod, num, Tile, SiteSelect, useSite } from './Enterprise';
+import { ScheduleDialog } from './ReportSchedules';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const P = () => mod('platform');
@@ -114,7 +115,7 @@ export function ReportDesigner() {
   const defs = useQuery({ queryKey: ['report-defs'], queryFn: () => get<any[]>('/api/reports') });
   const [sel, setSel] = useState<string | null>(null); const [open, setOpen] = useState(false); const [sched, setSched] = useState(false);
   const run = useQuery({ queryKey: ['saved-report-run', sel], enabled: !!sel, queryFn: () => get<any>(`/api/designer/reports/${sel}/run`) });
-  const users = useUsers(); const r = useRunner(() => qc.invalidateQueries({ queryKey: ['saved-reports'] }));
+  const r = useRunner(() => qc.invalidateQueries({ queryKey: ['saved-reports'] }));
   const x = run.data;
   return (
     <ModuleWorkspace module={P()} crumbs={crumbs('Report designer')} title="Report designer" actions={<Button variant="contained" onClick={() => setOpen(true)}>New report</Button>}>
@@ -132,11 +133,9 @@ export function ReportDesigner() {
       <StepDialog open={open} onClose={() => setOpen(false)} title="New report" confirm="Save" intro="Start from any standard report you can access, then choose columns, a filter and an optional pivot."
         inputs={[{ name: 'name', label: 'Name' }, { name: 'reportKey', label: 'Source report', type: 'select', options: (defs.data ?? []).map((d) => [d.key, d.title]) }, { name: 'kind', label: 'Layout', type: 'select', options: reportKinds.map((k, i) => [i, k]), initial: '0' },
           { name: 'columns', label: 'Columns (comma separated keys, blank = all)' }, { name: 'filterColumn', label: 'Filter column' }, { name: 'filterValue', label: 'Filter value' }, { name: 'rowField', label: 'Pivot rows' }, { name: 'columnField', label: 'Pivot columns' },
-          ...(can('reports.share') ? [{ name: 'shared', label: 'Share with colleagues', type: 'checkbox' as const }] : [])]}
-        onConfirm={async (v) => { const s = await post<any>('/api/designer/reports', { name: v.name, reportKey: v.reportKey, kind: Number(v.kind), columns: v.columns ? String(v.columns).split(',').map((c) => c.trim()).filter(Boolean) : [], siteId: null, rangeDays: 90, filterColumn: v.filterColumn || null, filterValue: v.filterValue || null, rowField: v.rowField || null, columnField: v.columnField || null, valueField: null, shared: !!v.shared }); qc.invalidateQueries({ queryKey: ['saved-reports'] }); setSel(s.id); }} />
-      <StepDialog open={sched} onClose={() => setSched(false)} title="Schedule report" confirm="Schedule" intro="Recipients get a notification linking to the report; they see only data they are permitted to see."
-        inputs={[{ name: 'cron', label: 'Cron (minute hour day month weekday)', initial: '0 7 * * 1' }, { name: 'recipients', label: 'Recipients', type: 'users', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }]}
-        onConfirm={async (v) => { await post('/api/designer/schedules', { savedReportId: sel, cron: v.cron, recipients: v.recipients ?? [], format: 0 }); }} />
+          ...(can('reports.share') ? [{ name: 'shared', label: 'Share with colleagues', type: 'checkbox' as const }] : []), { name: 'confidential', label: 'Confidential (never attached to scheduled emails unless policy allows)', type: 'checkbox' as const }]}
+        onConfirm={async (v) => { const s = await post<any>('/api/designer/reports', { name: v.name, reportKey: v.reportKey, kind: Number(v.kind), columns: v.columns ? String(v.columns).split(',').map((c) => c.trim()).filter(Boolean) : [], siteId: null, rangeDays: 90, filterColumn: v.filterColumn || null, filterValue: v.filterValue || null, rowField: v.rowField || null, columnField: v.columnField || null, valueField: null, shared: v.shared === 'true', confidential: v.confidential === 'true' }); qc.invalidateQueries({ queryKey: ['saved-reports'] }); setSel(s.id); }} />
+      <ScheduleDialog open={sched} onClose={() => setSched(false)} savedReportId={sel} onSaved={() => undefined} />
     </ModuleWorkspace>
   );
 }

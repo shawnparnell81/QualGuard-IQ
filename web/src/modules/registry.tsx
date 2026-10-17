@@ -680,6 +680,7 @@ export const modules: ModuleDef[] = [
       { label: 'Resources', path: '/platform/resources', permission: 'audits.view' },
       { label: 'Genealogy', path: '/platform/genealogy' },
       { label: 'Report designer', path: '/platform/reports', permission: 'reports.view' },
+      { label: 'Report schedules', path: '/platform/report-schedules', permission: 'reports.view' },
       { label: 'Dashboards', path: '/platform/dashboards', permission: 'reports.view' },
       { label: 'Workflow designer', path: '/platform/workflows', permission: 'admin.organization' },
       { label: 'Form designer', path: '/platform/forms', permission: 'forms.edit' },
