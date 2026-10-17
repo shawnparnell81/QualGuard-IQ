@@ -112,6 +112,12 @@ const TransferList = lazy(() => import('./pages/Warehouse').then((m) => ({ defau
 const TransferNew = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.TransferNew })));
 const TransferDetail = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.TransferDetail })));
 const LotMergePage = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.LotMergePage })));
+const ScanStation = lazy(() => import('./pages/ScanStation').then((m) => ({ default: m.ScanStation })));
+const LogisticsOverview = lazy(() => import('./pages/Shipping').then((m) => ({ default: m.LogisticsOverview })));
+const ShipmentList = lazy(() => import('./pages/Shipping').then((m) => ({ default: m.ShipmentList })));
+const ShipmentNew = lazy(() => import('./pages/Shipping').then((m) => ({ default: m.ShipmentNew })));
+const ShipmentDetail = lazy(() => import('./pages/Shipping').then((m) => ({ default: m.ShipmentDetail })));
+const CarrierList = lazy(() => import('./pages/Shipping').then((m) => ({ default: m.CarrierList })));
 const ApqpList = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpList })));
 const ApqpNew = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpNew })));
 const ApqpDetail = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpDetail })));
@@ -342,6 +348,12 @@ export function App() {
               <Route path="/warehouse/transfers/new" element={<TransferNew />} />
               <Route path="/warehouse/transfers/:id" element={<TransferDetail />} />
               <Route path="/warehouse/lot-merge" element={<LotMergePage />} />
+              <Route path="/warehouse/scan" element={<ScanStation />} />
+              <Route path="/shipping" element={<LogisticsOverview />} />
+              <Route path="/shipping/shipments" element={<ShipmentList />} />
+              <Route path="/shipping/shipments/new" element={<ShipmentNew />} />
+              <Route path="/shipping/shipments/:id" element={<ShipmentDetail />} />
+              <Route path="/shipping/carriers" element={<CarrierList />} />
               <Route path="/trace" element={<TraceSearch />} />
               <Route path="/trace/scan" element={<ScanPage />} />
               <Route path="/trace/labels" element={<LabelsPage />} />

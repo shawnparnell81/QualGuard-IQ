@@ -1,0 +1,232 @@
+import { useEffect, useState, type ReactNode } from 'react';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material';
+import CloudOffOutlined from '@mui/icons-material/CloudOffOutlined';
+import { useQuery } from '@tanstack/react-query';
+import { get, post } from '../api';
+import { modules } from '../modules/registry';
+import { ModuleWorkspace } from '../layout/ModuleWorkspace';
+import { useLookup } from '../components/Kit';
+import { fmtDateTime, localDate } from '../components/Status';
+import { mono } from '../theme';
+import { newRequestId, postOrQueue, useOfflineQueue } from '../offline';
+import { ScanField, StockBadge, stockStatusLabel, useLocations, type StockRow } from '../warehouse/common';
+import { qty } from './Warehouse';
+
+const mod = modules.find((m) => m.key === 'warehouse')!;
+interface ScanLink { type: string; id: string; number: string; title: string; status: string; url: string }
+interface Ctx { match: { raw: string; kind: string; type?: string; id?: string; number?: string; url?: string; detail?: string }; stock: StockRow[]; holds: ScanLink[]; related: ScanLink[]; actions: string[] }
+const flows: [string, string, string][] = [['receive', 'Receive', 'Dock to stock'], ['inspect', 'Inspect', 'Open the inspection'], ['move', 'Move', 'Put away / relocate'], ['issue', 'Issue', 'To a work order'], ['ship', 'Ship', 'Pick & verify'], ['trace', 'Trace', 'What is this?']];
+const scan = (code: string) => post<Ctx>('/api/warehouse/scan', { code });
+
+/** Result banner: green for posted, amber for queued offline, red for refused. */
+type Outcome = { tone: 'success' | 'warning' | 'error'; text: string } | null;
+const done = (queued: boolean, what: string): Outcome => (queued ? { tone: 'warning', text: `${what} saved on this device; it posts when the connection returns.` } : { tone: 'success', text: `${what} posted.` });
+
+function Big({ children, onClick, disabled, color = 'primary' }: { children: ReactNode; onClick: () => void; disabled?: boolean; color?: 'primary' | 'inherit' }) {
+  return <Button fullWidth size="large" variant={color === 'primary' ? 'contained' : 'outlined'} color={color} disabled={disabled} onClick={onClick} sx={{ py: 1.8, fontSize: 17 }}>{children}</Button>;
+}
+function Step({ n, label, value, children }: { n: number; label: string; value?: string; children: ReactNode }) {
+  return <Box sx={{ display: 'grid', gridTemplateColumns: '34px 1fr', gap: 1.5, alignItems: 'start' }}>
+    <Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', bgcolor: value ? 'primary.main' : 'action.hover', color: value ? 'primary.contrastText' : 'text.secondary', fontWeight: 700 }}>{n}</Box>
+    <Box><Typography variant="overline" color="text.secondary">{label}</Typography>{value ? <Typography sx={{ fontFamily: mono, fontSize: 17, wordBreak: 'break-all' }}>{value}</Typography> : children}</Box>
+  </Box>;
+}
+
+export function ScanStation() {
+  const [p, setP] = useSearchParams();
+  const flow = p.get('flow') ?? '';
+  const q = useOfflineQueue();
+  return (
+    <ModuleWorkspace module={mod} crumbs={[{ label: 'Scan station' }]} title="Scan station"
+      actions={<Chip icon={q.online ? undefined : <CloudOffOutlined />} color={q.online ? 'success' : 'warning'} label={q.online ? 'Online' : 'Offline — scans are queued'} />}>
+      <Box sx={{ maxWidth: 560, mx: 'auto' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(3, 1fr)' }, gap: 1, mb: 2 }}>
+          {flows.map(([k, l, sub]) => (
+            <Button key={k} variant={flow === k ? 'contained' : 'outlined'} onClick={() => setP({ flow: k })} sx={{ py: 1.5, flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
+              <Typography sx={{ fontWeight: 700, fontSize: 17 }}>{l}</Typography><Typography variant="caption" sx={{ opacity: 0.8, textTransform: 'none' }}>{sub}</Typography></Button>))}
+        </Box>
+        <Paper sx={{ p: 2 }}>
+          {flow === '' && <Typography color="text.secondary">Choose what you are doing. Scanners that type and press Enter work in every field; the camera button reads codes on a phone.</Typography>}
+          {flow === 'receive' && <ReceiveFlow key="r" />}
+          {flow === 'inspect' && <InspectFlow key="i" />}
+          {flow === 'move' && <MoveFlow key="m" initialItem={p.get('item') ?? ''} />}
+          {flow === 'issue' && <IssueFlow key="is" initialItem={p.get('item') ?? ''} />}
+          {flow === 'ship' && <ShipFlow key="s" />}
+          {(flow === 'trace' || flow === 'lookup') && <TraceFlow key="t" onAction={(a, code) => setP({ flow: a, item: code })} />}
+        </Paper>
+        <QueuePanel q={q} />
+      </Box>
+    </ModuleWorkspace>
+  );
+}
+
+function QueuePanel({ q }: { q: ReturnType<typeof useOfflineQueue> }) {
+  if (!q.items.length) return null;
+  return <Paper sx={{ p: 2, mt: 2, borderLeft: 5, borderColor: 'warning.main' }}>
+    <Stack direction="row" justifyContent="space-between" alignItems="center"><Typography sx={{ fontWeight: 700 }}>Waiting to post ({q.items.length})</Typography><Button size="small" disabled={!q.online} onClick={() => q.flush()}>Post now</Button></Stack>
+    {q.items.map((i) => <Stack key={i.id} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.75, borderTop: 1, borderColor: 'divider' }}>
+      <Box><Typography variant="body2">{i.label}</Typography><Typography variant="caption" color={i.error ? 'error' : 'text.secondary'}>{i.error ? `Refused: ${i.error}` : `Scanned ${fmtDateTime(i.at)}`}</Typography></Box>
+      {i.error && <Button size="small" color="inherit" onClick={() => q.discard(i.id)}>Discard</Button>}</Stack>)}
+  </Paper>;
+}
+
+const strip = (code: string, prefix: string) => (code.toUpperCase().startsWith(prefix) ? code.slice(prefix.length) : code).trim();
+
+function ReceiveFlow() {
+  const parts = useLookup('part');
+  const locs = useLocations();
+  const [part, setPart] = useState<{ id: string; label: string } | null>(null);
+  const [lot, setLot] = useState(''); const [n, setN] = useState('');
+  const [dock, setDock] = useState<{ id: string; code: string; siteId: string } | null>(null);
+  const [out, setOut] = useState<Outcome>(null);
+  const findPart = (code: string) => {
+    const v = strip(code, 'QG:PART:').toUpperCase();
+    const x = parts.data?.find((r) => (r.partNumber ?? r.number ?? '').toUpperCase() === v);
+    if (x) setPart({ id: x.id, label: `${x.partNumber ?? x.number} ${x.name ?? ''}` }); else setOut({ tone: 'error', text: `No part ${v}.` });
+  };
+  const findLoc = (code: string) => { const v = strip(code, 'QG:LOC:').toUpperCase(); const l = locs.data?.find((r) => r.code.toUpperCase() === v); if (l) setDock({ id: l.id, code: l.code, siteId: l.siteId }); else setOut({ tone: 'error', text: `No location ${v}.` }); };
+  const submit = async () => {
+    setOut(null);
+    const id = newRequestId();
+    try {
+      const r = await postOrQueue<{ number: string }>('/api/warehouse/receipts', { clientRequestId: id, kind: 3, supplierId: null, purchaseOrderId: null, asnNumber: null, packingSlip: null, carrierId: null, trackingNumber: null, receivedOn: localDate(), receivingLocationId: dock!.id, notes: 'Received at scan station',
+        supplierOverrideReason: null, siteId: dock!.siteId, departmentId: null,
+        lines: [{ partId: part!.id, revision: null, purchaseOrderLineId: null, quantityExpected: null, quantityReceived: Number(n), supplierLotNumber: lot || null, lotNumber: null, serialNumbers: null, inspectionRequired: null, inspectionPlanId: null, aqlPlanId: null, aqlInspectionLevel: null, aqlLevel: null, putAwayLocationId: null, clientRequestId: id }] },
+        `Receive ${n} × ${part!.label} at ${dock!.code}`);
+      setOut(done(r.queued, r.result ? `Receipt ${r.result.number}` : 'Receipt')); setPart(null); setLot(''); setN('');
+    } catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+  };
+  return <Stack gap={2}>
+    <Step n={1} label="Receiving dock" value={dock?.code}><ScanField label="Scan dock location" onScan={findLoc} autoFocus /></Step>
+    <Step n={2} label="Part" value={part?.label}><ScanField label="Scan part label (QG:PART) or type part number" onScan={findPart} /></Step>
+    <Step n={3} label="Supplier lot / heat"><TextField fullWidth value={lot} onChange={(e) => setLot(e.target.value)} placeholder="Optional" /></Step>
+    <Step n={4} label="Quantity"><TextField fullWidth type="number" value={n} onChange={(e) => setN(e.target.value)} slotProps={{ htmlInput: { inputMode: 'decimal', style: { fontSize: 22 } } }} /></Step>
+    {out && <Alert severity={out.tone}>{out.text}</Alert>}
+    <Big disabled={!dock || !part || !(Number(n) > 0)} onClick={submit}>Receive</Big>
+    <Typography variant="caption" color="text.secondary">Parts with a receiving inspection plan land as awaiting inspection; the label prints from the receipt.</Typography>
+  </Stack>;
+}
+
+function InspectFlow() {
+  const [ctx, setCtx] = useState<Ctx | null>(null); const [err, setErr] = useState<string | null>(null);
+  const go = async (c: string) => { setErr(null); try { setCtx(await scan(c)); } catch (e) { setErr((e as Error).message); } };
+  const insp = ctx?.related.filter((r) => r.type === 'Inspection' || r.type === 'AqlInspection') ?? [];
+  return <Stack gap={2}>
+    <ScanField label="Scan the lot label" onScan={go} autoFocus />
+    {err && <Alert severity="error">{err}</Alert>}
+    {ctx && <>
+      <Typography sx={{ fontFamily: mono, fontSize: 18 }}>{ctx.match.kind} {ctx.match.number}</Typography>
+      {!ctx.actions.includes('inspect') && <Alert severity="info">Nothing is waiting for receiving inspection on this {ctx.match.kind.toLowerCase()}.</Alert>}
+      {insp.map((r) => <Button key={r.id} variant="contained" size="large" component={RouterLink} to={r.url}>{r.number} · {r.title} · {r.status}</Button>)}
+      {ctx.related.filter((r) => r.type === 'Receipt').map((r) => <Button key={r.id} variant="outlined" component={RouterLink} to={r.url}>Receipt {r.number} — record the outcome</Button>)}
+    </>}
+  </Stack>;
+}
+
+function MoveFlow({ initialItem }: { initialItem: string }) {
+  const [item, setItem] = useState(initialItem); const [from, setFrom] = useState(''); const [to, setTo] = useState(''); const [n, setN] = useState('');
+  const [stock, setStock] = useState<StockRow[]>([]);
+  const [out, setOut] = useState<Outcome>(null);
+  useEffect(() => { if (initialItem && navigator.onLine) scan(initialItem).then((c) => setStock(c.stock)).catch(() => undefined); }, [initialItem]);
+  const onItem = (c: string) => { setItem(c); if (navigator.onLine) scan(c).then((x) => { setStock(x.stock); if (x.stock.length === 1) { setFrom(`QG:LOC:${x.stock[0].locationCode}`); setN(String(x.stock[0].available)); } }).catch(() => setStock([])); };
+  const submit = async () => {
+    setOut(null);
+    try { const r = await postOrQueue('/api/warehouse/moves/scan', { item, from, to, quantity: Number(n) }, `Move ${n} × ${item} ${strip(from, 'QG:LOC:')} → ${strip(to, 'QG:LOC:')}`); setOut(done(r.queued, 'Move')); setItem(''); setFrom(''); setTo(''); setN(''); setStock([]); }
+    catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+  };
+  return <Stack gap={2}>
+    <Step n={1} label="Item" value={item}><ScanField label="Scan lot, serial or part" onScan={onItem} autoFocus /></Step>
+    {stock.length > 1 && !from && <Stack gap={0.5}>{stock.map((s) => <Button key={s.id} variant="outlined" onClick={() => { setFrom(`QG:LOC:${s.locationCode}`); setN(String(s.available)); }} sx={{ justifyContent: 'space-between', fontFamily: mono }}>
+      <span>{s.locationCode}</span><span>{qty(s.available)} {stockStatusLabel[s.status]}</span></Button>)}</Stack>}
+    <Step n={2} label="From" value={from}><ScanField label="Scan source location" onScan={setFrom} /></Step>
+    <Step n={3} label="To" value={to}><ScanField label="Scan destination location" onScan={setTo} /></Step>
+    <Step n={4} label="Quantity"><TextField fullWidth type="number" value={n} onChange={(e) => setN(e.target.value)} slotProps={{ htmlInput: { inputMode: 'decimal', style: { fontSize: 22 } } }} /></Step>
+    {out && <Alert severity={out.tone}>{out.text}</Alert>}
+    <Big disabled={!item || !from || !to || !(Number(n) > 0)} onClick={submit}>Move</Big>
+    {(item || from || to) && <Big color="inherit" onClick={() => { setItem(''); setFrom(''); setTo(''); setN(''); setStock([]); setOut(null); }}>Start over</Big>}
+  </Stack>;
+}
+
+function IssueFlow({ initialItem }: { initialItem: string }) {
+  const [wo, setWo] = useState(''); const [mat, setMat] = useState(initialItem); const [from, setFrom] = useState(''); const [n, setN] = useState(''); const [op, setOp] = useState('');
+  const [out, setOut] = useState<Outcome>(null);
+  const submit = async () => {
+    setOut(null);
+    try { const r = await postOrQueue('/api/warehouse/issues/scan', { workOrder: wo, material: mat, from, quantity: Number(n), operationSequence: op ? Number(op) : null }, `Issue ${n} × ${mat} to ${strip(wo, 'QG:WO:')}`); setOut(done(r.queued, 'Issue')); setMat(''); setFrom(''); setN(''); }
+    catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+  };
+  return <Stack gap={2}>
+    <Step n={1} label="Work order" value={wo}><ScanField label="Scan work order traveler (QG:WO)" onScan={setWo} autoFocus /></Step>
+    <Step n={2} label="Material" value={mat}><ScanField label="Scan material lot or serial" onScan={setMat} /></Step>
+    <Step n={3} label="From" value={from}><ScanField label="Scan the location it comes from" onScan={setFrom} /></Step>
+    <Step n={4} label="Quantity & operation"><Stack direction="row" gap={1}><TextField fullWidth type="number" label="Quantity" value={n} onChange={(e) => setN(e.target.value)} slotProps={{ htmlInput: { inputMode: 'decimal' } }} /><TextField label="Op" value={op} onChange={(e) => setOp(e.target.value)} sx={{ width: 110 }} slotProps={{ htmlInput: { inputMode: 'numeric' } }} /></Stack></Step>
+    {out && <Alert severity={out.tone}>{out.text}</Alert>}
+    <Big disabled={!wo || !mat || !from || !(Number(n) > 0)} onClick={submit}>Issue to work order</Big>
+    <Typography variant="caption" color="text.secondary">Issuing records genealogy from the material lot to the work order. Held or uninspected material is refused.</Typography>
+  </Stack>;
+}
+
+interface ShipDetail { shipment: { id: string; number: string; status: number }; picks: { task: { id: string; quantity: number; status: number }; partNumber: string; lotNumber?: string; serialNumber?: string; locationCode: string }[] }
+function ShipFlow() {
+  const [id, setId] = useState<string | null>(null); const [out, setOut] = useState<Outcome>(null);
+  const [loc, setLoc] = useState(''); const [verify, setVerify] = useState<string[]>([]);
+  const d = useQuery({ queryKey: ['shipment', id], queryFn: () => get<ShipDetail>(`/api/shipping/shipments/${id}`), enabled: !!id });
+  const open = d.data?.picks.filter((x) => x.task.status === 0) ?? [];
+  const next = open[0];
+  const find = async (c: string) => { setOut(null); try { const x = await scan(c); if (x.match.kind !== 'Shipment' || !x.match.id) throw new Error('That is not a shipment or carton label.'); setId(x.match.id); } catch (e) { setOut({ tone: 'error', text: (e as Error).message }); } };
+  const pick = async (item: string) => {
+    setOut(null);
+    try { await post(`/api/shipping/shipments/${id}/picks/${next!.task.id}`, { locationCode: loc, itemCode: item, quantity: next!.task.quantity }); setOut({ tone: 'success', text: `Picked ${next!.partNumber} from ${next!.locationCode}.` }); setLoc(''); d.refetch(); }
+    catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+  };
+  const doVerify = async () => {
+    setOut(null);
+    try { const r = await post<{ verified: boolean; issues: string[] }>(`/api/shipping/shipments/${id}/verify`, { scans: verify.map((code) => ({ code, quantity: null })) }); setOut(r.verified ? { tone: 'success', text: 'Shipment verified — ready to ship.' } : { tone: 'warning', text: r.issues.join(' ') || 'Not verified yet.' }); d.refetch(); }
+    catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+  };
+  if (!navigator.onLine) return <Alert severity="warning">Picking and verification check live stock, so they need a connection. Moves and issues still queue offline.</Alert>;
+  return <Stack gap={2}>
+    {!id ? <ScanField label="Scan shipment number or carton (QG:CTN)" onScan={find} autoFocus /> : <Typography sx={{ fontFamily: mono, fontSize: 18 }}>{d.data?.shipment.number}</Typography>}
+    {out && <Alert severity={out.tone}>{out.text}</Alert>}
+    {id && d.data && next && <Paper variant="outlined" sx={{ p: 2 }}>
+      <Typography variant="overline">Next pick · {open.length} left</Typography>
+      <Typography sx={{ fontFamily: mono, fontSize: 26, fontWeight: 700 }}>{next.locationCode}</Typography>
+      <Typography>{next.partNumber} · {next.serialNumber ?? next.lotNumber ?? ''} · <b>{qty(next.task.quantity)}</b></Typography>
+      <Stack gap={1.5} sx={{ mt: 1.5 }}>
+        <Step n={1} label="Location" value={loc}><ScanField label="Scan pick location" onScan={setLoc} autoFocus /></Step>
+        {loc && <Step n={2} label="Item"><ScanField label="Scan the lot / serial picked" onScan={pick} autoFocus /></Step>}
+      </Stack>
+    </Paper>}
+    {id && d.data && !next && d.data.picks.length > 0 && d.data.shipment.status < 5 && <Stack gap={1.5}>
+      <Typography sx={{ fontWeight: 600 }}>All picks done. Scan cartons to verify.</Typography>
+      <ScanField label="Scan carton / item" onScan={(c) => setVerify([...verify, c])} autoFocus />
+      {verify.map((v, i) => <Typography key={i} sx={{ fontFamily: mono }}>{v}</Typography>)}
+      <Big disabled={!verify.length} onClick={doVerify}>Verify</Big>
+    </Stack>}
+    {id && d.data && d.data.picks.length === 0 && <Alert severity="info">No pick list yet — build it on the shipment.</Alert>}
+    {id && <Button component={RouterLink} to={`/shipping/shipments/${id}`}>Open shipment</Button>}
+  </Stack>;
+}
+
+function TraceFlow({ onAction }: { onAction: (a: string, code: string) => void }) {
+  const nav = useNavigate();
+  const [ctx, setCtx] = useState<Ctx | null>(null); const [err, setErr] = useState<string | null>(null);
+  const go = async (c: string) => { setErr(null); try { setCtx(await scan(c)); } catch (e) { setErr((e as Error).message); setCtx(null); } };
+  return <Stack gap={2}>
+    <ScanField label="Scan anything" onScan={go} autoFocus helper="Lot, serial, location, part, work order, receipt, shipment or carton" />
+    {err && <Alert severity="error">{err}</Alert>}
+    {ctx && <>
+      <Box><Typography variant="overline" color="text.secondary">{ctx.match.kind}</Typography><Typography sx={{ fontFamily: mono, fontSize: 22, fontWeight: 700 }}>{ctx.match.number ?? ctx.match.raw}</Typography>{ctx.match.detail && <Typography color="text.secondary">{ctx.match.detail}</Typography>}</Box>
+      {ctx.holds.map((h) => <Alert key={h.id} severity="error" action={<Button color="inherit" component={RouterLink} to={h.url}>Open</Button>}>On hold {h.number}: {h.title}</Alert>)}
+      {ctx.stock.length > 0 && <Stack gap={0.5}>{ctx.stock.map((s) => <Stack key={s.id} direction="row" justifyContent="space-between" alignItems="center" sx={{ py: 0.75, borderBottom: 1, borderColor: 'divider' }}>
+        <Box><Typography sx={{ fontFamily: mono }}>{s.locationCode}</Typography><Typography variant="caption" color="text.secondary">{s.partNumber} {s.serialNumber ?? s.lotNumber ?? ''}</Typography></Box>
+        <Stack direction="row" gap={1} alignItems="center"><StockBadge status={s.status} held={s.held} /><b>{qty(s.onHand)}</b></Stack></Stack>)}</Stack>}
+      {ctx.related.length > 0 && <Stack gap={0.5}>{ctx.related.map((r) => <Button key={`${r.type}${r.id}`} component={RouterLink} to={r.url} sx={{ justifyContent: 'space-between' }}><span>{r.number} · {r.title}</span><span>{r.status}</span></Button>)}</Stack>}
+      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+        {ctx.actions.filter((a) => ['move', 'issue', 'ship', 'inspect', 'receive'].includes(a)).map((a) => <Big key={a} onClick={() => onAction(a, ctx.match.raw)}>{a[0].toUpperCase() + a.slice(1)}</Big>)}
+        {ctx.match.url && <Big color="inherit" onClick={() => nav(ctx.match.url!)}>Open record</Big>}
+      </Box>
+    </>}
+  </Stack>;
+}
