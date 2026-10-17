@@ -33,7 +33,7 @@ public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegi
                      .Join(db.TrainingCourses, t => t.CourseId, c => c.Id, (t, c) => new { t.Id, t.UserId, t.DueOn, c.Number, c.Title, CourseId = c.Id }).ToListAsync(ct))
             items.Add(($"training:{t.Id}:{Phase(t.DueOn)}", t.UserId, $"Training {t.Number} {(t.DueOn < today ? "is overdue" : $"is due {t.DueOn:yyyy-MM-dd}")}: {t.Title}", "TrainingCourse", t.CourseId));
 
-        foreach (var e in await db.Equipment.Where(e => e.Status == EquipmentStatus.Active && e.NextDueOn != null && e.NextDueOn <= soon).Select(e => new { e.Id, e.Number, e.Name, e.OwnerId, Due = e.NextDueOn!.Value }).ToListAsync(ct))
+        foreach (var e in await db.Equipment.Where(e => e.Status == EquipmentStatus.Active && e.RequiresCalibration && e.NextDueOn != null && e.NextDueOn <= soon).Select(e => new { e.Id, e.Number, e.Name, e.OwnerId, Due = e.NextDueOn!.Value }).ToListAsync(ct))
             items.Add(($"calibration:{e.Id}:{e.Due:yyyyMMdd}:{Phase(e.Due)}", e.OwnerId, $"Calibration of {e.Number} {e.Name} {(e.Due < today ? "is overdue" : $"is due {e.Due:yyyy-MM-dd}")}", "Equipment", e.Id));
 
         var certLimit = today.AddDays(CertificateLeadDays);
@@ -51,6 +51,13 @@ public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegi
 
         foreach (var d in await db.Documents.Where(d => d.NextReviewDue != null && d.NextReviewDue <= soon).Select(d => new { d.Id, d.Number, d.Title, d.OwnerId, Due = d.NextReviewDue!.Value }).ToListAsync(ct))
             items.Add(($"doc-review:{d.Id}:{d.Due:yyyyMMdd}:{Phase(d.Due)}", d.OwnerId, $"Periodic review of {d.Number} {d.Title} {(d.Due < today ? "is overdue" : $"is due {d.Due:yyyy-MM-dd}")}", "Document", d.Id));
+
+        foreach (var p in await db.MaintenancePlans.Where(p => p.IsActive && p.NextDueOn <= soon)
+                     .Join(db.Equipment.Where(e => e.Status != EquipmentStatus.Retired), p => p.EquipmentId, e => e.Id, (p, e) => new { p.Id, p.Title, Due = p.NextDueOn, e.Number, e.OwnerId, EquipmentId = e.Id }).ToListAsync(ct))
+            items.Add(($"pm:{p.Id}:{p.Due:yyyyMMdd}:{Phase(p.Due)}", p.OwnerId, $"Maintenance \"{p.Title}\" on {p.Number} {(p.Due < today ? "is overdue" : $"is due {p.Due:yyyy-MM-dd}")}", "Equipment", p.EquipmentId));
+
+        foreach (var e in await db.Equipment.Where(e => e.Status != EquipmentStatus.Retired && e.QualificationDueOn != null && e.QualificationDueOn <= soon).Select(e => new { e.Id, e.Number, e.Name, e.OwnerId, Due = e.QualificationDueOn!.Value }).ToListAsync(ct))
+            items.Add(($"qualification:{e.Id}:{e.Due:yyyyMMdd}:{Phase(e.Due)}", e.OwnerId, $"Requalification of {e.Number} {e.Name} {(e.Due < today ? "is overdue" : $"is due {e.Due:yyyy-MM-dd}")}", "Equipment", e.Id));
 
         foreach (var r in await db.Risks.Where(r => r.Status != RiskStatus.Closed && r.Status != RiskStatus.Cancelled && r.ReviewDueOn <= soon).Select(r => new { r.Id, r.Number, r.Title, r.OwnerId, Due = r.ReviewDueOn }).ToListAsync(ct))
             items.Add(($"risk-review:{r.Id}:{r.Due:yyyyMMdd}:{Phase(r.Due)}", r.OwnerId, $"Review of risk {r.Number} {r.Title} {(r.Due < today ? "is overdue" : $"is due {r.Due:yyyy-MM-dd}")}", "Risk", r.Id));

@@ -9,7 +9,10 @@ using QualGuardIQ.Infrastructure.Services;
 namespace QualGuardIQ.Infrastructure.Modules.Quality;
 
 public sealed record CreateEquipmentRequest(string Name, string? Manufacturer, string? Model, string? SerialNumber, string? Location, string? MeasurementRange,
-    string? Tolerance, Guid SiteId, Guid? DepartmentId, Guid? OwnerId, int CalibrationIntervalDays, DateOnly? NextDueOn);
+    string? Tolerance, Guid SiteId, Guid? DepartmentId, Guid? OwnerId, int CalibrationIntervalDays, DateOnly? NextDueOn,
+    string? Category = null, string? AssetNumber = null, bool RequiresCalibration = true);
+public sealed record UpdateEquipmentRequest(string Name, string? Manufacturer, string? Model, string? SerialNumber, string? Location, string? MeasurementRange, string? Tolerance,
+    Guid? DepartmentId, Guid OwnerId, int CalibrationIntervalDays, string Category, string? AssetNumber, uint RowVersion);
 public sealed record RecordCalibrationRequest(DateOnly PerformedOn, string PerformedBy, CalibrationResult Result, string? AsFound, string? AsLeft, string? StandardsUsed, string? CertificateNumber);
 public sealed record CompleteImpactRequest(string AffectedProduct, string Assessment, string Decision);
 
@@ -33,7 +36,8 @@ public sealed class CalibrationService(AppDbContext db, ModuleSupport m, INumber
             Number = await numbers.NextAsync(EquipmentType, r.SiteId, ct), Name = r.Name.Trim(), Manufacturer = r.Manufacturer?.Trim(), Model = r.Model?.Trim(),
             SerialNumber = r.SerialNumber?.Trim(), Location = r.Location?.Trim(), MeasurementRange = r.MeasurementRange?.Trim(), Tolerance = r.Tolerance?.Trim(),
             SiteId = r.SiteId, DepartmentId = r.DepartmentId, OwnerId = owner, CalibrationIntervalDays = r.CalibrationIntervalDays,
-            NextDueOn = r.NextDueOn ?? await m.TodayAsync(r.SiteId, ct), Status = EquipmentStatus.Active
+            NextDueOn = r.RequiresCalibration ? r.NextDueOn ?? await m.TodayAsync(r.SiteId, ct) : null, Status = EquipmentStatus.Active,
+            Category = Category(r.Category), AssetNumber = string.IsNullOrWhiteSpace(r.AssetNumber) ? null : r.AssetNumber.Trim(), RequiresCalibration = r.RequiresCalibration
         };
         db.Equipment.Add(e);
         await db.SaveChangesAsync(ct);
@@ -42,12 +46,53 @@ public sealed class CalibrationService(AppDbContext db, ModuleSupport m, INumber
         return e;
     }
 
+    public static readonly string[] Categories = ["Production equipment", "Test equipment", "Inspection equipment", "Tooling", "Fixture", "Jig", "Gage", "Mold", "Die", "Machine", "Laboratory equipment", "Reference standard"];
+
+    private static string Category(string? c)
+    {
+        if (string.IsNullOrWhiteSpace(c)) return "Inspection equipment";
+        if (c.Length > 100) throw new AppException("The equipment type is limited to 100 characters.");
+        return c.Trim();
+    }
+
+    public async Task UpdateAsync(Guid id, UpdateEquipmentRequest r, CancellationToken ct)
+    {
+        await m.EditAsync(EquipmentType, id, ct);
+        var e = await db.Equipment.FirstAsync(x => x.Id == id, ct);
+        if (e.Status == EquipmentStatus.Retired) throw new ConflictException("Retired equipment cannot be edited.");
+        ModuleSupport.Required(r.Name, "Name", 200);
+        if (r.CalibrationIntervalDays is < 1 or > 3650) throw new AppException("The calibration interval must be between 1 and 3650 days.");
+        await m.ValidateLocationAsync(e.SiteId, r.DepartmentId, ct);
+        if (r.OwnerId != e.OwnerId) await m.RequireActiveUserAsync(r.OwnerId, "owner", ct);
+        db.Entry(e).Property(x => x.RowVersion).OriginalValue = r.RowVersion;
+        string? T(string? v) => string.IsNullOrWhiteSpace(v) ? null : v.Trim();
+        e.Name = r.Name.Trim(); e.Manufacturer = T(r.Manufacturer); e.Model = T(r.Model); e.SerialNumber = T(r.SerialNumber); e.Location = T(r.Location);
+        e.MeasurementRange = T(r.MeasurementRange); e.Tolerance = T(r.Tolerance); e.DepartmentId = r.DepartmentId; e.OwnerId = r.OwnerId; e.Category = Category(r.Category); e.AssetNumber = T(r.AssetNumber);
+        if (e.CalibrationIntervalDays != r.CalibrationIntervalDays && e.RequiresCalibration && e.LastCalibratedOn is { } last) e.NextDueOn = last.AddDays(r.CalibrationIntervalDays);
+        e.CalibrationIntervalDays = r.CalibrationIntervalDays;
+        await db.SaveChangesAsync(ct);
+        await m.IndexAsync(EquipmentType, e.Id, $"{e.Manufacturer} {e.Model} {e.SerialNumber} {e.Location} {e.AssetNumber}", ct);
+    }
+
+    public async Task RetireAsync(Guid id, CancellationToken ct)
+    {
+        await m.ViewAsync(EquipmentType, id, ct);
+        var e = await db.Equipment.FirstAsync(x => x.Id == id, ct);
+        await m.RequireAsync(Permissions.CalibrationApprove, e.SiteId, e.DepartmentId, ct);
+        if (e.Status == EquipmentStatus.Retired) throw new ConflictException("The equipment is already retired.");
+        if (await db.ImpactAssessments.AnyAsync(x => x.EquipmentId == id && x.Status == ImpactStatus.Open, ct)) throw new AppException("Complete the open impact assessment first.");
+        e.Status = EquipmentStatus.Retired; e.NextDueOn = null;
+        foreach (var p in await db.MaintenancePlans.Where(p => p.EquipmentId == id && p.IsActive).ToListAsync(ct)) p.IsActive = false;
+        await db.SaveChangesAsync(ct);
+    }
+
     /// <summary>Records a calibration. Events are immutable. Out-of-tolerance or failed results quarantine the equipment and open an impact assessment.</summary>
     public async Task<(CalibrationEvent Event, ImpactAssessment? Impact)> RecordAsync(Guid equipmentId, RecordCalibrationRequest r, CancellationToken ct)
     {
         await m.EditAsync(EquipmentType, equipmentId, ct);
         var e = await db.Equipment.FirstAsync(x => x.Id == equipmentId, ct);
         if (e.Status == EquipmentStatus.Retired) throw new ConflictException("Retired equipment cannot be calibrated.");
+        if (!e.RequiresCalibration) throw new AppException("This equipment is not under calibration control.");
         ModuleSupport.Required(r.PerformedBy, "Performed by", 200);
         if (r.PerformedOn > await m.TodayAsync(e.SiteId, ct)) throw new AppException("The calibration date cannot be in the future.");
         if (e.LastCalibratedOn is { } last && r.PerformedOn < last) throw new AppException("A later calibration is already recorded.");
@@ -133,7 +178,8 @@ public sealed class CalibrationService(AppDbContext db, ModuleSupport m, INumber
         if (await db.ImpactAssessments.AnyAsync(x => x.EquipmentId == e.Id && x.Status == ImpactStatus.Open, ct)) throw new AppException("Complete the open impact assessment first.");
         var latest = await db.CalibrationEvents.Where(x => x.EquipmentId == e.Id).OrderByDescending(x => x.PerformedOn).ThenByDescending(x => x.CreatedAt).FirstOrDefaultAsync(ct);
         if (latest is null || latest.Result is not (CalibrationResult.Pass or CalibrationResult.PassAfterAdjustment)) throw new AppException("Record a passing calibration before returning to service.");
-        e.Status = EquipmentStatus.Active;
+        if (e.RecalibrateAfter is { } after && latest.PerformedOn < after) throw new AppException($"A repair on {after:yyyy-MM-dd} requires a calibration on or after that date.");
+        e.Status = EquipmentStatus.Active; e.RecalibrateAfter = null;
         await db.SaveChangesAsync(ct);
         await m.IndexAsync(EquipmentType, e.Id, null, ct);
     }

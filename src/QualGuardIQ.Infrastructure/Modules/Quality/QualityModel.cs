@@ -17,6 +17,8 @@ public partial class AppDbContext
     public DbSet<TrainingCourse> TrainingCourses => Set<TrainingCourse>();
     public DbSet<TrainingAssignment> TrainingAssignments => Set<TrainingAssignment>();
     public DbSet<Equipment> Equipment => Set<Equipment>();
+    public DbSet<MaintenancePlan> MaintenancePlans => Set<MaintenancePlan>();
+    public DbSet<MaintenanceEvent> MaintenanceEvents => Set<MaintenanceEvent>();
     public DbSet<CalibrationEvent> CalibrationEvents => Set<CalibrationEvent>();
     public DbSet<ImpactAssessment> ImpactAssessments => Set<ImpactAssessment>();
 
@@ -166,8 +168,35 @@ public partial class AppDbContext
             e.HasIndex(x => x.NextDueOn);
             e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
             e.ToTable(t => t.HasCheckConstraint("ck_equipment_interval", "\"CalibrationIntervalDays\" BETWEEN 1 AND 3650"));
+            e.Property(x => x.Category).HasMaxLength(100).HasDefaultValue("Inspection equipment");
+            e.Property(x => x.RequiresCalibration).HasDefaultValue(true);
+            e.Property(x => x.AssetNumber).HasMaxLength(60);
+            e.HasIndex(x => x.Category);
         });
         Scoped<Equipment>(b);
+        b.Entity<MaintenancePlan>(e =>
+        {
+            e.ToTable("maintenance_plans");
+            e.Property(x => x.Title).HasMaxLength(200);
+            e.Property(x => x.Instructions).HasMaxLength(4000);
+            e.HasIndex(x => new { x.EquipmentId, x.IsActive });
+            e.HasIndex(x => x.NextDueOn);
+            e.HasOne<Equipment>().WithMany().HasForeignKey(x => x.EquipmentId).OnDelete(DeleteBehavior.Restrict);
+            e.ToTable(t => t.HasCheckConstraint("ck_maintenance_interval", "\"IntervalDays\" BETWEEN 1 AND 3650"));
+        });
+        b.Entity<MaintenanceEvent>(e =>
+        {
+            e.ToTable("maintenance_events");
+            e.Property(x => x.Number).HasMaxLength(40);
+            e.HasIndex(x => x.Number).IsUnique();
+            e.HasIndex(x => new { x.EquipmentId, x.PerformedOn });
+            e.Property(x => x.PerformedBy).HasMaxLength(200);
+            e.Property(x => x.Description).HasMaxLength(4000);
+            e.Property(x => x.DowntimeHours).HasPrecision(10, 2);
+            e.HasOne<Equipment>().WithMany().HasForeignKey(x => x.EquipmentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<MaintenancePlan>().WithMany().HasForeignKey(x => x.PlanId).OnDelete(DeleteBehavior.Restrict);
+        });
+        Scoped<MaintenanceEvent>(b);
         b.Entity<CalibrationEvent>(e =>
         {
             e.ToTable("calibration_events");
