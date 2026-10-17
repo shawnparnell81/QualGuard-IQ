@@ -35,7 +35,7 @@ This guide covers the Integrations module (Admin → Integrations). The vendor r
 | Infor | M3, Mongoose | ION API OAuth from the `.ionapi` file values (`grant`, default client credentials); Mongoose also supports `mode=direct` | Company = Mongoose configuration; options `cono` (M3), `ionProductPath` (Mongoose, default CSI) |
 | Epicor Kinetic | KineticRestV2 | API key plus Basic (Username + Secret), or IdP token (`auth=idp`, `tokenUrl`) | Company = Epicor company; options `baq.<Entity>` for BAQ reads |
 | Plex Smart Manufacturing | Connect | `X-Plex-Connect-Api-Key` (Secret) and `X-Plex-Connect-Tenant-Id` | Account = tenant id; options `query.<Entity>`, `idField` |
-| DELMIAworks (IQMS) | WebApi | Session login (`loginPath`, token header `tokenHeader`) | Company = company/EPLANT; options `path.<Entity>`, `idField.<Entity>` |
+| DELMIAworks (IQMS) | WebApi | Session login (`loginPath`, token header `tokenHeader`) | Username + Secret (password); Company = database alias; options `tokenMinutes` (default 20), `path.<Entity>`, `idField.<Entity>` |
 | Generic REST | Rest | `auth` = bearer, basic or apikey (`apiKeyHeader`) | options `url.<Entity>`, `items.<Entity>`, `id.<Entity>`, `modified.<Entity>`, `next.<Entity>`, `since.<Entity>`, `testEntity` |
 | CSV exchange | Csv | none (upload) | `id.<Entity>` |
 
