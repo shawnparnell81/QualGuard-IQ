@@ -24287,6 +24287,498 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/labels/printers:
+    get:
+      tags:
+        - Labels
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrinterRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrinterRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrinterRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Labels
+      description: 'Requires permission: `inventory.approve` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrinterInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PrinterInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PrinterInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/labels/printers/{id}':
+    put:
+      tags:
+        - Labels
+      description: 'Requires permission: `inventory.approve` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrinterInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PrinterInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PrinterInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/labels/printers/{id}/test':
+    post:
+      tags:
+        - Labels
+      description: 'Requires permission: `inventory.approve` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PrintOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintOutcome'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PrintOutcome'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/labels/routes:
+    get:
+      tags:
+        - Labels
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RouteRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RouteRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RouteRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Labels
+      description: 'Requires permission: `inventory.approve` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RouteInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RouteInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/labels/routes/{id}':
+    put:
+      tags:
+        - Labels
+      description: 'Requires permission: `inventory.approve` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RouteInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RouteInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RouteInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/labels/routes/resolve:
+    get:
+      tags:
+        - Labels
+      description: 'Requires permission: `inventory.view` (site/department scoped).'
+      parameters:
+        - name: labelType
+          in: query
+          schema:
+            $ref: '#/components/schemas/LabelType'
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: locationId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: workstation
+          in: query
+          schema:
+            type: string
+        - name: userId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/labels/print:
+    post:
+      tags:
+        - Labels
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrintRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PrintRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PrintRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrintOutcome'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrintOutcome'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PrintOutcome'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/labels/preview:
+    get:
+      tags:
+        - Labels
+      description: Requires an authenticated user.
+      parameters:
+        - name: labelType
+          in: query
+          schema:
+            $ref: '#/components/schemas/LabelType'
+        - name: refType
+          in: query
+          schema:
+            type: string
+        - name: refId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/labels/jobs:
+    get:
+      tags:
+        - Labels
+      description: Requires an authenticated user.
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PrintJobStatus'
+        - name: printerId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: refType
+          in: query
+          schema:
+            type: string
+        - name: refId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/JobPage'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobPage'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/JobPage'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/labels/jobs/{id}/retry':
+    post:
+      tags:
+        - Labels
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PrintOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintOutcome'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PrintOutcome'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/labels/jobs/{id}/reprint':
+    post:
+      tags:
+        - Labels
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReprintInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReprintInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReprintInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PrintOutcome'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrintOutcome'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PrintOutcome'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/labels/jobs/{id}/cancel':
+    post:
+      tags:
+        - Labels
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/labels/jobs/{id}/pdf':
+    get:
+      tags:
+        - Labels
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/labels/jobs/{id}/zpl':
+    get:
+      tags:
+        - Labels
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/master/families:
     get:
       tags:
@@ -43635,6 +44127,37 @@ components:
             - 'null'
             - string
           format: uuid
+    JobPage:
+      required:
+        - items
+        - total
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobRow'
+        total:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    JobRow:
+      required:
+        - job
+        - printer
+        - requestedBy
+      type: object
+      properties:
+        job:
+          $ref: '#/components/schemas/LabelPrintJob'
+        printer:
+          type:
+            - 'null'
+            - string
+        requestedBy:
+          type: string
     JsonElement: { }
     KnowledgeArticle:
       type: object
@@ -43888,6 +44411,201 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/KpiPoint'
+    LabelPrintJob:
+      type: object
+      properties:
+        labelType:
+          $ref: '#/components/schemas/LabelType'
+        trigger:
+          $ref: '#/components/schemas/PrintTrigger'
+        refType:
+          type: string
+        refId:
+          type: string
+          format: uuid
+        refNumber:
+          type:
+            - 'null'
+            - string
+        title:
+          type: string
+        barcode:
+          type: string
+        dataJson:
+          type: string
+        printerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        routeId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        copies:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        status:
+          $ref: '#/components/schemas/PrintJobStatus'
+        attempts:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        nextAttemptAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        lastError:
+          type:
+            - 'null'
+            - string
+        requestedById:
+          type: string
+          format: uuid
+        requestedAt:
+          type: string
+          format: date-time
+        printedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        workstation:
+          type:
+            - 'null'
+            - string
+        triggerKey:
+          type:
+            - 'null'
+            - string
+        reprintOfId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        reprintReason:
+          type:
+            - 'null'
+            - string
+        locationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    LabelPrintRoute:
+      type: object
+      properties:
+        labelType:
+          $ref: '#/components/schemas/LabelType'
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        locationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        workstation:
+          type:
+            - 'null'
+            - string
+        userId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        printerId:
+          type: string
+          format: uuid
+        copies:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        autoPrint:
+          type: boolean
+        mode:
+          $ref: '#/components/schemas/PrintMode'
+        active:
+          type: boolean
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    LabelType:
+      type: integer
     LevelInput:
       required:
         - code
@@ -48500,6 +49218,216 @@ components:
           type: string
         applies:
           type: boolean
+    PrinterDriver:
+      type: integer
+    PrinterInput:
+      required:
+        - code
+        - name
+        - driver
+        - address
+        - language
+        - dpi
+        - widthMm
+        - heightMm
+        - enabled
+        - siteId
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        driver:
+          $ref: '#/components/schemas/PrinterDriver'
+        address:
+          type:
+            - 'null'
+            - string
+        language:
+          $ref: '#/components/schemas/PrinterLanguage'
+        dpi:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        widthMm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        heightMm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        enabled:
+          type: boolean
+        siteId:
+          type: string
+          format: uuid
+        secret:
+          type:
+            - 'null'
+            - string
+        clearSecret:
+          type: boolean
+          default: false
+    PrinterLanguage:
+      type: integer
+    PrinterRow:
+      required:
+        - id
+        - code
+        - name
+        - driver
+        - address
+        - language
+        - dpi
+        - widthMm
+        - heightMm
+        - enabled
+        - status
+        - lastCheckedAt
+        - lastError
+        - hasSecret
+        - siteId
+        - siteName
+        - pending
+        - failed
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        code:
+          type: string
+        name:
+          type: string
+        driver:
+          $ref: '#/components/schemas/PrinterDriver'
+        address:
+          type:
+            - 'null'
+            - string
+        language:
+          $ref: '#/components/schemas/PrinterLanguage'
+        dpi:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        widthMm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        heightMm:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        enabled:
+          type: boolean
+        status:
+          $ref: '#/components/schemas/PrinterStatus'
+        lastCheckedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        lastError:
+          type:
+            - 'null'
+            - string
+        hasSecret:
+          type: boolean
+        siteId:
+          type: string
+          format: uuid
+        siteName:
+          type: string
+        pending:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        failed:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    PrinterStatus:
+      type: integer
+    PrintJobStatus:
+      type: integer
+    PrintMode:
+      type: integer
+    PrintOutcome:
+      required:
+        - jobId
+        - labelType
+        - title
+        - status
+        - printer
+        - error
+      type: object
+      properties:
+        jobId:
+          type: string
+          format: uuid
+        labelType:
+          $ref: '#/components/schemas/LabelType'
+        title:
+          type: string
+        status:
+          $ref: '#/components/schemas/PrintJobStatus'
+        printer:
+          type:
+            - 'null'
+            - string
+        error:
+          type:
+            - 'null'
+            - string
+    PrintRequest:
+      required:
+        - labelType
+        - refType
+        - refId
+        - printerId
+        - copies
+      type: object
+      properties:
+        labelType:
+          $ref: '#/components/schemas/LabelType'
+        refType:
+          type: string
+        refId:
+          type: string
+          format: uuid
+        printerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        copies:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+    PrintTrigger:
+      type: integer
     ProblemDetails:
       required:
         - title
@@ -51014,6 +51942,27 @@ components:
             - integer
             - string
           format: uint32
+    ReprintInput:
+      required:
+        - reason
+        - printerId
+        - copies
+      type: object
+      properties:
+        reason:
+          type: string
+        printerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        copies:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
     RequirementInput:
       required:
         - title
@@ -52662,6 +53611,81 @@ components:
             - string
           format: uuid
         recordTypeLabel:
+          type:
+            - 'null'
+            - string
+    RouteInput:
+      required:
+        - labelType
+        - siteId
+        - locationId
+        - workstation
+        - userId
+        - printerId
+        - copies
+        - autoPrint
+        - mode
+        - active
+      type: object
+      properties:
+        labelType:
+          $ref: '#/components/schemas/LabelType'
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        locationId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        workstation:
+          type:
+            - 'null'
+            - string
+        userId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        printerId:
+          type: string
+          format: uuid
+        copies:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        autoPrint:
+          type: boolean
+        mode:
+          $ref: '#/components/schemas/PrintMode'
+        active:
+          type: boolean
+    RouteRow:
+      required:
+        - route
+        - printer
+        - site
+        - location
+        - user
+      type: object
+      properties:
+        route:
+          $ref: '#/components/schemas/LabelPrintRoute'
+        printer:
+          type: string
+        site:
+          type:
+            - 'null'
+            - string
+        location:
+          type:
+            - 'null'
+            - string
+        user:
           type:
             - 'null'
             - string
@@ -58900,6 +59924,7 @@ tags:
   - name: Returns
   - name: Intelligence
   - name: Alerts
+  - name: Labels
   - name: MasterData
   - name: Suppliers
   - name: OAuth

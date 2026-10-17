@@ -37,6 +37,7 @@ sealed class JobRegistration(IRecurringJobManager jobs) : IHostedService
         jobs.AddOrUpdate<PlatformEventJob>("platform-events", j => j.RunAsync(CancellationToken.None), Cron.Minutely());
         jobs.AddOrUpdate<ApprovalEscalationJob>("approval-escalations", j => j.RunAsync(CancellationToken.None), "*/15 * * * *");
         jobs.AddOrUpdate<ReportScheduleJob>("report-schedules", j => j.RunAsync(CancellationToken.None), "*/5 * * * *");
+        jobs.AddOrUpdate<LabelPrintQueueJob>("label-print", j => j.RunAsync(CancellationToken.None), Cron.Minutely());
         return Task.CompletedTask;
     }
     public Task StopAsync(CancellationToken ct) => Task.CompletedTask;

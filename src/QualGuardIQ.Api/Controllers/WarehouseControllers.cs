@@ -4,12 +4,13 @@ using QualGuardIQ.Api.Auth;
 using QualGuardIQ.Domain.Quality;
 using QualGuardIQ.Domain.Security;
 using QualGuardIQ.Infrastructure.Modules.Inventory;
+using QualGuardIQ.Infrastructure.Modules.Logistics;
 
 namespace QualGuardIQ.Api.Controllers;
 
 /// <summary>Warehouse locations, stock, the inventory ledger, holds, issues, transfers, counts and ERP mirror mode.</summary>
 [ApiController, Authorize, Route("api/warehouse")]
-public sealed class WarehouseController(InventoryService inv, CountService counts, WarehouseInsights insights) : ControllerBase
+public sealed class WarehouseController(InventoryService inv, CountService counts, WarehouseInsights insights, LabelPrintService labels) : ControllerBase
 {
     [HttpGet("locations")] [RequirePermission(Permissions.InventoryView)] public Task<List<LocationRow>> Locations([FromQuery] Guid? siteId, CancellationToken ct) => inv.LocationsAsync(siteId, ct);
     [HttpPost("locations")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> CreateLocation(LocationInput r, CancellationToken ct) { var l = await inv.CreateLocationAsync(r, ct); return new { l.Id, l.Code, l.Path }; }
@@ -34,11 +35,11 @@ public sealed class WarehouseController(InventoryService inv, CountService count
     /// <summary>Scan to move: item, source location and destination location codes.</summary>
     [HttpPost("moves/scan")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> MoveScan(ScanMoveInput r, CancellationToken ct) => Tx(await inv.MoveByScanAsync(r, ct));
     [HttpPost("adjustments")] [RequirePermission(Permissions.InventoryApprove)] public async Task<object> Adjust(AdjustInput r, CancellationToken ct) => Tx(await inv.AdjustAsync(r, ct));
-    [HttpPost("scrap")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> Scrap(ScrapInput r, CancellationToken ct) => Tx(await inv.ScrapAsync(r, ct));
+    [HttpPost("scrap")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> Scrap(ScrapInput r, CancellationToken ct) { var t = await inv.ScrapAsync(r, ct); await this.AutoAsync(labels, LabelType.Scrap, InventoryService.TxType, t.Id, ct); return Tx(t); }
     [HttpPost("reservations")] [RequirePermission(Permissions.InventoryEdit)] public async Task<IActionResult> Reserve(ReserveInput r, CancellationToken ct) { await inv.ReserveAsync(r, ct); return NoContent(); }
 
     [HttpGet("holds")] [RequirePermission(Permissions.InventoryView)] public Task<List<InventoryHold>> Holds([FromQuery] HoldStatus? status, [FromQuery] Guid? lotId, CancellationToken ct) => inv.HoldsAsync(status, lotId, ct);
-    [HttpPost("holds")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> CreateHold(HoldInput r, CancellationToken ct) { var h = await inv.CreateHoldAsync(r, ct); return new { h.Id, h.Number }; }
+    [HttpPost("holds")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> CreateHold(HoldInput r, CancellationToken ct) { var h = await inv.CreateHoldAsync(r, ct); await this.AutoAsync(labels, LabelType.Hold, InventoryService.HoldType, h.Id, ct); return new { h.Id, h.Number }; }
     [HttpGet("holds/{id:guid}")] public Task<InventoryHold> Hold(Guid id, CancellationToken ct) => inv.GetHoldAsync(id, ct);
     /// <summary>Requests release; the hold stays until the approval route (inventory.approve, e-signed) signs it off.</summary>
     [HttpPost("holds/{id:guid}/request-release")] public async Task<IActionResult> RequestRelease(Guid id, NotesInput r, CancellationToken ct) { await inv.RequestReleaseAsync(id, r, ct); return NoContent(); }
@@ -81,10 +82,10 @@ public sealed class WarehouseController(InventoryService inv, CountService count
 
 /// <summary>Receiving, receiving inspection outcome, MRB and returns to vendor.</summary>
 [ApiController, Authorize, Route("api/warehouse")]
-public sealed class ReceivingController(ReceivingService svc, InventoryService inv) : ControllerBase
+public sealed class ReceivingController(ReceivingService svc, InventoryService inv, LabelPrintService labels, QualGuardIQ.Infrastructure.Persistence.AppDbContext db) : ControllerBase
 {
     [HttpGet("receipts")] [RequirePermission(Permissions.InventoryView)] public Task<List<Receipt>> Receipts([FromQuery] ReceiptStatus? status, CancellationToken ct) => svc.ListAsync(status, ct);
-    [HttpPost("receipts")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> CreateReceipt(ReceiptInput r, CancellationToken ct) { var x = await svc.CreateAsync(r, ct); return new { x.Id, x.Number, x.Status }; }
+    [HttpPost("receipts")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> CreateReceipt(ReceiptInput r, CancellationToken ct) { var x = await svc.CreateAsync(r, ct); await this.AutoAsync(labels, LabelType.Receiving, ReceivingService.ReceiptType, x.Id, ct); return new { x.Id, x.Number, x.Status }; }
     [HttpGet("receipts/{id:guid}")] public Task<ReceiptDetail> Receipt(Guid id, CancellationToken ct) => svc.GetAsync(id, ct);
     /// <summary>Lot and serial labels for a receipt (copies from the receiving requirement).</summary>
     [HttpGet("receipts/{id:guid}/labels")] public Task<List<ReceiptLabel>> ReceiptLabels(Guid id, CancellationToken ct) => svc.LabelsAsync(id, ct);
@@ -100,7 +101,15 @@ public sealed class ReceivingController(ReceivingService svc, InventoryService i
     [HttpPost("receiving/requirements/{id:guid}/retire")] [RequirePermission(Permissions.InventoryApprove)] public async Task<IActionResult> RetireRequirement(Guid id, CancellationToken ct) { await svc.RetireRequirementAsync(id, ct); return NoContent(); }
     [HttpPost("receipts/{id:guid}/lines/{lineId:guid}/inspection")] public async Task<IActionResult> LinkInspection(Guid id, Guid lineId, LinkInspectionInput r, CancellationToken ct) { await svc.LinkInspectionAsync(id, lineId, r, ct); return NoContent(); }
     /// <summary>Inspection outcome: Accept, Reject (quarantine + hold + NCR) or Quarantine (hold).</summary>
-    [HttpPost("receipts/{id:guid}/lines/{lineId:guid}/decision")] public async Task<IActionResult> Decide(Guid id, Guid lineId, LineDecisionInput r, CancellationToken ct) { await svc.DecideLineAsync(id, lineId, r, ct); return NoContent(); }
+    [HttpPost("receipts/{id:guid}/lines/{lineId:guid}/decision")] public async Task<IActionResult> Decide(Guid id, Guid lineId, LineDecisionInput r, CancellationToken ct)
+    {
+        var before = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(db.ReceiptLines.Where(x => x.Id == lineId).Select(x => x.HoldId), ct);
+        await svc.DecideLineAsync(id, lineId, r, ct);
+        // a rejected or quarantined line gets a quarantine label for the hold it created
+        var after = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.FirstOrDefaultAsync(db.ReceiptLines.Where(x => x.Id == lineId).Select(x => x.HoldId), ct);
+        if (after is { } hold && hold != before) await this.AutoAsync(labels, LabelType.Quarantine, InventoryService.HoldType, hold, ct);
+        return NoContent();
+    }
     /// <summary>Puts a received customer return (RMA) into a returns location awaiting disposition.</summary>
     [HttpPost("returns/receive")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> ReceiveReturn(ReturnStockInput r, CancellationToken ct) { var t = await svc.ReceiveReturnStockAsync(r, ct); return new { t.Id, t.Number }; }
 
@@ -120,7 +129,7 @@ public sealed class ReceivingController(ReceivingService svc, InventoryService i
 
 /// <summary>Shipments: pick, pack, verify, ship; carriers; packing list and bill of lading.</summary>
 [ApiController, Authorize, Route("api/shipping")]
-public sealed class ShippingController(ShippingService svc, InventoryService inv) : ControllerBase
+public sealed class ShippingController(ShippingService svc, InventoryService inv, LabelPrintService labels) : ControllerBase
 {
     [HttpGet("carriers")] [RequirePermission(Permissions.ShippingView)] public Task<List<Carrier>> Carriers(CancellationToken ct) => svc.CarriersAsync(ct);
     [HttpPost("carriers")] [RequirePermission(Permissions.ShippingEdit)] public Task<Carrier> CreateCarrier(CarrierInput r, CancellationToken ct) => svc.SaveCarrierAsync(null, r, ct);
@@ -140,9 +149,9 @@ public sealed class ShippingController(ShippingService svc, InventoryService inv
     [HttpPut("shipments/{id:guid}/picker")] public async Task<object> AssignPicker(Guid id, AssignPickerInput r, CancellationToken ct) { var s = await svc.AssignPickerAsync(id, r, ct); return new { s.Id, s.AssignedPickerId, s.AssignedAt }; }
     /// <summary>The caller's assigned open pick work, for download to a scan device.</summary>
     [HttpGet("my-picks")] [RequirePermission(Permissions.ShippingEdit)] public Task<MyPicks> MyPicks(CancellationToken ct) => svc.MyPicksAsync(ct);
-    [HttpPost("shipments/{id:guid}/containers")] public async Task<object> Pack(Guid id, PackInput r, CancellationToken ct) { var c = await svc.PackAsync(id, r, ct); return new { c.Id, c.Number }; }
+    [HttpPost("shipments/{id:guid}/containers")] public async Task<object> Pack(Guid id, PackInput r, CancellationToken ct) { var c = await svc.PackAsync(id, r, ct); await this.AutoAsync(labels, c.Kind == ContainerKind.Pallet ? LabelType.Pallet : LabelType.Carton, ShippingService.ContainerType, c.Id, ct); return new { c.Id, c.Number }; }
     [HttpPost("shipments/{id:guid}/verify")] public Task<VerifyResult> Verify(Guid id, VerifyInput r, CancellationToken ct) => svc.VerifyAsync(id, r, ct);
-    [HttpPost("shipments/{id:guid}/ship")] public async Task<IActionResult> Ship(Guid id, ShipInput r, CancellationToken ct) { await svc.ShipAsync(id, r, ct); return NoContent(); }
+    [HttpPost("shipments/{id:guid}/ship")] public async Task<IActionResult> Ship(Guid id, ShipInput r, CancellationToken ct) { await svc.ShipAsync(id, r, ct); await this.AutoAsync(labels, LabelType.Shipping, ShippingService.ShipmentType, id, ct); return NoContent(); }
     [HttpPost("shipments/{id:guid}/delivered")] public async Task<IActionResult> Delivered(Guid id, DeliveredInput r, CancellationToken ct) { await svc.DeliveredAsync(id, r, ct); return NoContent(); }
     /// <summary>Cancels before shipping; staged (picked) stock needs returnLocationId and is moved back as available stock.</summary>
     [HttpPost("shipments/{id:guid}/cancel")] public async Task<IActionResult> Cancel(Guid id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] CancelShipmentInput? r, CancellationToken ct) { await svc.CancelAsync(id, r, ct); return NoContent(); }

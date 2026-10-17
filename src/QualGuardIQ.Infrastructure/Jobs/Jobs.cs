@@ -113,3 +113,10 @@ public sealed class ApprovalEscalationJob(QualGuardIQ.Infrastructure.Services.Wo
     [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 300)]
     public async Task RunAsync(CancellationToken ct) { await workflow.EscalateAsync(ct); await rules.EscalateAsync(ct); }
 }
+
+/// <summary>Every minute: sends pending label prints and retries failed ones whose back-off has passed.</summary>
+public sealed class LabelPrintQueueJob(QualGuardIQ.Infrastructure.Modules.Logistics.LabelPrintService labels)
+{
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 120)]
+    public Task RunAsync(CancellationToken ct) => labels.ProcessDueAsync(ct);
+}
