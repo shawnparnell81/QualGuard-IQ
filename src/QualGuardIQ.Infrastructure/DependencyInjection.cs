@@ -98,6 +98,8 @@ public static class DependencyInjection
             (id, ct) => sp.GetRequiredService<FormService>().OnApprovedAsync(id, ct), (id, _, ct) => sp.GetRequiredService<FormService>().OnRejectedAsync(id, ct)));
         s.AddScoped<MasterDataService>();
         s.AddScoped<SupplierService>();
+        s.AddScoped<SupplierQualityService>();
+        P<SupplierCorrectiveAction>(SupplierQualityService.ScarType, Permissions.SuppliersView, Permissions.SuppliersEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/suppliers/scar/{x.Id}", x.Status is ScarStatus.Closed or ScarStatus.Cancelled));
         P<Product>(MasterDataService.ProductType, Permissions.MasterDataView, Permissions.MasterDataEdit, x => (x.Number, x.Name, x.Status.ToString(), $"/products/items/{x.Id}", false));
         P<Part>(MasterDataService.PartRecordType, Permissions.MasterDataView, Permissions.MasterDataEdit, x => (x.PartNumber, x.Name, x.Status.ToString(), $"/products/parts/{x.Id}", false));
         P<Customer>(MasterDataService.CustomerType, Permissions.MasterDataView, Permissions.MasterDataEdit, x => (x.Code, x.Name, x.Status.ToString(), $"/products/customers/{x.Id}", false));
