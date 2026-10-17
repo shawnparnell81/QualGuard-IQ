@@ -20804,6 +20804,82 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/reports/{key}/xlsx':
+    get:
+      tags:
+        - Reports
+      description: 'Requires permission: `reports.export` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: departmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/reports/{key}/pdf':
+    get:
+      tags:
+        - Reports
+      description: 'Requires permission: `reports.export` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: departmentId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/risks/settings:
     get:
       tags:
