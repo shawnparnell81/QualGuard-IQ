@@ -21,7 +21,7 @@ public sealed class AuthController(
     IAntiforgery antiforgery) : ControllerBase
 {
     public sealed record LoginRequest(string Email, string Password);
-    public sealed record MeResponse(Guid Id, string Email, string DisplayName, IReadOnlyList<PermissionGrant> Grants);
+    public sealed record MeResponse(Guid Id, string Email, string DisplayName, IReadOnlyList<PermissionGrant> Grants, string? PortalKind = null);
 
     public sealed class LoginValidator : AbstractValidator<LoginRequest>
     {
@@ -115,6 +115,6 @@ public sealed class AuthController(
     {
         var user = await users.GetUserAsync(User);
         if (user is null) return Unauthorized();
-        return new MeResponse(user.Id, user.Email!, user.DisplayName, await access.GetGrantsAsync(user.Id));
+        return new MeResponse(user.Id, user.Email!, user.DisplayName, await access.GetGrantsAsync(user.Id), user.PortalKind);
     }
 }

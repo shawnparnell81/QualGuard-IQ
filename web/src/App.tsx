@@ -50,6 +50,22 @@ const CustomerDetail = lazy(() => import('./pages/Products').then((m) => ({ defa
 const SupplierList = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierList })));
 const SupplierNew = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierNew })));
 const SupplierDetail = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierDetail })));
+const ApqpList = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpList })));
+const ApqpNew = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpNew })));
+const ApqpDetail = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpDetail })));
+const SpcList = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.SpcList })));
+const SpcNew = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.SpcNew })));
+const SpcDetail = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.SpcDetail })));
+const MsaList = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.MsaList })));
+const MsaNew = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.MsaNew })));
+const MsaDetail = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.MsaDetail })));
+const LpaHome = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.LpaHome })));
+const CoqHome = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.CoqHome })));
+const SupplierScorecard = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.SupplierScorecard })));
+const InsightsHome = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.InsightsHome })));
+const RelationshipGraph = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.RelationshipGraph })));
+const PortalAccounts = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.PortalAccounts })));
+const PortalApp = lazy(() => import('./pages/Portal').then((m) => ({ default: m.PortalApp })));
 const RecordRedirect = lazy(() => import('./pages/RecordRedirect').then((m) => ({ default: m.RecordRedirect })));
 const ChangeList = lazy(() => import('./pages/Changes').then((m) => ({ default: m.ChangeList })));
 const ChangeNew = lazy(() => import('./pages/Changes').then((m) => ({ default: m.ChangeNew })));
@@ -113,7 +129,7 @@ export function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       {loading ? <Box sx={{ display: 'grid', placeItems: 'center', height: '100vh' }}><CircularProgress /></Box>
-        : !me ? <Login /> : (
+        : !me ? <Login /> : me.portalKind ? <Suspense fallback={null}><PortalApp /></Suspense> : (
           <>
             <TopBar onOpenPalette={() => setPalette(true)} />
             <CommandPalette open={palette} onClose={() => setPalette(false)} />
@@ -205,6 +221,24 @@ export function App() {
               <Route path="/complaints/trends" element={<ComplaintTrends />} />
               <Route path="/complaints/:id" element={<ComplaintDetail />} />
               <Route path="/suppliers/scar/:id" element={<ScarDetail />} />
+              <Route path="/suppliers/performance" element={<SupplierScorecard />} />
+              <Route path="/apqp" element={<ApqpList />} />
+              <Route path="/apqp/new" element={<ApqpNew />} />
+              <Route path="/apqp/:kind/:id" element={<ApqpDetail />} />
+              <Route path="/spc" element={<SpcList />} />
+              <Route path="/spc/new" element={<SpcNew />} />
+              <Route path="/spc/msa" element={<MsaList />} />
+              <Route path="/spc/msa/new" element={<MsaNew />} />
+              <Route path="/spc/msa/:id" element={<MsaDetail />} />
+              <Route path="/spc/:id" element={<SpcDetail />} />
+              <Route path="/lpa" element={<LpaHome />} />
+              <Route path="/lpa/:id" element={<LpaHome />} />
+              <Route path="/coq" element={<CoqHome />} />
+              <Route path="/coq/scrap" element={<CoqHome />} />
+              <Route path="/coq/rework/:id" element={<CoqHome />} />
+              <Route path="/insights" element={<InsightsHome />} />
+              <Route path="/insights/graph" element={<RelationshipGraph />} />
+              <Route path="/admin/portal" element={<PortalAccounts />} />
               <Route path="/suppliers/reviews-due" element={<ReviewsDue />} />
               <Route path="/suppliers/:id" element={<SupplierDetail />} />
               <Route path="/admin" element={<AdminHome />} />

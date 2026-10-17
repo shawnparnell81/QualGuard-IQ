@@ -14,6 +14,11 @@ import FlagOutlined from '@mui/icons-material/FlagOutlined';
 import RuleOutlined from '@mui/icons-material/RuleOutlined';
 import ChangeCircleOutlined from '@mui/icons-material/ChangeCircleOutlined';
 import StraightenOutlined from '@mui/icons-material/StraightenOutlined';
+import AccountTreeOutlined from '@mui/icons-material/AccountTreeOutlined';
+import ShowChartOutlined from '@mui/icons-material/ShowChartOutlined';
+import LayersOutlined from '@mui/icons-material/LayersOutlined';
+import PaidOutlined from '@mui/icons-material/PaidOutlined';
+import HubOutlined from '@mui/icons-material/HubOutlined';
 
 export interface NavItem { label: string; path: string; permission?: string; children?: NavItem[] }
 export interface ModuleDef {
@@ -171,6 +176,11 @@ export const modules: ModuleDef[] = [
         { label: 'All SCARs', path: '/suppliers/scar?all=1' },
       ] },
       { label: 'Periodic reviews due', path: '/suppliers/reviews-due' },
+      { label: 'Performance', path: '/suppliers/performance', children: [
+        { label: 'Scorecard', path: '/suppliers/performance' },
+        { label: 'Development programs', path: '/suppliers/performance?view=programs' },
+        { label: 'Weighting', path: '/suppliers/performance?view=weights' },
+      ] },
     ],
   },
   {
@@ -291,6 +301,92 @@ export const modules: ModuleDef[] = [
     ],
   },
   {
+    key: 'apqp',
+    label: 'Process Planning',
+    description: 'Process flows, PFMEA with action priority, and control plans under revision control',
+    icon: <AccountTreeOutlined fontSize="small" />,
+    basePath: '/apqp',
+    permissions: ['apqp.view'],
+    sidebar: [
+      { label: 'Documents', path: '/apqp', children: [
+        { label: 'Control plans', path: '/apqp?kind=plans' },
+        { label: 'PFMEA', path: '/apqp?kind=pfmea' },
+        { label: 'Process flows', path: '/apqp?kind=flows' },
+      ] },
+      { label: 'Start a document', path: '/apqp/new?kind=plans', permission: 'apqp.edit' },
+    ],
+  },
+  {
+    key: 'spc',
+    label: 'SPC & MSA',
+    description: 'Control charts with rule checks and capability, gage R&R, bias, linearity and stability studies',
+    icon: <ShowChartOutlined fontSize="small" />,
+    basePath: '/spc',
+    permissions: ['spc.view'],
+    sidebar: [
+      { label: 'Control charts', path: '/spc', children: [
+        { label: 'All charts', path: '/spc' },
+        { label: 'New chart', path: '/spc/new', permission: 'spc.edit' },
+      ] },
+      { label: 'Measurement systems', path: '/spc/msa', children: [
+        { label: 'All studies', path: '/spc/msa' },
+        { label: 'Review due', path: '/spc/msa?due=1' },
+        { label: 'New study', path: '/spc/msa/new', permission: 'spc.edit' },
+      ] },
+    ],
+  },
+  {
+    key: 'lpa',
+    label: 'Layered Audits',
+    description: 'Layered process audit templates, schedules, completion and automatic NCR / CAPA on failure',
+    icon: <LayersOutlined fontSize="small" />,
+    basePath: '/lpa',
+    permissions: ['lpa.view'],
+    sidebar: [
+      { label: 'Audits', path: '/lpa', children: [
+        { label: 'Due', path: '/lpa' },
+        { label: 'Missed', path: '/lpa?view=missed' },
+        { label: 'All', path: '/lpa?view=all' },
+      ] },
+      { label: 'Templates', path: '/lpa?view=templates' },
+    ],
+  },
+  {
+    key: 'coq',
+    label: 'Cost of Quality',
+    description: 'Prevention, appraisal and failure costs, scrap and rework with approval and validation',
+    icon: <PaidOutlined fontSize="small" />,
+    basePath: '/coq',
+    permissions: ['coq.view'],
+    sidebar: [
+      { label: 'Summary', path: '/coq', children: [
+        { label: 'By month', path: '/coq' },
+        { label: 'By category', path: '/coq?view=category' },
+        { label: 'By product', path: '/coq?view=product' },
+        { label: 'By supplier', path: '/coq?view=supplier' },
+        { label: 'By customer', path: '/coq?view=customer' },
+      ] },
+      { label: 'Records', path: '/coq?view=entries', children: [
+        { label: 'Cost entries', path: '/coq?view=entries' },
+        { label: 'Scrap', path: '/coq?view=scrap' },
+        { label: 'Rework orders', path: '/coq?view=rework' },
+      ] },
+    ],
+  },
+  {
+    key: 'insights',
+    label: 'Insights',
+    description: 'Plant and executive quality metrics with drill-down, record relationship maps and trend history',
+    icon: <HubOutlined fontSize="small" />,
+    basePath: '/insights',
+    permissions: ['analytics.view'],
+    sidebar: [
+      { label: 'Production metrics', path: '/insights' },
+      { label: 'Executive overview', path: '/insights?view=executive' },
+      { label: 'Relationships', path: '/insights/graph' },
+    ],
+  },
+  {
     key: 'reports',
     label: 'Reports',
     description: 'Quality dashboard, report library and CSV export, scoped to your sites',
@@ -308,11 +404,12 @@ export const modules: ModuleDef[] = [
     description: 'Users, roles, sites, approval routes and logs',
     icon: <AdminPanelSettingsOutlined fontSize="small" />,
     basePath: '/admin',
-    permissions: ['admin.users', 'admin.roles', 'admin.organization', 'audittrail.view', 'securitylog.view'],
+    permissions: ['admin.users', 'admin.roles', 'portal.admin', 'admin.organization', 'audittrail.view', 'securitylog.view'],
     sidebar: [
       { label: 'People', path: '/admin/users', children: [
         { label: 'Users', path: '/admin/users', permission: 'admin.users' },
         { label: 'Roles', path: '/admin/roles', permission: 'admin.roles' },
+        { label: 'Portal accounts', path: '/admin/portal', permission: 'portal.admin' },
       ] },
       { label: 'Organization', path: '/admin/organization', children: [
         { label: 'Settings & branding', path: '/admin/organization', permission: 'admin.organization' },
