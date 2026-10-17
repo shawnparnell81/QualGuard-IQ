@@ -25,4 +25,6 @@ public class ApplicationUser : IdentityUser<Guid>
     /// <summary>Secret shown during set-up, encrypted, until the first code confirms it.</summary>
     public string? MfaPendingSecret { get; set; }
     public DateTimeOffset? MfaPendingExpiresAt { get; set; }
+    /// <summary>Break-glass account: may always sign in with its password, even when its email domain must use single sign-on.</summary>
+    public bool SsoBreakGlass { get; set; }
 }
