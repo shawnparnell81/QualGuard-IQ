@@ -50,6 +50,10 @@ const CustomerDetail = lazy(() => import('./pages/Products').then((m) => ({ defa
 const SupplierList = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierList })));
 const SupplierNew = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierNew })));
 const SupplierDetail = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.SupplierDetail })));
+const ComplaintList = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintList })));
+const ComplaintNew = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintNew })));
+const ComplaintDetail = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintDetail })));
+const ComplaintTrends = lazy(() => import('./pages/Complaints').then((m) => ({ default: m.ComplaintTrends })));
 const ScarList = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.ScarList })));
 const ScarDetail = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.ScarDetail })));
 const ReviewsDue = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.ReviewsDue })));
@@ -132,6 +136,10 @@ export function App() {
               <Route path="/suppliers" element={<SupplierList />} />
               <Route path="/suppliers/new" element={<SupplierNew />} />
               <Route path="/suppliers/scar" element={<ScarList />} />
+              <Route path="/complaints" element={<ComplaintList />} />
+              <Route path="/complaints/new" element={<ComplaintNew />} />
+              <Route path="/complaints/trends" element={<ComplaintTrends />} />
+              <Route path="/complaints/:id" element={<ComplaintDetail />} />
               <Route path="/suppliers/scar/:id" element={<ScarDetail />} />
               <Route path="/suppliers/reviews-due" element={<ReviewsDue />} />
               <Route path="/suppliers/:id" element={<SupplierDetail />} />
