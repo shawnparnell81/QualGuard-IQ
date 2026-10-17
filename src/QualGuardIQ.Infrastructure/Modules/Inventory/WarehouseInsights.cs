@@ -53,7 +53,7 @@ public sealed class WarehouseInsights(AppDbContext db, ModuleSupport m, Inventor
             new("acceptance", "Receiving acceptance (30 d)", recLines.Sum(x => x.QuantityReceived) == 0 ? null : Math.Round(100m * (1 - recLines.Sum(x => x.QuantityRejected) / recLines.Sum(x => x.QuantityReceived)), 1), "%",
                 recLines.Sum(x => x.QuantityReceived) - recLines.Sum(x => x.QuantityRejected), recLines.Sum(x => x.QuantityReceived), "/warehouse/receipts"),
             new("shipping", "Shipments on time (30 d)", shipPromised.Count == 0 ? null : Math.Round(100m * shipPromised.Count(x => OnTime(x.PromisedOn, x.ShippedAt, x.DeliveredOn)) / shipPromised.Count, 1), "%",
-                shipPromised.Count(x => OnTime(x.PromisedOn, x.ShippedAt, x.DeliveredOn)), shipPromised.Count, "/warehouse/shipments"),
+                shipPromised.Count(x => OnTime(x.PromisedOn, x.ShippedAt, x.DeliveredOn)), shipPromised.Count, "/shipping/shipments"),
             new("awaiting", "Awaiting inspection", byStatus.GetValueOrDefault(StockStatus.AwaitingInspection), "units", null, null, "/warehouse/stock?status=1"),
             new("quarantine", "Quarantine inventory", quarantine, "units", null, null, "/warehouse/stock?status=2"),
             new("mrb", "MRB inventory", byStatus.GetValueOrDefault(StockStatus.Mrb), "units", null, null, "/warehouse/mrb"),
@@ -97,7 +97,7 @@ public sealed class WarehouseInsights(AppDbContext db, ModuleSupport m, Inventor
                 match = new ScanResult(raw, "Receipt", ReceivingService.ReceiptType, rc.Id, rc.Number, $"/warehouse/receipts/{rc.Id}", rc.Status.ToString());
             else if (await m.TryScopeAsync(db.Shipments.AsNoTracking(), Permissions.ShippingView, ct) is { } sq
                 && await sq.FirstOrDefaultAsync(x => x.Number == v || db.ShipmentContainers.Any(c => c.ShipmentId == x.Id && (c.Number == v || "QG:CTN:" + c.Number == raw)), ct) is { } sh)
-                match = new ScanResult(raw, "Shipment", ShippingService.ShipmentType, sh.Id, sh.Number, $"/warehouse/shipments/{sh.Id}", sh.Status.ToString());
+                match = new ScanResult(raw, "Shipment", ShippingService.ShipmentType, sh.Id, sh.Number, $"/shipping/shipments/{sh.Id}", sh.Status.ToString());
         }
         var stock = new List<StockRow>(); var holds = new List<ScanLink>(); var related = new List<ScanLink>(); var actions = new List<string>();
         var canInv = await m.CanAnyAsync(Permissions.InventoryView, ct);
@@ -117,7 +117,7 @@ public sealed class WarehouseInsights(AppDbContext db, ModuleSupport m, Inventor
                     foreach (var n in await nq.Where(x => x.LotNumber == lot.Number || (lot.SupplierLotNumber != null && x.BatchNumber == lot.SupplierLotNumber)).Take(20).ToListAsync(ct))
                         related.Add(new("Ncr", n.Id, n.Number, n.Title, n.Status.ToString(), $"/ncr/{n.Id}"));
                 foreach (var e in await db.TraceEvents.AsNoTracking().Where(x => x.FromLotId == lotId && x.Kind == TraceEventKind.Shipment && x.RefId != null).Take(20).ToListAsync(ct))
-                    related.Add(new("Shipment", e.RefId!.Value, e.RefNumber ?? "Shipment", $"Shipped {e.Quantity:0.##}", "Shipped", $"/warehouse/shipments/{e.RefId}"));
+                    related.Add(new("Shipment", e.RefId!.Value, e.RefNumber ?? "Shipment", $"Shipped {e.Quantity:0.##}", "Shipped", $"/shipping/shipments/{e.RefId}"));
                 holds.AddRange((await db.InventoryHolds.AsNoTracking().Where(h => h.LotId == lotId && (h.Status == HoldStatus.Active || h.Status == HoldStatus.ReleaseRequested)).ToListAsync(ct))
                     .Select(h => new ScanLink("InventoryHold", h.Id, h.Number, h.Reason, h.Status.ToString(), $"/warehouse/holds/{h.Id}")));
                 actions.AddRange(["move", "issue", "trace"]);

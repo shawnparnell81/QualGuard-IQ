@@ -23,6 +23,8 @@ import PrecisionManufacturingOutlined from '@mui/icons-material/PrecisionManufac
 import QrCode2Outlined from '@mui/icons-material/QrCode2Outlined';
 import AssignmentReturnOutlined from '@mui/icons-material/AssignmentReturnOutlined';
 import SyncAltOutlined from '@mui/icons-material/SyncAltOutlined';
+import WarehouseOutlined from '@mui/icons-material/WarehouseOutlined';
+import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined';
 
 export interface NavItem { label: string; path: string; permission?: string; children?: NavItem[] }
 export interface ModuleDef {
@@ -413,6 +415,47 @@ export const modules: ModuleDef[] = [
         { label: 'New serial', path: '/trace/serials/new', permission: 'trace.edit' },
       ] },
       { label: 'Labels', path: '/trace/labels' },
+    ],
+  },
+  {
+    key: 'warehouse',
+    label: 'Warehouse',
+    description: 'Inventory ledger, locations, receiving and inspection, holds, MRB, returns to vendor, counts, transfers and scan stations',
+    icon: <WarehouseOutlined fontSize="small" />,
+    basePath: '/warehouse',
+    permissions: ['inventory.view'],
+    sidebar: [
+      { label: 'Overview', path: '/warehouse' },
+      { label: 'Scan station', path: '/warehouse/scan' },
+      { label: 'Inventory', path: '/warehouse/stock', children: [
+        { label: 'Stock', path: '/warehouse/stock' },
+        { label: 'Work in process', path: '/warehouse/wip' },
+        { label: 'Movement history', path: '/warehouse/ledger' },
+        { label: 'Lot merge', path: '/warehouse/lot-merge', permission: 'inventory.edit' },
+      ] },
+      { label: 'Locations', path: '/warehouse/locations' },
+      { label: 'Receiving', path: '/warehouse/receipts' },
+      { label: 'Quality stock', path: '/warehouse/holds', children: [
+        { label: 'Holds', path: '/warehouse/holds' },
+        { label: 'MRB', path: '/warehouse/mrb' },
+        { label: 'Returns to vendor', path: '/warehouse/rtv' },
+      ] },
+      { label: 'Counts', path: '/warehouse/counts' },
+      { label: 'Transfers', path: '/warehouse/transfers' },
+    ],
+  },
+  {
+    key: 'shipping',
+    label: 'Shipping & Logistics',
+    description: 'Shipments with pick, pack, verify and ship, packing lists and bills of lading, carriers and logistics reporting',
+    icon: <Inventory2Outlined fontSize="small" />,
+    basePath: '/shipping',
+    permissions: ['shipping.view'],
+    sidebar: [
+      { label: 'Logistics overview', path: '/shipping' },
+      { label: 'Shipments', path: '/shipping/shipments' },
+      { label: 'New shipment', path: '/shipping/shipments/new', permission: 'shipping.edit' },
+      { label: 'Carriers', path: '/shipping/carriers' },
     ],
   },
   {

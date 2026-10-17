@@ -44,6 +44,11 @@ public sealed class ReceivingService(AppDbContext db, ModuleSupport m, INumberin
         await m.ValidateLocationAsync(r.SiteId, r.DepartmentId, ct);
         await m.RequireAsync(Permissions.InventoryEdit, r.SiteId, r.DepartmentId, ct);
         if (r.Lines is null || r.Lines.Count == 0) throw new AppException("Add at least one received line.");
+        // offline replay: a line request id already posted means this receipt was booked; return it instead of receiving twice
+        var replayIds = r.Lines.Select(l => l.ClientRequestId).Where(x => !string.IsNullOrWhiteSpace(x)).ToList();
+        if (replayIds.Count > 0 && await db.InventoryTransactions.AsNoTracking().Where(x => replayIds.Contains(x.ClientRequestId) && x.RefType == ReceiptType).Select(x => x.RefId).FirstOrDefaultAsync(ct) is { } prior
+            && await db.Receipts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == prior, ct) is { } booked)
+            return booked;
         if (r.ReceivedOn > await m.TodayAsync(r.SiteId, ct)) throw new AppException("The receipt date cannot be in the future.");
         var recvLoc = await db.WarehouseLocations.AsNoTracking().FirstOrDefaultAsync(x => x.Id == r.ReceivingLocationId, ct) ?? throw new AppException("Select the receiving location.");
         if (recvLoc.SiteId != r.SiteId) throw new AppException("The receiving location is at another site.");

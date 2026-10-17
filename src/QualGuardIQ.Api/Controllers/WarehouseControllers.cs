@@ -81,7 +81,7 @@ public sealed class WarehouseController(InventoryService inv, CountService count
 
 /// <summary>Receiving, receiving inspection outcome, MRB and returns to vendor.</summary>
 [ApiController, Authorize, Route("api/warehouse")]
-public sealed class ReceivingController(ReceivingService svc) : ControllerBase
+public sealed class ReceivingController(ReceivingService svc, InventoryService inv) : ControllerBase
 {
     [HttpGet("receipts")] [RequirePermission(Permissions.InventoryView)] public Task<List<Receipt>> Receipts([FromQuery] ReceiptStatus? status, CancellationToken ct) => svc.ListAsync(status, ct);
     [HttpPost("receipts")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> CreateReceipt(ReceiptInput r, CancellationToken ct) { var x = await svc.CreateAsync(r, ct); return new { x.Id, x.Number, x.Status }; }
@@ -103,6 +103,7 @@ public sealed class ReceivingController(ReceivingService svc) : ControllerBase
     [HttpPost("supplier-returns/{id:guid}/ship")] public async Task<IActionResult> ShipRtv(Guid id, RtvShipInput r, CancellationToken ct) { await svc.ShipRtvAsync(id, r, ct); return NoContent(); }
     [HttpPost("supplier-returns/{id:guid}/credit")] public async Task<IActionResult> CreditRtv(Guid id, RtvCreditInput r, CancellationToken ct) { await svc.CreditRtvAsync(id, r, ct); return NoContent(); }
     [HttpPost("supplier-returns/{id:guid}/close")] public async Task<IActionResult> CloseRtv(Guid id, CancellationToken ct) { await svc.CloseRtvAsync(id, ct); return NoContent(); }
+    [HttpGet("supplier-returns/{id:guid}/custody")] [RequirePermission(Permissions.InventoryView)] public Task<List<CustodyRow>> RtvCustody(Guid id, CancellationToken ct) => inv.CustodyAsync(ReceivingService.RtvType, id, ct);
 }
 
 /// <summary>Shipments: pick, pack, verify, ship; carriers; packing list and bill of lading.</summary>
