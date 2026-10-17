@@ -10,12 +10,17 @@ public class Attachment : Entity, IAudited, IArchivable, IContentLock
 {
     public string StatusProperty => nameof(IsLocked);
     public bool IsLockedState(object? originalStatus) => originalStatus is true;
-    public IReadOnlyCollection<string> MutableWhenLocked { get; } = [nameof(RetainUntil)];
+    public IReadOnlyCollection<string> MutableWhenLocked { get; } = [nameof(RetainUntil), nameof(SiteId), nameof(DepartmentId), nameof(ViewPermission)];
 
     public string OwnerType { get; set; } = "";
     public Guid OwnerId { get; set; }
     public Guid? SiteId { get; set; }
+    /// <summary>Owning record's department and view permission, copied at upload so the content library can filter by scope in the database.</summary>
+    public Guid? DepartmentId { get; set; }
+    public string? ViewPermission { get; set; }
     public string FileName { get; set; } = "";
+    /// <summary>Lower-case extension including the dot (database-generated from FileName).</summary>
+    public string? Extension { get; private set; }
     public string ContentType { get; set; } = "";
     public long SizeBytes { get; set; }
     public string Sha256 { get; set; } = "";

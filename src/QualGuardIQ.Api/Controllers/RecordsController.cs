@@ -245,6 +245,13 @@ public sealed class FilesController(AttachmentService files) : ControllerBase
     [HttpGet]
     public Task<List<LibraryItem>> Library([FromQuery] string? kind, [FromQuery] string? q, [FromQuery] int take = 100, CancellationToken ct = default) => files.LibraryAsync(kind, q, take, ct);
 
+    /// <summary>Paged, permission-aware content library search with filters and a total count (no result cap).</summary>
+    [HttpGet("search")]
+    public Task<LibraryPage> Search([FromQuery] string? kind, [FromQuery] string? q, [FromQuery] DateOnly? from, [FromQuery] DateOnly? to, [FromQuery] string? contentType, [FromQuery] Guid? uploadedById,
+        [FromQuery] Guid? siteId, [FromQuery] Guid? departmentId, [FromQuery] Classification? classification, [FromQuery] LibraryRetention retention = LibraryRetention.Any, [FromQuery] string? ownerType = null,
+        [FromQuery] LibrarySort sort = LibrarySort.Newest, [FromQuery] int page = 1, [FromQuery] int pageSize = 50, CancellationToken ct = default) =>
+        files.SearchLibraryAsync(new LibraryQuery(kind, q, from, to, contentType, uploadedById, siteId, departmentId, classification, retention, ownerType, sort, page, pageSize), ct);
+
     [HttpGet("{id:guid}/versions")]
     public async Task<IEnumerable<RecordsController.AttachmentDto>> Versions(Guid id, CancellationToken ct) => (await files.VersionsAsync(id, ct)).Select(RecordsController.ToDto);
 
