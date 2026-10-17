@@ -26,10 +26,67 @@ const mnum = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono
 interface Unverified { topic: string; detail: string; source: string }
 interface Caps { edition: string; read: number[]; write: number[]; delta: boolean; auth: string; api: string; paging: string; rateLimits: string; events: string; defaultConcurrency: number; defaultRequestsPerMinute: number; doc: string }
 interface Adapter { system: string; editions: { edition: string; capabilities: Caps; unverified: Unverified[]; setupNotes: string }[] }
-interface Conn { id: string; name: string; system: string; edition: string; baseUrl: string; account?: string; company?: string; clientId?: string; username?: string; options: Record<string, unknown>; hasSecret: boolean; hasSecondarySecret: boolean; secretSetAt?: string; enabled: boolean; allowWrites: boolean; maxConcurrency: number; requestsPerMinute: number; inventorySystemOfRecord: boolean; setupNotes: string; adminNotes?: string; lastTestAt?: string; lastTestOk?: boolean; lastTestMessage?: string; siteId: string; departmentId?: string }
+interface Conn { id: string; name: string; system: string; edition: string; baseUrl: string; account?: string; company?: string; clientId?: string; username?: string; options: Record<string, unknown>; hasSecret: boolean; hasSecondarySecret: boolean; secretSetAt?: string; enabled: boolean; allowWrites: boolean; maxConcurrency: number; requestsPerMinute: number; inventorySystemOfRecord: boolean; setupNotes: string; adminNotes?: string; lastTestAt?: string; lastTestOk?: boolean; lastTestMessage?: string; environment?: string; siteId: string; departmentId?: string }
 interface Mapping { id: string; entity: number; direction: number; mode: number; conflict: number; cron: string; nextRunAt?: string; fieldMap: string; validationRules: string; version: number }
 interface Run { id: string; entity: number; startedAt: string; finishedAt?: string; status: number; read: number; created: number; updated: number; unchanged: number; queued: number; rejected: number; requests: number; error?: string; trigger: string }
 interface Change { id: string; number: string; connectionId: string; entity: number; externalId: string; action: string; before?: string; after: string; validationErrors?: string; status: number; localType?: string; localId?: string; decisionNote?: string; appliedAt?: string; createdAt: string }
+
+const environments = ['Sandbox', 'Test', 'Production'];
+const gateNames: Record<number, string> = { 1: 'Connection', 2: 'Authentication', 3: 'Read', 4: 'Write', 5: 'Production approval', 6: 'Assumption' };
+const gateColor = (s: string): 'success' | 'error' | 'default' | 'warning' => (s === 'Passed' || s === 'Confirmed' ? 'success' : s === 'Failed' || s === 'Rejected' ? 'error' : s === 'Not applicable' ? 'default' : 'warning');
+interface Validation { environment: number; fixtureTested: string; gates: { gate: number; status: string; at?: string; by?: string; environment?: number; notes?: string; required: boolean }[];
+  assumptions: { topic: string; detail: string; source: string; key: boolean; status: string; at?: string; by?: string; notes?: string }[]; supportedEntities: number[]; unsupportedEntities: number[];
+  checklist: { step: string; text: string; gate?: number }[]; canEnable: boolean; blockers: string[]; productionApproved: boolean; lastTestAt?: string; lastTestedBy?: string; disclaimer: string }
+
+/** Live-validation gates for the current configuration, unverified vendor assumptions and the guided checklist. */
+function ValidationPanel({ id, edit }: { id: string; edit: boolean }) {
+  const qc = useQueryClient();
+  const { can } = useAuth();
+  const q = useQuery({ queryKey: ['erp-validation', id], queryFn: () => get<Validation>(`/api/integrations/${id}/validation`) });
+  const [dlg, setDlg] = useState<null | { topic: string } | 'approve'>(null);
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['erp-validation', id] }); qc.invalidateQueries({ queryKey: ['connection', id] }); };
+  const v = q.data;
+  if (!v) return null;
+  return (
+    <Stack gap={2} data-testid="erp-validation">
+      <Alert severity={v.canEnable ? 'success' : 'warning'} data-testid="erp-gate-summary">{v.canEnable ? 'The validation gate passes for the current configuration.' : <>Cannot be enabled yet: {v.blockers.join(' ')}</>}</Alert>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+        <Section title={`Gates · ${environments[v.environment]}`} action={can('integrations.approve') && environments[v.environment] === 'Production' && !v.productionApproved && <Button size="small" variant="contained" onClick={() => setDlg('approve')}>Approve for production</Button>}>
+          <Table size="small"><TableBody>
+            <TableRow><TableCell>Fixture tested</TableCell><TableCell><Chip size="small" variant="outlined" label="Fixtures only" /></TableCell><TableCell><Typography variant="caption">{v.fixtureTested}</Typography></TableCell></TableRow>
+            {v.gates.map((g) => <TableRow key={g.gate} data-testid="erp-gate"><TableCell>{gateNames[g.gate]}{g.required && <Typography component="span" variant="caption" color="text.secondary"> · required</Typography>}</TableCell>
+              <TableCell><Chip size="small" color={gateColor(g.status)} label={g.status} /></TableCell>
+              <TableCell><Typography variant="caption">{g.at ? `${fmtDateTime(g.at)} · ${g.by ?? ''}${g.environment != null ? ` · ${environments[g.environment]}` : ''}` : ''}</Typography><Typography variant="caption" display="block" color="text.secondary">{g.notes}</Typography></TableCell></TableRow>)}
+          </TableBody></Table>
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 1 }}>{v.disclaimer}</Typography>
+        </Section>
+        <Section title="Entities">
+          <Facts items={[['Supported (read)', v.supportedEntities.map((e) => erpEntities[e]).join(', ') || 'None'], ['Not supported', v.unsupportedEntities.map((e) => erpEntities[e]).join(', ') || 'None'], ['Writes', 'None (read-only adapters)']]} />
+        </Section>
+      </Box>
+      <Section title={`Unverified assumptions (${v.assumptions.filter((a) => a.status !== 'Confirmed').length} open)`}>
+        <Table size="small"><TableBody>{v.assumptions.map((a) => <TableRow key={a.topic} data-testid="erp-assumption">
+          <TableCell sx={{ width: 220 }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{a.topic}</Typography>{a.key && <Chip size="small" variant="outlined" color="warning" label="Key — needed for production" sx={{ mt: 0.5 }} />}</TableCell>
+          <TableCell><Typography variant="body2" color="text.secondary">{a.detail}</Typography>{a.notes && <Typography variant="caption" display="block">{a.status} by {a.by} {fmtDateTime(a.at)}: {a.notes}</Typography>}</TableCell>
+          <TableCell sx={{ width: 120 }}><Chip size="small" color={gateColor(a.status)} label={a.status} /></TableCell>
+          <TableCell sx={{ width: 100 }}>{edit && <Button size="small" onClick={() => setDlg({ topic: a.topic })}>Record</Button>}</TableCell></TableRow>)}
+          {v.assumptions.length === 0 && <TableRow><TableCell><Typography color="text.secondary">Nothing flagged.</Typography></TableCell></TableRow>}</TableBody></Table>
+      </Section>
+      <Section title="Live-validation checklist">
+        <Box component="ol" sx={{ m: 0, pl: 2.5 }}>{v.checklist.map((c) => { const g = c.gate ? v.gates.find((x) => x.gate === c.gate) : undefined;
+          return <li key={c.step}><Typography variant="body2"><b>{c.step}.</b> {c.text} {g && <Chip size="small" color={gateColor(g.status)} label={g.status} sx={{ ml: 0.5 }} />}</Typography></li>; })}</Box>
+      </Section>
+      <StepDialog open={!!dlg && typeof dlg === 'object'} title={`Record: ${(dlg as { topic: string } | null)?.topic ?? ''}`} confirm="Record" onClose={() => setDlg(null)}
+        intro="Confirm only what you checked against the customer's system after a passing read test. Say what you checked and where."
+        inputs={[{ name: 'result', label: 'Result', type: 'select', options: [[3, 'Confirmed'], [4, 'Rejected (does not hold)'], [5, 'Withdraw earlier result']], initial: '3' }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
+        onConfirm={async (x) => { await post(`/api/integrations/${id}/validation/assumptions`, { topic: (dlg as { topic: string }).topic, result: Number(x.result), notes: x.notes }); refresh(); }} />
+      <StepDialog open={dlg === 'approve'} title="Approve for production" confirm="Approve" onClose={() => setDlg(null)}
+        intro="You confirm the gates passed against the production system and the key assumptions were checked. You cannot approve a test you ran yourself."
+        inputs={[{ name: 'notes', label: 'Approval notes', type: 'multiline' }]}
+        onConfirm={async (x) => { await post(`/api/integrations/${id}/validation/production-approval`, { notes: x.notes }); refresh(); }} />
+    </Stack>
+  );
+}
 
 const useAdapters = () => useQuery({ queryKey: ['adapters'], queryFn: () => get<Adapter[]>('/api/integrations/adapters') });
 
@@ -49,6 +106,7 @@ export function ConnectionList() {
           <Stack direction="row" gap={1} sx={{ mt: 1 }}>
             <Chip size="small" variant="outlined" label={c.hasSecret ? 'Secret set' : 'No secret'} color={c.hasSecret ? 'default' : 'warning'} />
             {c.lastTestAt && <Chip size="small" variant="outlined" color={c.lastTestOk ? 'success' : 'error'} label={c.lastTestOk ? 'Test passed' : 'Test failed'} />}
+            <Chip size="small" variant="outlined" label={c.environment ?? 'Sandbox'} />
           </Stack>
         </Paper>)}
       </Box>
@@ -61,7 +119,7 @@ function ConnectionForm({ initial, onSaved }: { initial?: Conn; onSaved: (id: st
   const adapters = useAdapters();
   const sites = useSites();
   const [v, setV] = useState({ name: initial?.name ?? '', system: initial?.system ?? 'NetSuite', edition: initial?.edition ?? '', baseUrl: initial?.baseUrl ?? '', account: initial?.account ?? '', company: initial?.company ?? '', clientId: initial?.clientId ?? '', username: initial?.username ?? '',
-    options: JSON.stringify(initial?.options ?? {}, null, 2), maxConcurrency: String(initial?.maxConcurrency ?? ''), requestsPerMinute: String(initial?.requestsPerMinute ?? ''), adminNotes: initial?.adminNotes ?? '', siteId: initial?.siteId ?? '' });
+    options: JSON.stringify(initial?.options ?? {}, null, 2), maxConcurrency: String(initial?.maxConcurrency ?? ''), requestsPerMinute: String(initial?.requestsPerMinute ?? ''), adminNotes: initial?.adminNotes ?? '', siteId: initial?.siteId ?? '', environment: initial?.environment ?? 'Sandbox' });
   const [error, setError] = useState<string | null>(null);
   const set = (k: string) => (e: { target: { value: string } }) => setV({ ...v, [k]: e.target.value });
   const ad = adapters.data?.find((a) => a.system === v.system);
@@ -83,13 +141,14 @@ function ConnectionForm({ initial, onSaved }: { initial?: Conn; onSaved: (id: st
         <TextField label="Options (JSON)" multiline minRows={4} value={v.options} onChange={set('options')} sx={{ gridColumn: '1 / -1', '& textarea': { fontFamily: mono, fontSize: 12.5 } }} />
         <TextField select label="Site" value={v.siteId} onChange={set('siteId')}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>
         <TextField label="Admin notes" value={v.adminNotes} onChange={set('adminNotes')} />
+        <TextField select label="Environment" value={v.environment} onChange={set('environment')} helperText="Changing it puts every validation gate back to not run.">{environments.map((e) => <MenuItem key={e} value={e}>{e}</MenuItem>)}</TextField>
         <Stack direction="row" gap={1} sx={{ gridColumn: '1 / -1' }}>
           <Button variant="contained" onClick={async () => {
             setError(null);
             let options: unknown;
             try { options = JSON.parse(v.options || '{}'); } catch { setError('Options must be valid JSON.'); return; }
             const body = { name: v.name, system: sysCode[v.system], edition: ed?.edition ?? null, baseUrl: v.baseUrl || null, account: v.account || null, company: v.company || null, clientId: v.clientId || null, username: v.username || null, options,
-              maxConcurrency: v.maxConcurrency ? Number(v.maxConcurrency) : null, requestsPerMinute: v.requestsPerMinute ? Number(v.requestsPerMinute) : null, inventorySystemOfRecord: initial?.inventorySystemOfRecord ?? false, adminNotes: v.adminNotes || null, siteId: v.siteId, departmentId: null };
+              maxConcurrency: v.maxConcurrency ? Number(v.maxConcurrency) : null, requestsPerMinute: v.requestsPerMinute ? Number(v.requestsPerMinute) : null, inventorySystemOfRecord: initial?.inventorySystemOfRecord ?? false, adminNotes: v.adminNotes || null, siteId: v.siteId, departmentId: null, environment: environments.indexOf(v.environment) };
             try { const r = initial ? await put<Conn>(`/api/integrations/${initial.id}`, body) : await post<Conn>('/api/integrations', body); onSaved(r.id); }
             catch (e) { setError((e as Error).message); }
           }}>{initial ? 'Save settings' : 'Create connection (off)'}</Button>
@@ -146,7 +205,7 @@ export function ConnectionDetail() {
   const adapters = useAdapters();
   const maps = useQuery({ queryKey: ['mappings', id], queryFn: () => get<Mapping[]>(`/api/integrations/${id}/mappings`), enabled: tab === 'mappings' });
   const runs = useQuery({ queryKey: ['runs', id], queryFn: () => get<Run[]>(`/api/integrations/${id}/runs`), enabled: tab === 'runs' });
-  const refresh = () => { qc.invalidateQueries({ queryKey: ['connection', id] }); qc.invalidateQueries({ queryKey: ['mappings', id] }); qc.invalidateQueries({ queryKey: ['runs', id] }); };
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['connection', id] }); qc.invalidateQueries({ queryKey: ['mappings', id] }); qc.invalidateQueries({ queryKey: ['runs', id] }); qc.invalidateQueries({ queryKey: ['erp-validation', id] }); };
   const { error, busy, run } = useRunner(refresh);
   const [lastRun, setLastRun] = useState<string | null>(null);
   const x = c.data;
@@ -157,11 +216,11 @@ export function ConnectionDetail() {
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Connections', to: '/integrations' }, { label: x.name }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span>{x.name}</span><Chip size="small" color={x.enabled ? 'success' : 'default'} label={x.enabled ? 'On' : 'Off'} /><Typography color="text.secondary">{sysLabel(x.system)} · {x.edition}</Typography></Stack>}
-      tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Settings', value: 'settings' }, { label: 'Mappings', value: 'mappings' }, { label: 'Sync runs', value: 'runs' }, { label: 'Unverified', value: 'notes' }]} tab={tab} onTab={(t) => setP({ tab: t })}
+      tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Settings', value: 'settings' }, { label: 'Mappings', value: 'mappings' }, { label: 'Sync runs', value: 'runs' }, { label: 'Live validation', value: 'validation' }, { label: 'Unverified', value: 'notes' }]} tab={tab} onTab={(t) => setP({ tab: t })}
       actions={edit ? <Stack direction="row" gap={1} alignItems="center">
         <Button variant="outlined" onClick={() => setDlg('secret')}>{x.hasSecret ? 'Replace secret' : 'Set secret'}</Button>
         <Button variant="outlined" disabled={busy} onClick={() => run(async () => setTest(await post<{ ok: boolean; message: string }>(`/api/integrations/${id}/test`)))}>Test connection</Button>
-        <Stack direction="row" alignItems="center"><Switch checked={x.enabled} onChange={(e) => run(() => post(`/api/integrations/${id}/enabled`, { enabled: e.target.checked }))} inputProps={{ 'aria-label': 'Enabled' }} /><Typography variant="body2">{x.enabled ? 'Enabled' : 'Disabled'}</Typography></Stack>
+        <Stack direction="row" alignItems="center"><Switch checked={x.enabled} onChange={(e) => run(() => post(`/api/integrations/${id}/enabled`, { enabled: e.target.checked }))} slotProps={{ input: { 'aria-label': 'Enabled' } }} /><Typography variant="body2">{x.enabled ? 'Enabled' : 'Disabled'}</Typography></Stack>
       </Stack> : undefined}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {test && <Alert severity={test.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setTest(null)}>{test.message}</Alert>}
@@ -188,6 +247,7 @@ export function ConnectionDetail() {
         columns={[{ header: 'Started', accessorKey: 'startedAt', cell: (v) => fmtDateTime(v.getValue()) }, { header: 'Entity', accessorFn: (r) => erpEntities[r.entity] }, { header: 'Trigger', accessorKey: 'trigger' },
           { header: 'Status', accessorFn: (r) => runStatus[r.status], cell: (v) => <StatusChip status={v.getValue() === 'PartiallySucceeded' ? 'Conditional' : v.getValue()} /> },
           { header: 'Read / queued / same / rejected', accessorFn: (r) => `${r.read} / ${r.queued} / ${r.unchanged} / ${r.rejected}`, cell: mnum }, { header: 'Requests', accessorKey: 'requests' }, { header: 'Error', accessorKey: 'error' }]} />}
+      {tab === 'validation' && <ValidationPanel id={x.id} edit={edit} />}
       {tab === 'notes' && ed && <AdapterNotes caps={ed.capabilities} unverified={ed.unverified} notes={x.setupNotes} />}
       <StepDialog open={dlg === 'secret'} title="Set secrets" confirm="Save" onClose={() => setDlg(null)} intro="Secrets are encrypted and can never be read back. Leave a field blank to keep the stored value."
         inputs={[{ name: 'secret', label: 'Secret / private key / API key / password', type: 'password' }, { name: 'secondary', label: 'Second secret (if the vendor needs one)', type: 'password' }]}

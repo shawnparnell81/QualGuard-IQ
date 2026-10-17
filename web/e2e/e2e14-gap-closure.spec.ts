@@ -175,4 +175,27 @@ test.describe('E2E 14: gap closure', () => {
     await ppap.getByRole('button', { name: 'History' }).click();
     await expect(page.getByTestId('mapping-history')).toContainText('Verified');
   });
+
+  test('a connection shows its live-validation gates, checklist and unverified key assumptions, and the gate decides enabling', async ({ page }) => {
+    const api = await Api.as(users.author);
+    const base = { company: null, clientId: null, username: null, options: {}, maxConcurrency: null, requestsPerMinute: null, inventorySystemOfRecord: false, adminNotes: null, siteId: state().siteId, departmentId: null };
+    const plex = await api.post<{ id: string }>('/api/integrations', { ...base, name: unique('Plex gates'), system: 7, edition: 'Connect', baseUrl: 'https://connect.plex.example', account: 'tenant-1' });
+    await signIn(page, users.author);
+    await page.goto(`/integrations/${plex.id}?tab=validation`);
+    await expect(page.getByTestId('erp-gate-summary')).toContainText('Cannot be enabled yet');
+    const paths = page.getByTestId('erp-assumption').filter({ hasText: 'Paths' }).first();
+    await expect(paths).toContainText('Key — needed for production');
+    await expect(paths).toContainText('Unverified');
+    await expect(page.getByText(/Plex developer portal\./)).toBeVisible();
+    await expect(page.getByTestId('erp-gate').filter({ hasText: 'Write' })).toContainText('Not run');
+
+    const csv = await api.post<{ id: string }>('/api/integrations', { ...base, name: unique('CSV gates'), system: 21, edition: 'Csv', baseUrl: null, account: null });
+    await page.goto(`/integrations/${csv.id}?tab=validation`);
+    await expect(page.getByTestId('erp-gate-summary')).toContainText('Run Test connection once');
+    await page.getByRole('button', { name: 'Test connection' }).click();
+    await expect(page.getByTestId('erp-gate-summary')).toContainText('passes for the current configuration');
+    await expect(page.getByTestId('erp-gate').filter({ hasText: 'Connection' })).toContainText('Not applicable');
+    await page.getByLabel('Enabled', { exact: true }).click();
+    await expect(page.getByText('Enabled', { exact: true })).toBeVisible();
+  });
 });

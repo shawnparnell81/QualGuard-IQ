@@ -21857,6 +21857,132 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/integrations/{id}/validation':
+    get:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/Status'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/Status'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}/validation/history':
+    get:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpValidationEvent'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpValidationEvent'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ErpValidationEvent'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}/validation/assumptions':
+    post:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AssumptionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AssumptionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AssumptionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/integrations/{id}/validation/production-approval':
+    post:
+      tags:
+        - Integrations
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductionApprovalInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ProductionApprovalInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ProductionApprovalInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/integrations/{id}/mappings':
     get:
       tags:
@@ -34778,6 +34904,59 @@ components:
             - 'null'
             - string
           format: uuid
+    AssumptionInput:
+      required:
+        - topic
+        - result
+        - notes
+      type: object
+      properties:
+        topic:
+          type: string
+        result:
+          $ref: '#/components/schemas/ErpValidationResult'
+        notes:
+          type: string
+    AssumptionRow:
+      required:
+        - topic
+        - detail
+        - source
+        - key
+        - status
+        - at
+        - by
+        - environment
+        - notes
+      type: object
+      properties:
+        topic:
+          type: string
+        detail:
+          type: string
+        source:
+          type: string
+        key:
+          type: boolean
+        status:
+          type: string
+        at:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        by:
+          type:
+            - 'null'
+            - string
+        environment:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/ErpEnvironment'
+        notes:
+          type:
+            - 'null'
+            - string
     Attachment:
       required:
         - id
@@ -36542,6 +36721,21 @@ components:
             - string
     ChecklistResult:
       type: integer
+    ChecklistStep:
+      required:
+        - step
+        - text
+        - gate
+      type: object
+      properties:
+        step:
+          type: string
+        text:
+          type: string
+        gate:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/ErpValidationGate'
     Classification:
       type: integer
     CloneRequest:
@@ -37016,6 +37210,10 @@ components:
             - 'null'
             - string
           format: uuid
+        environment:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/ErpEnvironment'
     ConsumeInput:
       required:
         - workOrderId
@@ -40023,6 +40221,8 @@ components:
             - integer
             - string
           format: uint32
+    ErpEnvironment:
+      type: integer
     ErpSyncRun:
       type: object
       properties:
@@ -40119,6 +40319,71 @@ components:
             - string
           format: uint32
     ErpSystem:
+      type: integer
+    ErpValidationEvent:
+      type: object
+      properties:
+        connectionId:
+          type: string
+          format: uuid
+        gate:
+          $ref: '#/components/schemas/ErpValidationGate'
+        result:
+          $ref: '#/components/schemas/ErpValidationResult'
+        topic:
+          type:
+            - 'null'
+            - string
+        environment:
+          $ref: '#/components/schemas/ErpEnvironment'
+        configFingerprint:
+          type: string
+        byId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        byName:
+          type: string
+        at:
+          type: string
+          format: date-time
+        notes:
+          type:
+            - 'null'
+            - string
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    ErpValidationGate:
+      type: integer
+    ErpValidationResult:
       type: integer
     EvaluationCode:
       enum:
@@ -41341,6 +41606,40 @@ components:
           type:
             - 'null'
             - string
+    GateRow:
+      required:
+        - gate
+        - status
+        - at
+        - by
+        - environment
+        - notes
+        - required
+      type: object
+      properties:
+        gate:
+          $ref: '#/components/schemas/ErpValidationGate'
+        status:
+          type: string
+        at:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        by:
+          type:
+            - 'null'
+            - string
+        environment:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/ErpEnvironment'
+        notes:
+          type:
+            - 'null'
+            - string
+        required:
+          type: boolean
     Genealogy:
       required:
         - root
@@ -46111,6 +46410,13 @@ components:
           type:
             - 'null'
             - string
+    ProductionApprovalInput:
+      required:
+        - notes
+      type: object
+      properties:
+        notes:
+          type: string
     ProductionEntry:
       type: object
       properties:
@@ -52668,6 +52974,70 @@ components:
           type:
             - 'null'
             - string
+    Status:
+      required:
+        - connectionId
+        - environment
+        - fixtureTested
+        - gates
+        - assumptions
+        - supportedEntities
+        - unsupportedEntities
+        - checklist
+        - canEnable
+        - blockers
+        - productionApproved
+        - lastTestAt
+        - lastTestedBy
+        - disclaimer
+      type: object
+      properties:
+        connectionId:
+          type: string
+          format: uuid
+        environment:
+          $ref: '#/components/schemas/ErpEnvironment'
+        fixtureTested:
+          type: string
+        gates:
+          type: array
+          items:
+            $ref: '#/components/schemas/GateRow'
+        assumptions:
+          type: array
+          items:
+            $ref: '#/components/schemas/AssumptionRow'
+        supportedEntities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErpEntity'
+        unsupportedEntities:
+          type: array
+          items:
+            $ref: '#/components/schemas/ErpEntity'
+        checklist:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChecklistStep'
+        canEnable:
+          type: boolean
+        blockers:
+          type: array
+          items:
+            type: string
+        productionApproved:
+          type: boolean
+        lastTestAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        lastTestedBy:
+          type:
+            - 'null'
+            - string
+        disclaimer:
+          type: string
     StepDto:
       required:
         - order
