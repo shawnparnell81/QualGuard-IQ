@@ -312,6 +312,7 @@ public sealed class FaiAqlTests(TestApp app)
         Assert.Equal("H", calc.Str("codeLetter"));
         Assert.Equal(1, calc.GetProperty("thresholds")[0].Int("acceptanceNumber"));
         Assert.Equal(2, calc.GetProperty("thresholds")[0].Int("rejectionNumber"));
+        Assert.Equal(1.0m, calc.GetProperty("thresholds")[0].GetProperty("aql").GetDecimal());
         var perClass = await (await w.Insp.PostOkAsync("/api/v1/aql/calculate-sample", new { planId, lotSize = 500, inspectionLevel = "II", aqlLevelMajor = 1.0m })).JsonAsync();
         Assert.Equal("Major", perClass.GetProperty("thresholds")[0].Str("defectClass"));
         Assert.Equal(HttpStatusCode.BadRequest, (await w.Insp.PostAsync("/api/v1/aql/calculate-sample", new { planId, lotSize = 500, inspectionLevel = "II" })).StatusCode); // an AQL is required

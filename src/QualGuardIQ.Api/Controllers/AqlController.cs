@@ -160,7 +160,7 @@ public sealed class AqlController(AppDbContext db, AqlService svc, CapaService c
     public async Task<AQLCalculationResult> CalculateSample(AQLCalculationRequest r, CancellationToken ct)
     {
         var c = await svc.CalculateAsync(r.PlanId, r.LotSize, r.InspectionLevel, r.AqlLevel, r.AqlLevelCritical, r.AqlLevelMajor, r.AqlLevelMinor, ct);
-        return new AQLCalculationResult(c.SampleSize, Thresholds(c), c.CodeLetter, c.PlanLabel, c.HundredPercent);
+        return new AQLCalculationResult(c.SampleSize, Thresholds(c, r.AqlLevel), c.CodeLetter, c.PlanLabel, c.HundredPercent);
     }
     [HttpPost("calculate-sample-size")] [RequirePermission(Permissions.InspectionView)] [Tags("AQL Plans")]
     public Task<AqlLookup> SampleSize(LookupRequest r, CancellationToken ct) => svc.DetermineAsync(r.PlanName, r.Severity, r.LotSize, r.InspectionLevel, r.AqlLevel, ct);
