@@ -9,7 +9,7 @@ This guide covers the Integrations module (Admin → Integrations). The vendor r
 - **Changes go to a queue first.** A sync never edits a record directly. Each new or changed external row becomes a *pending change* (Create or Update, with before and after values). Someone with `integrations.approve` submits it, and it goes through the normal approval route ("ErpChange"). An approval applies the change and writes an audit entry (who, what, when, description).
 - **Duplicates are skipped.** Rows are matched by external id. If there is no external id link yet, they are matched by business key (part number, supplier code, customer code and so on). A row whose content hash has not changed since the last run is counted as *unchanged*.
 - **Delta reads.** Where the vendor documents a modified-date filter, the adapter reads from the last watermark minus a 2-minute overlap. Otherwise it reads in full and relies on the hash check.
-- **Schedule.** The worker runs `erp-sync` every minute. Each mapping has its own interval in minutes, so a connection only syncs when its mapping is due.
+- **Schedule.** The worker runs `erp-sync` every minute. Each mapping has its own cron schedule, so a connection only syncs when its mapping is due.
 - **Throttling.** HTTP 429 and 503 honour `Retry-After`, with capped exponential back-off. The connection's *max concurrency* setting limits parallel calls.
 - **Revision changes.** When a part's revision changes through a sync, a part revision is recorded. The connection owner also gets a "FAI required" notification.
 - **Read only.** No adapter writes to the ERP. Outbound mappings are refused.
