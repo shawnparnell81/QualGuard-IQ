@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
-import { Alert, Box, Button, Chip, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Chip, FormControlLabel, Paper, Stack, TextField, Typography } from '@mui/material';
 import CloudOffOutlined from '@mui/icons-material/CloudOffOutlined';
 import { useQuery } from '@tanstack/react-query';
 import { get, post } from '../api';
+import { useAuth } from '../auth';
 import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { useLookup } from '../components/Kit';
@@ -17,7 +18,7 @@ import { qty } from './Warehouse';
 const mod = modules.find((m) => m.key === 'warehouse')!;
 interface ScanLink { type: string; id: string; number: string; title: string; status: string; url: string }
 interface Ctx { match: { raw: string; kind: string; type?: string; id?: string; number?: string; url?: string; detail?: string }; stock: StockRow[]; holds: ScanLink[]; related: ScanLink[]; actions: string[] }
-const flows: [string, string, string][] = [['receive', 'Receive', 'Dock to stock'], ['inspect', 'Inspect', 'Open the inspection'], ['move', 'Move', 'Put away / relocate'], ['issue', 'Issue', 'To a work order'], ['ship', 'Ship', 'Pick & verify'], ['trace', 'Trace', 'What is this?']];
+const flows: [string, string, string, string?][] = [['receive', 'Receive PO', 'Against a purchase order'], ['blind', 'Blind receipt', 'No PO or delivery', 'inventory.receive_blind'], ['inspect', 'Inspect', 'Open the inspection'], ['move', 'Move', 'Put away / relocate'], ['issue', 'Issue', 'To a work order'], ['ship', 'Ship', 'Pick & verify'], ['trace', 'Trace', 'What is this?']];
 const scan = (code: string) => post<Ctx>('/api/warehouse/scan', { code });
 
 /** Result banner: green for posted, amber for queued offline, red for refused. */
@@ -38,18 +39,20 @@ export function ScanStation() {
   const [p, setP] = useSearchParams();
   const flow = p.get('flow') ?? '';
   const q = useOfflineQueue();
+  const { can } = useAuth();
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Scan station' }]} title="Scan station"
       actions={<Chip icon={q.online ? undefined : <CloudOffOutlined />} color={q.online ? 'success' : 'warning'} label={q.online ? 'Online' : 'Offline — scans are queued'} />}>
       <Box sx={{ maxWidth: 560, mx: 'auto' }}>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(3, 1fr)' }, gap: 1, mb: 2 }}>
-          {flows.map(([k, l, sub]) => (
+          {flows.filter(([, , , perm]) => !perm || can(perm)).map(([k, l, sub]) => (
             <Button key={k} variant={flow === k ? 'contained' : 'outlined'} onClick={() => setP({ flow: k })} sx={{ py: 1.5, flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left' }}>
               <Typography sx={{ fontWeight: 700, fontSize: 17 }}>{l}</Typography><Typography variant="caption" sx={{ opacity: 0.8, textTransform: 'none' }}>{sub}</Typography></Button>))}
         </Box>
         <Paper sx={{ p: 2 }}>
           {flow === '' && <Typography color="text.secondary">Choose what you are doing. Scanners that type and press Enter work in every field; the camera button reads codes on a phone.</Typography>}
-          {flow === 'receive' && <ReceiveFlow key="r" />}
+          {flow === 'receive' && <PoReceiveFlow key="r" />}
+          {flow === 'blind' && (can('inventory.receive_blind') ? <BlindReceiveFlow key="b" /> : <Alert severity="warning">Blind receipts need the blind receiving permission. Receive against the purchase order instead.</Alert>)}
           {flow === 'inspect' && <InspectFlow key="i" />}
           {flow === 'move' && <MoveFlow key="m" initialItem={p.get('item') ?? ''} />}
           {flow === 'issue' && <IssueFlow key="is" initialItem={p.get('item') ?? ''} />}
@@ -64,7 +67,7 @@ export function ScanStation() {
 
 const strip = (code: string, prefix: string) => (code.toUpperCase().startsWith(prefix) ? code.slice(prefix.length) : code).trim();
 
-function ReceiveFlow() {
+function BlindReceiveFlow() {
   const parts = useLookup('part');
   const locs = useLocations();
   const [part, setPart] = useState<{ id: string; label: string } | null>(null);
@@ -94,7 +97,7 @@ function ReceiveFlow() {
     const id = newRequestId();
     try {
       const r = await postOrQueue<{ number: string }>('/api/warehouse/receipts', { clientRequestId: id, kind: 3, supplierId: null, purchaseOrderId: null, asnNumber: null, packingSlip: null, carrierId: null, trackingNumber: null, receivedOn: localDate(), receivingLocationId: dock!.id, notes: 'Received at scan station',
-        supplierOverrideReason: null, siteId: dock!.siteId, departmentId: null,
+        supplierOverrideReason: null, siteId: dock!.siteId, departmentId: null, channel: 'ScanStation',
         lines: [{ partId: part!.id, revision: null, purchaseOrderLineId: null, quantityExpected: null, quantityReceived: Number(n), supplierLotNumber: lot || null, lotNumber: null, serialNumbers: null, inspectionRequired: null, inspectionPlanId: null, aqlPlanId: null, aqlInspectionLevel: null, aqlLevel: null, putAwayLocationId: null, clientRequestId: id }] },
         `Receive ${n} × ${part!.label} at ${dock!.code}`);
       setOut(done(r.queued, r.result ? `Receipt ${r.result.number}` : 'Receipt')); setPart(null); setLot(''); setN('');
@@ -107,7 +110,146 @@ function ReceiveFlow() {
     <Step n={4} label="Quantity"><TextField fullWidth type="number" value={n} onChange={(e) => setN(e.target.value)} slotProps={{ htmlInput: { inputMode: 'decimal', style: { fontSize: 22 } } }} /></Step>
     {out && <Alert severity={out.tone}>{out.text}</Alert>}
     <Big disabled={!dock || !part || !(Number(n) > 0)} onClick={submit}>Receive</Big>
-    <Typography variant="caption" color="text.secondary">Parts with a receiving inspection plan land as awaiting inspection; the label prints from the receipt.</Typography>
+    <Typography variant="caption" color="text.secondary">Blind receipts have no purchase order to check against. Parts with a receiving inspection plan land as awaiting inspection.</Typography>
+  </Stack>;
+}
+
+interface Requirement { id?: string; inspectionRequired: boolean; inspectionPlanNumber?: string; aqlPlanId?: string; aqlPlanName?: string; holdOnReceipt: boolean; holdReason?: string; serialsRequired: boolean; labelCopies: number }
+interface PoLine { id: string; lineNumber: number; partId?: string; itemNumber: string; partName?: string; revision?: string; ordered: number; received: number; remaining: number; maxReceivable: number; unitOfMeasure: string; dueOn?: string; requirement: Requirement }
+interface PoInfo { id: string; number: string; supplierId: string; supplierName: string; supplierStatus: string; supplierBlocked: boolean; supplierConditions: string[]; status: string; siteId: string;
+  policy: { overReceiptPercent: number; overReceiptQuantity: number; allowPartialReceipt: boolean }; lines: PoLine[] }
+interface CheckResult { ok: boolean; errors: { code: string; message: string }[]; warnings: string[]; overReceived: number; underReceipt: boolean }
+interface ReceiptLabel { lineNumber: number; kind: string; number: string; content: string; copies: number }
+interface ReceiptRow { line: { status: number; lotId?: string }; lotNumber?: string; inspectionNumber?: string; aqlNumber?: string; holdNumber?: string }
+
+function RequirementChips({ r }: { r: Requirement }) {
+  return <Stack direction="row" gap={0.5} flexWrap="wrap">
+    {r.inspectionRequired && <Chip size="small" color="warning" label={`Inspection${r.inspectionPlanNumber ? ` ${r.inspectionPlanNumber}` : ''}`} />}
+    {r.aqlPlanId && <Chip size="small" color="warning" label={`AQL ${r.aqlPlanName ?? ''}`} />}
+    {r.holdOnReceipt && <Chip size="small" color="error" label="Receiving hold" />}
+    {r.serialsRequired && <Chip size="small" label="Serial per unit" />}
+  </Stack>;
+}
+
+/** Receiving against a purchase order: dock → PO → line → item → revision, lot, serials, quantity → server check → receive, then labels. */
+function PoReceiveFlow() {
+  const locs = useLocations();
+  const [dock, setDock] = useState<{ id: string; code: string; siteId: string } | null>(null);
+  const [po, setPo] = useState<PoInfo | null>(null);
+  const [line, setLine] = useState<PoLine | null>(null);
+  const [item, setItem] = useState('');
+  const [rev, setRev] = useState(''); const [lot, setLot] = useState(''); const [n, setN] = useState('');
+  const [serials, setSerials] = useState<string[]>([]); const [serialInput, setSerialInput] = useState('');
+  const [hold, setHold] = useState(false); const [holdReason, setHoldReason] = useState('');
+  const [check, setCheck] = useState<CheckResult | null>(null);
+  const [out, setOut] = useState<Outcome>(null);
+  const [done2, setDone2] = useState<{ id?: string; number?: string; rows: ReceiptRow[]; labels: ReceiptLabel[] } | null>(null);
+  const reset = (keepPo = true) => { setLine(null); setItem(''); setRev(''); setLot(''); setN(''); setSerials([]); setHold(false); setHoldReason(''); setCheck(null); if (!keepPo) setPo(null); };
+  const findLoc = async (code: string) => {
+    setOut(null);
+    const v = strip(code, 'QG:LOC:').toUpperCase();
+    const l = locs.data?.find((r) => r.code.toUpperCase() === v);
+    if (l) { setDock({ id: l.id, code: l.code, siteId: l.siteId }); return; }
+    // cache cold or stale: ask the server
+    const c = await scan(code.toUpperCase().startsWith('QG:') ? code : `QG:LOC:${code}`).catch(() => null);
+    if (c?.match.kind === 'Location' && c.match.id) { const x = await get<{ id: string; code: string; siteId: string }>(`/api/warehouse/locations/${c.match.id}`); setDock({ id: x.id, code: x.code, siteId: x.siteId }); }
+    else setOut({ tone: 'error', text: `No location ${v}.` });
+  };
+  const findPo = async (code: string) => {
+    setOut(null); setDone2(null); reset(false);
+    try { const x = await get<PoInfo>(`/api/warehouse/receiving/po?number=${encodeURIComponent(code.trim())}`); setPo(x); if (x.lines.length === 0) setOut({ tone: 'warning', text: `PO ${x.number} has no open lines.` }); }
+    catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+  };
+  const pick = (l: PoLine) => { setLine(l); setRev(l.revision ?? ''); setN(String(l.remaining)); setCheck(null); setOut(null); };
+  const onItem = (code: string) => {
+    setCheck(null);
+    const v = strip(code, 'QG:PART:');
+    if (line && v.toUpperCase() !== line.itemNumber.toUpperCase()) { setItem(''); setOut({ tone: 'error', text: `Wrong part: scanned ${v}, PO line ${line.lineNumber} is ${line.itemNumber}.` }); return; }
+    setOut(null); setItem(v);
+  };
+  const onSerial = (code: string) => {
+    const v = code.replace(/^QG:SN:[^:]+:/i, '').trim();
+    setSerialInput('');
+    if (!v) return;
+    if (serials.some((s) => s.toUpperCase() === v.toUpperCase())) { setOut({ tone: 'error', text: `Serial ${v} is already scanned.` }); return; }
+    setOut(null); const next = [...serials, v]; setSerials(next); setN(String(next.length)); setCheck(null);
+  };
+  const lineBody = () => ({ partId: line!.partId, revision: rev.trim() || null, purchaseOrderLineId: line!.id, quantityExpected: null, quantityReceived: Number(n), supplierLotNumber: lot.trim() || null, lotNumber: null,
+    serialNumbers: serials.length ? serials : null, inspectionRequired: null, inspectionPlanId: null, aqlPlanId: null, aqlInspectionLevel: null, aqlLevel: null, putAwayLocationId: null, clientRequestId: null as string | null,
+    placeHold: hold || null, holdReason: hold ? holdReason.trim() : null });
+  const runCheck = async () => {
+    setOut(null);
+    try {
+      const [r] = await post<CheckResult[]>('/api/warehouse/receiving/check', { purchaseOrderId: po!.id, siteId: po!.siteId, supplierId: null, lines: [lineBody()], scannedItem: item });
+      setCheck(r);
+      return r;
+    } catch (e) { setOut({ tone: 'error', text: (e as Error).message }); return null; }
+  };
+  const submit = async () => {
+    const r = check ?? await runCheck();
+    if (!r || r.errors.length > 0) return;
+    const id = newRequestId();
+    try {
+      const res = await postOrQueue<{ id: string; number: string }>('/api/warehouse/receipts', { clientRequestId: id, kind: 0, supplierId: po!.supplierId, purchaseOrderId: po!.id, asnNumber: null, packingSlip: null, carrierId: null, trackingNumber: null,
+        receivedOn: localDate(), receivingLocationId: dock!.id, notes: null, supplierOverrideReason: null, siteId: po!.siteId, departmentId: null, channel: 'ScanStation', lines: [{ ...lineBody(), clientRequestId: id }] },
+        `Receive ${n} × ${line!.itemNumber} on PO ${po!.number} line ${line!.lineNumber}`);
+      if (res.result) {
+        const d = await get<{ lines: ReceiptRow[] }>(`/api/warehouse/receipts/${res.result.id}`);
+        const labels = await get<ReceiptLabel[]>(`/api/warehouse/receipts/${res.result.id}/labels`);
+        setDone2({ id: res.result.id, number: res.result.number, rows: d.lines, labels });
+        setOut({ tone: 'success', text: `Receipt ${res.result.number} posted.` });
+        setPo(await get<PoInfo>(`/api/warehouse/receiving/po?number=${encodeURIComponent(po!.number)}`));
+      } else { setDone2(null); setOut(done(true, 'Receipt')); }
+      reset();
+    } catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+  };
+  const ready = !!dock && !!po && !!line && !!item && Number(n) > 0 && !po.supplierBlocked && (!hold || holdReason.trim().length > 1) && (!line.requirement.serialsRequired || serials.length > 0);
+  return <Stack gap={2}>
+    <Step n={1} label="Receiving dock" value={dock?.code}><ScanField label="Scan dock location" onScan={findLoc} autoFocus /></Step>
+    <Step n={2} label="Purchase order" value={po ? `${po.number} · ${po.supplierName}` : undefined}><ScanField label="Scan PO label or type the PO number" onScan={findPo} /></Step>
+    {po && po.supplierBlocked && <Alert severity="error">Supplier {po.supplierName} is restricted ({po.supplierConditions.join('; ')}). Receive on the desktop receiving page, where an authorized override with a reason is recorded.</Alert>}
+    {po && !po.supplierBlocked && po.supplierConditions.length > 0 && <Alert severity="warning">{po.supplierConditions.join('; ')}</Alert>}
+    {po && !line && po.lines.length > 0 && <Stack gap={1} data-testid="po-lines">
+      <Typography variant="overline" color="text.secondary">3 · Select the PO line</Typography>
+      {po.lines.map((l) => <Button key={l.id} variant="outlined" onClick={() => pick(l)} sx={{ justifyContent: 'flex-start', textAlign: 'left', py: 1.25, flexDirection: 'column', alignItems: 'flex-start', textTransform: 'none' }}>
+        <Typography sx={{ fontFamily: mono, fontWeight: 700 }}>Line {l.lineNumber} · {l.itemNumber}{l.revision ? ` rev ${l.revision}` : ''}</Typography>
+        <Typography variant="body2">{qty(l.remaining)} of {qty(l.ordered)} {l.unitOfMeasure} open{l.maxReceivable > l.remaining ? ` · up to ${qty(l.maxReceivable)} with tolerance` : ''}</Typography>
+        <RequirementChips r={l.requirement} /></Button>)}
+    </Stack>}
+    {line && <>
+      <Step n={3} label="PO line" value={`Line ${line.lineNumber} · ${line.itemNumber} · ${qty(line.remaining)} open`}><span /></Step>
+      <RequirementChips r={line.requirement} />
+      <Step n={4} label="Item" value={item || undefined}><ScanField label="Scan the item (part label)" onScan={onItem} autoFocus /></Step>
+      <Step n={5} label="Revision"><TextField fullWidth value={rev} onChange={(e) => { setRev(e.target.value); setCheck(null); }} helperText={line.revision ? `PO orders revision ${line.revision}` : undefined} slotProps={{ htmlInput: { 'aria-label': 'Revision' } }} /></Step>
+      <Step n={6} label="Supplier lot / heat"><TextField fullWidth value={lot} onChange={(e) => { setLot(e.target.value); setCheck(null); }} placeholder="Optional" slotProps={{ htmlInput: { 'aria-label': 'Supplier lot' } }} /></Step>
+      <Step n={7} label={line.requirement.serialsRequired ? 'Serial numbers (one per unit)' : 'Serial numbers (optional)'}>
+        <ScanField label="Scan serial" onScan={onSerial} value={serialInput} onChange={setSerialInput} />
+        {serials.length > 0 && <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ mt: 1 }} data-testid="scanned-serials">{serials.map((s) => <Chip key={s} label={s} onDelete={() => { const next = serials.filter((x) => x !== s); setSerials(next); setN(String(next.length)); setCheck(null); }} />)}</Stack>}
+      </Step>
+      <Step n={8} label="Quantity"><TextField fullWidth type="number" value={n} disabled={serials.length > 0} onChange={(e) => { setN(e.target.value); setCheck(null); }} slotProps={{ htmlInput: { inputMode: 'decimal', style: { fontSize: 22 }, 'aria-label': 'Quantity received' } }} /></Step>
+      {!line.requirement.holdOnReceipt && <FormControlLabel control={<Checkbox checked={hold} onChange={(e) => { setHold(e.target.checked); setCheck(null); }} />} label="Place a receiving hold" />}
+      {hold && <TextField label="Hold reason" value={holdReason} onChange={(e) => { setHoldReason(e.target.value); setCheck(null); }} />}
+      {check && check.errors.length > 0 && <Alert severity="error" data-testid="receive-check">{check.errors.map((e) => <div key={e.code + e.message}>{e.message}</div>)}</Alert>}
+      {check && check.errors.length === 0 && check.warnings.length > 0 && <Alert severity="warning" data-testid="receive-check">{check.warnings.map((w) => <div key={w}>{w}</div>)}</Alert>}
+      <Stack direction="row" gap={1}><Button variant="outlined" disabled={!ready} onClick={runCheck}>Check</Button><Button onClick={() => reset()}>Change line</Button></Stack>
+    </>}
+    {out && <Alert severity={out.tone}>{out.text}</Alert>}
+    {line && <Big disabled={!ready || (check?.errors.length ?? 0) > 0} onClick={submit}>{check && check.warnings.length > 0 ? 'Receive with warnings' : 'Receive'}</Big>}
+    {done2 && <Paper variant="outlined" sx={{ p: 1.5 }} data-testid="receive-result">
+      <Typography sx={{ fontFamily: mono, fontWeight: 700 }}>Receipt {done2.number}</Typography>
+      {done2.rows.map((r, i) => <Stack key={i} direction="row" gap={0.5} flexWrap="wrap" sx={{ mt: 0.5 }}>
+        {r.lotNumber && <Chip size="small" label={`Lot ${r.lotNumber}`} />}
+        <Chip size="small" color={r.line.status === 1 ? 'warning' : 'success'} label={r.line.status === 1 ? 'Awaiting inspection' : 'Accepted to stock'} />
+        {r.inspectionNumber && <Chip size="small" label={`Inspection ${r.inspectionNumber}`} />}
+        {r.aqlNumber && <Chip size="small" label={`AQL ${r.aqlNumber}`} />}
+        {r.holdNumber && <Chip size="small" color="error" label={`Hold ${r.holdNumber}`} />}
+      </Stack>)}
+      <Stack direction="row" gap={1} sx={{ mt: 1 }}>
+        <Button variant="contained" component={RouterLink} to={`/warehouse/receipts/${done2.id}/labels`}>Labels ({done2.labels.reduce((a, l) => a + l.copies, 0)})</Button>
+        <Button component={RouterLink} to={`/warehouse/receipts/${done2.id}`}>Open receipt</Button>
+      </Stack>
+    </Paper>}
+    <Typography variant="caption" color="text.secondary">The server checks part, revision, open quantity and over-receipt tolerance, serials and the part's receiving requirements before anything is posted.</Typography>
   </Stack>;
 }
 

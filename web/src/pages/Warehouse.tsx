@@ -263,8 +263,8 @@ export function LocationDetail() {
 }
 
 // ------------------------------------------------------------------ receiving
-interface Receipt { id: string; number: string; kind: number; status: number; supplierId?: string; purchaseOrderId?: string; purchaseOrderNumber?: string; asnNumber?: string; packingSlip?: string; trackingNumber?: string; receivedOn: string; receivingLocationId: string; notes?: string; siteId: string }
-interface ReceiptLine { id: string; lineNumber: number; partId: string; revision?: string; quantityExpected: number; quantityReceived: number; quantityAccepted: number; quantityRejected: number; supplierLotNumber?: string; lotId?: string; serialNumbers?: string;
+interface Receipt { id: string; number: string; kind: number; status: number; supplierId?: string; purchaseOrderId?: string; purchaseOrderNumber?: string; asnNumber?: string; packingSlip?: string; trackingNumber?: string; receivedOn: string; receivingLocationId: string; notes?: string; channel?: string; siteId: string }
+interface ReceiptLine { id: string; lineNumber: number; partId: string; revision?: string; quantityExpected: number; quantityReceived: number; quantityAccepted: number; quantityRejected: number; overReceivedQuantity: number; supplierLotNumber?: string; lotId?: string; serialNumbers?: string;
   inspectionRequired: boolean; inspectionId?: string; aqlInspectionId?: string; ncrId?: string; holdId?: string; putAwayLocationId?: string; status: number; decisionNotes?: string }
 interface ReceiptDetail { receipt: Receipt; lines: { line: ReceiptLine; partNumber: string; partName?: string; lotNumber?: string; inspectionNumber?: string; inspectionStatus?: string; aqlNumber?: string; aqlResult?: string; ncrNumber?: string; holdNumber?: string }[] }
 
@@ -301,7 +301,9 @@ export function ReceiptNew() {
   const [p] = useSearchParams();
   const sups = useLookup('supplier'); const parts = useLookup('part'); const carriers = useCarriers();
   const pos = useQuery({ queryKey: ['po-list'], queryFn: () => get<{ id: string; number: string; supplierId: string; siteId: string; status: number }[]>('/api/production/purchase-orders') });
-  const [h, setH] = useState({ kind: p.get('po') ? '0' : '3', supplierId: '', purchaseOrderId: p.get('po') ?? '', asnNumber: '', packingSlip: '', carrierId: '', trackingNumber: '', receivedOn: localDate(), siteId: '', receivingLocationId: '', notes: '', supplierOverrideReason: '' });
+  const { can: canDo } = useAuth();
+  const blindOk = canDo('inventory.receive_blind');
+  const [h, setH] = useState({ kind: p.get('po') ? '0' : blindOk ? '3' : '1', supplierId: '', purchaseOrderId: p.get('po') ?? '', asnNumber: '', packingSlip: '', carrierId: '', trackingNumber: '', receivedOn: localDate(), siteId: '', receivingLocationId: '', notes: '', supplierOverrideReason: '' });
   const [lines, setLines] = useState<DraftLine[]>([{ ...emptyLine }]);
   const [error, setError] = useState<string | null>(null);
   const po = useQuery({ queryKey: ['po', h.purchaseOrderId], queryFn: () => get<PoDetail>(`/api/production/purchase-orders/${h.purchaseOrderId}`), enabled: !!h.purchaseOrderId });
@@ -326,7 +328,7 @@ export function ReceiptNew() {
       <MirrorBanner siteId={siteId || undefined} />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Paper sx={{ p: 2.5, mb: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
-        <TextField select label="Receipt type" value={h.kind} onChange={set('kind')}>{receiptKinds.map((k, i) => <MenuItem key={k} value={String(i)}>{k}</MenuItem>)}</TextField>
+        <TextField select label="Receipt type" value={h.kind} onChange={set('kind')} helperText={blindOk ? undefined : 'Blind receipts need the blind receiving permission.'}>{receiptKinds.map((k, i) => <MenuItem key={k} value={String(i)} disabled={i === 3 && !blindOk}>{k}</MenuItem>)}</TextField>
         <TextField select label="Purchase order" value={h.purchaseOrderId} onChange={set('purchaseOrderId')}><MenuItem value="">None</MenuItem>{(pos.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.number}</MenuItem>)}</TextField>
         <TextField select label="Supplier" value={h.supplierId || po.data?.purchaseOrder.supplierId || ''} onChange={set('supplierId')}><MenuItem value="">None (blind)</MenuItem>{(sups.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{lookupLabel(s)}</MenuItem>)}</TextField>
         <TextField label="Received on" type="date" value={h.receivedOn} onChange={set('receivedOn')} slotProps={{ inputLabel: { shrink: true } }} />
@@ -380,7 +382,7 @@ export function ReceiptDetailPage() {
               <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" gap={1}>
                 <Box><Typography sx={{ fontFamily: mono, fontWeight: 600 }}>{x.line.lineNumber}. {x.partNumber}{x.line.revision ? ` rev ${x.line.revision}` : ''}</Typography>
                   <Typography variant="body2" color="text.secondary">{x.partName} · lot <span style={{ fontFamily: mono }}>{x.lotNumber ?? '—'}</span>{x.line.supplierLotNumber ? ` · supplier lot ${x.line.supplierLotNumber}` : ''}</Typography>
-                  <Typography variant="body2">Received {qty(x.line.quantityReceived)} · accepted {qty(x.line.quantityAccepted)} · rejected {qty(x.line.quantityRejected)}</Typography></Box>
+                  <Typography variant="body2">Received {qty(x.line.quantityReceived)} · accepted {qty(x.line.quantityAccepted)} · rejected {qty(x.line.quantityRejected)}{x.line.overReceivedQuantity > 0 ? ` · ${qty(x.line.overReceivedQuantity)} over the PO (within tolerance)` : ''}</Typography></Box>
                 <Stack alignItems={{ md: 'flex-end' }} gap={0.75}>
                   <StatusChip status={lineStatus[x.line.status]} />
                   <Stack direction="row" gap={1} flexWrap="wrap">
@@ -397,7 +399,7 @@ export function ReceiptDetailPage() {
           {tab === 'ledger' && <RefLedger refType="Receipt" refId={r.id} />}
           {tab === 'files' && <AttachmentsAndHistory type="Receipt" id={id!} canEdit={can('inventory.edit')} />}
         </Box>
-        <Facts items={[['Type', receiptKinds[r.kind]], ['Supplier', sup ? lookupLabel(sup) : 'Blind receipt'], ['PO', r.purchaseOrderNumber], ['ASN', r.asnNumber], ['Packing slip', r.packingSlip], ['Tracking', r.trackingNumber], ['Received on', fmtDate(r.receivedOn)], ['Notes', r.notes]]} />
+        <Facts items={[['Type', receiptKinds[r.kind]], ['Entered at', r.channel === 'ScanStation' ? 'Scan station' : r.channel ?? 'Desktop'], ['Supplier', sup ? lookupLabel(sup) : 'Blind receipt'], ['PO', r.purchaseOrderNumber], ['ASN', r.asnNumber], ['Packing slip', r.packingSlip], ['Tracking', r.trackingNumber], ['Received on', fmtDate(r.receivedOn)], ['Notes', r.notes]]} />
       </Box>
       {dec && <StepDialog open title={`Line ${dec.line.lineNumber}: inspection outcome`} confirm="Record" onClose={() => setDec(null)}
         intro="Accept puts the material away as available. Reject moves it to quarantine as rejected, raises an NCR and a quality hold. Quarantine holds it for review."
@@ -857,6 +859,110 @@ export function LotMergePage() {
         <Typography variant="body2" sx={{ gridColumn: { md: 'span 3' } }}>{chosen.length} lot(s) selected · {qty(chosen.reduce((a, c) => a + c.onHand, 0))} units</Typography>
         <Button variant="contained" disabled={chosen.length < 2 || !f.to} onClick={merge}>Merge {chosen.length} lots</Button>
       </Paper>
+    </ModuleWorkspace>
+  );
+}
+
+interface ReceiptLabelRow { lineNumber: number; kind: string; number: string; content: string; partNumber: string; revision?: string; quantity: number; copies: number }
+
+/** Printable lot and serial labels for a receipt (copies from the receiving requirement). */
+export function ReceiptLabelsPage() {
+  const { id } = useParams();
+  const d = useQuery({ queryKey: ['wh-receipt', id], queryFn: () => get<ReceiptDetail>(`/api/warehouse/receipts/${id}`) });
+  const labels = useQuery({ queryKey: ['wh-receipt-labels', id], queryFn: () => get<ReceiptLabelRow[]>(`/api/warehouse/receipts/${id}/labels`) });
+  const copies = (labels.data ?? []).flatMap((l) => Array.from({ length: l.copies }, (_, i) => ({ ...l, copy: i + 1 })));
+  return (
+    <ModuleWorkspace module={mod} crumbs={[{ label: 'Receiving', to: '/warehouse/receipts' }, { label: d.data?.receipt.number ?? '…', to: `/warehouse/receipts/${id}` }, { label: 'Labels' }]} title="Receipt labels"
+      actions={<Button variant="contained" onClick={() => window.print()} disabled={copies.length === 0}>Print</Button>}>
+      {labels.error && <Alert severity="error">{(labels.error as Error).message}</Alert>}
+      {labels.data && copies.length === 0 && <Alert severity="info">This receipt has no labels to print (label copies are set to 0 in the receiving requirement).</Alert>}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 2 }}>
+        {copies.map((l) => <Paper key={`${l.content}-${l.copy}`} variant="outlined" sx={{ p: 1.5, breakInside: 'avoid' }} data-testid="receipt-label">
+          <Typography variant="overline">{l.kind} · line {l.lineNumber}{l.copies > 1 ? ` · copy ${l.copy} of ${l.copies}` : ''}</Typography>
+          <Typography sx={{ fontFamily: mono, fontWeight: 700 }}>{l.number}</Typography>
+          <Typography variant="body2">{l.partNumber}{l.revision ? ` rev ${l.revision}` : ''} · qty {qty(l.quantity)}</Typography>
+          <Box component="img" alt={l.content} src={`/api/trace/labels?symbology=Code128&content=${encodeURIComponent(l.content)}&width=260&height=70`} sx={{ width: '100%', mt: 1 }} />
+        </Paper>)}
+      </Box>
+    </ModuleWorkspace>
+  );
+}
+
+interface RecvPolicy { siteId?: string; overReceiptPercent: number; overReceiptQuantity: number; allowPartialReceipt: boolean; inherited: boolean }
+interface RecvRequirement { id: string; partId: string; partNumber: string; supplierId?: string; supplierName?: string; inspectionRequired: boolean; inspectionPlanId?: string; inspectionPlanNumber?: string; aqlPlanId?: string; aqlPlanName?: string;
+  aqlInspectionLevel?: string; aqlLevel?: number; holdOnReceipt: boolean; holdReason?: string; serialsRequired: boolean; labelCopies: number; active: boolean; notes?: string; siteId: string; departmentId?: string }
+
+/** Over-receipt tolerance and partial receipt per site, and what receiving must do per part (inspection, AQL, hold, serials, labels). */
+export function ReceivingRulesPage() {
+  const { can } = useAuth();
+  const qc = useQueryClient();
+  const sites = useSites();
+  const [site, setSite] = useState('');
+  const siteId = site || sites.data?.find((s) => !s.isArchived)?.id || '';
+  const policy = useQuery({ queryKey: ['recv-policy', siteId], enabled: !!siteId, queryFn: () => get<RecvPolicy>(`/api/warehouse/receiving/policy?siteId=${siteId}`) });
+  const reqs = useQuery({ queryKey: ['recv-reqs'], queryFn: () => get<RecvRequirement[]>('/api/warehouse/receiving/requirements') });
+  const parts = useLookup('part'); const sups = useLookup('supplier');
+  const aql = useQuery({ queryKey: ['aql-plans-active'], queryFn: async () => { try { return (await get<{ items: { id: string; name: string; status: string; severity: string }[] }>('/api/v1/aql/plans?pageSize=200')).items.filter((p) => p.status === 'Active'); } catch { return []; } } });
+  const plans = useQuery({ queryKey: ['insp-plans-recv'], queryFn: async () => { try { return await get<{ id: string; number: string; title: string; partId?: string; inspectionType: string; isObsolete: boolean }[]>('/api/inspection/plans'); } catch { return []; } } });
+  const [dlg, setDlg] = useState<'policy' | 'req' | null>(null);
+  const [edit, setEdit] = useState<RecvRequirement | null>(null);
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['recv-policy'] }); qc.invalidateQueries({ queryKey: ['recv-reqs'] }); };
+  const manage = can('inventory.approve');
+  const p = policy.data;
+  const rows = (reqs.data ?? []).filter((r) => !siteId || r.siteId === siteId);
+  return (
+    <ModuleWorkspace module={mod} crumbs={[{ label: 'Receiving', to: '/warehouse/receipts' }, { label: 'Receiving rules' }]} title="Receiving rules">
+      <Stack gap={2}>
+        <SitePicker value={siteId} onChange={setSite} />
+        <Section title="Tolerances" action={manage && <Button size="small" onClick={() => setDlg('policy')}>Edit tolerances</Button>}>
+          {p && <Facts items={[['Over-receipt', p.overReceiptPercent === 0 && p.overReceiptQuantity === 0 ? 'Not allowed' : `Up to ${p.overReceiptPercent}% or ${qty(p.overReceiptQuantity)} units over the line, whichever is larger`],
+            ['Partial receipt', p.allowPartialReceipt ? 'Allowed — the rest stays open on the PO line' : 'Not allowed — lines are received in full'], ['Source', p.inherited ? 'Organization default' : 'This site']]} />}
+        </Section>
+        <Section title="Part requirements" action={manage && <Button size="small" variant="contained" onClick={() => { setEdit(null); setDlg('req'); }}>Add requirement</Button>}>
+          <Paper variant="outlined">
+            <Table size="small">
+              <TableHead><TableRow><TableCell>Part</TableCell><TableCell>Supplier</TableCell><TableCell>Inspection</TableCell><TableCell>AQL</TableCell><TableCell>Hold</TableCell><TableCell>Serials</TableCell><TableCell>Labels</TableCell><TableCell /></TableRow></TableHead>
+              <TableBody>
+                {rows.map((r) => <TableRow key={r.id}>
+                  <TableCell sx={{ fontFamily: mono }}>{r.partNumber}</TableCell><TableCell>{r.supplierName ?? 'Any supplier'}</TableCell>
+                  <TableCell>{r.inspectionRequired ? `Required${r.inspectionPlanNumber ? ` · ${r.inspectionPlanNumber}` : ''}` : '—'}</TableCell>
+                  <TableCell>{r.aqlPlanName ? `${r.aqlPlanName} · level ${r.aqlInspectionLevel ?? 'II'} · AQL ${r.aqlLevel ?? 1}` : '—'}</TableCell>
+                  <TableCell>{r.holdOnReceipt ? r.holdReason : '—'}</TableCell><TableCell>{r.serialsRequired ? 'One per unit' : '—'}</TableCell><TableCell>{r.labelCopies}</TableCell>
+                  <TableCell align="right">{manage && <><Button size="small" onClick={() => { setEdit(r); setDlg('req'); }}>Edit</Button>
+                    <Button size="small" color="error" onClick={async () => { await post(`/api/warehouse/receiving/requirements/${r.id}/retire`); refresh(); }}>Retire</Button></>}</TableCell>
+                </TableRow>)}
+                {rows.length === 0 && <TableRow><TableCell colSpan={8}><Typography variant="body2" color="text.secondary">No part requirements at this site. Parts with an effective receiving inspection plan are still sent to inspection.</Typography></TableCell></TableRow>}
+              </TableBody>
+            </Table>
+          </Paper>
+        </Section>
+      </Stack>
+      <StepDialog open={dlg === 'policy'} title="Receiving tolerances" confirm="Save" onClose={() => setDlg(null)}
+        intro="Over-receipt is allowed up to the larger of the percentage and the quantity above the ordered quantity of a PO line, on the receipt that completes the line."
+        inputs={[{ name: 'pct', label: 'Over-receipt tolerance (%)', initial: String(p?.overReceiptPercent ?? 0) }, { name: 'qty', label: 'Over-receipt tolerance (units)', initial: String(p?.overReceiptQuantity ?? 0) },
+          { name: 'partial', label: 'Allow partial receipt', type: 'checkbox', initial: String(p?.allowPartialReceipt ?? true) }]}
+        onConfirm={async (v) => { await put('/api/warehouse/receiving/policy', { siteId, overReceiptPercent: Number(v.pct || 0), overReceiptQuantity: Number(v.qty || 0), allowPartialReceipt: v.partial === 'true' }); refresh(); }} />
+      <StepDialog open={dlg === 'req'} title={edit ? `Receiving requirement · ${edit.partNumber}` : 'Add receiving requirement'} confirm="Save" onClose={() => setDlg(null)}
+        inputs={[
+          { name: 'part', label: 'Part', type: 'select', initial: edit?.partId ?? '', options: (parts.data ?? []).map((x) => [x.id, lookupLabel(x)]) },
+          { name: 'supplier', label: 'Supplier (blank = any supplier)', type: 'select', initial: edit?.supplierId ?? '', options: [['', 'Any supplier'], ...(sups.data ?? []).map((x) => [x.id, lookupLabel(x)] as [string, string])] },
+          { name: 'inspect', label: 'Receiving inspection required', type: 'checkbox', initial: String(edit?.inspectionRequired ?? true) },
+          { name: 'plan', label: 'Inspection plan', type: 'select', initial: edit?.inspectionPlanId ?? '', options: [['', 'Effective receiving plan of the part, if any'], ...(plans.data ?? []).filter((x) => !x.isObsolete && x.inspectionType === 'Receiving').map((x) => [x.id, `${x.number} — ${x.title}`] as [string, string])] },
+          { name: 'aql', label: 'AQL sampling plan', type: 'select', initial: edit?.aqlPlanId ?? '', options: [['', 'No AQL sampling'], ...(aql.data ?? []).map((x) => [x.id, `${x.name} (${x.severity})`] as [string, string])] },
+          { name: 'level', label: 'Inspection level', type: 'select', initial: edit?.aqlInspectionLevel ?? 'II', options: ['I', 'II', 'III', 'S-1', 'S-2', 'S-3', 'S-4'].map((x) => [x, x]) },
+          { name: 'aqlLevel', label: 'AQL', initial: String(edit?.aqlLevel ?? 1) },
+          { name: 'hold', label: 'Place a receiving hold', type: 'checkbox', initial: String(edit?.holdOnReceipt ?? false) },
+          { name: 'holdReason', label: 'Hold reason', initial: edit?.holdReason ?? '' },
+          { name: 'serials', label: 'Serial number per unit', type: 'checkbox', initial: String(edit?.serialsRequired ?? false) },
+          { name: 'labels', label: 'Lot labels per line', initial: String(edit?.labelCopies ?? 1) },
+          { name: 'notes', label: 'Notes', type: 'multiline', initial: edit?.notes ?? '' },
+        ]}
+        onConfirm={async (v) => {
+          const body = { partId: v.part, supplierId: v.supplier || null, inspectionRequired: v.inspect === 'true', inspectionPlanId: v.plan || null, aqlPlanId: v.aql || null, aqlInspectionLevel: v.aql ? v.level : null, aqlLevel: v.aql ? Number(v.aqlLevel || 1) : null,
+            holdOnReceipt: v.hold === 'true', holdReason: v.hold === 'true' ? v.holdReason : null, serialsRequired: v.serials === 'true', labelCopies: Number(v.labels || 1), notes: v.notes || null, siteId: edit?.siteId ?? siteId, departmentId: edit?.departmentId ?? null };
+          if (edit) await put(`/api/warehouse/receiving/requirements/${edit.id}`, body); else await post('/api/warehouse/receiving/requirements', body);
+          refresh();
+        }} />
     </ModuleWorkspace>
   );
 }

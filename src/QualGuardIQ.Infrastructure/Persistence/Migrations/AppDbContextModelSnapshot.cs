@@ -13198,6 +13198,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CarrierId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Channel")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -13320,6 +13324,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("NcrId")
                         .HasColumnType("uuid");
 
+                    b.Property<decimal>("OverReceivedQuantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
                     b.Property<Guid>("PartId")
                         .HasColumnType("uuid");
 
@@ -13346,6 +13354,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasColumnType("numeric(18,4)");
 
                     b.Property<Guid>("ReceiptId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("ReceivingRequirementId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Revision")
@@ -13382,10 +13393,160 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("PartId");
 
+                    b.HasIndex("ReceivingRequirementId");
+
                     b.HasIndex("ReceiptId", "LineNumber")
                         .IsUnique();
 
                     b.ToTable("receipt_lines", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.ReceivingPolicy", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("AllowPartialReceipt")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("OverReceiptPercent")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<decimal>("OverReceiptQuantity")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid?>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SiteId")
+                        .IsUnique();
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("SiteId"), false);
+
+                    b.ToTable("receiving_policies", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_recv_policy_pct", "\"OverReceiptPercent\" BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("ck_recv_policy_qty", "\"OverReceiptQuantity\" >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.ReceivingRequirement", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Active")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("AqlInspectionLevel")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<decimal?>("AqlLevel")
+                        .HasPrecision(6, 3)
+                        .HasColumnType("numeric(6,3)");
+
+                    b.Property<Guid?>("AqlPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("HoldOnReceipt")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("HoldReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<Guid?>("InspectionPlanId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("InspectionRequired")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("LabelCopies")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("PartId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<bool>("SerialsRequired")
+                        .HasColumnType("boolean");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("SupplierId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AqlPlanId");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.HasIndex("InspectionPlanId");
+
+                    b.HasIndex("SiteId");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("PartId", "SupplierId", "SiteId")
+                        .IsUnique()
+                        .HasFilter("\"Active\"");
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex("PartId", "SupplierId", "SiteId"), false);
+
+                    b.ToTable("receiving_requirements", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_recv_req_labels", "\"LabelCopies\" BETWEEN 0 AND 50");
+                        });
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.ReviewDecision", b =>
@@ -19599,6 +19760,54 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasForeignKey("ReceiptId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.ReceivingRequirement", null)
+                        .WithMany()
+                        .HasForeignKey("ReceivingRequirementId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.ReceivingPolicy", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Organization.Site", null)
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Quality.ReceivingRequirement", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Quality.AqlSamplingPlan", null)
+                        .WithMany()
+                        .HasForeignKey("AqlPlanId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Organization.Department", null)
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Quality.InspectionPlan", null)
+                        .WithMany()
+                        .HasForeignKey("InspectionPlanId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Part", null)
+                        .WithMany()
+                        .HasForeignKey("PartId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Organization.Site", null)
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.MasterData.Supplier", null)
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Quality.ReviewDecision", b =>

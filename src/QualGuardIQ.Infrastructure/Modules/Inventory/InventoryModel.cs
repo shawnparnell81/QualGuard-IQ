@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using QualGuardIQ.Domain.MasterData;
 using QualGuardIQ.Domain.Quality;
+using QualGuardIQ.Domain.Organization;
 
 namespace QualGuardIQ.Infrastructure.Persistence;
 
@@ -12,6 +13,8 @@ public partial class AppDbContext
     public DbSet<InventoryHold> InventoryHolds => Set<InventoryHold>();
     public DbSet<Receipt> Receipts => Set<Receipt>();
     public DbSet<ReceiptLine> ReceiptLines => Set<ReceiptLine>();
+    public DbSet<ReceivingPolicy> ReceivingPolicies => Set<ReceivingPolicy>();
+    public DbSet<ReceivingRequirement> ReceivingRequirements => Set<ReceivingRequirement>();
     public DbSet<MrbCase> MrbCases => Set<MrbCase>();
     public DbSet<SupplierReturn> SupplierReturns => Set<SupplierReturn>();
     public DbSet<CycleCount> CycleCounts => Set<CycleCount>();
@@ -79,6 +82,7 @@ public partial class AppDbContext
         {
             e.ToTable("receipts");
             e.HasIndex(x => x.Number).IsUnique(); e.HasIndex(x => x.PurchaseOrderId);
+            e.Property(x => x.Channel).HasMaxLength(30);
             e.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(R);
             e.HasOne<PurchaseOrder>().WithMany().HasForeignKey(x => x.PurchaseOrderId).OnDelete(R);
             e.HasOne<WarehouseLocation>().WithMany().HasForeignKey(x => x.ReceivingLocationId).OnDelete(R);
@@ -88,10 +92,32 @@ public partial class AppDbContext
         {
             e.ToTable("receipt_lines");
             e.HasIndex(x => new { x.ReceiptId, x.LineNumber }).IsUnique(); e.HasIndex(x => x.LotId); e.HasIndex(x => x.InspectionId); e.HasIndex(x => x.AqlInspectionId);
-            Q(e, nameof(ReceiptLine.QuantityExpected), nameof(ReceiptLine.QuantityReceived), nameof(ReceiptLine.QuantityAccepted), nameof(ReceiptLine.QuantityRejected));
+            Q(e, nameof(ReceiptLine.QuantityExpected), nameof(ReceiptLine.QuantityReceived), nameof(ReceiptLine.QuantityAccepted), nameof(ReceiptLine.QuantityRejected), nameof(ReceiptLine.OverReceivedQuantity));
             e.HasOne<Receipt>().WithMany().HasForeignKey(x => x.ReceiptId).OnDelete(C);
             e.HasOne<Part>().WithMany().HasForeignKey(x => x.PartId).OnDelete(R);
             e.HasOne<Lot>().WithMany().HasForeignKey(x => x.LotId).OnDelete(R);
+            e.HasOne<ReceivingRequirement>().WithMany().HasForeignKey(x => x.ReceivingRequirementId).OnDelete(R);
+        });
+        b.Entity<ReceivingPolicy>(e =>
+        {
+            e.ToTable("receiving_policies");
+            e.HasIndex(x => x.SiteId).IsUnique().AreNullsDistinct(false);
+            Q(e, nameof(ReceivingPolicy.OverReceiptPercent), nameof(ReceivingPolicy.OverReceiptQuantity));
+            e.ToTable(t => { t.HasCheckConstraint("ck_recv_policy_pct", "\"OverReceiptPercent\" BETWEEN 0 AND 100"); t.HasCheckConstraint("ck_recv_policy_qty", "\"OverReceiptQuantity\" >= 0"); });
+            e.HasOne<Site>().WithMany().HasForeignKey(x => x.SiteId).OnDelete(R);
+        });
+        b.Entity<ReceivingRequirement>(e =>
+        {
+            e.ToTable("receiving_requirements");
+            e.HasIndex(x => new { x.PartId, x.SupplierId, x.SiteId }).IsUnique().AreNullsDistinct(false).HasFilter("\"Active\"");
+            e.Property(x => x.AqlInspectionLevel).HasMaxLength(10); e.Property(x => x.AqlLevel).HasPrecision(6, 3);
+            e.Property(x => x.HoldReason).HasMaxLength(500); e.Property(x => x.Notes).HasMaxLength(1000);
+            e.ToTable(t => t.HasCheckConstraint("ck_recv_req_labels", "\"LabelCopies\" BETWEEN 0 AND 50"));
+            e.HasOne<Part>().WithMany().HasForeignKey(x => x.PartId).OnDelete(R);
+            e.HasOne<Supplier>().WithMany().HasForeignKey(x => x.SupplierId).OnDelete(R);
+            e.HasOne<InspectionPlan>().WithMany().HasForeignKey(x => x.InspectionPlanId).OnDelete(R);
+            e.HasOne<AqlSamplingPlan>().WithMany().HasForeignKey(x => x.AqlPlanId).OnDelete(R);
+            SiteRefs(e);
         });
         b.Entity<MrbCase>(e =>
         {

@@ -445,7 +445,10 @@ export const modules: ModuleDef[] = [
         { label: 'Lot merge', path: '/warehouse/lot-merge', permission: 'inventory.edit' },
       ] },
       { label: 'Locations', path: '/warehouse/locations' },
-      { label: 'Receiving', path: '/warehouse/receipts' },
+      { label: 'Receiving', path: '/warehouse/receipts', children: [
+        { label: 'Receipts', path: '/warehouse/receipts' },
+        { label: 'Receiving rules', path: '/warehouse/receiving-rules' },
+      ] },
       { label: 'Quality stock', path: '/warehouse/holds', children: [
         { label: 'Holds', path: '/warehouse/holds' },
         { label: 'MRB', path: '/warehouse/mrb' },

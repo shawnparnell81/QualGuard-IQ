@@ -110,6 +110,8 @@ const LocationDetail = lazy(() => import('./pages/Warehouse').then((m) => ({ def
 const ReceiptList = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.ReceiptList })));
 const ReceiptNew = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.ReceiptNew })));
 const ReceiptDetailPage = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.ReceiptDetailPage })));
+const ReceiptLabelsPage = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.ReceiptLabelsPage })));
+const ReceivingRulesPage = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.ReceivingRulesPage })));
 const HoldList = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.HoldList })));
 const HoldDetail = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.HoldDetail })));
 const MrbList = lazy(() => import('./pages/Warehouse').then((m) => ({ default: m.MrbList })));
@@ -413,6 +415,8 @@ export function App() {
               <Route path="/warehouse/receipts" element={<ReceiptList />} />
               <Route path="/warehouse/receipts/new" element={<ReceiptNew />} />
               <Route path="/warehouse/receipts/:id" element={<ReceiptDetailPage />} />
+              <Route path="/warehouse/receipts/:id/labels" element={<ReceiptLabelsPage />} />
+              <Route path="/warehouse/receiving-rules" element={<ReceivingRulesPage />} />
               <Route path="/warehouse/holds" element={<HoldList />} />
               <Route path="/warehouse/holds/:id" element={<HoldDetail />} />
               <Route path="/warehouse/mrb" element={<MrbList />} />

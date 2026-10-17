@@ -86,6 +86,18 @@ public sealed class ReceivingController(ReceivingService svc, InventoryService i
     [HttpGet("receipts")] [RequirePermission(Permissions.InventoryView)] public Task<List<Receipt>> Receipts([FromQuery] ReceiptStatus? status, CancellationToken ct) => svc.ListAsync(status, ct);
     [HttpPost("receipts")] [RequirePermission(Permissions.InventoryEdit)] public async Task<object> CreateReceipt(ReceiptInput r, CancellationToken ct) { var x = await svc.CreateAsync(r, ct); return new { x.Id, x.Number, x.Status }; }
     [HttpGet("receipts/{id:guid}")] public Task<ReceiptDetail> Receipt(Guid id, CancellationToken ct) => svc.GetAsync(id, ct);
+    /// <summary>Lot and serial labels for a receipt (copies from the receiving requirement).</summary>
+    [HttpGet("receipts/{id:guid}/labels")] public Task<List<ReceiptLabel>> ReceiptLabels(Guid id, CancellationToken ct) => svc.LabelsAsync(id, ct);
+    /// <summary>Open PO for receiving by number (or a scanned QG:PO: label): open lines, remaining and maximum receivable quantity, receiving requirements.</summary>
+    [HttpGet("receiving/po")] [RequirePermission(Permissions.InventoryEdit)] public Task<PoLookup> LookupPo([FromQuery] string number, CancellationToken ct) => svc.LookupPoAsync(number, ct);
+    /// <summary>Checks proposed receipt lines with the rules the receipt applies (part, revision, tolerance, serials, requirements) without posting.</summary>
+    [HttpPost("receiving/check")] [RequirePermission(Permissions.InventoryEdit)] public Task<List<LineCheckResult>> CheckReceipt(ReceivingCheckInput r, CancellationToken ct) => svc.CheckAsync(r, ct);
+    [HttpGet("receiving/policy")] [RequirePermission(Permissions.InventoryView)] public Task<ReceivingPolicyView> Policy([FromQuery] Guid? siteId, CancellationToken ct) => svc.PolicyAsync(siteId, ct);
+    [HttpPut("receiving/policy")] [RequirePermission(Permissions.InventoryApprove)] public async Task<IActionResult> SavePolicy(ReceivingPolicyInput r, CancellationToken ct) { await svc.SavePolicyAsync(r, ct); return NoContent(); }
+    [HttpGet("receiving/requirements")] [RequirePermission(Permissions.InventoryView)] public Task<List<ReceivingRequirementRow>> Requirements([FromQuery] Guid? partId, [FromQuery] bool includeInactive, CancellationToken ct) => svc.RequirementsAsync(partId, includeInactive, ct);
+    [HttpPost("receiving/requirements")] [RequirePermission(Permissions.InventoryApprove)] public async Task<object> CreateRequirement(ReceivingRequirementInput r, CancellationToken ct) => new { (await svc.SaveRequirementAsync(null, r, ct)).Id };
+    [HttpPut("receiving/requirements/{id:guid}")] [RequirePermission(Permissions.InventoryApprove)] public async Task<IActionResult> UpdateRequirement(Guid id, ReceivingRequirementInput r, CancellationToken ct) { await svc.SaveRequirementAsync(id, r, ct); return NoContent(); }
+    [HttpPost("receiving/requirements/{id:guid}/retire")] [RequirePermission(Permissions.InventoryApprove)] public async Task<IActionResult> RetireRequirement(Guid id, CancellationToken ct) { await svc.RetireRequirementAsync(id, ct); return NoContent(); }
     [HttpPost("receipts/{id:guid}/lines/{lineId:guid}/inspection")] public async Task<IActionResult> LinkInspection(Guid id, Guid lineId, LinkInspectionInput r, CancellationToken ct) { await svc.LinkInspectionAsync(id, lineId, r, ct); return NoContent(); }
     /// <summary>Inspection outcome: Accept, Reject (quarantine + hold + NCR) or Quarantine (hold).</summary>
     [HttpPost("receipts/{id:guid}/lines/{lineId:guid}/decision")] public async Task<IActionResult> Decide(Guid id, Guid lineId, LineDecisionInput r, CancellationToken ct) { await svc.DecideLineAsync(id, lineId, r, ct); return NoContent(); }
