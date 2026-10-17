@@ -472,6 +472,7 @@ export const modules: ModuleDef[] = [
       { label: 'New shipment', path: '/shipping/shipments/new', permission: 'shipping.edit' },
       { label: 'Carriers', path: '/shipping/carriers' },
       { label: 'Carrier connections', path: '/shipping/carrier-connections' },
+      { label: 'Document templates', path: '/shipping/document-templates' },
     ],
   },
   {

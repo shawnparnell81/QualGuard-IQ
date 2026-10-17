@@ -14,12 +14,13 @@ import { LabelPanel } from '../components/LabelPrint';
 import { mono } from '../theme';
 import { LocationSelect, MetricTile, ScanField, carrierKinds, containerKinds, pickStatus, shipKinds, shipStatus, useCarriers, useLocations, type Carrier } from '../warehouse/common';
 import { Custody, FlowChart, RefLedger, SitePicker, qty, type Dash } from './Warehouse';
+import { ShipmentDocumentsPanel } from './ShippingDocuments';
 import { ShipmentCarrierPanel } from './Carriers';
 
 const mod = modules.find((m) => m.key === 'shipping')!;
 const mnum = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue() ?? '')}</span>;
 
-interface Shipment { id: string; number: string; kind: number; status: number; assignedPickerId?: string | null; assignedAt?: string | null; assignedVerifierId?: string | null; verificationState?: number; validatedAt?: string | null; customerId?: string; supplierId?: string; toSiteId?: string; shipTo?: string; customerPo?: string; promisedOn?: string; stagingLocationId: string; carrierId?: string;
+interface Shipment { id: string; number: string; kind: number; status: number; assignedPickerId?: string | null; assignedAt?: string | null; assignedVerifierId?: string | null; verificationState?: number; validatedAt?: string | null; customerId?: string; supplierId?: string; toSiteId?: string; shipTo?: string; customerPo?: string; promisedOn?: string; stagingLocationId: string; carrierId?: string; freightTerms?: string | null; specialInstructions?: string | null;
   serviceLevel?: string; trackingNumber?: string; bolNumber?: string; grossWeight?: number; shippedAt?: string; deliveredOn?: string; notes?: string; siteId: string }
 interface Line { id: string; lineNumber: number; partId: string; revision?: string; quantity: number; lotId?: string; quantityPicked: number; quantityVerified: number }
 interface Pick { id: string; lineId: string; partId: string; lotId?: string; serialId?: string; locationId: string; quantity: number; quantityPicked: number; status: number; pickedAt?: string }
@@ -179,11 +180,8 @@ export function ShipmentDetail() {
           {tab === 'verify' && <VerifyTab d={d.data!} edit={edit && live} onDone={refresh} run={run} />}
           {tab === 'carrier' && <ShipmentCarrierPanel shipmentId={s.id} siteId={s.siteId} status={s.status} edit={edit} onChanged={refresh} />}
           {tab === 'ship' && <Section title="Documents & tracking"><Stack gap={2}>
-            <Stack direction="row" gap={1} flexWrap="wrap">
-              <Button variant="outlined" href={`/api/shipping/shipments/${id}/packing-list`} target="_blank">Packing list (PDF)</Button>
-              <Button variant="outlined" href={`/api/shipping/shipments/${id}/bill-of-lading`} target="_blank">Bill of lading (PDF)</Button>
-              {d.data!.trackingUrl && <Button variant="outlined" href={d.data!.trackingUrl} target="_blank" rel="noreferrer">Track with {d.data!.carrier}</Button>}
-            </Stack>
+            {d.data!.trackingUrl && <Box><Button variant="outlined" href={d.data!.trackingUrl} target="_blank" rel="noreferrer">Track with {d.data!.carrier}</Button></Box>}
+            <ShipmentDocumentsPanel shipmentId={s.id} status={s.status} edit={edit} freightTerms={s.freightTerms} specialInstructions={s.specialInstructions} onChanged={refresh} />
             {s.status < 4 && <Typography variant="body2" color="text.secondary">The shipment can be shipped once every line is picked, packed and scan-verified.</Typography>}
             <LabelPanel refType="Shipment" refId={s.id} siteId={s.siteId} types={[7]} title="Shipping labels" />
           </Stack></Section>}

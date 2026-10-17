@@ -297,3 +297,31 @@ On a shipment, open the **Carrier** tab (after packing):
 
 Every carrier call appears in the shipment's carrier request log. If the carrier is down the error says so and
 nothing is saved; try again later or ship with hand-entered tracking.
+
+## Shipping document templates (bill of lading, packing list, manifest)
+
+Shipping → **Document templates** controls how bills of lading, packing lists and carrier manifests look.
+
+- **New template**: code, name, document type and site (leave the site empty for an organization-wide template; that needs
+  the permission at every site). Revision 1 starts as a draft copy of the built-in layout.
+- **Editing a draft** (`shipping.edit`): who it applies to (customer, carrier, priority), an optional effective date,
+  page size and orientation, header title and subtitle, a JPEG logo, footer text and page numbers, and the sections in
+  print order: addresses, customer, carrier, shipment, product table (choose columns), lots, serials, carton hierarchy,
+  pallet hierarchy, weights, dimensions, freight terms, special instructions, signature blocks, Code 128 barcode, QR code
+  and free text. Titles and texts can use placeholders such as `{shipmentNumber}`, `{bolNumber}`, `{customerPo}`,
+  `{trackingNumber}`, `{carrier}`, `{customer}`, `{shipDate}`, `{site}` and `{manifestNumber}`; unknown placeholders are
+  refused. **Preview** prints sample data marked PREVIEW on every page.
+- **Submit for approval** needs a change summary. Someone else with `shipping.approve` **approves** (with notes) or
+  **rejects** it. The approved revision cannot be changed; start a **New revision** for the next change. It applies from
+  the later of the approval and the effective date; until then the earlier revision keeps being used.
+- **Which template is used**: the most specific active template with an effective revision — customer, then carrier, then
+  site, then the lowest priority number. Two active templates with the same site, customer, carrier and priority are
+  refused. With no template the built-in layout is used.
+
+On a shipment, **Ship & documents** shows which template each document will use, the **freight terms** and
+**special instructions** (editable until the shipment ships), and every **issued document** with the template revision,
+page count and fingerprint. **Open** returns the document exactly as issued; **Reproduce** renders it again from the
+stored data and revision and confirms it is identical.
+
+**Manifest** (Document templates → Manifest): choose the site, carrier and ship date to print the list of shipments
+for the driver to sign. Manifests are recorded like other documents.
