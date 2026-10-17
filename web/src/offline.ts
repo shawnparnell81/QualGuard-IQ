@@ -10,12 +10,19 @@ import { ApiError, post } from './api';
  * with its reason, can be retried or discarded) and "conflict" (the server reported a conflict that needs a person to review).
  * An item leaves the queue only after the server has confirmed it (2xx). The queue survives refreshes and restarts
  * (localStorage) and is shared across tabs; only one tab sends at a time.
+ *
+ * Each item belongs to the person who scanned it. A shared device only shows and sends the signed-in person's items, so a
+ * posting is never replayed under someone else's session; another person's pending items wait until they sign in again.
  */
 export type QueueState = 'local' | 'syncing' | 'failed' | 'conflict';
-export interface Queued { id: string; url: string; body: Record<string, unknown>; label: string; at: string; state?: QueueState; error?: string; attempts?: number }
+export interface Queued { id: string; url: string; body: Record<string, unknown>; label: string; at: string; state?: QueueState; error?: string; attempts?: number; user?: string | null }
 const KEY = 'qg.offline.queue';
 const SYNCED = 'qg.offline.synced';
 const listeners = new Set<() => void>();
+let currentUser: string | null = null;
+/** Set by the sign-in state: the queue only shows and sends the signed-in person's items. */
+export const setQueueUser = (id: string | null) => { if (currentUser !== id) { currentUser = id; notify(); if (id) flushQueue(); } };
+const mine = (x: Queued) => !!currentUser && (x.user ?? currentUser) === currentUser;
 const read = (): Queued[] => { try { return (JSON.parse(localStorage.getItem(KEY) ?? '[]') as Queued[]).map((x) => ({ ...x, state: x.state ?? (x.error ? 'failed' : 'local') })); } catch { return []; } };
 const notify = () => listeners.forEach((l) => l());
 const write = (q: Queued[]) => { localStorage.setItem(KEY, JSON.stringify(q)); notify(); };
@@ -25,7 +32,7 @@ export const newRequestId = () => (crypto.randomUUID?.() ?? `${Date.now()}-${Mat
 const isNetwork = (e: unknown) => e instanceof TypeError || (e as Error)?.message === 'Failed to fetch' || (e instanceof ApiError && (e.status === 0 || e.status === 502 || e.status === 503 || e.status === 504));
 const enqueue = (url: string, body: Record<string, unknown>, label: string) => {
   localStorage.removeItem(SYNCED);
-  write([...read().filter((x) => x.id !== body.clientRequestId), { id: body.clientRequestId as string, url, body, label, at: new Date().toISOString(), state: 'local', attempts: 0 }]);
+  write([...read().filter((x) => x.id !== body.clientRequestId), { id: body.clientRequestId as string, url, body, label, at: new Date().toISOString(), state: 'local', attempts: 0, user: currentUser }]);
 };
 
 /** Posts now when online; otherwise (or when the network drops mid-request) queues it. Server errors are raised, not queued. */
@@ -49,12 +56,12 @@ const withLock = async (fn: () => Promise<void>) => {
 
 /** Replays queued postings in order. Refused postings stay in the queue, apart, with the reason; network failures stop the run. */
 export async function flushQueue() {
-  if (flushing || !navigator.onLine) return;
+  if (flushing || !navigator.onLine || !currentUser) return;
   flushing = true;
   try {
     await withLock(async () => {
       let accepted = 0;
-      for (const item of read().filter((x) => x.state === 'local' || x.state === 'syncing')) {
+      for (const item of read().filter((x) => mine(x) && (x.state === 'local' || x.state === 'syncing'))) {
         update(item.id, { state: 'syncing', attempts: (item.attempts ?? 0) + 1 });
         try {
           await post(item.url, item.body);
@@ -76,7 +83,8 @@ export const clearSynced = () => { localStorage.removeItem(SYNCED); notify(); };
 const readSynced = (): { count: number; at: string } | null => { try { return JSON.parse(localStorage.getItem(SYNCED) ?? 'null'); } catch { return null; } };
 
 export function useOfflineQueue() {
-  const [items, setItems] = useState<Queued[]>(read);
+  const [all, setItems] = useState<Queued[]>(read);
+  const items = all.filter(mine);
   const [synced, setSynced] = useState(readSynced);
   const [online, setOnline] = useState(navigator.onLine);
   useEffect(() => {

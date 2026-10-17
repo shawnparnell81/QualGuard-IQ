@@ -172,3 +172,31 @@ granted to every role that already had `inventory.edit`, so nobody lost access; 
   skipped on any channel), the inspection plan (otherwise the part's effective receiving plan), AQL sampling plan, inspection level and AQL,
   a receiving hold with its reason (blocks issue and shipment until released through the hold approval), serial number per unit, and lot
   labels per line. Retired requirements stay linked to the receipt lines that applied them.
+
+## Picking on a device, with or without a connection
+
+A shipment's pick list is assigned to one picker on the shipment's **Pick** tab (**Assigned picker**; only people who may edit shipments
+at the shipment's site are offered). While a picker is assigned, only that person can confirm the picks, at the desk or on a device.
+
+**Warehouse → Scan station → Pick** (needs `shipping.edit`):
+
+1. **Download my picks** while connected. Only open picks assigned to you, on shipments that are still being picked and that you can
+   see, are downloaded: location, part, revision, lot or serial, and quantity. Nothing else about the shipment is kept on the device.
+2. Choose a shipment and follow the next pick: scan the location, scan the lot or serial label, check the quantity and **Confirm pick**.
+   A wrong location, part, lot or serial is refused on the device at once; a label the device cannot read (for example a supplier GS1 label)
+   is accepted with a note and checked by the server.
+3. Online, the pick posts at once. Offline, it is saved on the device with a request id and the device time, shown under *Saved locally*,
+   and sent when the connection returns. A pick saved on the device is not offered again.
+
+When the queued picks reach the server they are checked again. A replay of a pick that was already accepted (same request id) returns the
+original result and posts nothing twice. A pick is refused as a **conflict** and shown under *Conflict requires review*, with the reason,
+when meanwhile the shipment was cancelled or completed, the pick was confirmed by someone else, the pick list was reassigned or
+unassigned, the lot or part was put on hold, the location was frozen for a count, or the allocated stock is no longer there. Put the
+material back and mark the conflict reviewed.
+
+Every confirmation, accepted or refused, is listed on the shipment's Pick tab with the picker, the device time, the server time, whether it
+came from an offline device and the refusal code. Each accepted pick also adds a custody entry and an inventory ledger movement.
+
+Device storage: the download is kept per person, expires after 12 hours (refresh it before picking again), and is wiped when you sign out.
+On a shared device each person only sees and sends their own saved scans; another person's saved scans wait until they sign in again.
+A device clock more than 10 minutes ahead of the server is refused, so correct the device time if that message appears.

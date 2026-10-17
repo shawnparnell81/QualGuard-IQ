@@ -11,6 +11,8 @@ import { useLookup } from '../components/Kit';
 import { localDate } from '../components/Status';
 import { mono } from '../theme';
 import { newRequestId, postOrQueue, useOfflineQueue } from '../offline';
+import { checkPickItem, downloadPickWork, markPicked, normalizeLocation, pickWorkExpired, PICK_WORK_HOURS, readPickWork, type PickWork } from '../offlinePicks';
+import { fmtDateTime } from '../components/Status';
 import { SyncBanner } from '../components/SyncBanner';
 import { ScanField, StockBadge, stockStatusLabel, useLocations, type StockRow } from '../warehouse/common';
 import { qty } from './Warehouse';
@@ -18,7 +20,7 @@ import { qty } from './Warehouse';
 const mod = modules.find((m) => m.key === 'warehouse')!;
 interface ScanLink { type: string; id: string; number: string; title: string; status: string; url: string }
 interface Ctx { match: { raw: string; kind: string; type?: string; id?: string; number?: string; url?: string; detail?: string }; stock: StockRow[]; holds: ScanLink[]; related: ScanLink[]; actions: string[] }
-const flows: [string, string, string, string?][] = [['receive', 'Receive PO', 'Against a purchase order'], ['blind', 'Blind receipt', 'No PO or delivery', 'inventory.receive_blind'], ['inspect', 'Inspect', 'Open the inspection'], ['move', 'Move', 'Put away / relocate'], ['issue', 'Issue', 'To a work order'], ['ship', 'Ship', 'Pick & verify'], ['trace', 'Trace', 'What is this?']];
+const flows: [string, string, string, string?][] = [['receive', 'Receive PO', 'Against a purchase order'], ['blind', 'Blind receipt', 'No PO or delivery', 'inventory.receive_blind'], ['inspect', 'Inspect', 'Open the inspection'], ['move', 'Move', 'Put away / relocate'], ['issue', 'Issue', 'To a work order'], ['pick', 'Pick', 'Assigned picks · works offline', 'shipping.edit'], ['ship', 'Ship', 'Pick & verify'], ['trace', 'Trace', 'What is this?']];
 const scan = (code: string) => post<Ctx>('/api/warehouse/scan', { code });
 
 /** Result banner: green for posted, amber for queued offline, red for refused. */
@@ -56,6 +58,7 @@ export function ScanStation() {
           {flow === 'inspect' && <InspectFlow key="i" />}
           {flow === 'move' && <MoveFlow key="m" initialItem={p.get('item') ?? ''} />}
           {flow === 'issue' && <IssueFlow key="is" initialItem={p.get('item') ?? ''} />}
+          {flow === 'pick' && <PickFlow key="p" />}
           {flow === 'ship' && <ShipFlow key="s" />}
           {(flow === 'trace' || flow === 'lookup') && <TraceFlow key="t" onAction={(a, code) => setP({ flow: a, item: code })} />}
         </Paper>
@@ -313,6 +316,94 @@ function IssueFlow({ initialItem }: { initialItem: string }) {
 }
 
 interface ShipDetail { shipment: { id: string; number: string; status: number }; picks: { task: { id: string; quantity: number; status: number }; partNumber: string; lotNumber?: string; serialNumber?: string; locationCode: string }[] }
+/**
+ * Assigned picking that keeps working without a connection: download my picks, then scan location and item for each pick; the
+ * confirmation posts at once when online or is saved on the device with its request id and device time and syncs on reconnect.
+ * Work that changed meanwhile (cancelled, picked by someone else, held, stock moved, reassigned) comes back as a conflict.
+ */
+function PickFlow() {
+  const { me } = useAuth();
+  const q = useOfflineQueue();
+  const uid = me!.id;
+  const [work, setWork] = useState<PickWork | null>(() => readPickWork(uid));
+  const [sel, setSel] = useState<string | null>(null);
+  const [loc, setLoc] = useState(''); const [locIn, setLocIn] = useState('');
+  const [item, setItem] = useState(''); const [itemIn, setItemIn] = useState(''); const [warn, setWarn] = useState<string | null>(null);
+  const [n, setN] = useState('');
+  const [out, setOut] = useState<Outcome>(null);
+  const [busy, setBusy] = useState(false);
+  const pendingTasks = q.items.filter((x) => x.url.includes('/picks/') && x.state !== 'failed' && x.state !== 'conflict').map((x) => x.url.split('/picks/')[1].split('/')[0]);
+  const download = async () => {
+    setOut(null); setBusy(true);
+    try { const w = await downloadPickWork(uid, pendingTasks); setWork(w); setSel(null); const c = w.lists.reduce((a, l) => a + l.tasks.length, 0); setOut({ tone: 'success', text: `Downloaded ${c} pick${c === 1 ? '' : 's'} on ${w.lists.length} shipment${w.lists.length === 1 ? '' : 's'} assigned to you.` }); }
+    catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+    finally { setBusy(false); }
+  };
+  const reset = () => { setLoc(''); setLocIn(''); setItem(''); setItemIn(''); setWarn(null); setN(''); };
+  const expired = !!work && pickWorkExpired(work);
+  const list = work?.lists.find((l) => l.shipmentId === sel) ?? null;
+  const open = list?.tasks.filter((t) => !work!.done[t.taskId]) ?? [];
+  const next = open[0];
+  const scanLoc = (c: string) => {
+    setOut(null);
+    if (normalizeLocation(c) !== next!.locationCode.toUpperCase()) { setLocIn(''); setOut({ tone: 'error', text: `Wrong location: pick from ${next!.locationCode}.` }); return; }
+    setLoc(c);
+  };
+  const scanItem = (c: string) => {
+    setOut(null);
+    const r = checkPickItem(next!, c);
+    if (r.error) { setItemIn(''); setOut({ tone: 'error', text: r.error }); return; }
+    setWarn(r.warning ?? null); setItem(c); setN(String(next!.quantity));
+  };
+  const confirm = async () => {
+    const quantity = Number(n);
+    if (!(quantity > 0) || quantity > next!.quantity) { setOut({ tone: 'error', text: `Quantity must be between 0 and ${qty(next!.quantity)}.` }); return; }
+    setBusy(true); setOut(null);
+    const rid = newRequestId();
+    try {
+      const r = await postOrQueue<{ outcome: number; message: string }>(`/api/shipping/shipments/${list!.shipmentId}/picks/${next!.taskId}/confirm`,
+        { locationCode: loc, itemCode: item, quantity, clientRequestId: rid, deviceTimestamp: new Date().toISOString(), offline: !navigator.onLine },
+        `Pick ${list!.number} · ${next!.partNumber} ${next!.serialNumber ? 'SN ' + next!.serialNumber : next!.lotNumber ? 'lot ' + next!.lotNumber : ''} × ${qty(quantity)} from ${next!.locationCode}`);
+      setWork(markPicked(uid, next!.taskId, rid));
+      setOut(r.queued ? { tone: 'warning', text: `Pick of ${next!.partNumber} saved on this device; it syncs when the connection returns.` } : { tone: 'success', text: r.result?.message ?? 'Picked.' });
+      reset();
+    } catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
+    finally { setBusy(false); }
+  };
+  return <Stack gap={2} data-testid="pick-flow">
+    <Stack direction="row" gap={1} alignItems="center" justifyContent="space-between">
+      <Typography variant="body2" color="text.secondary" data-testid="pick-downloaded">{work ? `Downloaded ${fmtDateTime(work.downloadedAt)}` : 'No pick work on this device yet.'}</Typography>
+      <Button variant="outlined" disabled={!q.online || busy} onClick={download}>{work ? 'Refresh my picks' : 'Download my picks'}</Button>
+    </Stack>
+    {!q.online && !work && <Alert severity="warning">Download your assigned picks while connected; they can then be picked offline.</Alert>}
+    {expired && <Alert severity="warning" data-testid="pick-expired">This download is older than {PICK_WORK_HOURS} hours. Refresh it before picking so cancelled or changed work is not picked.</Alert>}
+    {out && <Alert severity={out.tone} data-testid="pick-result">{out.text}</Alert>}
+    {work && !expired && !list && (work.lists.length === 0 ? <Alert severity="info">No picks are assigned to you.</Alert>
+      : <Stack gap={1} data-testid="pick-lists">{work.lists.map((l) => { const left = l.tasks.filter((t) => !work.done[t.taskId]).length; return (
+        <Button key={l.shipmentId} variant="outlined" onClick={() => { setSel(l.shipmentId); reset(); setOut(null); }} sx={{ justifyContent: 'space-between', py: 1.5 }}>
+          <span style={{ fontFamily: mono }}>{l.number}</span><span>{l.customer ?? ''} · {left ? `${left} to pick` : 'done'}</span></Button>); })}</Stack>)}
+    {list && !expired && <>
+      <Stack direction="row" justifyContent="space-between" alignItems="center">
+        <Typography sx={{ fontFamily: mono, fontSize: 18 }}>{list.number}</Typography>
+        <Button size="small" onClick={() => { setSel(null); reset(); }}>All my picks</Button>
+      </Stack>
+      {next ? <Paper variant="outlined" sx={{ p: 2 }} data-testid="pick-next">
+        <Typography variant="overline">Next pick · {open.length} left</Typography>
+        <Typography sx={{ fontFamily: mono, fontSize: 26, fontWeight: 700 }}>{next.locationCode}</Typography>
+        <Typography>{next.partNumber}{next.revision ? ` rev ${next.revision}` : ''} · {next.serialNumber ? 'SN ' + next.serialNumber : next.lotNumber ? 'lot ' + next.lotNumber : ''} · <b>{qty(next.quantity)} {next.unitOfMeasure}</b></Typography>
+        <Stack gap={1.5} sx={{ mt: 1.5 }}>
+          <Step n={1} label="Location" value={loc}><ScanField label="Scan pick location" value={locIn} onChange={setLocIn} onScan={scanLoc} autoFocus /></Step>
+          {loc && <Step n={2} label="Item" value={item}><ScanField label="Scan the lot / serial picked" value={itemIn} onChange={setItemIn} onScan={scanItem} autoFocus /></Step>}
+          {warn && <Alert severity="info">{warn}</Alert>}
+          {item && <Step n={3} label="Quantity picked"><TextField fullWidth value={n} onChange={(e) => setN(e.target.value)} inputProps={{ inputMode: 'decimal', 'aria-label': 'Quantity picked' }} /></Step>}
+          {item && <Big disabled={busy} onClick={confirm}>Confirm pick</Big>}
+          {(loc || item) && <Button color="inherit" onClick={reset}>Start this pick again</Button>}
+        </Stack>
+      </Paper> : <Alert severity="success">All picks on {list.number} are done{q.pending.length ? '; they sync when the connection returns' : ''}.</Alert>}
+    </>}
+  </Stack>;
+}
+
 function ShipFlow() {
   const [id, setId] = useState<string | null>(null); const [out, setOut] = useState<Outcome>(null);
   const [loc, setLoc] = useState(''); const [verify, setVerify] = useState<string[]>([]);
@@ -330,7 +421,7 @@ function ShipFlow() {
     try { const r = await post<{ verified: boolean; issues: string[] }>(`/api/shipping/shipments/${id}/verify`, { scans: verify.map((code) => ({ code, quantity: null })) }); setOut(r.verified ? { tone: 'success', text: 'Shipment verified — ready to ship.' } : { tone: 'warning', text: r.issues.join(' ') || 'Not verified yet.' }); d.refetch(); }
     catch (e) { setOut({ tone: 'error', text: (e as Error).message }); }
   };
-  if (!navigator.onLine) return <Alert severity="warning">Picking and verification check live stock, so they need a connection. Moves and issues still queue offline.</Alert>;
+  if (!navigator.onLine) return <Alert severity="warning">Verification checks live stock, so it needs a connection. Assigned picks can be picked offline under Pick; moves and issues also queue offline.</Alert>;
   return <Stack gap={2}>
     {!id ? <ScanField label="Scan shipment number or carton (QG:CTN)" onScan={find} autoFocus /> : <Typography sx={{ fontFamily: mono, fontSize: 18 }}>{d.data?.shipment.number}</Typography>}
     {out && <Alert severity={out.tone}>{out.text}</Alert>}

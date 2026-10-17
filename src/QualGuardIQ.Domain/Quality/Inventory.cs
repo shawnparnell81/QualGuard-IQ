@@ -390,9 +390,36 @@ public class Shipment : Entity, IAudited, ISiteScoped
     public DateOnly? DeliveredOn { get; set; }
     public string? Notes { get; set; }
     public Guid OwnerId { get; set; }
+    /// <summary>The picker the pick list is assigned to; only this person can confirm its picks (scan station, online or offline).</summary>
+    public Guid? AssignedPickerId { get; set; }
+    public DateTimeOffset? AssignedAt { get; set; }
     public Guid SiteId { get; set; }
     public Guid? DepartmentId { get; set; }
     public string AuditLabel => $"shipment {Number}";
+}
+
+public enum MobileOutcome { Accepted = 0, Duplicate = 1, Rejected = 2 }
+
+/// <summary>
+/// Every pick confirmation received, online or replayed from a device queue: who, device time, server time, what was scanned and whether it was
+/// accepted. The client request id makes a replay idempotent (the accepted confirmation is returned, nothing is posted twice). Append-only.
+/// </summary>
+public class PickConfirmation : Entity
+{
+    public Guid ShipmentId { get; set; }
+    public Guid PickTaskId { get; set; }
+    public string? ClientRequestId { get; set; }
+    public Guid UserId { get; set; }
+    public DateTimeOffset? DeviceTimestamp { get; set; }
+    public DateTimeOffset ReceivedAt { get; set; }
+    public bool Offline { get; set; }
+    public string? LocationCode { get; set; }
+    public string? ItemCode { get; set; }
+    public decimal Quantity { get; set; }
+    public MobileOutcome Outcome { get; set; }
+    /// <summary>Conflict code when rejected: not_assigned, shipment_cancelled, shipment_completed, task_done, wrong_location, wrong_part, lot_mismatch, serial_mismatch, quantity, held, inventory_changed, location_frozen.</summary>
+    public string? Code { get; set; }
+    public string? Reason { get; set; }
 }
 
 public class ShipmentLine : Entity, IAudited

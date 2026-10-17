@@ -36,6 +36,10 @@ public sealed class ModuleSupport(AppDbContext db, IAccessService access, ICurre
         if (departmentId is { } d && !await db.Departments.AnyAsync(x => x.Id == d && x.SiteId == siteId, ct)) throw new AppException("The department does not belong to the site.");
     }
 
+    /// <summary>True when another (active) user holds the permission for the site/department.</summary>
+    public Task<bool> UserCanAsync(Guid userId, string permission, Guid siteId, Guid? departmentId, CancellationToken ct) => access.CanAccessAsync(userId, permission, siteId, departmentId, ct);
+    public Task<IReadOnlyList<Guid>> UsersWithAsync(string permission, Guid siteId, Guid? departmentId, CancellationToken ct) => access.UsersWithPermissionAsync(permission, siteId, departmentId, ct);
+
     public async Task RequireActiveUserAsync(Guid userId, string role, CancellationToken ct)
     {
         if (!await db.Users.AnyAsync(u => u.Id == userId && u.IsActive, ct)) throw new AppException($"The {role} must be an active user.");

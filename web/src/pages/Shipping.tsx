@@ -17,7 +17,7 @@ import { Custody, FlowChart, RefLedger, SitePicker, qty, type Dash } from './War
 const mod = modules.find((m) => m.key === 'shipping')!;
 const mnum = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue() ?? '')}</span>;
 
-interface Shipment { id: string; number: string; kind: number; status: number; customerId?: string; supplierId?: string; toSiteId?: string; shipTo?: string; customerPo?: string; promisedOn?: string; stagingLocationId: string; carrierId?: string;
+interface Shipment { id: string; number: string; kind: number; status: number; assignedPickerId?: string | null; assignedAt?: string | null; customerId?: string; supplierId?: string; toSiteId?: string; shipTo?: string; customerPo?: string; promisedOn?: string; stagingLocationId: string; carrierId?: string;
   serviceLevel?: string; trackingNumber?: string; bolNumber?: string; grossWeight?: number; shippedAt?: string; deliveredOn?: string; notes?: string; siteId: string }
 interface Line { id: string; lineNumber: number; partId: string; revision?: string; quantity: number; lotId?: string; quantityPicked: number; quantityVerified: number }
 interface Pick { id: string; lineId: string; partId: string; lotId?: string; serialId?: string; locationId: string; quantity: number; quantityPicked: number; status: number; pickedAt?: string }
@@ -151,7 +151,7 @@ export function ShipmentDetail() {
   const s = d.data?.shipment;
   if (!s) return <ModuleWorkspace module={mod} crumbs={[{ label: 'Shipments', to: '/shipping/shipments' }]} title="Loading…">{d.error ? <Alert severity="error">{(d.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   const edit = can('shipping.edit');
-  const refresh = () => { qc.invalidateQueries({ queryKey: ['shipment', id] }); qc.invalidateQueries({ queryKey: ['custody'] }); };
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['shipment', id] }); qc.invalidateQueries({ queryKey: ['custody'] }); qc.invalidateQueries({ queryKey: ['pick-confirmations', id] }); };
   const run = async (f: () => Promise<unknown>, ok: string) => { setMsg(null); try { await f(); setMsg({ ok: true, text: ok }); refresh(); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } };
   const live = s.status < 5;
   return (
@@ -204,7 +204,9 @@ function PickTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
   const [loc, setLoc] = useState<Record<string, string>>({});
   const [item, setItem] = useState<Record<string, string>>({});
   if (!d.picks.length) return <Typography color="text.secondary">No pick list yet. Build it from the header.</Typography>;
-  return <Stack gap={1.5}>{d.picks.map((p) => (
+  return <Stack gap={1.5}>
+    <PickerAssign d={d} edit={edit} run={run} />
+    {d.picks.map((p) => (
     <Paper key={p.task.id} variant="outlined" sx={{ p: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.3fr 1fr 1fr 120px' }, gap: 1.5, alignItems: 'center', opacity: p.task.status === 1 ? 0.6 : 1 }}>
       <Box><Typography sx={{ fontFamily: mono, fontWeight: 700, fontSize: 18 }}>{p.locationCode}</Typography>
         <Typography variant="body2">{p.partNumber} · {p.serialNumber ?? p.lotNumber ?? 'no lot'} · <b>{qty(p.task.quantity)}</b></Typography>
@@ -214,7 +216,43 @@ function PickTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
         <TextField size="small" label="Scan item (lot / serial)" value={item[p.task.id] ?? ''} onChange={(e) => setItem({ ...item, [p.task.id]: e.target.value })} sx={{ '& input': { fontFamily: mono } }} />
         <Button variant="contained" onClick={() => run(() => post(`/api/shipping/shipments/${d.shipment.id}/picks/${p.task.id}`, { locationCode: loc[p.task.id] || null, itemCode: item[p.task.id] || null, quantity: p.task.quantity }), `Picked ${p.partNumber} from ${p.locationCode}.`)}>Confirm pick</Button>
       </> : <Box sx={{ gridColumn: { md: 'span 3' } }}><StatusChip status={pickStatus[p.task.status]} /></Box>}
-    </Paper>))}</Stack>;
+    </Paper>))}
+    <PickConfirmations id={d.shipment.id} />
+  </Stack>;
+}
+
+interface PickConfirmationRow { confirmation: { id: string; clientRequestId?: string; deviceTimestamp?: string; receivedAt: string; offline: boolean; locationCode?: string; itemCode?: string; quantity: number; outcome: number; code?: string; reason?: string }; user: string; taskSummary?: string }
+const outcomes = ['Accepted', 'Duplicate', 'Refused'];
+
+/** Assigns the pick list to one picker; only that person can confirm its picks and it appears in their device download. */
+function PickerAssign({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
+  const s = d.shipment;
+  const pickers = useQuery({ queryKey: ['pickers', s.id], queryFn: () => get<{ id: string; name: string }[]>(`/api/shipping/shipments/${s.id}/pickers`), enabled: edit && s.status <= 1 });
+  const [v, setV] = useState<string | null>(null);
+  const current = pickers.data?.find((p) => p.id === s.assignedPickerId)?.name;
+  if (!edit || s.status > 1) return null;
+  const value = v ?? s.assignedPickerId ?? '';
+  return <Paper variant="outlined" sx={{ p: 2 }} data-testid="picker-assign">
+    <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} alignItems={{ sm: 'center' }}>
+      <TextField select size="small" label="Assigned picker" value={value} onChange={(e) => setV(e.target.value)} sx={{ minWidth: 240 }}>
+        <MenuItem value="">Not assigned (any picker at the desk)</MenuItem>
+        {(pickers.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
+      </TextField>
+      <Button variant="outlined" disabled={value === (s.assignedPickerId ?? '')} onClick={() => run(async () => { await put(`/api/shipping/shipments/${s.id}/picker`, { pickerId: value || null }); setV(null); }, value ? 'Picker assigned; the picks appear in their scan-station download.' : 'Picker unassigned.')}>Save</Button>
+      <Typography variant="body2" color="text.secondary">{s.assignedPickerId ? `Assigned to ${current ?? 'a picker'}${s.assignedAt ? ' ' + fmtDateTime(s.assignedAt) : ''}. Only they can confirm these picks.` : 'Assign a picker to send the picks to their device for offline picking.'}</Typography>
+    </Stack>
+  </Paper>;
+}
+
+/** Every confirmation received from desks and devices, including refused ones with their conflict reason. */
+function PickConfirmations({ id }: { id: string }) {
+  const q = useQuery({ queryKey: ['pick-confirmations', id], queryFn: () => get<PickConfirmationRow[]>(`/api/shipping/shipments/${id}/pick-confirmations`) });
+  if (!q.data?.length) return null;
+  return <Section title="Pick confirmations (desk and devices)"><Table size="small" data-testid="pick-confirmations"><TableHead><TableRow><TableCell>Received</TableCell><TableCell>Device time</TableCell><TableCell>Picker</TableCell><TableCell>Item</TableCell><TableCell align="right">Qty</TableCell><TableCell>Outcome</TableCell></TableRow></TableHead>
+    <TableBody>{q.data.map(({ confirmation: c, user, taskSummary }) => <TableRow key={c.id}>
+      <TableCell>{fmtDateTime(c.receivedAt)}</TableCell><TableCell>{c.deviceTimestamp ? fmtDateTime(c.deviceTimestamp) : '—'}{c.offline && <Chip size="small" label="offline" sx={{ ml: 1 }} />}</TableCell>
+      <TableCell>{user}</TableCell><TableCell sx={{ fontFamily: mono }}>{taskSummary} {c.itemCode}{c.locationCode ? ` @ ${c.locationCode}` : ''}</TableCell><TableCell align="right">{qty(c.quantity)}</TableCell>
+      <TableCell><StatusChip status={outcomes[c.outcome]} />{c.reason && <Typography variant="caption" display="block" color="text.secondary">{c.code}: {c.reason}</Typography>}</TableCell></TableRow>)}</TableBody></Table></Section>;
 }
 
 function PackTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
