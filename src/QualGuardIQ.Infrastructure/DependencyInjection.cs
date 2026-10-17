@@ -200,7 +200,15 @@ public static class DependencyInjection
         s.AddScoped<Modules.Traceability.TraceabilityService>();
         s.AddScoped<Modules.Traceability.RecallService>();
         s.AddScoped<Modules.Traceability.ReturnService>();
-        s.AddScoped<Modules.Traceability.BarcodeService>();
+        s.AddScoped(sp => new Modules.Traceability.BarcodeService(sp.GetRequiredService<AppDbContext>(), sp.GetRequiredService<ModuleSupport>())
+        {
+            LocationResolver = (raw, code, ct) => sp.GetRequiredService<Modules.Inventory.InventoryService>().ResolveLocationAsync(raw, code, ct)
+        });
+        s.AddScoped<Modules.Inventory.InventoryService>();
+        s.AddScoped<Modules.Inventory.ReceivingService>();
+        s.AddScoped<Modules.Inventory.ShippingService>();
+        s.AddScoped<Modules.Inventory.CountService>();
+        s.AddScoped<Modules.Inventory.WarehouseInsights>();
         s.AddScoped<Modules.Production.ProductionService>();
         s.AddScoped<Modules.Analytics.KpiEngine>();
         s.AddScoped<Modules.Analytics.CopilotService>();
@@ -217,6 +225,20 @@ public static class DependencyInjection
         P<WarrantyClaim>(Modules.Traceability.ReturnService.WarrantyType, Permissions.ReturnsView, Permissions.ReturnsEdit, x => (x.Number, x.FailureMode, x.Status.ToString(), $"/field/warranty/{x.Id}", x.Status is not (WarrantyClaimStatus.Submitted or WarrantyClaimStatus.UnderReview)));
         P<WorkOrder>(Modules.Production.ProductionService.WorkOrderType, Permissions.ProductionView, Permissions.ProductionEdit, x => (x.Number, $"{x.ItemNumber} × {x.Quantity:0.##}", x.Status.ToString(), $"/production/work-orders/{x.Id}", x.Status is WorkOrderStatus.Closed or WorkOrderStatus.Cancelled));
         P<PurchaseOrder>(Modules.Production.ProductionService.PurchaseOrderType, Permissions.ProductionView, Permissions.ProductionEdit, x => (x.Number, "Purchase order " + x.Number, x.Status.ToString(), $"/production/purchase-orders/{x.Id}", false));
+        P<WarehouseLocation>(Modules.Inventory.InventoryService.LocationType, Permissions.InventoryView, Permissions.InventoryEdit, x => (x.Code, x.Name, x.Active ? x.Purpose.ToString() : "Inactive", $"/warehouse/locations/{x.Id}", false));
+        P<InventoryHold>(Modules.Inventory.InventoryService.HoldType, Permissions.InventoryView, Permissions.InventoryEdit, x => (x.Number, $"{x.Kind} hold: {(x.Reason.Length > 100 ? x.Reason[..100] : x.Reason)}", x.Status.ToString(), $"/warehouse/holds/{x.Id}", x.Status is HoldStatus.Released or HoldStatus.Cancelled));
+        P<StockTransfer>(Modules.Inventory.InventoryService.TransferType, Permissions.InventoryView, Permissions.InventoryEdit, x => (x.Number, $"{x.Kind} transfer", x.Status.ToString(), $"/warehouse/transfers/{x.Id}", x.Status is TransferStatus.Received or TransferStatus.Cancelled));
+        P<Receipt>(Modules.Inventory.ReceivingService.ReceiptType, Permissions.InventoryView, Permissions.InventoryEdit, x => (x.Number, $"{x.Kind} receipt {x.PurchaseOrderNumber ?? x.AsnNumber}".Trim(), x.Status.ToString(), $"/warehouse/receipts/{x.Id}", x.Status is ReceiptStatus.Completed or ReceiptStatus.Cancelled));
+        P<MrbCase>(Modules.Inventory.ReceivingService.MrbType, Permissions.InventoryView, Permissions.InventoryEdit, x => (x.Number, $"Material review ({x.Disposition})", x.Status.ToString(), $"/warehouse/mrb/{x.Id}", x.Status is MrbStatus.PendingApproval or MrbStatus.Executed or MrbStatus.Cancelled));
+        P<SupplierReturn>(Modules.Inventory.ReceivingService.RtvType, Permissions.InventoryView, Permissions.InventoryEdit, x => (x.Number, "Return to supplier", x.Status.ToString(), $"/warehouse/supplier-returns/{x.Id}", x.Status is SupplierReturnStatus.Closed or SupplierReturnStatus.Cancelled));
+        P<CycleCount>(Modules.Inventory.CountService.CountType, Permissions.InventoryView, Permissions.InventoryEdit, x => (x.Number, $"{x.Frequency} count", x.Status.ToString(), $"/warehouse/counts/{x.Id}", x.Status is CountStatus.PendingApproval or CountStatus.Posted or CountStatus.Cancelled));
+        P<Shipment>(Modules.Inventory.ShippingService.ShipmentType, Permissions.ShippingView, Permissions.ShippingEdit, x => (x.Number, $"{x.Kind} shipment {x.CustomerPo}".Trim(), x.Status.ToString(), $"/warehouse/shipments/{x.Id}", x.Status is ShipmentStatus.Shipped or ShipmentStatus.Delivered or ShipmentStatus.Cancelled));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Inventory.InventoryService.HoldType,
+            (id, ct) => sp.GetRequiredService<Modules.Inventory.InventoryService>().OnHoldApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Inventory.InventoryService>().OnHoldRejectedAsync(id, c, ct)));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Inventory.ReceivingService.MrbType,
+            (id, ct) => sp.GetRequiredService<Modules.Inventory.ReceivingService>().OnMrbApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Inventory.ReceivingService>().OnMrbRejectedAsync(id, c, ct)));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Inventory.CountService.CountType,
+            (id, ct) => sp.GetRequiredService<Modules.Inventory.CountService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Inventory.CountService>().OnRejectedAsync(id, c, ct)));
         s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Traceability.RecallService.RecordType,
             (id, ct) => sp.GetRequiredService<Modules.Traceability.RecallService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.Traceability.RecallService>().OnRejectedAsync(id, c, ct)));
     }

@@ -129,6 +129,17 @@ public static class Permissions
     /// <summary>Configure alert rules, outbound integration points and data exports.</summary>
     public const string AlertsAdmin = "alerts.admin";
 
+    /// <summary>Warehouse locations, stock balances, ledger, receiving, holds, counts, issues and transfers.</summary>
+    public const string InventoryView = "inventory.view";
+    public const string InventoryEdit = "inventory.edit";
+    /// <summary>Release holds and approve count variances.</summary>
+    public const string InventoryApprove = "inventory.approve";
+    /// <summary>Sign Material Review Board dispositions.</summary>
+    public const string MrbApprove = "mrb.approve";
+    /// <summary>Shipments, pick lists, packing, verification, carriers and bills of lading.</summary>
+    public const string ShippingView = "shipping.view";
+    public const string ShippingEdit = "shipping.edit";
+
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
         .Where(f => f.IsLiteral && f.FieldType == typeof(string))
