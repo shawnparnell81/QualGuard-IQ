@@ -17,7 +17,7 @@ namespace QualGuardIQ.Infrastructure.Services;
 /// </summary>
 public sealed class WorkflowService(
     AppDbContext db, IRecordRegistry records, IAccessService access, ICurrentUser current, INotifier notifier,
-    UserManager<ApplicationUser> users, IEnumerable<IApprovalHandler> handlers, IClock clock, ISecurityEventLogger security, QualGuardIQ.Infrastructure.Modules.Enterprise.QualificationService qualifications, RecordConditions conditions)
+    UserManager<ApplicationUser> users, IEnumerable<IApprovalHandler> handlers, IClock clock, ISecurityEventLogger security, QualGuardIQ.Infrastructure.Modules.Enterprise.QualificationService qualifications, RecordConditions conditions, QualGuardIQ.Infrastructure.Modules.Platform.RuleEngine rules)
 {
     public async Task<ApprovalRequest> SubmitAsync(string recordType, Guid recordId, CancellationToken ct)
     {
@@ -30,12 +30,13 @@ public sealed class WorkflowService(
         if (await db.ApprovalRequests.AnyAsync(a => a.RecordType == record.Type && a.RecordId == record.Id && a.Status == ApprovalStatus.Pending, ct))
             throw new ConflictException("This record is already waiting for approval.");
 
+        var due = await rules.OnSubmitAsync(record, ct); // business rules: validation blocks, routing sets the due date
         var values = await conditions.ValuesAsync(record.Type, record.Id, ct);
         var first = NextStage(route, int.MinValue, values) ?? throw new AppException("No step of the approval route applies to this record. An administrator must add an unconditional step.");
         var req = new ApprovalRequest
         {
             RecordType = record.Type, RecordId = record.Id, RecordNumber = record.Number, SiteId = record.SiteId, DepartmentId = record.DepartmentId,
-            RouteId = route.Id, SubmittedById = current.UserId!.Value, Status = ApprovalStatus.Pending, CurrentStep = first, StageStartedAt = clock.UtcNow
+            RouteId = route.Id, SubmittedById = current.UserId!.Value, Status = ApprovalStatus.Pending, CurrentStep = first, StageStartedAt = clock.UtcNow, DueAt = due
         };
         db.ApprovalRequests.Add(req);
         await db.SaveChangesAsync(ct);

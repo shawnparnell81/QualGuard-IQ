@@ -115,4 +115,47 @@ public sealed class PlatformDesignerTests(TestApp app)
         Assert.DoesNotContain(list.EnumerateArray(), c => c.Id() == comp); // v1 retired
         Assert.Contains(list.EnumerateArray(), c => c.Id() == v2 && c.Int("version") == 2);
     }
+
+    [Fact]
+    public async Task Business_rules_validate_route_and_automate_without_code()
+    {
+        var site = await app.CreateSiteAsync();
+        var admin = await app.AdminAsync();
+        var (_, author) = await app.CreateUserAsync([Permissions.NcrView, Permissions.NcrEdit], site);
+        Assert.Equal(HttpStatusCode.Forbidden, (await author.GetAsync("/api/platform/rules")).StatusCode);
+        object Rule(string name, int kind, object[] conds, string message, string? target = null, string? trigger = null, int? due = null) =>
+            new { name, recordType = "Ncr", kind, trigger, conditions = conds, message, targetPermission = target, dueDays = due, afterHours = (int?)null, siteId = site, priority = 100, enabled = true };
+        Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync("/api/platform/rules", Rule("Bad", 0, [new { field = "Nope", @operator = "equals", value = "x" }], "x"))).StatusCode);
+        var block = (await (await admin.PostOkAsync("/api/platform/rules", Rule("Critical needs CAPA", 0, [new { field = "Severity", @operator = "equals", value = "Critical" }, new { field = "CapaRequired", @operator = "equals", value = "false" }], "Critical NCRs need a CAPA."))).JsonAsync()).Id();
+        var route = (await (await admin.PostOkAsync("/api/platform/rules", Rule("Supplier NCRs to supplier quality", 1, [new { field = "Source", @operator = "equals", value = "Supplier" }], "Supplier issue to review", Permissions.SuppliersEdit, due: 3))).JsonAsync()).Id();
+        var auto = (await (await admin.PostOkAsync("/api/platform/rules", Rule("Alert on critical NCR", 3, [new { field = "Severity", @operator = "greaterOrEqual", value = "Critical" }], "Critical NCR raised", Permissions.NcrApprove, PlatformEventsCreated))).JsonAsync()).Id();
+
+        async Task<Guid> Ncr(int severity, string source)
+        {
+            var id = (await (await author.PostOkAsync("/api/ncrs", new { title = "Rule NCR", description = "x", source, siteId = site, detectedOn = Today, severity })).JsonAsync()).Id();
+            await author.PostAsync($"/api/ncrs/{id}/containment", new { text = "Held" });
+            return id;
+        }
+        var crit = await Ncr(2, "In-process");
+        var blocked = await author.PostAsync($"/api/ncrs/{crit}/disposition", new { disposition = 1, justification = "Use as is", capaRequired = false });
+        Assert.Equal(HttpStatusCode.BadRequest, blocked.StatusCode);
+        Assert.Contains("Critical NCRs need a CAPA.", await blocked.Content.ReadAsStringAsync());
+        var test = await admin.GetElAsync($"/api/platform/rules/{block}/test/{crit}");
+        Assert.True(test.GetProperty("matches").GetBoolean()); // the blocked submission rolled back, so the stored record still matches
+        Assert.Equal(HttpStatusCode.NoContent, (await author.PostAsync($"/api/ncrs/{crit}/disposition", new { disposition = 1, justification = "Use as is", capaRequired = true })).StatusCode);
+
+        var sup = await Ncr(0, "Supplier");
+        Assert.Equal(HttpStatusCode.NoContent, (await author.PostAsync($"/api/ncrs/{sup}/disposition", new { disposition = 1, justification = "Use as is", capaRequired = false })).StatusCode);
+        var routed = await admin.GetElAsync($"/api/platform/rules/firings?ruleId={route}");
+        Assert.Contains(routed.EnumerateArray(), f => f.Id("recordId") == sup);
+        Assert.DoesNotContain(routed.EnumerateArray(), f => f.Id("recordId") == crit);
+
+        await admin.PostAsync("/api/platform/events/pump");
+        var fired = await admin.GetElAsync($"/api/platform/rules/firings?ruleId={auto}");
+        Assert.Contains(fired.EnumerateArray(), f => f.Id("recordId") == crit);
+        Assert.DoesNotContain(fired.EnumerateArray(), f => f.Id("recordId") == sup);
+        foreach (var id in new[] { block, route, auto }) await admin.DeleteAsync($"/api/platform/rules/{id}");
+    }
+
+    const string PlatformEventsCreated = "record.created";
 }

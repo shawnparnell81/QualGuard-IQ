@@ -76,9 +76,11 @@ public static class DependencyInjection
         services.AddScoped<Modules.Platform.PlatformService>();
         services.AddScoped<Modules.Platform.DesignerService>();
         services.AddScoped<Modules.Platform.FormLibraryService>();
+        services.AddScoped<Modules.Platform.RuleEngine>();
         services.AddSingleton<Modules.Platform.ApiMetrics>();
         services.AddScoped<Jobs.PlatformEventJob>();
         services.AddScoped<Jobs.ReportScheduleJob>();
+        services.AddScoped<Jobs.ApprovalEscalationJob>();
         return services;
     }
 

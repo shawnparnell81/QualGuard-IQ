@@ -70,3 +70,16 @@ public sealed class FormLibraryController(FormLibraryService svc) : ControllerBa
     [HttpGet("{id:guid}/insert")] public Task<List<QualGuardIQ.Application.Forms.FormField>> Insert(Guid id, [FromQuery] string? prefix, CancellationToken ct) => svc.InsertAsync(id, prefix, ct);
     [HttpPost("preview"), RequirePermission(Permissions.FormsView)] public FormPreviewResult Preview(FormPreviewInput r) => FormLibraryService.Preview(r);
 }
+
+/// <summary>Business rule engine administration: validation, routing, escalation and automation rules, dry runs and the firing log.</summary>
+[ApiController, Authorize, Route("api/platform/rules"), RequirePermission(Permissions.PlatformAdmin)]
+public sealed class RulesController(RuleEngine svc) : ControllerBase
+{
+    [HttpGet] public Task<List<BusinessRule>> List(CancellationToken ct) => svc.ListAsync(ct);
+    [HttpPost] public async Task<object> Create(BusinessRuleInput r, CancellationToken ct) => new { (await svc.CreateAsync(r, ct)).Id };
+    [HttpPut("{id:guid}")] public async Task<IActionResult> Update(Guid id, BusinessRuleInput r, CancellationToken ct) { await svc.UpdateAsync(id, r, ct); return NoContent(); }
+    [HttpDelete("{id:guid}")] public async Task<IActionResult> Delete(Guid id, CancellationToken ct) { await svc.DeleteAsync(id, ct); return NoContent(); }
+    [HttpGet("{id:guid}/test/{recordId:guid}")] public Task<RuleTestResult> Test(Guid id, Guid recordId, CancellationToken ct) => svc.TestAsync(id, recordId, ct);
+    [HttpGet("firings")] public Task<List<RuleFiring>> Firings([FromQuery] Guid? ruleId, CancellationToken ct) => svc.FiringsAsync(ruleId, ct);
+    [HttpPost("escalate")] public async Task<object> Escalate(CancellationToken ct) => new { Escalated = await svc.EscalateAsync(ct) };
+}
