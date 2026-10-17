@@ -30,6 +30,14 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
     internal static AttachmentDto ToDto(Attachment a) => new(a.Id, a.FileName, a.ContentType, a.SizeBytes, a.Sha256, a.Version, a.LineageId,
         a.Category, a.Description, a.Classification, a.IsLocked, a.IsArchived, a.ScanStatus, a.CreatedAt);
 
+    /// <summary>Number, title, status and URL of any record the user may view (used to open linked records generically).</summary>
+    [HttpGet]
+    public async Task<object> Summary(string type, Guid id, CancellationToken ct)
+    {
+        var r = await records.RequireViewAsync(type, id, ct);
+        return new { r.Type, r.Id, r.Number, r.Title, r.Status, r.Url };
+    }
+
     [HttpGet("files")]
     public async Task<IEnumerable<AttachmentDto>> Files(string type, Guid id, [FromQuery] bool history, CancellationToken ct) =>
         (await files.ListAsync(type, id, history, ct)).Select(ToDto);

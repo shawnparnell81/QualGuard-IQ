@@ -9,6 +9,7 @@ import SpeedOutlined from '@mui/icons-material/SpeedOutlined';
 import LocalShippingOutlined from '@mui/icons-material/LocalShippingOutlined';
 import SupportAgentOutlined from '@mui/icons-material/SupportAgentOutlined';
 import RuleOutlined from '@mui/icons-material/RuleOutlined';
+import ChangeCircleOutlined from '@mui/icons-material/ChangeCircleOutlined';
 
 export interface NavItem { label: string; path: string; permission?: string; children?: NavItem[] }
 export interface ModuleDef {
@@ -164,6 +165,23 @@ export const modules: ModuleDef[] = [
         { label: 'All SCARs', path: '/suppliers/scar?all=1' },
       ] },
       { label: 'Periodic reviews due', path: '/suppliers/reviews-due' },
+    ],
+  },
+  {
+    key: 'changes',
+    label: 'Changes',
+    description: 'Change requests, risk and impact, affected items, approval, implementation and post-implementation review',
+    icon: <ChangeCircleOutlined fontSize="small" />,
+    basePath: '/changes',
+    permissions: ['changes.view'],
+    sidebar: [
+      { label: 'Change requests', path: '/changes', children: [
+        { label: 'Open', path: '/changes' },
+        { label: 'In review', path: '/changes?view=1' },
+        { label: 'Implementation', path: '/changes?view=3' },
+        { label: 'All changes', path: '/changes?view=all' },
+        { label: 'Request change', path: '/changes/new', permission: 'changes.edit' },
+      ] },
     ],
   },
   {
