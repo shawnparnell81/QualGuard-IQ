@@ -25,6 +25,10 @@ import AssignmentReturnOutlined from '@mui/icons-material/AssignmentReturnOutlin
 import SyncAltOutlined from '@mui/icons-material/SyncAltOutlined';
 import WarehouseOutlined from '@mui/icons-material/WarehouseOutlined';
 import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined';
+import DesignServicesOutlined from '@mui/icons-material/DesignServicesOutlined';
+import PublicOutlined from '@mui/icons-material/PublicOutlined';
+import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined';
+import PsychologyOutlined from '@mui/icons-material/PsychologyOutlined';
 
 export interface NavItem { label: string; path: string; permission?: string; children?: NavItem[] }
 export interface ModuleDef {
@@ -582,17 +586,76 @@ export const modules: ModuleDef[] = [
     ],
   },
   {
+    key: 'engineering',
+    label: 'Engineering',
+    description: 'Product requirements and traceability, design reviews, BOM quality and variants',
+    icon: <DesignServicesOutlined fontSize="small" />,
+    basePath: '/engineering',
+    permissions: ['engineering.view'],
+    sidebar: [
+      { label: 'Requirements', path: '/engineering' },
+      { label: 'Design reviews', path: '/engineering/reviews' },
+      { label: 'BOM quality', path: '/engineering/bom', permission: 'masterdata.view' },
+      { label: 'Variants', path: '/engineering/variants', permission: 'masterdata.view' },
+    ],
+  },
+  {
+    key: 'qos',
+    label: 'Quality OS',
+    description: 'Global command center, factory center, risk matrix, KPI framework, digital twin and board reports',
+    icon: <PublicOutlined fontSize="small" />,
+    basePath: '/qos',
+    permissions: ['enterprise.view', 'risks.view', 'objectives.view', 'spc.view'],
+    sidebar: [
+      { label: 'Command center', path: '/qos', permission: 'enterprise.view' },
+      { label: 'Factory center', path: '/qos/factory' },
+      { label: 'Risk matrix', path: '/qos/risk', permission: 'risks.view' },
+      { label: 'KPI framework', path: '/qos/kpis', permission: 'objectives.view' },
+      { label: 'Digital twin', path: '/qos/twin' },
+      { label: 'Board reports', path: '/qos/boards', permission: 'enterprise.view' },
+    ],
+  },
+  {
+    key: 'knowledge',
+    label: 'Knowledge',
+    description: 'Lessons learned, root-cause library, playbooks, business processes and maturity',
+    icon: <MenuBookOutlined fontSize="small" />,
+    basePath: '/knowledge',
+    permissions: ['knowledge.view', 'process.view'],
+    sidebar: [
+      { label: 'Knowledge base', path: '/knowledge', permission: 'knowledge.view' },
+      { label: 'Playbooks', path: '/knowledge/playbooks', permission: 'knowledge.view' },
+      { label: 'Processes', path: '/processes', permission: 'process.view' },
+      { label: 'Maturity', path: '/maturity', permission: 'process.view' },
+    ],
+  },
+  {
+    key: 'advisor',
+    label: 'Advisor',
+    description: 'Rule-based quality advisor: ask, explain, document assistant and audit preparation',
+    icon: <PsychologyOutlined fontSize="small" />,
+    basePath: '/advisor',
+    permissions: ['copilot.use'],
+    sidebar: [
+      { label: 'Ask & explain', path: '/advisor' },
+      { label: 'Document assistant', path: '/advisor/documents' },
+      { label: 'Audit preparation', path: '/advisor/audit-prep' },
+    ],
+  },
+  {
     key: 'governance',
     label: 'Governance',
     description: 'Part 11 readiness, retention, business continuity, API clients and channels',
     icon: <AdminPanelSettingsOutlined fontSize="small" />,
     basePath: '/governance',
-    permissions: ['governance.view', 'audittrail.view', 'api.admin'],
+    permissions: ['governance.view', 'audittrail.view', 'api.admin', 'security.review'],
     sidebar: [
       { label: 'Part 11 readiness', path: '/governance', permission: 'audittrail.view' },
       { label: 'Retention', path: '/governance/retention', permission: 'governance.view' },
       { label: 'Business continuity', path: '/governance/continuity', permission: 'governance.view' },
       { label: 'API & channels', path: '/governance/api', permission: 'api.admin' },
+      { label: 'Access reviews', path: '/governance/access', permission: 'security.review' },
+      { label: 'Deployments', path: '/governance/deployments', permission: 'security.review' },
     ],
   },
   {

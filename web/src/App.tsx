@@ -8,7 +8,11 @@ import { CommandPalette } from './layout/CommandPalette';
 import { EnterpriseOverview, WarRoom, OrgStructure, StandardList, StandardNew, StandardDetail, SkillsMatrix, CurriculumList, AuditProgramList, AuditProgramDetail } from './pages/Enterprise';
 import { ComplianceHome, ValidationList, ValidationNew, ValidationDetail } from './pages/Compliance';
 import { ProjectList, ProjectNew, ProjectDetail, PpapList, PpapNew, PpapDetail, CapabilityStudies } from './pages/Launch';
-import { Part11Readiness, RetentionPage, ContinuityPage, ApiAccessPage } from './pages/Governance';
+import { Part11Readiness, RetentionPage, ContinuityPage, ApiAccessPage, AccessReviews, Deployments } from './pages/Governance';
+import { RequirementList, RequirementDetail, DesignReviewList, DesignReviewDetail, BomQuality, Variants } from './pages/Engineering';
+import { CommandCenter, FactoryCenter, EnterpriseRiskMatrix, KpiFramework, DigitalTwin, BoardReports } from './pages/QualityOs';
+import { KnowledgeLibrary, KnowledgeDetail, Playbooks, ProcessMap, Maturity } from './pages/Knowledge';
+import { AdvisorChat, DocumentAssistant, AuditPrep } from './pages/Advisor';
 import { Login } from './pages/Login';
 
 const LiveMonitor = lazy(() => import('./pages/ShopFloor').then((m) => ({ default: m.LiveMonitor })));
@@ -338,6 +342,28 @@ export function App() {
               <Route path="/governance/retention" element={<RetentionPage />} />
               <Route path="/governance/continuity" element={<ContinuityPage />} />
               <Route path="/governance/api" element={<ApiAccessPage />} />
+              <Route path="/governance/access" element={<AccessReviews />} />
+              <Route path="/governance/deployments" element={<Deployments />} />
+              <Route path="/engineering" element={<RequirementList />} />
+              <Route path="/engineering/requirements/:id" element={<RequirementDetail />} />
+              <Route path="/engineering/reviews" element={<DesignReviewList />} />
+              <Route path="/engineering/reviews/:id" element={<DesignReviewDetail />} />
+              <Route path="/engineering/bom" element={<BomQuality />} />
+              <Route path="/engineering/variants" element={<Variants />} />
+              <Route path="/qos" element={<CommandCenter />} />
+              <Route path="/qos/factory" element={<FactoryCenter />} />
+              <Route path="/qos/risk" element={<EnterpriseRiskMatrix />} />
+              <Route path="/qos/kpis" element={<KpiFramework />} />
+              <Route path="/qos/twin" element={<DigitalTwin />} />
+              <Route path="/qos/boards" element={<BoardReports />} />
+              <Route path="/knowledge" element={<KnowledgeLibrary />} />
+              <Route path="/knowledge/playbooks" element={<Playbooks />} />
+              <Route path="/knowledge/:id" element={<KnowledgeDetail />} />
+              <Route path="/processes" element={<ProcessMap />} />
+              <Route path="/maturity" element={<Maturity />} />
+              <Route path="/advisor" element={<AdvisorChat />} />
+              <Route path="/advisor/documents" element={<DocumentAssistant />} />
+              <Route path="/advisor/audit-prep" element={<AuditPrep />} />
               <Route path="/admin" element={<AdminHome />} />
               <Route path="/admin/users" element={<UsersPage />} />
               <Route path="/admin/roles" element={<RolesPage />} />
