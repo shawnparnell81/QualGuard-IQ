@@ -1,4 +1,4 @@
-# ADR 0010: Enterprise forms, template library and import center
+# ADR 0001: Enterprise forms, template library and import center
 
 Status: accepted, 2026-10-17.
 
@@ -13,7 +13,7 @@ storage abstraction with an attachment scanning boundary; background jobs use Ha
 - Keep document control as the owner of template revisions. The Enterprise Template Library adds catalog metadata, categories, packages
   and a normalized form definition linked to the document revision (one-to-one), so existing forms and records keep working unchanged.
 - Form schema v2 is a superset of the current field list (a v1 list still parses). It adds sections, tables, layout and signature blocks.
-- Tables live in the `public` schema with real foreign keys to documents, revisions, sites, departments, users and files. Approved revisions
+- Tables live in the application schema (`qms`, where every other table lives), not a separate `qg_templates` schema with real foreign keys to documents, revisions, sites, departments, users and files. Approved revisions
   are immutable in code (content lock) and in the database (trigger).
 - Imports run as background jobs with audited state transitions; originals are kept as stored files with SHA-256 hashes.
 - The reference SQL package is not applied; its ideas are rebuilt code-first with our own indexes and constraints.
