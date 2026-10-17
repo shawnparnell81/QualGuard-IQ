@@ -79,7 +79,7 @@ export function CodeField({ value, onChange, recovery, error, autoFocus = true, 
 
 /** Time left on a sign-in step, with a bar. Calls onExpired once when it reaches zero. */
 export function StepTimer({ expiresAt, onExpired }: { expiresAt: number; onExpired: () => void }) {
-  const total = Math.max(1, expiresAt - Date.now());
+  const total = useMemo(() => Math.max(1, expiresAt - Date.now()), [expiresAt]); // the step's full length, fixed when it starts
   const [left, setLeft] = useState(total);
   useEffect(() => {
     const t = setInterval(() => {
@@ -94,7 +94,7 @@ export function StepTimer({ expiresAt, onExpired }: { expiresAt: number; onExpir
   return (
     <Box aria-live={low ? 'polite' : 'off'}>
       <Stack direction="row" justifyContent="space-between" sx={{ mb: 0.5 }}>
-        <Typography variant="caption" color={low ? 'warning.main' : 'text.secondary'}>{low ? 'Less than a minute left for this step' : 'This step stays open for a few minutes'}</Typography>
+        <Typography variant="caption" color={low ? 'warning.main' : 'text.secondary'}>{low ? 'Less than a minute left for this step' : `Finish this step within ${Math.max(1, Math.round(total / 60000))} minutes`}</Typography>
         <Typography variant="caption" sx={{ fontFamily: mono }} color={low ? 'warning.main' : 'text.secondary'} aria-label={`${Math.floor(s / 60)} minutes ${s % 60} seconds left`}>
           {Math.floor(s / 60)}:{String(s % 60).padStart(2, '0')}
         </Typography>

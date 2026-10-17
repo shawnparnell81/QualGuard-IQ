@@ -28,6 +28,179 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/account/security:
+    get:
+      tags:
+        - Account
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SecurityDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SecurityDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SecurityDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/account/password:
+    post:
+      tags:
+        - Account
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/account/mfa/setup:
+    post:
+      tags:
+        - Account
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PasswordRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PasswordRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/account/mfa/enable:
+    post:
+      tags:
+        - Account
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/account/mfa/recovery-codes:
+    post:
+      tags:
+        - Account
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/account/mfa/disable:
+    post:
+      tags:
+        - Account
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DisableRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DisableRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DisableRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/account/trusted-devices/{id}':
+    delete:
+      tags:
+        - Account
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/account/trusted-devices/revoke-all:
+    post:
+      tags:
+        - Account
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/actions/{id}/complete':
     post:
       tags:
@@ -8757,6 +8930,24 @@ paths:
         '200':
           description: OK
       security: [ ]
+  /api/auth/password-policy:
+    get:
+      tags:
+        - Auth
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PolicyResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PolicyResponse'
+      security: [ ]
   /api/auth/login:
     post:
       tags:
@@ -8772,6 +8963,146 @@ paths:
           application/*+json:
             schema:
               $ref: '#/components/schemas/LoginRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+      security: [ ]
+  /api/auth/mfa/verify:
+    post:
+      tags:
+        - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+      security: [ ]
+  /api/auth/mfa/enrol/start:
+    post:
+      tags:
+        - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ChallengeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+      security: [ ]
+  /api/auth/mfa/enrol/confirm:
+    post:
+      tags:
+        - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CodeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+      security: [ ]
+  /api/auth/password/change-required:
+    post:
+      tags:
+        - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RequiredPasswordRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RequiredPasswordRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RequiredPasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+      security: [ ]
+  /api/auth/password/forgot:
+    post:
+      tags:
+        - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ForgotRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ForgotRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+      security: [ ]
+  /api/auth/password/reset/check:
+    post:
+      tags:
+        - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ChallengeRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ChallengeRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+      security: [ ]
+  /api/auth/password/reset:
+    post:
+      tags:
+        - Auth
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ResetRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ResetRequest'
         required: true
       responses:
         '200':
@@ -33207,6 +33538,82 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/admin/roles/{id}/mfa':
+    put:
+      tags:
+        - Roles
+      description: 'Requires permission: `admin.roles` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleMfaRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RoleMfaRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RoleMfaRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/admin/sign-in-policy:
+    get:
+      tags:
+        - SignInPolicy
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ViewDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ViewDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ViewDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - SignInPolicy
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyDto'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PolicyDto'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PolicyDto'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/admin/users:
     get:
       tags:
@@ -33409,6 +33816,68 @@ paths:
           schema:
             type: string
             format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/admin/users/{id}/temporary-password':
+    post:
+      tags:
+        - Users
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TemporaryPasswordRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TemporaryPasswordRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TemporaryPasswordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/admin/users/{id}/reset-mfa':
+    post:
+      tags:
+        - Users
+      description: 'Requires permission: `admin.users` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetMfaRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ResetMfaRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ResetMfaRequest'
+        required: true
       responses:
         '200':
           description: OK
@@ -41184,6 +41653,13 @@ components:
             - string
     CertificationStatus:
       type: integer
+    ChallengeRequest:
+      required:
+        - challenge
+      type: object
+      properties:
+        challenge:
+          type: string
     ChangeClass:
       type: integer
       default: 0
@@ -41213,6 +41689,16 @@ components:
             - 'null'
             - string
           format: uuid
+    ChangePasswordRequest:
+      required:
+        - currentPassword
+        - newPassword
+      type: object
+      properties:
+        currentPassword:
+          type: string
+        newPassword:
+          type: string
     ChangeQueueStatus:
       type: integer
     ChangeRequestInput:
@@ -41734,6 +42220,13 @@ components:
         isActive:
           type: boolean
           default: true
+    CodeRequest:
+      required:
+        - code
+      type: object
+      properties:
+        code:
+          type: string
     CommentDto:
       required:
         - id
@@ -42892,6 +43385,38 @@ components:
             - string
     CountStatus:
       type: integer
+    Coverage:
+      required:
+        - activeStaff
+        - staffWithMfa
+        - activePortal
+        - portalWithMfa
+      type: object
+      properties:
+        activeStaff:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        staffWithMfa:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        activePortal:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        portalWithMfa:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     CreateActionRequest:
       required:
         - title
@@ -43478,6 +44003,10 @@ components:
           type: string
         password:
           type: string
+        mustChangePassword:
+          type:
+            - 'null'
+            - boolean
     Criticality:
       type: integer
     CsvImportRequest:
@@ -44606,6 +45135,49 @@ components:
           type:
             - 'null'
             - string
+    DeviceDto:
+      required:
+        - id
+        - name
+        - ipAddress
+        - createdAt
+        - lastUsedAt
+        - expiresAt
+        - isThisBrowser
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        ipAddress:
+          type:
+            - 'null'
+            - string
+        createdAt:
+          type: string
+          format: date-time
+        lastUsedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        expiresAt:
+          type: string
+          format: date-time
+        isThisBrowser:
+          type: boolean
+    DisableRequest:
+      required:
+        - password
+        - code
+      type: object
+      properties:
+        password:
+          type: string
+        code:
+          type: string
     Disposition:
       type: integer
     DispositionRequest:
@@ -46876,6 +47448,13 @@ components:
     FmeaType:
       type: integer
       default: 0
+    ForgotRequest:
+      required:
+        - email
+      type: object
+      properties:
+        email:
+          type: string
     FormComponent:
       type: object
       properties:
@@ -49676,6 +50255,10 @@ components:
           type: string
         password:
           type: string
+        code:
+          type:
+            - 'null'
+            - string
     LookupRequest:
       required:
         - planName
@@ -52513,6 +53096,13 @@ components:
           type:
             - 'null'
             - string
+    PasswordRequest:
+      required:
+        - password
+      type: object
+      properties:
+        password:
+          type: string
     PauseInput:
       required:
         - reason
@@ -53130,6 +53720,33 @@ components:
           format: int32
     PlaybookTrigger:
       type: integer
+    PolicyDto:
+      required:
+        - mfaRequiredForStaff
+        - mfaRequiredForPortal
+        - trustedDevicesEnabled
+        - trustedDeviceDays
+        - rowVersion
+      type: object
+      properties:
+        mfaRequiredForStaff:
+          type: boolean
+        mfaRequiredForPortal:
+          type: boolean
+        trustedDevicesEnabled:
+          type: boolean
+        trustedDeviceDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     PolicyInput:
       required:
         - attachmentsEnabled
@@ -53170,6 +53787,48 @@ components:
             - array
           items:
             type: string
+    PolicyResponse:
+      required:
+        - minLength
+        - maxLength
+        - historyCount
+        - blocksCommonPasswords
+        - challengeMinutes
+        - resetLinkMinutes
+      type: object
+      properties:
+        minLength:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        maxLength:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        historyCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        blocksCommonPasswords:
+          type: boolean
+        challengeMinutes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        resetLinkMinutes:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     PoLineInput:
       required:
         - lineNumber
@@ -53379,6 +54038,10 @@ components:
           format: uuid
         password:
           type: string
+        mustChangePassword:
+          type:
+            - 'null'
+            - boolean
     PortalEvidence:
       required:
         - id
@@ -56927,6 +57590,16 @@ components:
           type:
             - 'null'
             - string
+    RequiredPasswordRequest:
+      required:
+        - challenge
+        - newPassword
+      type: object
+      properties:
+        challenge:
+          type: string
+        newPassword:
+          type: string
     RequirementInput:
       required:
         - title
@@ -57005,6 +57678,23 @@ components:
             - number
             - string
           format: double
+    ResetMfaRequest:
+      required:
+        - reason
+      type: object
+      properties:
+        reason:
+          type: string
+    ResetRequest:
+      required:
+        - token
+        - newPassword
+      type: object
+      properties:
+        token:
+          type: string
+        newPassword:
+          type: string
     ResidualInput:
       required:
         - probability
@@ -58617,6 +59307,37 @@ components:
             - integer
             - string
           format: uint32
+        requiresMfa:
+          type: boolean
+          default: false
+    RoleMfaRequest:
+      required:
+        - requiresMfa
+      type: object
+      properties:
+        requiresMfa:
+          type: boolean
+    RoleRow:
+      required:
+        - id
+        - name
+        - requiresMfa
+        - people
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        requiresMfa:
+          type: boolean
+        people:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     RolloutAdoptInput:
       required:
         - localDocumentId
@@ -59427,6 +60148,10 @@ components:
             - integer
             - string
           format: uint32
+        requiresMfa:
+          type:
+            - 'null'
+            - boolean
     SaveRouteRequest:
       required:
         - name
@@ -60081,6 +60806,58 @@ components:
         usesSize:
           type: boolean
           default: false
+    SecurityDto:
+      required:
+        - mfaEnabled
+        - mfaEnabledAt
+        - mfaRequired
+        - mfaRequiredReason
+        - recoveryCodesLeft
+        - passwordChangedAt
+        - trustedDevicesEnabled
+        - trustedDeviceDays
+        - trustedDevices
+        - isPortal
+      type: object
+      properties:
+        mfaEnabled:
+          type: boolean
+        mfaEnabledAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        mfaRequired:
+          type: boolean
+        mfaRequiredReason:
+          type:
+            - 'null'
+            - string
+        recoveryCodesLeft:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        passwordChangedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        trustedDevicesEnabled:
+          type: boolean
+        trustedDeviceDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        trustedDevices:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeviceDto'
+        isPortal:
+          type: boolean
     SecurityEventDto:
       required:
         - id
@@ -63335,6 +64112,16 @@ components:
             - string
         active:
           type: boolean
+    TemporaryPasswordRequest:
+      required:
+        - password
+      type: object
+      properties:
+        password:
+          type: string
+        mustChangePassword:
+          type: boolean
+          default: true
     TestRequest:
       required:
         - enableOnSuccess
@@ -64164,6 +64951,17 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AssignmentDto'
+        mfaEnabled:
+          type: boolean
+          default: false
+        mustChangePassword:
+          type: boolean
+          default: false
+        passwordChangedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
     UserIdsRequest:
       required:
         - userIds
@@ -64617,6 +65415,23 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RenditionRow'
+    ViewDto:
+      required:
+        - policy
+        - configuration
+        - roles
+        - coverage
+      type: object
+      properties:
+        policy:
+          $ref: '#/components/schemas/PolicyDto'
+        configuration: { }
+        roles:
+          type: array
+          items:
+            $ref: '#/components/schemas/RoleRow'
+        coverage:
+          $ref: '#/components/schemas/Coverage'
     VoidLabelsInput:
       required:
         - reason
@@ -65662,6 +66477,7 @@ tags:
   - name: RecordTypes
   - name: Risks
   - name: Roles
+  - name: SignInPolicy
   - name: Users
   - name: Warehouse
   - name: Receiving

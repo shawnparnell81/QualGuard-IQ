@@ -128,6 +128,7 @@ test('two-step verification set up from the Security page, with recovery codes',
   await d.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByText('Two-step verification is on.')).toBeVisible();
   await expect(page.getByText('10 of 10 recovery codes left.')).toBeVisible();
+  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
   await shot(page, 'sign-in-13-security-page-on');
 });
 
