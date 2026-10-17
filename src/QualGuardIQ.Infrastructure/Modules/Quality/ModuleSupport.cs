@@ -14,6 +14,7 @@ public sealed class ModuleSupport(AppDbContext db, IAccessService access, ICurre
     /// <summary>Today in the site's time zone (organization zone when no site is given).</summary>
     public Task<DateOnly> TodayAsync(Guid? siteId, CancellationToken ct) => calendar.TodayAsync(siteId, ct);
     public DateTimeOffset Now => clock.UtcNow;
+    public Task<TimeZoneInfo> ZoneAsync(Guid? siteId, CancellationToken ct) => calendar.ZoneAsync(siteId, ct);
 
     public async Task RequireAsync(string permission, Guid siteId, Guid? departmentId, CancellationToken ct)
     {
