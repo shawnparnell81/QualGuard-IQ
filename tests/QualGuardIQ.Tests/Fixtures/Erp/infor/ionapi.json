@@ -1,0 +1,1 @@
+{"ti":"ACME_TST","cn":"QualGuard","dt":"12","ci":"ACME_TST~client","cs":"client-secret","iu":"https://mingle-ionapi.inforcloudsuite.com","pu":"https://mingle-sso.inforcloudsuite.com:443/ACME_TST/as/","oa":"authorization.oauth2","ot":"token.oauth2","or":"revoke_token.oauth2","ev":"U1","v":"1.0","saak":"ACME_TST#service-key","sask":"service-secret"}
