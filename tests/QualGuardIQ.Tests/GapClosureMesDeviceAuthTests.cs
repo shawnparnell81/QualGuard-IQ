@@ -204,10 +204,10 @@ public sealed class GapClosureMesDeviceAuthTests(TestApp app)
         using var strict = app.WithWebHostBuilder(b => b.UseSetting("Mes:RequireDeviceClients", "true"));
         var userHttp = strict.CreateClient();
         var email = $"m{Guid.NewGuid():N}@test.local";
-        var uid = await (await w.Admin.PostOkAsync("/api/admin/users", new { email, displayName = "MES user", password = "long-enough-password" })).Content.ReadFromJsonAsync<Guid>();
+        var uid = await (await w.Admin.PostOkAsync("/api/admin/users", new { email, displayName = "MES user", password = "long-enough-password", mustChangePassword = false })).Content.ReadFromJsonAsync<Guid>();
         var role = await (await w.Admin.PostOkAsync("/api/admin/roles", new { name = "R" + Guid.NewGuid().ToString("N"), description = (string?)null, permissions = new[] { Permissions.ProductionEdit } })).Content.ReadFromJsonAsync<Guid>();
         await w.Admin.PostOkAsync($"/api/admin/users/{uid}/roles", new { roleId = role, siteId = w.SiteA, departmentId = (Guid?)null });
-        var tok = await userHttp.PostAsJsonAsync("/api/auth/token", new { email, password = "long-enough-password" });
+        var tok = await userHttp.PostAsJsonAsync("/api/auth/token", new { email, password = "long-enough-password", mustChangePassword = false });
         userHttp.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", (await tok.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("accessToken").GetString());
         Assert.Equal(HttpStatusCode.Forbidden, (await userHttp.PostAsJsonAsync("/api/mes/events", Ev(w, w.SiteA, "u2"))).StatusCode);
         var devHttp = strict.CreateClient(); devHttp.DefaultRequestHeaders.Add("X-Api-Key", device.Str("apiKey"));

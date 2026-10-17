@@ -16,7 +16,7 @@ export default async function globalSetup() {
   };
   const ids: Record<string, string> = {};
   for (const u of [users.author, users.approver, users.viewer, users.outsider]) {
-    ids[u.key] = await admin.post<string>('/api/admin/users', { email: u.email, displayName: u.name, password: u.password });
+    ids[u.key] = await admin.post<string>('/api/admin/users', { email: u.email, displayName: u.name, password: u.password, mustChangePassword: false });
     const r = roles[u.key as keyof typeof roles];
     if (r) await admin.post(`/api/admin/users/${ids[u.key]}/roles`, { roleId: r, siteId, departmentId: null });
   }

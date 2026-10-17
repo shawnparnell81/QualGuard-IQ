@@ -55,7 +55,7 @@ public sealed class RbacTests(TestApp app)
         var admin = await app.AdminAsync();
         var r = await admin.PostAsync("/api/admin/roles", new { name = "Ad" + Guid.NewGuid().ToString("N"), permissions = new[] { Permissions.AdminUsers } });
         var roleId = Guid.Parse((await r.Content.ReadAsStringAsync()).Trim('"'));
-        var u = await admin.PostOkAsync("/api/admin/users", new { email = $"x{Guid.NewGuid():N}@test.local", displayName = "X", password = "long-enough-password" });
+        var u = await admin.PostOkAsync("/api/admin/users", new { email = $"x{Guid.NewGuid():N}@test.local", displayName = "X", password = "long-enough-password", mustChangePassword = false });
         var userId = Guid.Parse((await u.Content.ReadAsStringAsync()).Trim('"'));
         var assign = await admin.PostAsync($"/api/admin/users/{userId}/roles", new { roleId, siteId = site });
         Assert.Equal(HttpStatusCode.BadRequest, assign.StatusCode);

@@ -7,11 +7,11 @@ const STATE = path.join(import.meta.dirname, '.state.json');
 
 export interface User { key: string; email: string; password: string; name: string; id?: string }
 export const users = {
-  admin: { key: 'admin', email: 'e2e-admin@qms.test', password: 'e2e-admin-password', name: 'Test Administrator' },
-  author: { key: 'author', email: 'author@qms.test', password: 'author-password-1', name: 'Alex Author' },
-  approver: { key: 'approver', email: 'approver@qms.test', password: 'approver-password-1', name: 'Pat Approver' },
-  viewer: { key: 'viewer', email: 'viewer@qms.test', password: 'viewer-password-1', name: 'Val Viewer' },
-  outsider: { key: 'outsider', email: 'outsider@qms.test', password: 'outsider-password-1', name: 'Oscar Outsider' },
+  admin: { key: 'admin', email: 'e2e-admin@qms.test', password: 'test-console-pass-4271', name: 'Test Administrator' },
+  author: { key: 'author', email: 'author@qms.test', password: 'writer-long-pass-1', name: 'Alex Author' },
+  approver: { key: 'approver', email: 'approver@qms.test', password: 'signoff-long-pass-1', name: 'Pat Approver' },
+  viewer: { key: 'viewer', email: 'viewer@qms.test', password: 'reader-long-pass-1', name: 'Val Viewer' },
+  outsider: { key: 'outsider', email: 'outsider@qms.test', password: 'stranger-long-pass-1', name: 'Oscar Outsider' },
 } satisfies Record<string, User>;
 
 export interface State { siteId: string; ids: Record<string, string> }

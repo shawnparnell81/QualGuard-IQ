@@ -213,11 +213,11 @@ public sealed class AdvancedQualityTests(TestApp app)
         Assert.Contains(scar.Str("number"), (await w.Eng.GetElAsync($"/api/records/AqlInspection/{lotId}/links")).ToString());
 
         // supplier portal account
-        Assert.Equal(HttpStatusCode.Forbidden, (await w.Eng.PostAsync("/api/portal/admin/accounts", new { email = "x@y.z", displayName = "x", kind = "Supplier", partyId = sid, password = "long-enough-password" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await w.Eng.PostAsync("/api/portal/admin/accounts", new { email = "x@y.z", displayName = "x", kind = "Supplier", partyId = sid, password = "long-enough-password", mustChangePassword = false })).StatusCode);
         var email = $"sup{w.Tag}@supplier.test";
-        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync("/api/portal/admin/accounts", new { email, displayName = "R. Hale", kind = "Supplier", partyId = sid, password = "long-enough-password" })).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync("/api/portal/admin/accounts", new { email, displayName = "R. Hale", kind = "Supplier", partyId = sid, password = "long-enough-password", mustChangePassword = false })).StatusCode);
         var otherEmail = $"oth{w.Tag}@supplier.test";
-        await admin.PostOkAsync("/api/portal/admin/accounts", new { email = otherEmail, displayName = "Other", kind = "Supplier", partyId = otherSid, password = "long-enough-password" });
+        await admin.PostOkAsync("/api/portal/admin/accounts", new { email = otherEmail, displayName = "Other", kind = "Supplier", partyId = otherSid, password = "long-enough-password", mustChangePassword = false });
         var portal = await app.SignInAsync(email, "long-enough-password");
         var other = await app.SignInAsync(otherEmail, "long-enough-password");
         Assert.Equal("Supplier", (await portal.GetElAsync("/api/portal/me")).Str("kind"));
@@ -343,9 +343,9 @@ public sealed class AdvancedQualityTests(TestApp app)
             siteId = w.Site, responseDueOn = Today.AddDays(10), returnAuthorization = "RMA-" + w.Tag })).JsonAsync()).Id();
 
         var email = $"cust{w.Tag}@customer.test";
-        await admin.PostOkAsync("/api/portal/admin/accounts", new { email, displayName = "J. Ortiz", kind = "Customer", partyId = customerId, password = "long-enough-password" });
+        await admin.PostOkAsync("/api/portal/admin/accounts", new { email, displayName = "J. Ortiz", kind = "Customer", partyId = customerId, password = "long-enough-password", mustChangePassword = false });
         var otherEmail = $"cus2{w.Tag}@customer.test";
-        await admin.PostOkAsync("/api/portal/admin/accounts", new { email = otherEmail, displayName = "Other", kind = "Customer", partyId = otherCustomer, password = "long-enough-password" });
+        await admin.PostOkAsync("/api/portal/admin/accounts", new { email = otherEmail, displayName = "Other", kind = "Customer", partyId = otherCustomer, password = "long-enough-password", mustChangePassword = false });
         var portal = await app.SignInAsync(email, "long-enough-password");
         var other = await app.SignInAsync(otherEmail, "long-enough-password");
         Assert.Contains("ACME-77", (await portal.GetElAsync("/api/portal/complaints")).ToString());

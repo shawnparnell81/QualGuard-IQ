@@ -33,6 +33,10 @@ public static class DependencyInjection
         services.AddScoped<IAccessService, AccessService>();
         Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddScoped<ICallerRestriction, NoCallerRestriction>(services);
         services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
+        services.Configure<AuthOptions>(config.GetSection(AuthOptions.Section));
+        services.AddScoped<SignInSecurityService>();
+        services.AddSingleton<AuthMailQueue>();
+        Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddSingleton<IAuthMailer>(services, sp => sp.GetRequiredService<AuthMailQueue>());
         services.AddScoped<INumberingService, NumberingService>();
         services.AddScoped<Seeder>();
         services.AddScoped<ISiteCalendar, SiteCalendar>();

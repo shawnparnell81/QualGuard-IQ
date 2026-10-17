@@ -10,7 +10,7 @@ test.describe('E2E 14: gap closure', () => {
     const other = await admin.post<string>('/api/organization/sites', { code: `OT${t}`.slice(0, 10).toUpperCase(), name: `Other Plant ${t}`, address: null, timeZone: 'America/New_York' });
     const role = await admin.post<string>('/api/admin/roles', { name: `LPA lead ${t}`, description: 'UI test', permissions: ['lpa.view', 'lpa.edit', 'coq.view', 'coq.edit'] });
     const u: User = { key: 'lpa', email: `lpa-${t}@qms.test`, password: 'lpa-lead-password-1', name: `Lee Layered ${t}` };
-    const uid = await admin.post<string>('/api/admin/users', { email: u.email, displayName: u.name, password: u.password });
+    const uid = await admin.post<string>('/api/admin/users', { email: u.email, displayName: u.name, password: u.password, mustChangePassword: false });
     await admin.post(`/api/admin/users/${uid}/roles`, { roleId: role, siteId: state().siteId, departmentId: null });
 
     await signIn(page, u);
@@ -241,7 +241,7 @@ test.describe('E2E 14: gap closure', () => {
     const admin = await Api.as(users.admin);
     const t = Date.now().toString(36);
     const role = await admin.post<string>('/api/admin/roles', { name: `MES service ${t}`, description: 'UI test', permissions: ['production.edit', 'production.view'] });
-    const svc = await admin.post<string>('/api/admin/users', { email: `mes-${t}@qms.test`, displayName: `MES Line ${t}`, password: 'mes-service-password-1' });
+    const svc = await admin.post<string>('/api/admin/users', { email: `mes-${t}@qms.test`, displayName: `MES Line ${t}`, password: 'mes-service-password-1', mustChangePassword: false });
     await admin.post(`/api/admin/users/${svc}/roles`, { roleId: role, siteId: null, departmentId: null });
 
     await signIn(page, users.admin);

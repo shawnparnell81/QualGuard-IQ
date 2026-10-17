@@ -8,6 +8,8 @@ public class Role : Entity, IAudited
     public string Name { get; set; } = "";
     public string? Description { get; set; }
     public bool IsSystem { get; set; }
+    /// <summary>People who hold this role (at any scope) must use two-step verification.</summary>
+    public bool RequiresMfa { get; set; }
     public List<RolePermission> Permissions { get; set; } = [];
     public string AuditLabel => $"Role {Name}";
 }
