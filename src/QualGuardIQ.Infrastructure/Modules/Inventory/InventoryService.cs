@@ -76,7 +76,13 @@ public sealed class InventoryService(AppDbContext db, ModuleSupport m, INumberin
     public async Task<InventoryTransaction> PostAsync(Move mv, CancellationToken ct)
     {
         if (mv.Quantity <= 0) throw new AppException("Quantity must be positive.");
-        if (mv.ClientRequestId is { Length: > 0 } cr && await db.InventoryTransactions.AsNoTracking().FirstOrDefaultAsync(x => x.ClientRequestId == cr, ct) is { } dup) return dup;
+        await using var dbtx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
+        if (mv.ClientRequestId is { Length: > 0 } cr)
+        {
+            // replays of the same offline request (two tabs, a retry racing the first post) wait for each other and post once
+            await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({"inventory-request:" + cr}, 0))", ct);
+            if (await db.InventoryTransactions.AsNoTracking().FirstOrDefaultAsync(x => x.ClientRequestId == cr, ct) is { } dup) return dup;
+        }
         var part = await db.Parts.AsNoTracking().FirstOrDefaultAsync(x => x.Id == mv.PartId, ct) ?? throw new AppException("Select a part.");
         var lot = mv.LotId is { } lid ? await db.Lots.FirstOrDefaultAsync(x => x.Id == lid, ct) ?? throw new AppException("Unknown lot.") : null;
         var ser = mv.SerialId is { } sid ? await db.SerialUnits.FirstOrDefaultAsync(x => x.Id == sid, ct) ?? throw new AppException("Unknown serial number.") : null;
@@ -103,7 +109,6 @@ public sealed class InventoryService(AppDbContext db, ModuleSupport m, INumberin
             if (!mv.AllowHeld) await EnsureNotHeldAsync(part, lot, ser, from, ct);
         }
         var site = (from ?? to)!;
-        await using var dbtx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
         InventoryBalance? fb = null;
         if (from is not null)
         {

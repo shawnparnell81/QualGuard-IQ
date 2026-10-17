@@ -143,6 +143,31 @@ public sealed class GapClosureOfflineVerificationTests(TestApp app)
         Assert.Contains(custody, c => c.Contains("for verification"));
     }
 
+    /// <summary>The same offline carton scan replayed by two tabs at once is counted once and neither tab sees an error.</summary>
+    [Fact]
+    public async Task Concurrent_replays_of_a_verification_scan_count_once()
+    {
+        var w = await SetupAsync();
+        var part = await PartAsync(w, "VR-");
+        await StockAsync(w, part, 10m, "LR-" + w.Tag);
+        var (id, _, cartons, _) = await PackedAsync(w, part, 6m, [4m, 2m]);
+        var url = $"/api/shipping/shipments/{id}/verification/scans";
+        var rid = Guid.NewGuid().ToString();
+        var replies = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => w.A.PostAsync(url, Scan(cartons[0], rid: rid))));
+        var outcomes = new List<int>();
+        foreach (var r in replies)
+        {
+            var body = await r.Content.ReadAsStringAsync();
+            Assert.True(r.StatusCode == HttpStatusCode.OK, $"replay returned {(int)r.StatusCode}: {body}");
+            outcomes.Add(JsonDocument.Parse(body).RootElement.GetProperty("outcome").GetInt32());
+        }
+        Assert.Equal(1, outcomes.Count(o => o == 0));
+        Assert.Equal(7, outcomes.Count(o => o == 1));
+        var log = (await w.Lead.GetElAsync(url)).EnumerateArray().Select(x => x.GetProperty("scan")).ToList();
+        Assert.Equal(1, log.Count(x => x.Int("outcome") == 0));
+        Assert.DoesNotContain(log, x => x.Int("outcome") != 0 && x.Str("clientRequestId") == rid);
+    }
+
     [Fact]
     public async Task Holds_cancellation_serials_and_revisions_are_rechecked_after_reconnect()
     {

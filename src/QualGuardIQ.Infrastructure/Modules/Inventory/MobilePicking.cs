@@ -88,6 +88,8 @@ public sealed partial class ShippingService
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         // serialize confirmations of the same task (two devices, or a replay racing a live post)
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM qms.pick_tasks WHERE \"Id\" = {taskId} FOR UPDATE", ct);
+        // a replay that waited on the lock finds the confirmation the other request just committed
+        if (rid is not null && await DuplicateAsync(rid, id, taskId, ct) is { } raced) { await tx.RollbackAsync(ct); return raced; }
         var s = await db.Shipments.FirstAsync(x => x.Id == id, ct);
         var t = await db.PickTasks.FirstOrDefaultAsync(x => x.Id == taskId && x.ShipmentId == id, ct) ?? throw new NotFoundException("Pick task");
         var refusal = await CheckPickAsync(s, t, r, me, ct);

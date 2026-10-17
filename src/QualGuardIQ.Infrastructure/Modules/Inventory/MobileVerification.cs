@@ -101,6 +101,12 @@ public sealed partial class ShippingService
 
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM qms.shipments WHERE \"Id\" = {id} FOR UPDATE", ct);
+        // a replay that waited on the lock finds the scan the other request just committed
+        if (rid is not null && await db.ShipmentVerificationScans.AsNoTracking().AnyAsync(x => x.ClientRequestId == rid && x.Outcome == MobileOutcome.Accepted && x.ShipmentId == id, ct))
+        {
+            await tx.RollbackAsync(ct);
+            return await StatusAsync(id, MobileOutcome.Duplicate, "Already synced; the scan was not counted twice.", null, ct);
+        }
         var s = await db.Shipments.FirstAsync(x => x.Id == id, ct);
         var scan = new ShipmentVerificationScan { ShipmentId = id, ClientRequestId = rid, UserId = me, DeviceTimestamp = r.DeviceTimestamp, ReceivedAt = m.Now, Offline = r.Offline, Code = code, Quantity = r.Quantity };
         var (refusal, status) = await EvaluateScanAsync(s, scan, me, ct);
