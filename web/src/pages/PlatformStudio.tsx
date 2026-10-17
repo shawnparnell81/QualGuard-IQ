@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Paper, Stack, Switch, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { get, post, put } from '../api';
+import { del, get, post, put } from '../api';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { mono } from '../theme';
 import { mod } from './Enterprise';
@@ -221,6 +221,83 @@ export function FormDesigner() {
       <Dialog open={comp.open} onClose={() => setComp({ ...comp, open: false })} fullWidth maxWidth="xs"><DialogTitle>Save as library component</DialogTitle>
         <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}><TextField label="Component key" value={comp.key} onChange={(e) => setComp({ ...comp, key: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') })} /><TextField label="Name" value={comp.name} onChange={(e) => setComp({ ...comp, name: e.target.value })} /><TextField label="Category" value={comp.category} onChange={(e) => setComp({ ...comp, category: e.target.value })} /></DialogContent>
         <DialogActions><Button onClick={() => setComp({ ...comp, open: false })}>Cancel</Button><Button variant="contained" onClick={saveComponent}>Save draft</Button></DialogActions></Dialog>
+    </ModuleWorkspace>
+  );
+}
+
+/* ---------------- Business rules ---------------- */
+const ruleKinds = [{ k: 0, label: 'Validate', verb: 'block submission with', color: 'error.main' }, { k: 1, label: 'Route', verb: 'route to', color: 'primary.main' }, { k: 2, label: 'Escalate', verb: 'escalate to', color: 'warning.main' }, { k: 3, label: 'Automate', verb: 'notify', color: 'success.main' }];
+const triggers = ['record.created', 'record.updated', 'record.approved', 'record.rejected', 'workflow.completed', 'workflow.step_signed'];
+const blankRule = { name: '', recordType: 'Ncr', kind: 0, trigger: 'record.created', conditions: [{ field: '', operator: 'equals', value: '' }] as Cond[], message: '', targetPermission: '', dueDays: 3, afterHours: 24, siteId: null, priority: 100, enabled: true };
+
+/** Business rule engine: rules read as sentences (WHEN … AND … THEN …) in four lanes; a builder dialog, a dry run against a record, and the firing log. */
+export function RulesStudio() {
+  const qc = useQueryClient(); const [tab, setTab] = useState('rules');
+  const rules = useQuery({ queryKey: ['rules'], queryFn: () => get<any[]>('/api/platform/rules') });
+  const firings = useQuery({ queryKey: ['rule-firings'], enabled: tab === 'log', queryFn: () => get<any[]>('/api/platform/rules/firings') });
+  const modules = useQuery({ queryKey: ['platform-modules'], queryFn: () => get<any[]>('/api/platform/modules') });
+  const types = [...new Set((modules.data ?? []).flatMap((m: any) => m.recordTypes as string[]))].sort();
+  const [edit, setEdit] = useState<any | null>(null); const [error, setError] = useState<string | null>(null);
+  const palette = useQuery({ queryKey: ['wf-fields', edit?.recordType], enabled: !!edit?.recordType, queryFn: () => get<any>(`/api/admin/config/workflow-designer/fields/${edit.recordType}`) });
+  const perms = useQuery({ queryKey: ['perm-catalog'], queryFn: () => get<string[]>('/api/admin/roles/permissions') });
+  const [testing, setTesting] = useState<any | null>(null); const [testId, setTestId] = useState(''); const [testRes, setTestRes] = useState<any>(null);
+  const save = async () => {
+    setError(null);
+    const body = { ...edit, conditions: edit.conditions.filter((c: Cond) => c.field), targetPermission: edit.targetPermission || null, trigger: edit.kind === 3 ? edit.trigger : null, dueDays: edit.kind === 1 ? Number(edit.dueDays) : null, afterHours: edit.kind === 2 ? Number(edit.afterHours) : null };
+    try { if (edit.id) await put(`/api/platform/rules/${edit.id}`, body); else await post('/api/platform/rules', body); setEdit(null); qc.invalidateQueries({ queryKey: ['rules'] }); } catch (e) { setError((e as Error).message); }
+  };
+  const sentence = (r: any) => <>
+    <b>WHEN</b> {r.recordType}{r.kind === 3 ? <> {r.trigger}</> : r.kind === 2 ? <> waits {r.afterHours} h for approval</> : <> is submitted</>}
+    {r.conditions.map((c: Cond, i: number) => <span key={i}> <b>{i === 0 ? 'AND' : 'AND'}</b> {c.field} {opLabel[c.operator]} {c.value}</span>)}
+    {' '}<b>THEN</b> {ruleKinds[r.kind].verb} {r.kind === 0 ? `“${r.message}”` : r.targetPermission}{r.kind === 1 ? ` (due in ${r.dueDays} d)` : ''}</>;
+  return (
+    <ModuleWorkspace module={P()} crumbs={crumbs('Business rules')} title="Business rule engine" tabs={[{ value: 'rules', label: 'Rules' }, { value: 'log', label: 'Firing log' }]} tab={tab} onTab={setTab}
+      actions={<Button variant="contained" onClick={() => { setError(null); setEdit(structuredClone(blankRule)); }}>New rule</Button>}>
+      {tab === 'rules' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
+        {ruleKinds.map((k) => <Box key={k.k}><Typography variant="overline" sx={{ color: k.color, fontWeight: 700 }}>{k.label}</Typography>
+          <Stack gap={1}>{(rules.data ?? []).filter((r) => r.kind === k.k).map((r) => <Paper key={r.id} sx={{ p: 1.25, borderTop: 3, borderColor: k.color, opacity: r.enabled ? 1 : .55 }}>
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>{r.name}</Typography>
+            <Typography variant="caption" sx={{ display: 'block', my: .5, fontFamily: mono }}>{sentence(r)}</Typography>
+            <Stack direction="row" gap={.5}><Button size="small" onClick={() => { setError(null); setEdit(structuredClone(r)); }}>Edit</Button><Button size="small" onClick={() => { setTesting(r); setTestRes(null); }}>Dry run</Button>
+              <Button size="small" onClick={async () => { await put(`/api/platform/rules/${r.id}`, { ...r, enabled: !r.enabled }); qc.invalidateQueries({ queryKey: ['rules'] }); }}>{r.enabled ? 'Disable' : 'Enable'}</Button></Stack></Paper>)}
+            {(rules.data ?? []).filter((r) => r.kind === k.k).length === 0 && <Typography variant="caption" color="text.secondary">No rules.</Typography>}</Stack></Box>)}
+      </Box>}
+      {tab === 'log' && <Stack gap={.75}>{(firings.data ?? []).map((f) => <Paper key={f.id} sx={{ p: 1, display: 'flex', gap: 2 }}><Typography variant="caption" sx={{ minWidth: 150 }}>{new Date(f.firedAt).toLocaleString()}</Typography>
+        <Chip size="small" label={f.recordType} /><Typography variant="body2">{(rules.data ?? []).find((r) => r.id === f.ruleId)?.name ?? 'rule'} — {f.outcome}</Typography></Paper>)}
+        {firings.data?.length === 0 && <Typography color="text.secondary">No rule has fired yet.</Typography>}</Stack>}
+      <Dialog open={!!edit} onClose={() => setEdit(null)} fullWidth maxWidth="md"><DialogTitle>{edit?.id ? 'Edit rule' : 'New rule'}</DialogTitle>
+        {edit && <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          {error && <Alert severity="error">{error}</Alert>}
+          <TextField label="Rule name" value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
+          <Stack direction="row" gap={1}>{ruleKinds.map((k) => <Chip key={k.k} label={k.label} color={edit.kind === k.k ? 'primary' : 'default'} onClick={() => setEdit({ ...edit, kind: k.k })} />)}</Stack>
+          <Stack direction="row" gap={1} alignItems="center"><Typography sx={{ fontWeight: 700 }}>WHEN</Typography>
+            <TextField select size="small" label="Record type" value={edit.recordType} onChange={(e) => setEdit({ ...edit, recordType: e.target.value, conditions: [{ field: '', operator: 'equals', value: '' }] })} sx={{ minWidth: 200 }}>{(types.length ? types : [edit.recordType]).map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>
+            {edit.kind === 3 && <TextField select size="small" label="Event" value={edit.trigger} onChange={(e) => setEdit({ ...edit, trigger: e.target.value })} sx={{ minWidth: 200 }}>{triggers.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>}
+            {edit.kind === 2 && <TextField size="small" type="number" label="waits (hours)" value={edit.afterHours} onChange={(e) => setEdit({ ...edit, afterHours: e.target.value })} sx={{ width: 140 }} />}
+            {edit.kind < 2 && <Typography>is submitted for approval</Typography>}</Stack>
+          {edit.conditions.map((c: Cond, i: number) => <Stack key={i} direction="row" gap={1} alignItems="center"><Typography sx={{ fontWeight: 700, width: 48 }}>AND</Typography>
+            <TextField select size="small" label="Field" value={c.field} onChange={(e) => setEdit({ ...edit, conditions: edit.conditions.map((x: Cond, j: number) => (j === i ? { ...x, field: e.target.value } : x)) })} sx={{ flex: 1 }}>{(palette.data?.fields ?? []).map((f: any) => <MenuItem key={f.name} value={f.name}>{f.name}</MenuItem>)}</TextField>
+            <TextField select size="small" label="is" value={c.operator} onChange={(e) => setEdit({ ...edit, conditions: edit.conditions.map((x: Cond, j: number) => (j === i ? { ...x, operator: e.target.value } : x)) })} sx={{ width: 120 }}>{ops.map((o) => <MenuItem key={o} value={o}>{opLabel[o]}</MenuItem>)}</TextField>
+            {(() => { const f = (palette.data?.fields ?? []).find((x: any) => x.name === c.field); const onV = (v: string) => setEdit({ ...edit, conditions: edit.conditions.map((x: Cond, j: number) => (j === i ? { ...x, value: v } : x)) });
+              return f?.options ? <TextField select size="small" label="Value" value={c.value ?? ''} onChange={(e) => onV(e.target.value)} sx={{ width: 180 }}>{f.options.map((o: string) => <MenuItem key={o} value={o}>{o}</MenuItem>)}</TextField>
+                : f?.type === 'yesno' ? <TextField select size="small" label="Value" value={c.value ?? ''} onChange={(e) => onV(e.target.value)} sx={{ width: 180 }}><MenuItem value="true">Yes</MenuItem><MenuItem value="false">No</MenuItem></TextField>
+                : <TextField size="small" label="Value" value={c.value ?? ''} onChange={(e) => onV(e.target.value)} sx={{ width: 180 }} />; })()}
+            <Button size="small" color="error" onClick={() => setEdit({ ...edit, conditions: edit.conditions.filter((_: Cond, j: number) => j !== i) })}>✕</Button></Stack>)}
+          <Button size="small" sx={{ justifySelf: 'start' }} onClick={() => setEdit({ ...edit, conditions: [...edit.conditions, { field: '', operator: 'equals', value: '' }] })}>+ Condition</Button>
+          <Stack direction="row" gap={1} alignItems="center"><Typography sx={{ fontWeight: 700 }}>THEN</Typography><Typography>{ruleKinds[edit.kind].verb}</Typography>
+            {edit.kind !== 0 && <TextField select size="small" label="Permission group" value={edit.targetPermission ?? ''} onChange={(e) => setEdit({ ...edit, targetPermission: e.target.value })} sx={{ minWidth: 220 }}>{(perms.data ?? []).map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}</TextField>}
+            {edit.kind === 1 && <TextField size="small" type="number" label="Due in days" value={edit.dueDays} onChange={(e) => setEdit({ ...edit, dueDays: e.target.value })} sx={{ width: 120 }} />}
+            <TextField size="small" label={edit.kind === 0 ? 'Message shown to the submitter' : 'Notification text'} value={edit.message} onChange={(e) => setEdit({ ...edit, message: e.target.value })} sx={{ flex: 1 }} /></Stack>
+        </DialogContent>}
+        <DialogActions>{edit?.id && <Button color="error" onClick={async () => { await del(`/api/platform/rules/${edit.id}`); setEdit(null); qc.invalidateQueries({ queryKey: ['rules'] }); }}>Delete</Button>}<Button onClick={() => setEdit(null)}>Cancel</Button><Button variant="contained" onClick={save}>Save rule</Button></DialogActions></Dialog>
+      <Dialog open={!!testing} onClose={() => setTesting(null)} fullWidth maxWidth="sm"><DialogTitle>Dry run: {testing?.name}</DialogTitle>
+        <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
+          <Stack direction="row" gap={1}><TextField size="small" label={`${testing?.recordType} record id`} value={testId} onChange={(e) => setTestId(e.target.value)} sx={{ flex: 1 }} />
+            <Button onClick={async () => { try { setTestRes(await get(`/api/platform/rules/${testing.id}/test/${testId.trim()}`)); } catch (e) { setTestRes({ error: (e as Error).message }); } }}>Run</Button></Stack>
+          {testRes?.error && <Alert severity="error">{testRes.error}</Alert>}
+          {testRes?.conditions && <><Stack gap={.5}>{testRes.conditions.map((c: any, i: number) => <Typography key={i} variant="body2">{c.holds ? '✓' : '✗'} {c.field} {opLabel[c.operator]} {c.value} <Typography component="span" variant="caption">(actual: {c.actual ?? 'empty'})</Typography></Typography>)}</Stack>
+            <Alert severity={testRes.matches ? 'warning' : 'info'}>{testRes.outcome}</Alert></>}
+        </DialogContent></Dialog>
     </ModuleWorkspace>
   );
 }

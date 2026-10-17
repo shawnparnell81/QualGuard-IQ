@@ -30,7 +30,7 @@ public sealed record CalendarItem(DateOnly Date, DateOnly? End, string Kind, str
 /// the organizational calendar, resource availability, personal workspace, health and security operations, and the module registry.
 /// </summary>
 public sealed class PlatformService(AppDbContext db, ModuleSupport m, IAccessService access, IRecordRegistry records, SecretProtector secrets,
-    IHttpClientFactory http, IClock clock, IEnumerable<IRecordTypeProvider> providers, ApiMetrics metrics)
+    IHttpClientFactory http, IClock clock, IEnumerable<IRecordTypeProvider> providers, ApiMetrics metrics, RuleEngine rules)
 {
     static readonly HashSet<string> Internal = ["ApprovalRequest", "RecordLink", "WebhookSubscription", "Notification", "SearchEntry", "UserRoleAssignment", "ApplicationUser", "ReportSchedule", "SavedReport", "Dashboard"];
 
@@ -79,6 +79,7 @@ public sealed class PlatformService(AppDbContext db, ModuleSupport m, IAccessSer
         await db.SaveChangesAsync(ct);
         await QueueAsync(events, ct);
         await tx.CommitAsync(ct);
+        await rules.ProcessEventsAsync(ct); // automation rules react to the new events
         return events.Count;
     }
 

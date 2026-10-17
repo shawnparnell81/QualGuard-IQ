@@ -675,6 +675,7 @@ export const modules: ModuleDef[] = [
       { label: 'Dashboards', path: '/platform/dashboards', permission: 'reports.view' },
       { label: 'Workflow designer', path: '/platform/workflows', permission: 'admin.organization' },
       { label: 'Form designer', path: '/platform/forms', permission: 'forms.edit' },
+      { label: 'Business rules', path: '/platform/rules', permission: 'platform.admin' },
       { label: 'Webhooks', path: '/platform/webhooks', permission: 'platform.admin' },
       { label: 'System health', path: '/platform/health', permission: 'platform.admin' },
       { label: 'Security operations', path: '/platform/security', permission: 'security.review' },

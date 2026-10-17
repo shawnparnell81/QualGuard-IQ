@@ -26018,6 +26018,187 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/platform/rules:
+    get:
+      tags:
+        - Rules
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BusinessRule'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BusinessRule'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BusinessRule'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Rules
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessRuleInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/BusinessRuleInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/BusinessRuleInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/rules/{id}':
+    put:
+      tags:
+        - Rules
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BusinessRuleInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/BusinessRuleInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/BusinessRuleInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    delete:
+      tags:
+        - Rules
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/platform/rules/{id}/test/{recordId}':
+    get:
+      tags:
+        - Rules
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: recordId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/RuleTestResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuleTestResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/RuleTestResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/rules/firings:
+    get:
+      tags:
+        - Rules
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      parameters:
+        - name: ruleId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RuleFiring'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RuleFiring'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RuleFiring'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/platform/rules/escalate:
+    post:
+      tags:
+        - Rules
+      description: 'Requires permission: `platform.admin` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/forms/templates/effective:
     get:
       tags:
@@ -33612,6 +33793,150 @@ components:
           type:
             - 'null'
             - string
+    BusinessRule:
+      type: object
+      properties:
+        name:
+          type: string
+        recordType:
+          type: string
+        kind:
+          $ref: '#/components/schemas/RuleKind'
+        trigger:
+          type:
+            - 'null'
+            - string
+        conditions:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuleCondition'
+        message:
+          type: string
+        targetPermission:
+          type:
+            - 'null'
+            - string
+        dueDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        afterHours:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        priority:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        enabled:
+          type: boolean
+        auditLabel:
+          type:
+            - 'null'
+            - string
+        id:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        createdById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        updatedAt:
+          type: string
+          format: date-time
+        updatedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    BusinessRuleInput:
+      required:
+        - name
+        - recordType
+        - kind
+        - trigger
+        - conditions
+        - message
+        - targetPermission
+        - dueDays
+        - afterHours
+        - siteId
+      type: object
+      properties:
+        name:
+          type: string
+        recordType:
+          type: string
+        kind:
+          $ref: '#/components/schemas/RuleKind'
+        trigger:
+          type:
+            - 'null'
+            - string
+        conditions:
+          type:
+            - 'null'
+            - array
+          items:
+            $ref: '#/components/schemas/RuleCondition'
+        message:
+          type: string
+        targetPermission:
+          type:
+            - 'null'
+            - string
+        dueDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        afterHours:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        priority:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+          default: 100
+        enabled:
+          type: boolean
+          default: true
     CalendarItem:
       required:
         - date
@@ -46705,6 +47030,66 @@ components:
           type:
             - 'null'
             - string
+    RuleCondition:
+      type: object
+      properties:
+        field:
+          type: string
+        operator:
+          type: string
+        value:
+          type:
+            - 'null'
+            - string
+    RuleFiring:
+      type: object
+      properties:
+        id:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        ruleId:
+          type: string
+          format: uuid
+        recordType:
+          type: string
+        recordId:
+          type: string
+          format: uuid
+        eventId:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int64
+        approvalRequestId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        firedAt:
+          type: string
+          format: date-time
+        outcome:
+          type: string
+    RuleKind:
+      type: integer
+    RuleTestResult:
+      required:
+        - matches
+        - conditions
+        - outcome
+      type: object
+      properties:
+        matches:
+          type: boolean
+        conditions:
+          type: array
+        outcome:
+          type: string
     SamplingMode:
       type: integer
     SamplingTypeCode:
@@ -52540,6 +52925,7 @@ tags:
   - name: Platform
   - name: Designer
   - name: FormLibrary
+  - name: Rules
   - name: Forms
   - name: Ncrs
   - name: Capas
