@@ -7,6 +7,7 @@ import FactCheckOutlined from '@mui/icons-material/FactCheckOutlined';
 import SchoolOutlined from '@mui/icons-material/SchoolOutlined';
 import SpeedOutlined from '@mui/icons-material/SpeedOutlined';
 import LocalShippingOutlined from '@mui/icons-material/LocalShippingOutlined';
+import SupportAgentOutlined from '@mui/icons-material/SupportAgentOutlined';
 
 export interface NavItem { label: string; path: string; permission?: string; children?: NavItem[] }
 export interface ModuleDef {
@@ -162,6 +163,23 @@ export const modules: ModuleDef[] = [
         { label: 'All SCARs', path: '/suppliers/scar?all=1' },
       ] },
       { label: 'Periodic reviews due', path: '/suppliers/reviews-due' },
+    ],
+  },
+  {
+    key: 'complaints',
+    label: 'Complaints',
+    description: 'Customer complaints, returns (RMA), returned-material evaluation and customer responses',
+    icon: <SupportAgentOutlined fontSize="small" />,
+    basePath: '/complaints',
+    permissions: ['complaints.view'],
+    sidebar: [
+      { label: 'Complaints', path: '/complaints', children: [
+        { label: 'Open', path: '/complaints' },
+        { label: 'Awaiting customer', path: '/complaints?view=2' },
+        { label: 'All complaints', path: '/complaints?view=all' },
+        { label: 'Record complaint', path: '/complaints/new', permission: 'complaints.edit' },
+      ] },
+      { label: 'Trends', path: '/complaints/trends' },
     ],
   },
   {
