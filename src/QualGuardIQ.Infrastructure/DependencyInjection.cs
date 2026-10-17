@@ -102,6 +102,7 @@ public static class DependencyInjection
         s.AddScoped<SupplierQualityService>();
         s.AddScoped<Modules.Complaints.ComplaintService>();
         s.AddScoped<Modules.Risks.RiskService>();
+        s.AddScoped<Modules.Reports.ReportService>();
         s.AddScoped<MaintenanceService>();
         s.AddScoped<Modules.Objectives.KpiCalculator>();
         s.AddScoped<Modules.Objectives.ObjectiveService>();
