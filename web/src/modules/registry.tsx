@@ -19,6 +19,10 @@ import ShowChartOutlined from '@mui/icons-material/ShowChartOutlined';
 import LayersOutlined from '@mui/icons-material/LayersOutlined';
 import PaidOutlined from '@mui/icons-material/PaidOutlined';
 import HubOutlined from '@mui/icons-material/HubOutlined';
+import PrecisionManufacturingOutlined from '@mui/icons-material/PrecisionManufacturingOutlined';
+import QrCode2Outlined from '@mui/icons-material/QrCode2Outlined';
+import AssignmentReturnOutlined from '@mui/icons-material/AssignmentReturnOutlined';
+import SyncAltOutlined from '@mui/icons-material/SyncAltOutlined';
 
 export interface NavItem { label: string; path: string; permission?: string; children?: NavItem[] }
 export interface ModuleDef {
@@ -374,16 +378,106 @@ export const modules: ModuleDef[] = [
     ],
   },
   {
+    key: 'shopfloor',
+    label: 'Shop Floor',
+    description: 'Work orders, purchase orders, shop-floor data collection and the live quality monitor',
+    icon: <PrecisionManufacturingOutlined fontSize="small" />,
+    basePath: '/production',
+    permissions: ['production.view'],
+    sidebar: [
+      { label: 'Live monitor', path: '/production' },
+      { label: 'Record entry', path: '/production/entry', permission: 'production.edit' },
+      { label: 'Orders', path: '/production/work-orders', children: [
+        { label: 'Work orders', path: '/production/work-orders' },
+        { label: 'Purchase orders', path: '/production/purchase-orders' },
+        { label: 'New work order', path: '/production/work-orders/new', permission: 'production.edit' },
+        { label: 'New purchase order', path: '/production/purchase-orders/new', permission: 'production.edit' },
+      ] },
+      { label: 'Entry log', path: '/production/entries' },
+    ],
+  },
+  {
+    key: 'trace',
+    label: 'Traceability',
+    description: 'Lots, serial numbers, genealogy, traceability search, barcode labels and scanning',
+    icon: <QrCode2Outlined fontSize="small" />,
+    basePath: '/trace',
+    permissions: ['trace.view'],
+    sidebar: [
+      { label: 'Trace search', path: '/trace' },
+      { label: 'Scan', path: '/trace/scan' },
+      { label: 'Inventory identity', path: '/trace/lots', children: [
+        { label: 'Lots & batches', path: '/trace/lots' },
+        { label: 'Serial numbers', path: '/trace/serials' },
+        { label: 'New lot', path: '/trace/lots/new', permission: 'trace.edit' },
+        { label: 'New serial', path: '/trace/serials/new', permission: 'trace.edit' },
+      ] },
+      { label: 'Labels', path: '/trace/labels' },
+    ],
+  },
+  {
+    key: 'field',
+    label: 'Field Quality',
+    description: 'Recalls with lot trace and containment, customer returns (RMA) and warranty claims',
+    icon: <AssignmentReturnOutlined fontSize="small" />,
+    basePath: '/field/recalls',
+    permissions: ['recalls.view', 'returns.view'],
+    sidebar: [
+      { label: 'Recalls', path: '/field/recalls', permission: 'recalls.view', children: [
+        { label: 'All recalls', path: '/field/recalls', permission: 'recalls.view' },
+        { label: 'Open a recall', path: '/field/recalls/new', permission: 'recalls.edit' },
+      ] },
+      { label: 'Returns (RMA)', path: '/field/returns', permission: 'returns.view', children: [
+        { label: 'All returns', path: '/field/returns', permission: 'returns.view' },
+        { label: 'Authorize a return', path: '/field/returns/new', permission: 'returns.edit' },
+      ] },
+      { label: 'Warranty', path: '/field/warranty', permission: 'returns.view', children: [
+        { label: 'Claims', path: '/field/warranty', permission: 'returns.view' },
+        { label: 'Warranty metrics', path: '/field/warranty/metrics', permission: 'returns.view' },
+        { label: 'New claim', path: '/field/warranty/new', permission: 'returns.edit' },
+      ] },
+    ],
+  },
+  {
+    key: 'integrations',
+    label: 'Integrations',
+    description: 'ERP and MES connections (off until enabled), field mappings, sync runs and the inbound change queue',
+    icon: <SyncAltOutlined fontSize="small" />,
+    basePath: '/integrations',
+    permissions: ['integrations.view'],
+    sidebar: [
+      { label: 'Connections', path: '/integrations', children: [
+        { label: 'All connections', path: '/integrations' },
+        { label: 'New connection', path: '/integrations/new', permission: 'integrations.edit' },
+        { label: 'Supported systems', path: '/integrations/adapters' },
+      ] },
+      { label: 'Change queue', path: '/integrations/changes', children: [
+        { label: 'Pending', path: '/integrations/changes' },
+        { label: 'In approval', path: '/integrations/changes?status=1' },
+        { label: 'Applied', path: '/integrations/changes?status=2' },
+        { label: 'Failed', path: '/integrations/changes?status=4' },
+      ] },
+    ],
+  },
+  {
     key: 'insights',
     label: 'Insights',
     description: 'Plant and executive quality metrics with drill-down, record relationship maps and trend history',
     icon: <HubOutlined fontSize="small" />,
     basePath: '/insights',
-    permissions: ['analytics.view'],
+    permissions: ['analytics.view', 'copilot.use'],
     sidebar: [
-      { label: 'Production metrics', path: '/insights' },
-      { label: 'Executive overview', path: '/insights?view=executive' },
-      { label: 'Relationships', path: '/insights/graph' },
+      { label: 'Production metrics', path: '/insights', permission: 'analytics.view' },
+      { label: 'Executive overview', path: '/insights?view=executive', permission: 'analytics.view' },
+      { label: 'Relationships', path: '/insights/graph', permission: 'analytics.view' },
+      { label: 'KPI library', path: '/insights/kpis', permission: 'analytics.view' },
+      { label: 'Quality assistant', path: '/insights/assistant', permission: 'copilot.use', children: [
+        { label: 'Ask', path: '/insights/assistant', permission: 'copilot.use' },
+        { label: 'Investigate an NCR', path: '/insights/investigate', permission: 'copilot.use' },
+        { label: 'Monthly narrative', path: '/insights/assistant?view=executive', permission: 'analytics.view' },
+      ] },
+      { label: 'Trends & risk', path: '/insights/risk', permission: 'analytics.view' },
+      { label: 'Datasets', path: '/insights/datasets', permission: 'analytics.view' },
     ],
   },
   {
@@ -404,7 +498,7 @@ export const modules: ModuleDef[] = [
     description: 'Users, roles, sites, approval routes and logs',
     icon: <AdminPanelSettingsOutlined fontSize="small" />,
     basePath: '/admin',
-    permissions: ['admin.users', 'admin.roles', 'portal.admin', 'admin.organization', 'audittrail.view', 'securitylog.view'],
+    permissions: ['admin.users', 'admin.roles', 'portal.admin', 'admin.organization', 'audittrail.view', 'securitylog.view', 'alerts.admin'],
     sidebar: [
       { label: 'People', path: '/admin/users', children: [
         { label: 'Users', path: '/admin/users', permission: 'admin.users' },
@@ -419,6 +513,11 @@ export const modules: ModuleDef[] = [
       { label: 'Logs', path: '/admin/audit', children: [
         { label: 'Audit trail', path: '/admin/audit', permission: 'audittrail.view' },
         { label: 'Security events', path: '/admin/security', permission: 'securitylog.view' },
+      ] },
+      { label: 'Notifications', path: '/admin/alerts', permission: 'alerts.admin', children: [
+        { label: 'Alert rules', path: '/admin/alerts', permission: 'alerts.admin' },
+        { label: 'Raised alerts', path: '/admin/alerts?view=events', permission: 'alerts.admin' },
+        { label: 'Integration points', path: '/admin/alerts?view=endpoints', permission: 'alerts.admin' },
       ] },
     ],
   },
