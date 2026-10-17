@@ -273,3 +273,27 @@ After a scan-station receipt the result shows the label status.
 **Print queue actions.** *Retry* sends a failed job again; *Release* sends a held job; *Reprint* prints the label again with exactly the
 original content and needs a reason, which is recorded on the job and in the audit trail; *PDF* downloads the label at the printer's
 label size (4 × 6 in when there is no printer); *Cancel* stops a job that has not printed. A disabled printer is not retried.
+
+## Carrier labels, rates and tracking
+
+Carrier connections are set up by an administrator under Shipping → Carrier connections (see
+docs/setup/carrier-connections.md). A connection is only offered on shipments once it has passed its test and been
+enabled; a sandbox connection shows a warning that its rates and labels are test results.
+
+On a shipment, open the **Carrier** tab (after packing):
+
+1. Enter the **delivery address** (name, street, city, region, postal code, two-letter country, residential) and
+   **Save address**. The address can't be changed while active labels exist; void them first.
+2. Choose the **carrier connection** and **Validate with carrier**. A corrected address from the carrier replaces
+   yours; the chip shows when it was validated. Editing the address clears the validation.
+3. Enter carton dimensions when packing (length, width, height in cm) for dimensional rating. **Get rates** lists the
+   services and charges; **Select** stores the service (the charge is re-quoted on the server).
+4. **Create labels** makes one label per top-level carton or pallet. The tracking number and carrier are written to
+   the shipment and a custody entry is added. Download each label from the labels table.
+5. **Void labels** (with a reason) before shipping if something changes. A void the carrier refuses shows as
+   *Void failed*; contact the carrier.
+6. Ship as usual; the carrier and tracking number come from the labels. Tracking refreshes every 30 minutes, or use
+   **Refresh tracking**. A delivery event marks the shipment Delivered.
+
+Every carrier call appears in the shipment's carrier request log. If the carrier is down the error says so and
+nothing is saved; try again later or ship with hand-entered tracking.

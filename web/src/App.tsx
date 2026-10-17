@@ -132,6 +132,7 @@ const ShipmentList = lazy(() => import('./pages/Shipping').then((m) => ({ defaul
 const ShipmentNew = lazy(() => import('./pages/Shipping').then((m) => ({ default: m.ShipmentNew })));
 const ShipmentDetail = lazy(() => import('./pages/Shipping').then((m) => ({ default: m.ShipmentDetail })));
 const CarrierList = lazy(() => import('./pages/Shipping').then((m) => ({ default: m.CarrierList })));
+const CarrierConnections = lazy(() => import('./pages/Carriers').then((m) => ({ default: m.CarrierConnections })));
 const ApqpList = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpList })));
 const ApqpNew = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpNew })));
 const ApqpDetail = lazy(() => import('./pages/Advanced').then((m) => ({ default: m.ApqpDetail })));
@@ -438,6 +439,7 @@ export function App() {
               <Route path="/shipping/shipments/new" element={<ShipmentNew />} />
               <Route path="/shipping/shipments/:id" element={<ShipmentDetail />} />
               <Route path="/shipping/carriers" element={<CarrierList />} />
+              <Route path="/shipping/carrier-connections" element={<CarrierConnections />} />
               <Route path="/trace" element={<TraceSearch />} />
               <Route path="/trace/scan" element={<ScanPage />} />
               <Route path="/trace/labels" element={<LabelsPage />} />

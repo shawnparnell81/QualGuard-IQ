@@ -14,6 +14,7 @@ import { LabelPanel } from '../components/LabelPrint';
 import { mono } from '../theme';
 import { LocationSelect, MetricTile, ScanField, carrierKinds, containerKinds, pickStatus, shipKinds, shipStatus, useCarriers, useLocations, type Carrier } from '../warehouse/common';
 import { Custody, FlowChart, RefLedger, SitePicker, qty, type Dash } from './Warehouse';
+import { ShipmentCarrierPanel } from './Carriers';
 
 const mod = modules.find((m) => m.key === 'shipping')!;
 const mnum = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue() ?? '')}</span>;
@@ -23,7 +24,7 @@ interface Shipment { id: string; number: string; kind: number; status: number; a
 interface Line { id: string; lineNumber: number; partId: string; revision?: string; quantity: number; lotId?: string; quantityPicked: number; quantityVerified: number }
 interface Pick { id: string; lineId: string; partId: string; lotId?: string; serialId?: string; locationId: string; quantity: number; quantityPicked: number; status: number; pickedAt?: string }
 interface Packed { id: string; lineId: string; partNumber: string; lotNumber?: string; serialNumber?: string; quantity: number }
-interface Container { id: string; number: string; kind: number; parentId?: string; weight?: number; verified: boolean }
+interface Container { id: string; number: string; kind: number; parentId?: string; weight?: number; lengthCm?: number; widthCm?: number; heightCm?: number; verified: boolean }
 interface Detail { shipment: Shipment; lines: { line: Line; partNumber: string; partName?: string; lotNumber?: string }[]; picks: { task: Pick; partNumber: string; lotNumber?: string; serialNumber?: string; locationCode: string }[];
   containers: { container: Container; items: Packed[] }[]; customer?: string; carrier?: string; trackingUrl?: string }
 interface VerifyResult { verified: boolean; issues: string[]; lines: { lineId: string; lineNumber: number; partNumber: string; revision?: string; expected: number; verified: number }[] }
@@ -160,7 +161,7 @@ export function ShipmentDetail() {
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Shipments', to: '/shipping/shipments' }, { label: s.number }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{s.number}</span><Typography color="text.secondary">{d.data!.customer ?? s.shipTo}</Typography>{s.status === 7 && <Chip color="default" label="Cancelled" />}</Stack>}
-      tabs={[{ label: 'Lines', value: 'lines' }, { label: 'Pick', value: 'pick' }, { label: 'Pack', value: 'pack' }, { label: 'Verify', value: 'verify' }, { label: 'Ship & documents', value: 'ship' }, { label: 'Custody', value: 'custody' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
+      tabs={[{ label: 'Lines', value: 'lines' }, { label: 'Pick', value: 'pick' }, { label: 'Pack', value: 'pack' }, { label: 'Verify', value: 'verify' }, { label: 'Carrier', value: 'carrier' }, { label: 'Ship & documents', value: 'ship' }, { label: 'Custody', value: 'custody' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={edit && <Stack direction="row" gap={1}>
         {s.status === 0 && <Button variant="contained" onClick={() => run(() => post(`/api/shipping/shipments/${id}/pick-list`, {}), 'Pick list built from available stock (FIFO by lot).').then(() => setTab('pick'))}>Build pick list</Button>}
         {s.status === 4 && <Button variant="contained" onClick={() => setDlg('ship')}>Ship</Button>}
@@ -176,6 +177,7 @@ export function ShipmentDetail() {
           {tab === 'pick' && <PickTab d={d.data!} edit={edit && live} run={run} />}
           {tab === 'pack' && <PackTab d={d.data!} edit={edit && live} run={run} />}
           {tab === 'verify' && <VerifyTab d={d.data!} edit={edit && live} onDone={refresh} run={run} />}
+          {tab === 'carrier' && <ShipmentCarrierPanel shipmentId={s.id} siteId={s.siteId} status={s.status} edit={edit} onChanged={refresh} />}
           {tab === 'ship' && <Section title="Documents & tracking"><Stack gap={2}>
             <Stack direction="row" gap={1} flexWrap="wrap">
               <Button variant="outlined" href={`/api/shipping/shipments/${id}/packing-list`} target="_blank">Packing list (PDF)</Button>
@@ -266,7 +268,7 @@ function PickConfirmations({ id }: { id: string }) {
 }
 
 function PackTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
-  const [kind, setKind] = useState('0'); const [parent, setParent] = useState(''); const [weight, setWeight] = useState('');
+  const [kind, setKind] = useState('0'); const [parent, setParent] = useState(''); const [weight, setWeight] = useState(''); const [dims, setDims] = useState({ l: '', w: '', h: '' });
   const [take, setTake] = useState<Record<string, string>>({});
   // Packing works per picked lot / serial: what was picked of each, less what is already in a container.
   const items = d.containers.flatMap((c) => c.items);
@@ -279,7 +281,7 @@ function PackTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
   const remaining = [...groups.values()].map((g) => ({ ...g, left: g.picked - items.filter((i) => i.lineId === g.lineId && (i.serialNumber ?? i.lotNumber ?? '') === g.ident).reduce((a, i) => a + i.quantity, 0) })).filter((g) => g.left > 0);
   const tree = (pid?: string, depth = 0): React.ReactNode => d.containers.filter((c) => (c.container.parentId ?? undefined) === pid).map((c) => (
     <Box key={c.container.id} sx={{ ml: depth * 3, mb: 1, borderLeft: 3, borderColor: c.container.verified ? '#2E6B5E' : 'divider', pl: 1.5 }}>
-      <Typography sx={{ fontWeight: 600 }}><span style={{ fontFamily: mono }}>QG:CTN:{c.container.number}</span> · {containerKinds[c.container.kind]}{c.container.weight != null ? ` · ${qty(c.container.weight)} kg` : ''}{c.container.verified && <Chip size="small" color="success" label="verified" sx={{ ml: 1 }} />}</Typography>
+      <Typography sx={{ fontWeight: 600 }}><span style={{ fontFamily: mono }}>QG:CTN:{c.container.number}</span> · {containerKinds[c.container.kind]}{c.container.weight != null ? ` · ${qty(c.container.weight)} kg` : ''}{c.container.lengthCm != null ? ` · ${qty(c.container.lengthCm)}×${qty(c.container.widthCm ?? 0)}×${qty(c.container.heightCm ?? 0)} cm` : ''}{c.container.verified && <Chip size="small" color="success" label="verified" sx={{ ml: 1 }} />}</Typography>
       {c.items.map((i) => <Typography key={i.id} variant="body2" sx={{ fontFamily: mono }}>{i.partNumber} {i.serialNumber ?? i.lotNumber ?? ''} × {qty(i.quantity)}</Typography>)}
       {tree(c.container.id, depth + 1)}
     </Box>));
@@ -292,11 +294,13 @@ function PackTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
       <Stack direction="row" gap={1}><TextField select size="small" label="Container" value={kind} onChange={(e) => setKind(e.target.value)} sx={{ flex: 1 }}>{containerKinds.map((k, i) => <MenuItem key={k} value={String(i)}>{k}</MenuItem>)}</TextField>
         <TextField select size="small" label="Inside" value={parent} onChange={(e) => setParent(e.target.value)} sx={{ flex: 1 }}><MenuItem value="">Top level</MenuItem>{d.containers.map((c) => <MenuItem key={c.container.id} value={c.container.id}>{c.container.number}</MenuItem>)}</TextField>
         <TextField size="small" label="Weight kg" value={weight} onChange={(e) => setWeight(e.target.value)} sx={{ width: 110 }} /></Stack>
+      <Stack direction="row" gap={1}>{(['l', 'w', 'h'] as const).map((k) => <TextField key={k} size="small" type="number" label={{ l: 'Length cm', w: 'Width cm', h: 'Height cm' }[k]} value={dims[k]} onChange={(e) => setDims({ ...dims, [k]: e.target.value })} sx={{ flex: 1 }} />)}</Stack>
       {remaining.map((l) => <Stack key={l.key} direction="row" gap={1} alignItems="center"><Typography sx={{ flex: 1, fontFamily: mono }}>{l.partNumber} {l.ident} <Typography component="span" variant="caption" color="text.secondary">({qty(l.left)} picked, unpacked)</Typography></Typography>
         <TextField size="small" type="number" label="Qty" value={take[l.key] ?? ''} onChange={(e) => setTake({ ...take, [l.key]: e.target.value })} sx={{ width: 100 }} /></Stack>)}
       {remaining.length === 0 && <Typography variant="body2" color="text.secondary">Every picked unit is packed. Empty containers (pallets) can still be added to nest cartons.</Typography>}
       <Button variant="contained" onClick={() => run(async () => { await post(`/api/shipping/shipments/${d.shipment.id}/containers`, { kind: Number(kind), parentId: parent || null, weight: weight ? Number(weight) : null,
-        items: remaining.filter((l) => Number(take[l.key]) > 0).map((l) => ({ lineId: l.lineId, lotId: l.lotId ?? null, serialId: l.serialId ?? null, quantity: Number(take[l.key]) })) }); setTake({}); setWeight(''); }, 'Container packed.')}>Pack</Button>
+        lengthCm: dims.l ? Number(dims.l) : null, widthCm: dims.w ? Number(dims.w) : null, heightCm: dims.h ? Number(dims.h) : null,
+        items: remaining.filter((l) => Number(take[l.key]) > 0).map((l) => ({ lineId: l.lineId, lotId: l.lotId ?? null, serialId: l.serialId ?? null, quantity: Number(take[l.key]) })) }); setTake({}); setWeight(''); setDims({ l: '', w: '', h: '' }); }, 'Container packed.')}>Pack</Button>
     </Stack></Section>}
   </Box>;
 }
