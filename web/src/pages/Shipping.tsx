@@ -245,6 +245,7 @@ function WorkAssign({ d, edit, run, kind }: { d: Detail; edit: boolean; run: Run
     <Stack direction={{ xs: 'column', sm: 'row' }} gap={1.5} alignItems={{ sm: 'center' }}>
       <TextField select size="small" label={kind === 'picker' ? 'Assigned picker' : 'Assigned verifier'} value={value} onChange={(e) => setV(e.target.value)} sx={{ minWidth: 240 }}>
         <MenuItem value="">Not assigned (anyone at the desk)</MenuItem>
+        {value && !pickers.data?.some((p) => p.id === value) && <MenuItem value={value}>{pickers.isLoading ? 'Loading…' : 'Assigned team member (no longer eligible)'}</MenuItem>}
         {(pickers.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{p.name}</MenuItem>)}
       </TextField>
       <Button variant="outlined" disabled={value === (assigned ?? '')} onClick={() => run(async () => { await put(`/api/shipping/shipments/${s.id}/${kind}`, kind === 'picker' ? { pickerId: value || null } : { verifierId: value || null }); setV(null); },
@@ -279,7 +280,7 @@ function PackTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
   const remaining = [...groups.values()].map((g) => ({ ...g, left: g.picked - items.filter((i) => i.lineId === g.lineId && (i.serialNumber ?? i.lotNumber ?? '') === g.ident).reduce((a, i) => a + i.quantity, 0) })).filter((g) => g.left > 0);
   const tree = (pid?: string, depth = 0): React.ReactNode => d.containers.filter((c) => (c.container.parentId ?? undefined) === pid).map((c) => (
     <Box key={c.container.id} sx={{ ml: depth * 3, mb: 1, borderLeft: 3, borderColor: c.container.verified ? '#2E6B5E' : 'divider', pl: 1.5 }}>
-      <Typography sx={{ fontWeight: 600 }}><span style={{ fontFamily: mono }}>QG:CTN:{c.container.number}</span> · {containerKinds[c.container.kind]}{c.container.weight != null ? ` · ${qty(c.container.weight)} kg` : ''}{c.container.lengthCm != null ? ` · ${qty(c.container.lengthCm)}×${qty(c.container.widthCm ?? 0)}×${qty(c.container.heightCm ?? 0)} cm` : ''}{c.container.verified && <Chip size="small" color="success" label="verified" sx={{ ml: 1 }} />}</Typography>
+      <Typography component="div" sx={{ fontWeight: 600 }}><span style={{ fontFamily: mono }}>QG:CTN:{c.container.number}</span> · {containerKinds[c.container.kind]}{c.container.weight != null ? ` · ${qty(c.container.weight)} kg` : ''}{c.container.lengthCm != null ? ` · ${qty(c.container.lengthCm)}×${qty(c.container.widthCm ?? 0)}×${qty(c.container.heightCm ?? 0)} cm` : ''}{c.container.verified && <Chip size="small" color="success" label="verified" sx={{ ml: 1 }} />}</Typography>
       {c.items.map((i) => <Typography key={i.id} variant="body2" sx={{ fontFamily: mono }}>{i.partNumber} {i.serialNumber ?? i.lotNumber ?? ''} × {qty(i.quantity)}</Typography>)}
       {tree(c.container.id, depth + 1)}
     </Box>));

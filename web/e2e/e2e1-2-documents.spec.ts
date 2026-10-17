@@ -11,7 +11,7 @@ test.describe('E2E 1: controlled procedure lifecycle', () => {
     await topMenu(author).getByRole('link', { name: 'Documents' }).click();
     await author.getByRole('link', { name: 'New document' }).click();
     await author.getByLabel('Title').fill(title);
-    await choose(author, 'Type', 'Procedure');
+    await choose(author, 'Type', /^Procedure$/);
     await choose(author, 'Site', /^E2E/);
     await author.getByRole('button', { name: 'Create document' }).click();
     await expect(author).toHaveURL(/\/documents\/[0-9a-f-]{36}$/);

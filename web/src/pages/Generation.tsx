@@ -85,7 +85,7 @@ function ProvidersTab() {
       <Stack gap={1.5}>{(q.data ?? []).map((p) => <Paper key={p.id} variant="outlined" sx={{ p: 2 }} data-testid={`gen-provider-${p.name}`}>
         <Stack direction={{ xs: 'column', md: 'row' }} gap={1}>
           <Box sx={{ flex: 1 }}>
-            <Typography sx={{ fontWeight: 600 }}>{p.name} <Chip size="small" label={p.enabled ? 'Enabled' : 'Disabled'} color={p.enabled ? 'success' : 'default'} sx={{ ml: 1 }} /></Typography>
+            <Typography component="div" sx={{ fontWeight: 600 }}>{p.name} <Chip size="small" label={p.enabled ? 'Enabled' : 'Disabled'} color={p.enabled ? 'success' : 'default'} sx={{ ml: 1 }} /></Typography>
             <Typography variant="body2" color="text.secondary">{kinds[p.kind]}{p.endpoint ? ` · ${p.endpoint}` : ''}{p.model ? ` · ${p.model}` : ''} · secret {p.secretStored ? 'stored' : p.secretReference ? `from ${p.secretReference}` : 'none'}</Typography>
             <Typography variant="body2">{p.lastTestAt ? `Last test ${fmtDateTime(p.lastTestAt)}: ${p.lastTestOk ? 'passed' : 'failed'}${p.testCurrent ? '' : ' (configuration changed since)'} — ${p.lastTestMessage ?? ''}` : 'Not tested yet.'}</Typography>
             {p.needsApproval && <Typography variant="body2">{p.approvedAt ? `Approved ${fmtDateTime(p.approvedAt)}` : 'Approval pending.'}</Typography>}

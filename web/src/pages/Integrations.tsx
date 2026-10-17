@@ -74,7 +74,7 @@ function ValidationPanel({ id, edit }: { id: string; edit: boolean }) {
       </Section>
       <Section title="Live-validation checklist">
         <Box component="ol" sx={{ m: 0, pl: 2.5 }}>{v.checklist.map((c) => { const g = c.gate ? v.gates.find((x) => x.gate === c.gate) : undefined;
-          return <li key={c.step}><Typography variant="body2"><b>{c.step}.</b> {c.text} {g && <Chip size="small" color={gateColor(g.status)} label={g.status} sx={{ ml: 0.5 }} />}</Typography></li>; })}</Box>
+          return <li key={c.step}><Typography component="div" variant="body2"><b>{c.step}.</b> {c.text} {g && <Chip size="small" color={gateColor(g.status)} label={g.status} sx={{ ml: 0.5 }} />}</Typography></li>; })}</Box>
       </Section>
       <StepDialog open={!!dlg && typeof dlg === 'object'} title={`Record: ${(dlg as { topic: string } | null)?.topic ?? ''}`} confirm="Record" onClose={() => setDlg(null)}
         intro="Confirm only what you checked against the customer's system after a passing read test. Say what you checked and where."

@@ -52,7 +52,7 @@ export function KnowledgeLibrary() {
         {r.error && <Alert severity="error">{r.error}</Alert>}
         {hits && (hits.length === 0 ? <Alert severity="info">Nothing similar found.</Alert> : hits.map((h) => <Paper key={h.type + h.id} sx={{ p: 1.5, display: 'flex', gap: 2, alignItems: 'center', cursor: 'pointer' }} onClick={() => nav(h.url)} data-testid="similar-hit">
           <Box sx={{ width: 54, textAlign: 'center' }}><Typography sx={{ fontFamily: mono, fontWeight: 700 }}>{Math.round(h.similarity * 100)}%</Typography></Box>
-          <Box sx={{ flex: 1 }}><Typography variant="body2"><Chip size="small" label={h.type} sx={{ mr: 1 }} /><b>{h.number}</b> {h.title}</Typography>
+          <Box sx={{ flex: 1 }}><Typography variant="body2" component="div"><Chip size="small" label={h.type} sx={{ mr: 1 }} /><b>{h.number}</b> {h.title}</Typography>
             {h.rootCause && <Typography variant="caption">Root cause: {h.rootCause}</Typography>}
             <Stack direction="row" gap={0.5} sx={{ mt: 0.5 }}>{h.sharedTerms.map((t: string) => <Chip key={t} size="small" variant="outlined" label={t} />)}</Stack></Box></Paper>))}
       </Stack>}
