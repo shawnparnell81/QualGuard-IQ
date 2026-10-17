@@ -4,7 +4,7 @@ using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Infrastructure;
 using QualGuardIQ.Infrastructure.Jobs;
 
-// Background job host: notification email delivery and scheduled releases.
+// Background job host: notification email delivery, scheduled releases and daily due-date reminders.
 var builder = Host.CreateApplicationBuilder(args);
 var cs = builder.Configuration.GetConnectionString("Default") ?? throw new InvalidOperationException("ConnectionStrings:Default is not configured.");
 builder.Services.AddHttpContextAccessor();
@@ -29,6 +29,7 @@ sealed class JobRegistration(IRecurringJobManager jobs) : IHostedService
     {
         jobs.AddOrUpdate<NotificationEmailJob>("notification-email", j => j.RunAsync(CancellationToken.None), Cron.Minutely());
         jobs.AddOrUpdate<DocumentReleaseJob>("document-release", j => j.RunAsync(CancellationToken.None), "5 * * * *");
+        jobs.AddOrUpdate<ReminderJob>("due-reminders", j => j.RunAsync(CancellationToken.None), "15 6 * * *");
         return Task.CompletedTask;
     }
     public Task StopAsync(CancellationToken ct) => Task.CompletedTask;

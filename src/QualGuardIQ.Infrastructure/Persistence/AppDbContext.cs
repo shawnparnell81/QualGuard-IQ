@@ -31,6 +31,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<RecordTag> RecordTags => Set<RecordTag>();
     public DbSet<ActionItem> ActionItems => Set<ActionItem>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<ReminderLog> ReminderLogs => Set<ReminderLog>();
     public DbSet<CustomFieldDefinition> CustomFieldDefinitions => Set<CustomFieldDefinition>();
     public DbSet<CustomFieldValues> CustomFieldValues => Set<CustomFieldValues>();
     public DbSet<SearchEntry> SearchEntries => Set<SearchEntry>();
@@ -204,6 +205,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.HasOne<Site>().WithMany().HasForeignKey(x => x.SiteId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.AssigneeId).OnDelete(DeleteBehavior.Restrict);
         });
+        b.Entity<ReminderLog>(e => { e.Property(x => x.Key).HasMaxLength(200); e.HasIndex(x => x.Key).IsUnique(); });
         b.Entity<Notification>(e =>
         {
             e.ToTable("notifications");

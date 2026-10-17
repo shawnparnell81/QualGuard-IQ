@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using QualGuardIQ.Domain.Security;
@@ -191,5 +192,26 @@ public sealed class SupplierQualityScenarioTests(TestApp app)
         Assert.Equal(94.5m, review.GetProperty("overallScore").GetDecimal());
         Assert.Equal(1, review.Int("ncrsLast12Months"));
         Assert.Equal(today.AddYears(1).ToString("yyyy-MM-dd"), s.Str("nextReviewOn"));
+    }
+}
+
+[Collection("api")]
+public sealed class ReminderJobTests(TestApp app)
+{
+    [Fact]
+    public async Task Due_reminders_are_sent_once_per_condition()
+    {
+        var today = TestDates.Today;
+        var site = await app.CreateSiteAsync();
+        var (_, sqe) = await app.CreateUserAsync([Permissions.SuppliersView, Permissions.SuppliersEdit], site);
+        var code = "R" + Guid.NewGuid().ToString("N")[..8];
+        var sid = (await (await sqe.PostOkAsync("/api/suppliers", new { code, legalName = "Expiring Cert Co", category = "Castings", criticality = 1, risk = 1, siteId = site })).JsonAsync()).Id();
+        await sqe.PostOkAsync($"/api/suppliers/{sid}/certifications", new { standard = "IATF 16949", expiresOn = today.AddDays(10) });
+
+        async Task<int> Run() { using var s = app.Services.CreateScope(); return await s.ServiceProvider.GetRequiredService<QualGuardIQ.Infrastructure.Jobs.ReminderJob>().RunAsync(default); }
+        Assert.True(await Run() >= 1);
+        await Run();
+        var notes = await sqe.GetJsonAsync<NotificationsDto>("/api/my/notifications");
+        Assert.Single(notes.Items, n => n.Title.Contains(code) && n.Title.Contains("IATF 16949"));
     }
 }
