@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { get, post, resetCsrf } from './api';
 import { setQueueUser } from './offline';
 import { clearPickWork } from './offlinePicks';
+import { clearVerifyWork } from './offlineVerifications';
 
 export interface Grant { permission: string; siteId: string | null; departmentId: string | null }
 export interface Me { id: string; email: string; displayName: string; grants: Grant[]; portalKind?: string | null }
@@ -40,7 +41,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout: async () => {
       await post('/api/auth/logout');
       resetCsrf();
-      clearPickWork(); // downloaded pick work never outlives the session on a shared device
+      clearPickWork(); clearVerifyWork(); // downloaded pick and verification work never outlives the session on a shared device
       // Signed out: show the sign-in page at once (me = null), then drop every cached query so no record data outlives the session.
       // Clearing the cache alone left the mounted shell on screen with its queries failing with 401.
       await qc.cancelQueries();

@@ -200,3 +200,34 @@ came from an offline device and the refusal code. Each accepted pick also adds a
 Device storage: the download is kept per person, expires after 12 hours (refresh it before picking again), and is wiped when you sign out.
 On a shared device each person only sees and sends their own saved scans; another person's saved scans wait until they sign in again.
 A device clock more than 10 minutes ahead of the server is refused, so correct the device time if that message appears.
+
+## Verifying shipments on a device, with or without a connection
+
+A shipment's verification is assigned on its **Verify** tab (**Assigned verifier**; only people who may edit shipments at the shipment's
+site are offered). While someone is assigned, only that person can record verification scans.
+
+**Warehouse → Scan station → Verify shipment** (needs `shipping.edit`):
+
+1. **Download my verifications** while connected. Packed shipments assigned to you are downloaded with their lines (part, revision,
+   required lot, quantity) and packing tree (pallets, cartons, the lots and serials in each). Nothing else about the shipment is kept.
+2. Choose a shipment and scan cartons, pallets (a pallet counts everything on it), lot labels (enter a quantity for a loose partial lot)
+   or serial labels. A duplicate scan, a carton already counted inside a scanned pallet, a lot or serial that was not packed, the wrong
+   product, the wrong revision or more than ordered is refused on the device at once.
+3. Online, each scan posts at once. Offline, it is saved on the device with a request id and the device time and sent when the
+   connection returns; a replay is never counted twice.
+
+Offline scans only verify contents. When every line is complete the shipment shows **Pending validation**: it stays Packed and cannot
+ship. Once connected, choose **Confirm release conditions online**. The server checks, at that moment, the shipment status, that every line
+is verified, that the packed stock is still staged, that no hold covers the material, that the packed revisions match the lines, and that
+the customer is active and required lots are shipped. If any check fails the shipment stays pending validation and the failed checks are
+listed. When all pass the shipment becomes Verified. Shipping re-runs the same checks, so a hold placed after verification still stops it.
+
+Scans made online that complete the contents confirm the release conditions straight away. Scans that reach the server after the
+shipment was cancelled, shipped or reassigned are refused as conflicts and listed under *Conflict requires review*. **Restart
+verification** stops the scans so far from counting (they stay in the log) and starts again.
+
+Every scan, accepted or refused, is listed on the shipment's Verify tab with the person, device time, server time, the offline flag and the
+reason for a refusal; the online confirmation adds a custody entry. Cancelling a shipment that has staged (picked) stock asks for the
+location to return it to, and the stock goes back there as available.
+
+Device storage: as for picking, the download is per person, expires after 12 hours and is wiped at sign-out.

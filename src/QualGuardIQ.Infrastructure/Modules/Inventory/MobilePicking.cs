@@ -33,11 +33,7 @@ public sealed partial class ShippingService
     public async Task<Shipment> AssignPickerAsync(Guid id, AssignPickerInput r, CancellationToken ct)
     {
         var s = await EditAsync(id, ct, ShipmentStatus.Draft, ShipmentStatus.Picking);
-        if (r.PickerId is { } p)
-        {
-            await m.RequireActiveUserAsync(p, "picker", ct);
-            if (!await m.UserCanAsync(p, Permissions.ShippingEdit, s.SiteId, s.DepartmentId, ct)) throw new AppException("The picker is not allowed to pick shipments at this site.");
-        }
+        if (r.PickerId is { } p) await RequireWarehouseAssigneeAsync(s, p, "picker", ct);
         if (s.AssignedPickerId == r.PickerId) return s;
         var name = r.PickerId is { } pid ? await db.Users.Where(u => u.Id == pid).Select(u => u.DisplayName).FirstAsync(ct) : null;
         s.AssignedPickerId = r.PickerId; s.AssignedAt = r.PickerId is null ? null : m.Now;

@@ -23,6 +23,7 @@ public sealed record VerifyLine(Guid LineId, int LineNumber, string PartNumber, 
 public sealed record VerifyResult(bool Verified, List<string> Issues, List<VerifyLine> Lines);
 public sealed record ShipInput(Guid CarrierId, string? TrackingNumber, string? ServiceLevel, decimal? GrossWeight);
 public sealed record DeliveredInput(DateOnly DeliveredOn);
+public sealed record CancelShipmentInput(Guid? ReturnLocationId, string? Reason);
 public sealed record ShipmentDetail(Shipment Shipment, List<ShipmentLineRow> Lines, List<PickRow> Picks, List<ContainerRow> Containers, string? Customer, string? Carrier, string? TrackingUrl);
 public sealed record ShipmentLineRow(ShipmentLine Line, string PartNumber, string? PartName, string? LotNumber);
 public sealed record PickRow(PickTask Task, string PartNumber, string? LotNumber, string? SerialNumber, string LocationCode);
@@ -244,15 +245,29 @@ public sealed partial class ShippingService(AppDbContext db, ModuleSupport m, IN
         foreach (var l in rows.Where(x => x.Verified != x.Expected)) issues.Add($"Wrong quantity on line {l.LineNumber} {l.PartNumber}: {l.Verified:0.####} verified, {l.Expected:0.####} ordered.");
         var allOk = issues.Count == 0;
         foreach (var l in lines) l.QuantityVerified = verified[l.Id];
-        s.Status = allOk ? ShipmentStatus.Verified : ShipmentStatus.Packed;
+        // a desk verification counts from scratch: device scans so far stop counting (they stay in the log)
+        foreach (var x in await db.ShipmentVerificationScans.Where(x => x.ShipmentId == id && x.Active).ToListAsync(ct)) x.Active = false;
+        s.Status = ShipmentStatus.Packed;
+        s.VerificationState = r.Scans.Count == 0 ? ShipmentVerificationState.NotStarted : allOk ? ShipmentVerificationState.PendingValidation : ShipmentVerificationState.InProgress;
         await db.SaveChangesAsync(ct);
-        return new VerifyResult(allOk, issues, rows);
+        if (allOk)
+        {
+            var checks = await ReleaseChecksAsync(s, ct);
+            Apply(s, checks);
+            issues.AddRange(checks.Where(c => !c.Passed).Select(c => $"{c.Label}: {c.Message}"));
+            await db.SaveChangesAsync(ct);
+        }
+        return new VerifyResult(issues.Count == 0, issues, rows);
     }
 
     /// <summary>Ships a verified shipment: stock leaves the staging location, genealogy records the shipment to the customer, the BOL number is issued.</summary>
     public async Task ShipAsync(Guid id, ShipInput r, CancellationToken ct)
     {
         var s = await EditAsync(id, ct, ShipmentStatus.Verified);
+        // final release is online only and re-checks every release condition at this moment
+        if (s.VerificationState != ShipmentVerificationState.Validated) throw new ConflictException("Confirm the verification online before shipping.");
+        var failed = (await ReleaseChecksAsync(s, ct)).Where(c => !c.Passed).ToList();
+        if (failed.Count > 0) throw new ConflictException("Release blocked: " + string.Join(" ", failed.Select(c => $"{c.Label}: {c.Message}")));
         var carrier = await db.Carriers.AsNoTracking().FirstOrDefaultAsync(x => x.Id == r.CarrierId && x.Active, ct) ?? throw new AppException("Select an active carrier.");
         if (carrier.Kind == CarrierKind.Parcel && string.IsNullOrWhiteSpace(r.TrackingNumber)) throw new AppException("Enter the tracking number.");
         var conts = await db.ShipmentContainers.AsNoTracking().Where(x => x.ShipmentId == id).Select(x => x.Id).ToListAsync(ct);
@@ -284,17 +299,31 @@ public sealed partial class ShippingService(AppDbContext db, ModuleSupport m, IN
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task CancelAsync(Guid id, CancellationToken ct)
+    /// <summary>Cancels a shipment before it ships. Open picks are released; picked (staged) stock goes back to the return location as available stock.</summary>
+    public async Task CancelAsync(Guid id, CancelShipmentInput? r, CancellationToken ct)
     {
-        var s = await EditAsync(id, ct, ShipmentStatus.Draft, ShipmentStatus.Picking);
+        var s = await EditAsync(id, ct, ShipmentStatus.Draft, ShipmentStatus.Picking, ShipmentStatus.Picked, ShipmentStatus.Packed, ShipmentStatus.Verified);
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
         foreach (var t in await db.PickTasks.Where(x => x.ShipmentId == id && x.Status == PickStatus.Open).ToListAsync(ct))
         {
             var b = await db.InventoryBalances.FirstAsync(x => x.PartId == t.PartId && x.LotId == t.LotId && x.SerialId == t.SerialId && x.LocationId == t.LocationId && x.Status == StockStatus.Available && x.WorkOrderId == null, ct);
             b.Allocated -= t.Quantity; t.Status = PickStatus.Cancelled;
         }
-        if (await db.PickTasks.AnyAsync(x => x.ShipmentId == id && x.QuantityPicked > 0, ct)) throw new ConflictException("Picked stock is staged; move it back before cancelling.");
+        var picked = await db.PickTasks.AsNoTracking().Where(x => x.ShipmentId == id && x.QuantityPicked > 0).ToListAsync(ct);
+        if (picked.Count > 0)
+        {
+            if (r?.ReturnLocationId is not { } back) throw new AppException("Picked stock is staged; choose the location to return it to.");
+            var to = await db.WarehouseLocations.AsNoTracking().FirstOrDefaultAsync(x => x.Id == back && x.SiteId == s.SiteId, ct) ?? throw new AppException("The return location must be at the shipment's site.");
+            foreach (var g in picked.GroupBy(x => new { x.PartId, x.LotId, x.SerialId }))
+                await inv.PostAsync(new Move(InventoryTxKind.Transfer, g.Key.PartId, g.Sum(x => x.QuantityPicked), g.Key.LotId, g.Key.SerialId, s.StagingLocationId, StockStatus.Available, FromAllocated: true, ToLocationId: to.Id, ToStatus: StockStatus.Available,
+                    RefType: ShipmentType, RefId: s.Id, RefNumber: s.Number, Reason: "Shipment cancelled; staged stock returned", AllowHeld: true), ct);
+            db.CustodyEvents.Add(new CustodyEvent { RefType = ShipmentType, RefId = s.Id, Action = $"Cancelled; staged stock returned to {to.Code}", ById = m.UserId, At = m.Now, LocationId = to.Id, Notes = r.Reason });
+        }
+        else db.CustodyEvents.Add(new CustodyEvent { RefType = ShipmentType, RefId = s.Id, Action = "Cancelled", ById = m.UserId, At = m.Now, LocationId = s.StagingLocationId, Notes = r?.Reason });
+        foreach (var x in await db.ShipmentVerificationScans.Where(x => x.ShipmentId == id && x.Active).ToListAsync(ct)) x.Active = false;
         s.Status = ShipmentStatus.Cancelled;
         await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
     }
 
     // ---------------------------------------------------------------- documents
