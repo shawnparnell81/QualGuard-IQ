@@ -82,7 +82,10 @@ test.describe('E2E 5: out-of-tolerance calibration and impact assessment', () =>
     const outsider = await browser.newPage();
     await signIn(outsider, users.outsider);
     await expect(outsider.locator('header nav').getByRole('link', { name: 'Calibration' })).toHaveCount(0);
+    // the alert is shown once the server has refused the equipment request
+    const refused = outsider.waitForResponse(r => r.url().includes(`/api/calibration/equipment/${id}`) && [403, 404].includes(r.status()));
     await outsider.goto(`/calibration/equipment/${id}`);
+    await refused;
     await expect(outsider.getByRole('alert')).toBeVisible();
     await api.dispose();
   });

@@ -1,6 +1,6 @@
 # Run QualGuard IQ on a Windows laptop
 
-These steps put the whole application (web app, API, background worker, database, file storage and virus scanning) on one Windows computer with Docker Desktop. Everything runs in containers; nothing is installed into Windows itself.
+These steps put the whole application (web app, API, background worker, database and file storage) on one Windows computer with Docker Desktop. Virus scanning of uploads is optional and only runs on Intel/AMD laptops (see step 6b). Everything runs in containers; nothing is installed into Windows itself.
 
 The steps use `C:\QualGuard-IQ` as the folder. Every command is written with the full folder path, so you can run each one from any PowerShell window.
 
@@ -40,12 +40,14 @@ A PostgreSQL server already installed on the laptop (for example PostgreSQL 18 o
 
    | Setting | What to enter |
    | --- | --- |
-   | `POSTGRES_PASSWORD` | A new password for the application's database (you never type it anywhere else) |
+   | `POSTGRES_PASSWORD` | A new password for the database owner, used only to update the database (you never type it anywhere else) |
+   | `POSTGRES_APP_PASSWORD` | A second, different password (at least 12 characters) for the limited login the app uses every day |
    | `ADMIN_EMAIL` | Your email address. This becomes the first administrator's sign-in name |
    | `ADMIN_PASSWORD` | A temporary first password, at least 12 characters and not a common password |
    | `ADMIN_NAME` | Your name as it should appear in the app, for example `Shawn Parnell` |
    | `ORGANIZATION_NAME` | Your company name |
    | `MINIO_ROOT_PASSWORD` | A password of at least 8 characters for the built-in file storage (needed only when you keep MinIO, see step 6) |
+   | `MINIO_APP_PASSWORD` | A different password of at least 8 characters for the app's own storage login, which can only reach the file bucket (MinIO only) |
 
    Leave `WEB_PORT=8081` and `APP_BASE_URL=http://localhost:8081` as they are unless port 8081 is already used on the laptop (see Troubleshooting).
 
@@ -66,13 +68,15 @@ A PostgreSQL server already installed on the laptop (for example PostgreSQL 18 o
 
      `STORAGE_SERVICE_URL` is the **S3 API** address from the bucket's settings page without `/qms-files` on the end. With `COMPOSE_PROFILES` empty, MinIO is not started at all. The bucket must already exist; the app only checks it and never tries to create it.
 
+6b. Virus scanning (optional). It is off by default: uploads are stored and marked "Not scanned", and administrators see a notice on the Users and Organization pages. ClamAV has no ARM version, so leave it off on ARM laptops (for example Snapdragon). On an Intel or AMD laptop you can turn it on with `MALWARE_SCANNER=ClamAV` and by adding `clamav` to the profiles, for example `COMPOSE_PROFILES=minio,clamav`.
+
 7. Build and start everything with one command. The first run downloads and builds the images and takes about 10 to 20 minutes. Later starts take under a minute.
 
    ```powershell
    docker compose -f C:\QualGuard-IQ\docker-compose.yml up -d --build
    ```
 
-8. Check that everything is up. Wait until `api` shows `healthy` (the virus scanner downloads its signatures on the first start, so this can take 3 to 5 minutes).
+8. Check that everything is up. Wait until `api` shows `healthy`. `migrate` (and `minio-init` with MinIO) run once and then show `exited (0)`; that is expected. With virus scanning on, the first start takes 3 to 5 minutes longer while it downloads its signatures.
 
    ```powershell
    docker compose -f C:\QualGuard-IQ\docker-compose.yml ps
@@ -84,6 +88,7 @@ A PostgreSQL server already installed on the laptop (for example PostgreSQL 18 o
     - Email: the `ADMIN_EMAIL` from your `.env` file.
     - Password: the `ADMIN_PASSWORD` from your `.env` file.
     - The app then asks you to choose a new password straight away. The `.env` password works only for this first sign-in.
+    - On a new installation the app also asks you to set up an authenticator app (for example Microsoft Authenticator or Google Authenticator on your phone), because administrators need two-step verification. Keep the recovery codes it shows somewhere safe. To skip this, set `ADMIN_REQUIRES_MFA=false` in `.env` before the first start; you can change it later in Admin › Roles.
 
     The administrator account is created when the API starts and no account with `ADMIN_EMAIL` exists yet, so normally only on the first start. Changing `ADMIN_PASSWORD` in `.env` later does not change the existing account (use **Forgot password** or the Users page instead), and changing `ADMIN_EMAIL` would create a second administrator with that address, so leave it as it is.
 
@@ -113,13 +118,13 @@ The containers also start by themselves when Docker Desktop starts, unless you s
    git -C C:\QualGuard-IQ pull
    ```
 
-2. Rebuild and restart. Database changes are applied automatically when the API starts; your data is kept.
+2. If `.env.example` gained new settings, compare it with your `.env` and copy any new lines across, filling in the values (for example `POSTGRES_APP_PASSWORD` and `MINIO_APP_PASSWORD`).
+
+3. Rebuild and restart. The `migrate` step applies database changes before the API starts; your data is kept.
 
    ```powershell
    docker compose -f C:\QualGuard-IQ\docker-compose.yml up -d --build
    ```
-
-3. If `.env.example` gained new settings, compare it with your `.env` and copy any new lines across.
 
 ## Troubleshooting
 
@@ -137,9 +142,11 @@ docker compose -f C:\QualGuard-IQ\docker-compose.yml logs --tail 200 api
 
 | Problem | What to do |
 | --- | --- |
-| `required variable POSTGRES_PASSWORD is missing a value` (or `ADMIN_EMAIL`, `ADMIN_PASSWORD`) | The `.env` file is missing or a value is empty. Repeat steps 3 to 5 |
+| `required variable POSTGRES_PASSWORD is missing a value` (or `POSTGRES_APP_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`) | The `.env` file is missing or a value is empty. Repeat steps 3 to 5 (after an update, copy the new lines from `.env.example`) |
+| `migrate` exited with an error | Read its log: `docker compose -f C:\QualGuard-IQ\docker-compose.yml logs migrate`. A message about `AppRolePassword` means `POSTGRES_APP_PASSWORD` is shorter than 12 characters or the same as `POSTGRES_PASSWORD` |
+| `minio-init` exited with an error | `MINIO_APP_PASSWORD` is missing, shorter than 8 characters, or the same as `MINIO_ROOT_PASSWORD` |
 | `port is already allocated` for 8081 | Another program uses port 8081. Set `WEB_PORT=8091` and `APP_BASE_URL=http://localhost:8091` in `.env`, run step 7 again and open http://localhost:8091 |
-| `api` stays `starting` or `unhealthy` for more than 10 minutes | Read the API log (above). On the first start the virus scanner may still be loading; wait and check `ps` again |
+| `api` stays `starting` or `unhealthy` for more than 10 minutes | Read the API log (above). With virus scanning on, the scanner may still be loading on the first start; wait and check `ps` again |
 | API log says `Initial administrator could not be created` | `ADMIN_PASSWORD` breaks the password rules (at least 12 characters, not a common password). Change it in `.env`, then run step 7 again |
 | API log mentions storage, `AccessDenied` or `InvalidAccessKeyId` | Check the `STORAGE_` values. For R2: the address has no bucket on the end, `STORAGE_REGION=auto`, and the token has Object Read & Write on `qms-files` |
 | MinIO is `unhealthy` | `MINIO_ROOT_PASSWORD` must be at least 8 characters |
@@ -148,7 +155,7 @@ docker compose -f C:\QualGuard-IQ\docker-compose.yml logs --tail 200 api
 
 ### Optional: connect a database tool
 
-The application's database is private to Docker by default. To look at it with pgAdmin or DBeaver, start it with the extra file below. It is published on `localhost:5433` (set `POSTGRES_HOST_PORT` in `.env` to change it), so it does not collide with a PostgreSQL server on 5432. Database `qgiq`, user `qgiq`, password `POSTGRES_PASSWORD` from `.env`.
+The application's database is private to Docker by default. To look at it with pgAdmin or DBeaver, start it with the extra file below. It is published on `localhost:5433` (set `POSTGRES_HOST_PORT` in `.env` to change it), so it does not collide with a PostgreSQL server on 5432. Database `qgiq`, user `qgiq`, password `POSTGRES_PASSWORD` from `.env` (or the read-and-write login `qgiq_app` with `POSTGRES_APP_PASSWORD`).
 
 ```powershell
 docker compose -f C:\QualGuard-IQ\docker-compose.yml -f C:\QualGuard-IQ\docker-compose.db-port.yml up -d
