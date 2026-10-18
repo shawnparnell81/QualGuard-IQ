@@ -22137,6 +22137,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
 
+                    b.Property<Guid?>("AssignedEngineerId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid?>("AuthorId")
                         .HasColumnType("uuid");
 
@@ -22157,8 +22160,16 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("DepartmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("DevelopmentStatus")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<DateOnly?>("EffectiveDate")
                         .HasColumnType("date");
+
+                    b.Property<string>("EngineeringNotes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
 
                     b.Property<string>("FaiType")
                         .HasMaxLength(100)
@@ -22215,6 +22226,16 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<string>("ProductFamily")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Project")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("ReleaseRecommendedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ReleaseRecommendedById")
+                        .HasColumnType("uuid");
 
                     b.Property<DateTimeOffset?>("ReleasedAt")
                         .HasColumnType("timestamp with time zone");
@@ -22281,6 +22302,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("SupersededAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<DateOnly?>("TargetCompletionDate")
+                        .HasColumnType("date");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -22319,11 +22343,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("FamilyId");
 
-                    b.HasIndex("OwnerId");
-
                     b.HasIndex("PartId");
 
                     b.HasIndex("PreviousRevisionId");
+
+                    b.HasIndex("ReleaseRecommendedById");
 
                     b.HasIndex("ReleasedById");
 
@@ -22335,8 +22359,12 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UpdatedAt");
 
+                    b.HasIndex("AssignedEngineerId", "Status");
+
                     b.HasIndex("Number", "Revision")
                         .IsUnique();
+
+                    b.HasIndex("OwnerId", "Status");
 
                     b.HasIndex("SiteId", "Status");
 
@@ -27956,6 +27984,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
                         .WithMany()
+                        .HasForeignKey("AssignedEngineerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
                         .HasForeignKey("AuthorId")
                         .OnDelete(DeleteBehavior.Restrict);
 
@@ -27977,6 +28010,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasOne("QualGuardIQ.Domain.Sequfloh.SequflohWorkInstruction", null)
                         .WithMany()
                         .HasForeignKey("PreviousRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReleaseRecommendedById")
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)

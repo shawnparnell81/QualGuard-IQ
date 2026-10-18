@@ -10,6 +10,7 @@ import { Facts, useSites, useUsers } from '../components/Kit';
 import { fmtDate, fmtDateTime } from '../components/Status';
 import { Confirm, Empty, ErrorState, Filters, Grid, Loading, Mono, Paged, PagedTable, S, SqfPage, SqfStatus, nul, qs, useOptions, useUnsaved, words } from './common';
 import { type AuditRow, HistoryTable, SimpleTable } from './Parts';
+import { DevelopmentPanel } from './Personnel';
 import { type DSchema, FieldInput, ProblemList, type Row, RowsEditor, SectionCard, type Val, sequenceProblems, typeLabels, types, useSchemas } from './Designer';
 
 export const wiCrumbs = (label: string, folder?: { label: string; to: string }) =>
@@ -36,8 +37,9 @@ const folders: Record<string, { api: string; title: string; kind: Kind; descript
   archived: { api: 'archived', title: 'Archived Instructions', kind: 'generic', description: 'Archived instructions. Restore one to bring it back to its previous status.' },
 };
 
-export function InstructionsFolderPage({ fixedFolder, crumbsOverride, titleOverride, descriptionOverride, permission }: {
-  fixedFolder?: string; crumbsOverride?: { label: string; to?: string }[]; titleOverride?: string; descriptionOverride?: string; permission?: string } = {}) {
+export function InstructionsFolderPage({ fixedFolder, crumbsOverride, titleOverride, descriptionOverride, permission, tabs, tab, onTab }: {
+  fixedFolder?: string; crumbsOverride?: { label: string; to?: string }[]; titleOverride?: string; descriptionOverride?: string; permission?: string;
+  tabs?: { label: string; value: string }[]; tab?: string; onTab?: (t: string) => void } = {}) {
   const params = useParams();
   const folderKey = fixedFolder ?? params.folder ?? 'all';
   const cfg = folders[folderKey] ?? folders.all;
@@ -81,7 +83,7 @@ export function InstructionsFolderPage({ fixedFolder, crumbsOverride, titleOverr
         { key: 'partNumber', label: 'Part', render: (r: WiRow) => r.partNumber ?? '—' }, { key: 'revision', label: 'Rev' },
         { key: 'status', label: 'Status', sort: true, render: (r: WiRow) => <SqfStatus status={r.status} /> }, people[0], ...tail, actions];
   return (
-    <SqfPage title={title} crumbs={crumbsOverride ?? wiCrumbs(title)} description={descriptionOverride ?? cfg.description} permission={permission}
+    <SqfPage title={title} crumbs={crumbsOverride ?? wiCrumbs(title)} description={descriptionOverride ?? cfg.description} permission={permission} tabs={tabs} tab={tab} onTab={onTab}
       actions={can('sequfloh.create_work_instruction') && <Button variant="contained" component={RouterLink} to={`/sequfloh/instructions/new${cfg.newType ? `?type=${cfg.newType}` : ''}`}>New instruction</Button>}>
       <Filters search={v('q')} onSearch={(s) => set('q', s)} values={Object.fromEntries(filters.map((f) => [f.key, v(f.key)]))} onChange={set} onClear={() => { setSp({}); setPage(1); }} filters={filters}
         extra={cfg.kind === 'repair' && <TextField size="small" label="Part number" defaultValue={v('part')} key={v('part')} onBlur={(e) => set('part', e.target.value.trim())} sx={{ width: 160 }} />} />
@@ -228,10 +230,11 @@ interface WiDoc {
   supersededAt?: string | null; obsoleteAt?: string | null; reviewedAt?: string | null; approvedAt?: string | null; releasedAt?: string | null; revisionReason?: string | null; createdAt: string; updatedAt: string;
   rowVersion: number; content: Record<string, Record<string, Val>>; steps: Row[]; characteristics: Row[]; partsRows: Row[]; owner?: string; author?: string; reviewer?: string; approver?: string;
   reviewedBy?: string; approvedBy?: string; releasedBy?: string; createdBy?: string; updatedBy?: string; site?: string; department?: string;
+  developmentStatus?: string | null; engineeringNotes?: string | null;
 }
 interface WiResponse { instruction: WiDoc; transitions: { id: string; action: string; fromStatus?: string; toStatus: string; comment?: string; revision: string; createdAt: string; user?: string }[];
   revisions: { id: string; revision: string; status: string; effectiveDate?: string; releasedAt?: string; supersededAt?: string; revisionReason?: string; createdAt: string }[];
-  canEdit: boolean; actions: { action: string; label: string; commentRequired: boolean }[]; releaseProblems: string[]; canDuplicate: boolean }
+  canEdit: boolean; actions: { action: string; label: string; commentRequired: boolean }[]; releaseProblems: string[]; canDuplicate: boolean; canDevelop: boolean }
 
 const applicability: [keyof WiDoc, string][] = [['productFamily', 'Product family'], ['assembly', 'Assembly'], ['model', 'Model'], ['variant', 'Variant'], ['process', 'Process'], ['operation', 'Operation'],
   ['workstation', 'Workstation'], ['location', 'Location']];
@@ -292,6 +295,7 @@ export function InstructionPage() {
   const seqIssues = [...sequenceProblems(doc.steps, 'step'), ...(schema.hasCharacteristics ? sequenceProblems(doc.characteristics, 'characteristic') : [])];
   const tabs = [{ label: 'Document control', value: 'control' }, { label: 'Content', value: 'content' }, { label: schema.stepsTitle, value: 'steps' },
     ...(schema.hasCharacteristics ? [{ label: 'Characteristics', value: 'characteristics' }] : []), ...(schema.hasPartsRows ? [{ label: 'Repair parts', value: 'parts' }] : []),
+    ...(q.data.canDevelop || doc.developmentStatus || doc.engineeringNotes ? [{ label: 'Development', value: 'development' }] : []),
     { label: 'History', value: 'history' }];
   const folder = schema.type === 'RepairWork' || schema.type === 'RepairTest' ? { label: 'Repair Work Instructions', to: '/sequfloh/instructions/repair' } : { label: 'Validation Work Instructions', to: '/sequfloh/instructions/validation' };
   return (
@@ -356,6 +360,8 @@ export function InstructionPage() {
       {tab === 'parts' && schema.hasPartsRows && <RowsEditor title="Repair parts list" noun="parts row" seqLabel="Item" cols={schema.partsRowColumns} rows={doc.partsRows} disabled={ro} onChange={(partsRows) => upd({ partsRows })}
         summary={['replacementPartNumber', 'description', 'quantity', 'unit', 'required', 'approvedAlternate']}
         actions={!ro && <CopyPartsButton withSave={withSave} id={id} />} />}
+
+      {tab === 'development' && <DevelopmentPanel id={id} doc={doc as unknown as Record<string, unknown>} canEdit={q.data.canDevelop} onSaved={() => qc.invalidateQueries({ queryKey: ['sqf-wi-one', id] })} />}
 
       {tab === 'history' && <Stack gap={2}>
         <Typography variant="h3">Lifecycle transitions</Typography>

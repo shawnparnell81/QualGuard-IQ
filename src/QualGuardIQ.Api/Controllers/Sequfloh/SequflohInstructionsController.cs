@@ -39,6 +39,7 @@ public sealed class SequflohInstructionsController(AppDbContext db, ModuleSuppor
             "superseded" => query.Where(x => x.Status == WorkInstructionStatus.Superseded),
             "obsolete" => query.Where(x => x.Status == WorkInstructionStatus.Obsolete),
             "archived" => query.Where(x => x.Status == WorkInstructionStatus.Archived),
+            "development" => query.Where(x => x.Status == WorkInstructionStatus.Draft || x.Status == WorkInstructionStatus.InDevelopment || x.Status == WorkInstructionStatus.ChangesRequested),
             "validation-only" => query.Where(x => x.Type == WorkInstructionType.Validation),
             "validation-fai" => query.Where(x => x.Type == WorkInstructionType.ValidationFai),
             "fai" => query.Where(x => x.Type == WorkInstructionType.Fai),
@@ -66,7 +67,8 @@ public sealed class SequflohInstructionsController(AppDbContext db, ModuleSuppor
         return await Paging.PageAsync(query.Select(x => new
         {
             x.Id, x.Number, x.Title, x.Type, x.Revision, x.Status, x.PartId, x.PartNumber, x.ValidationType, x.FaiType, x.RepairCategory, x.RepairType, x.RepairDescription, x.ResultStatus,
-            x.EffectiveDate, x.UpdatedAt,
+            x.EffectiveDate, x.UpdatedAt, x.Project, x.TargetCompletionDate, x.DevelopmentStatus, x.ReleaseRecommendedAt, x.ReviewedAt, x.ApprovedAt,
+            AssignedEngineer = db.Users.Where(u => u.Id == x.AssignedEngineerId).Select(u => u.DisplayName).FirstOrDefault(),
             Owner = db.Users.Where(u => u.Id == x.OwnerId).Select(u => u.DisplayName).FirstOrDefault(),
             Reviewer = db.Users.Where(u => u.Id == x.ReviewerId).Select(u => u.DisplayName).FirstOrDefault(),
             Approver = db.Users.Where(u => u.Id == x.ApproverId).Select(u => u.DisplayName).FirstOrDefault()
@@ -90,6 +92,7 @@ public sealed class SequflohInstructionsController(AppDbContext db, ModuleSuppor
                 x.Id, x.FamilyId, x.Number, x.Type, x.Title, x.Revision, x.Status, x.SiteId, x.DepartmentId, x.OwnerId, x.AuthorId, x.ReviewerId, x.ApproverId, x.PartId, x.PartNumber, x.PartDescription,
                 x.ProductFamily, x.Assembly, x.Model, x.Variant, x.Process, x.Operation, x.Workstation, x.Location, x.ValidationType, x.FaiType, x.RepairCategory, x.RepairType, x.RepairDescription,
                 x.SourcePartsListId, x.ResultStatus, x.EffectiveDate, x.SupersededAt, x.ObsoleteAt, x.ReviewedAt, x.ApprovedAt, x.ReleasedAt, x.RevisionReason, x.CreatedAt, x.UpdatedAt, x.RowVersion,
+                x.AssignedEngineerId, x.TargetCompletionDate, x.Project, x.EngineeringNotes, x.DevelopmentStatus, x.ReleaseRecommendedAt, ReleaseRecommendedBy = Name(x.ReleaseRecommendedById),
                 Content = JsonNode.Parse(x.Content), Steps = JsonNode.Parse(x.Steps), Characteristics = JsonNode.Parse(x.Characteristics), PartsRows = JsonNode.Parse(x.PartsRows),
                 Owner = Name(x.OwnerId), Author = Name(x.AuthorId), Reviewer = Name(x.ReviewerId), Approver = Name(x.ApproverId), ReviewedBy = Name(x.ReviewedById), ApprovedBy = Name(x.ApprovedById),
                 ReleasedBy = Name(x.ReleasedById), CreatedBy = Name(x.CreatedById), UpdatedBy = Name(x.UpdatedById),
@@ -99,6 +102,8 @@ public sealed class SequflohInstructionsController(AppDbContext db, ModuleSuppor
             Transitions = transitions, Revisions = revisions, CanEdit = canEdit,
             Actions = await wi.AvailableActionsAsync(x, ct),
             ReleaseProblems = await wi.ReleaseProblemsAsync(x, true, ct),
+            CanDevelop = x.Status is not (WorkInstructionStatus.Released or WorkInstructionStatus.Superseded or WorkInstructionStatus.Obsolete or WorkInstructionStatus.Archived)
+                && await m.CanAsync(Permissions.SequflohEditEngineeringFolder, x.SiteId, x.DepartmentId, ct),
             CanDuplicate = await m.CanAsync(Permissions.SequflohCreateWorkInstruction, x.SiteId, x.DepartmentId, ct)
         };
     }
@@ -107,6 +112,8 @@ public sealed class SequflohInstructionsController(AppDbContext db, ModuleSuppor
     public async Task<object> Create(InstructionCreateInput r, CancellationToken ct) { var x = await wi.CreateAsync(r, ct); return new { x.Id, x.Number }; }
     [HttpPut("{id:guid}")] [RequirePermission(Permissions.SequflohEditDraftWorkInstruction)]
     public async Task<IActionResult> Save(Guid id, InstructionSaveInput r, CancellationToken ct) { await wi.SaveAsync(id, r, ct); return NoContent(); }
+    [HttpPut("{id:guid}/development")] [RequirePermission(Permissions.SequflohEditEngineeringFolder)]
+    public async Task<IActionResult> Development(Guid id, DevelopmentInput r, CancellationToken ct) { await wi.SaveDevelopmentAsync(id, r, ct); return NoContent(); }
     [HttpPost("{id:guid}/actions/{name}")]
     public async Task<object> Act(Guid id, string name, InstructionActionInput r, CancellationToken ct) { var x = await wi.ActAsync(id, name, r, ct); return new { x.Id, x.Status }; }
     [HttpPost("{id:guid}/revise")] [RequirePermission(Permissions.SequflohReviseWorkInstruction)]

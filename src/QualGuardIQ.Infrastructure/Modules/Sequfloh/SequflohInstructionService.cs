@@ -11,6 +11,7 @@ using QualGuardIQ.Infrastructure.Services;
 
 namespace QualGuardIQ.Infrastructure.Modules.Sequfloh;
 
+public sealed record DevelopmentInput(Guid? AssignedEngineerId = null, DateOnly? TargetCompletionDate = null, string? Project = null, string? EngineeringNotes = null, string? DevelopmentStatus = null, bool? RecommendRelease = null);
 public sealed record InstructionCreateInput(WorkInstructionType Type, string Title, Guid SiteId, Guid? DepartmentId, Guid? PartId);
 public sealed record InstructionSaveInput(string Title, Guid SiteId, Guid? DepartmentId, Guid? OwnerId, Guid? ReviewerId, Guid? ApproverId, Guid? PartId, string? ProductFamily, string? Assembly,
     string? Model, string? Variant, string? Process, string? Operation, string? Workstation, string? Location, string? ValidationType, string? FaiType, string? RepairCategory, string? RepairType,
@@ -338,6 +339,45 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
     }
 
     // ------------------------------------------------------------------ revision / duplicate
+    /// <summary>
+    /// Engineering development record on an instruction that is not yet released: assigned engineer, target date, project, notes, development status and a
+    /// release recommendation. These are planning fields, not controlled content, so they do not need a revision; changes are audited.
+    /// </summary>
+    public async Task<SequflohWorkInstruction> SaveDevelopmentAsync(Guid id, DevelopmentInput r, CancellationToken ct)
+    {
+        var wi = await LoadAsync(id, true, ct);
+        await m.RequireAsync(Permissions.SequflohEditEngineeringFolder, wi.SiteId, wi.DepartmentId, ct);
+        if (wi.Status is WorkInstructionStatus.Released or WorkInstructionStatus.Superseded or WorkInstructionStatus.Obsolete or WorkInstructionStatus.Archived)
+            throw new ConflictException($"{wi.Number} rev {wi.Revision} is {Words(wi.Status.ToString()).ToLowerInvariant()}. Development details apply to instructions not yet released.");
+        if (r.AssignedEngineerId is { } eng)
+        {
+            await m.RequireActiveUserAsync(eng, "assigned engineer", ct);
+            if (!await m.UserCanAsync(eng, Permissions.SequflohEditEngineeringFolder, wi.SiteId, wi.DepartmentId, ct)) throw new AppException("The assigned engineer needs Engineering folder access at this site.");
+        }
+        string? T(string? v, int max) { if (string.IsNullOrWhiteSpace(v)) return null; v = v.Trim(); return v.Length > max ? throw new AppException($"A value is limited to {max} characters.") : v; }
+        var changed = new List<string>();
+        void Set<TV>(string name, TV? now, TV? value, Action<TV?> apply) { if (!EqualityComparer<TV?>.Default.Equals(now, value)) { apply(value); changed.Add(name); } }
+        Set("assigned engineer", wi.AssignedEngineerId, r.AssignedEngineerId, v => wi.AssignedEngineerId = v);
+        Set("target completion date", wi.TargetCompletionDate, r.TargetCompletionDate, v => wi.TargetCompletionDate = v);
+        Set("project", wi.Project, T(r.Project, 100), v => wi.Project = v);
+        Set("Engineering notes", wi.EngineeringNotes, T(r.EngineeringNotes, 4000), v => wi.EngineeringNotes = v);
+        Set("development status", wi.DevelopmentStatus, T(r.DevelopmentStatus, 100), v => wi.DevelopmentStatus = v);
+        if (r.RecommendRelease is { } rec && rec != (wi.ReleaseRecommendedAt is not null))
+        {
+            if (rec)
+            {
+                var problems = await ReleaseProblemsAsync(wi, true, ct);
+                if (problems.Count > 0) throw new AppException("Release cannot be recommended yet: " + string.Join(" ", problems));
+                wi.ReleaseRecommendedAt = m.Now; wi.ReleaseRecommendedById = m.UserId; changed.Add("release recommended");
+            }
+            else { wi.ReleaseRecommendedAt = null; wi.ReleaseRecommendedById = null; changed.Add("release recommendation withdrawn"); }
+        }
+        if (changed.Count == 0) return wi;
+        f.Audit("WorkInstructionDevelopmentUpdated", EntityType, wi.Id, $"{wi.Number} rev {wi.Revision}: {string.Join(", ", changed)}", wi.SiteId);
+        await db.SaveChangesAsync(ct);
+        return wi;
+    }
+
     public async Task<SequflohWorkInstruction> ReviseAsync(Guid id, ReviseInput r, CancellationToken ct)
     {
         var settings = await f.GetSettingsAsync(ct);
