@@ -84,9 +84,24 @@ public sealed class ImportsController(ImportCenterService imports, AppDbContext 
     [HttpGet("{id:guid}/original-preview")]
     public async Task<IActionResult> OriginalPreview(Guid id, CancellationToken ct)
     {
-        var (content, name) = await imports.OriginalPreviewAsync(id, ct);
-        return File(content, "application/pdf", name);
+        var (content, name, type) = await imports.OriginalPreviewAsync(id, ct);
+        return File(content, type, name);
     }
+    /// <summary>PDF and scanned image settings: pages and table to extract, title, whether pages without text are recognized.</summary>
+    [HttpPut("{id:guid}/pdf-settings")] public async Task<IActionResult> PdfSettings(Guid id, PdfSettingsRequest req, CancellationToken ct) { await imports.UpdatePdfSettingsAsync(id, req, ct); return NoContent(); }
+    /// <summary>Review of detected fields, tables, checkboxes and signature areas: include or leave out, correct, confirm.</summary>
+    [HttpPut("{id:guid}/detections")] public async Task<IActionResult> Detections(Guid id, DetectionReviewRequest req, CancellationToken ct) { await imports.ReviewDetectionsAsync(id, req, ct); return NoContent(); }
+    /// <summary>Files derived from the original: rendered page images, recognized text, generated previews.</summary>
+    [HttpGet("{id:guid}/derived")] public Task<IReadOnlyList<object>> Derived(Guid id, CancellationToken ct) => imports.DerivedFilesAsync(id, ct);
+    [HttpGet("{id:guid}/derived/{fileId:guid}")]
+    public async Task<IActionResult> DerivedFile(Guid id, Guid fileId, CancellationToken ct)
+    {
+        var (content, type, name) = await imports.DerivedFileAsync(id, fileId, ct);
+        return File(content, type, name);
+    }
+    /// <summary>One embedded picture of a PDF, as PNG.</summary>
+    [HttpGet("{id:guid}/pdf-images/{page:int}/{index:int}")]
+    public async Task<IActionResult> PdfImage(Guid id, int page, int index, CancellationToken ct) => File(await imports.PdfImageAsync(id, page, index, ct), "image/png", $"page-{page}-picture-{index}.png");
     /// <summary>Secured grid preview of one worksheet of the preserved original (values, formula, validation and named-range indicators; nothing is run).</summary>
     [HttpGet("{id:guid}/workbook")] public Task<QualGuardIQ.Infrastructure.Modules.Imports.Excel.GridPreview> Workbook(Guid id, [FromQuery] string? sheet, CancellationToken ct) => imports.WorkbookGridAsync(id, sheet, ct);
     [HttpPut("{id:guid}/mapping")] public async Task<IActionResult> Mapping(Guid id, MappingRequest req, CancellationToken ct) { await imports.UpdateMappingAsync(id, req, ct); return NoContent(); }

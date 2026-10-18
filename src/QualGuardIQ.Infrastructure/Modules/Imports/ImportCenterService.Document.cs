@@ -25,7 +25,7 @@ public sealed partial class ImportCenterService
 {
     public static bool IsDocument(ImportJob job) => job.FileType is "docx" or "doc";
     /// <summary>Files read by a structure parser (rather than as delimited text).</summary>
-    public static bool IsStructured(ImportJob job) => IsWorkbook(job) || IsDocument(job);
+    public static bool IsStructured(ImportJob job) => IsWorkbook(job) || IsDocument(job) || IsPdf(job);
 
     public async Task<DocModel> LoadDocumentAsync(ImportJob job, CancellationToken ct)
     {
@@ -126,14 +126,19 @@ public sealed partial class ImportCenterService
     /// The original rendered to PDF by the office conversion adapter (Word, Excel) or the PDF itself: the left side of the fidelity comparison.
     /// Generated once and kept with the job as its generated preview.
     /// </summary>
-    public async Task<(Stream Content, string FileName)> OriginalPreviewAsync(Guid id, CancellationToken ct)
+    public async Task<(Stream Content, string FileName, string ContentType)> OriginalPreviewAsync(Guid id, CancellationToken ct)
     {
         var job = await LoadAsync(id, Permissions.ImportsView, ct);
         var name = Path.GetFileNameWithoutExtension(job.OriginalFileName) + " (original).pdf";
-        if (job.FileType == "pdf") return (await OpenOriginalAsync(job, ct), job.OriginalFileName);
-        if (!IsStructured(job)) throw new AppException("Only Word, Excel and PDF files have an original preview.");
+        if (job.FileType == "pdf") return (await OpenOriginalAsync(job, ct), job.OriginalFileName, "application/pdf");
+        if (job.FileType == "image")
+        {
+            var ext = Path.GetExtension(job.OriginalFileName).ToLowerInvariant();
+            return (await OpenOriginalAsync(job, ct), job.OriginalFileName, ext is ".png" ? "image/png" : ext is ".jpg" or ".jpeg" ? "image/jpeg" : "image/tiff");
+        }
+        if (!IsWorkbook(job) && !IsDocument(job)) throw new AppException("Only Word, Excel, PDF and image files have an original preview.");
         var existing = await db.Attachments.AsNoTracking().FirstOrDefaultAsync(a => a.OwnerType == RecordType && a.OwnerId == job.Id && a.Category == "Import preview", ct);
-        if (existing is not null) return (await storage.GetAsync(existing.StorageKey, ct), name);
+        if (existing is not null) return (await storage.GetAsync(existing.StorageKey, ct), name, "application/pdf");
         if (!legacy.Available) throw new AppException("The document converter is not available on this server, so the original cannot be rendered. The converted preview and the fidelity report are still available.", 503);
         await using var src = await OpenOriginalAsync(job, ct);
         await using var pdf = await legacy.ConvertAsync(src, job.FileType, "pdf", ct);
@@ -151,6 +156,6 @@ public sealed partial class ImportCenterService
         Event(job, "PreviewGenerated", $"Original rendered to PDF ({ms.Length:N0} bytes, SHA-256 {hash[..12]}…)");
         await db.SaveChangesAsync(ct);
         ms.Position = 0;
-        return (ms, name);
+        return (ms, name, "application/pdf");
     }
 }

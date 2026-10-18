@@ -36,7 +36,16 @@ public sealed class TestApp : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Licensing:PublicKeyPem", LicenseSigner.ExportSubjectPublicKeyInfoPem());
         // sign-in emails (reset links) are captured instead of sent
         builder.ConfigureServices(s => s.AddSingleton<QualGuardIQ.Infrastructure.Security.IAuthMailer>(Mail));
+        // OCR and page rendering are replaced by fakes so scanned-page tests do not depend on installed tools
+        builder.ConfigureServices(s =>
+        {
+            s.AddSingleton<QualGuardIQ.Infrastructure.Modules.Imports.Pdf.IOcrEngine>(Ocr);
+            s.AddSingleton<QualGuardIQ.Infrastructure.Modules.Imports.Pdf.IPdfPageRenderer>(new FakePageRenderer());
+        });
     }
+
+    /// <summary>Test OCR engine: off unless a test turns it on.</summary>
+    public static readonly FakeOcrEngine Ocr = new();
 
     /// <summary>Sign-in emails the API queued during the run (password reset links, change notices).</summary>
     public static readonly CapturedAuthMail Mail = new();

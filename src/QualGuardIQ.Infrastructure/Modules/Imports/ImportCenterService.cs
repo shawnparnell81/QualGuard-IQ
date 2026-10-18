@@ -32,7 +32,8 @@ public sealed record DryRunSummary(int Rows, int Valid, int Invalid, int Duplica
 /// rollback and audited state transitions. Large files are advanced by the background worker instead of inside the request.
 /// </summary>
 public sealed partial class ImportCenterService(AppDbContext db, IAccessService access, ICurrentUser current, IFileStorage storage, IMalwareScanner scanner,
-    INumberingService numbers, IEnumerable<IImportTarget> targets, IClock clock, IConfiguration config, Documents.DocumentService docs, ILegacyOfficeConverter legacy)
+    INumberingService numbers, IEnumerable<IImportTarget> targets, IClock clock, IConfiguration config, Documents.DocumentService docs, ILegacyOfficeConverter legacy,
+    Pdf.IOcrEngine ocr, Pdf.IPdfPageRenderer pdfPages)
 {
     public const string RecordType = "ImportJob";
     public static readonly HashSet<string> Supported = [".csv", ".txt", ".tsv", ".xlsx", ".xlsm", ".xls", ".docx", ".doc", ".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff"];
@@ -226,6 +227,12 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
                 return Starts(Ole) ? null : "The file content is not a legacy Office document.";
             case ".pdf":
                 return Starts(Pdf) ? null : "The file content is not a PDF.";
+            case ".png":
+                return Starts([0x89, 0x50, 0x4E, 0x47]) ? null : "The file content is not a PNG image.";
+            case ".jpg" or ".jpeg":
+                return Starts([0xFF, 0xD8, 0xFF]) ? null : "The file content is not a JPEG image.";
+            case ".tif" or ".tiff":
+                return Starts([0x49, 0x49, 0x2A, 0x00]) || Starts([0x4D, 0x4D, 0x00, 0x2A]) ? null : "The file content is not a TIFF image.";
             case ".csv" or ".txt" or ".tsv":
                 var buf = new byte[8192];
                 var m = await s.ReadAsync(buf, ct);
@@ -296,7 +303,6 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             job.StartedAt ??= clock.UtcNow;
             if (job.FileType != "csv" && !IsStructured(job))
             {
-                // the PDF and image parsers attach here (later phases); until then the job waits for that parser.
                 Event(job, "Inspected", $"{job.FileType.ToUpperInvariant()} file waiting for its parser.");
                 await db.SaveChangesAsync(ct);
                 return;
@@ -306,11 +312,11 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         if (job.Status != ImportJobStatus.Parsing) return;
         if (IsStructured(job))
         {
-            try { if (IsWorkbook(job)) await ParseWorkbookAsync(job, ct); else await ParseDocumentAsync(job, ct); }
+            try { if (IsWorkbook(job)) await ParseWorkbookAsync(job, ct); else if (IsDocument(job)) await ParseDocumentAsync(job, ct); else await ParsePdfAsync(job, ct); }
             catch (Exception e) when (e is not OperationCanceledException and not DbUpdateException)
             {
                 AddIssue(job, "file", null, ImportIssueSeverity.Error, "PARSE", e.Message, "Check the file and its settings.");
-                Transition(job, ImportJobStatus.Failed, IsWorkbook(job) ? "The workbook could not be read." : "The document could not be read.");
+                Transition(job, ImportJobStatus.Failed, IsWorkbook(job) ? "The workbook could not be read." : IsDocument(job) ? "The document could not be read." : "The PDF or image could not be read.");
             }
             await db.SaveChangesAsync(ct);
             return;
@@ -504,6 +510,11 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             await foreach (var r in DocumentRowsAsync(job, ct)) yield return r;
             yield break;
         }
+        if (IsPdf(job))
+        {
+            await foreach (var r in PdfRowsAsync(job, ct)) yield return r;
+            yield break;
+        }
         var o = Options(job) ?? throw new AppException("The file has not been analyzed.");
         await using var s = await OpenOriginalAsync(job, ct);
         using var reader = new StreamReader(s, CsvParser.EncodingFor(o.Encoding), true, 65536);
@@ -587,6 +598,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         var job = await LoadAsync(id, Permissions.ImportsEdit, ct);
         if (job.Status == ImportJobStatus.ValidationFailed && !skipInvalidRows) throw new AppException("Some rows have problems. Fix them, or choose to import only the rows without problems.");
         if (job.Status is not (ImportJobStatus.PreviewReady or ImportJobStatus.ValidationFailed)) throw new ConflictException("Validate the import before submitting it.");
+        CheckPdfReview(job);
         job.Settings = SetFlag(job.Settings, "skipInvalidRows", skipInvalidRows);
         Transition(job, ImportJobStatus.AwaitingApproval, skipInvalidRows ? "Rows with problems will be skipped." : null);
         await db.SaveChangesAsync(ct);
@@ -669,6 +681,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
                         if (!seen.Add(k) || await target.ExistsAsync(job, keys.ToDictionary(x => x, x => vals.GetValueOrDefault(x)), ct)) { dupSkipped++; continue; }
                     }
                     var newId = await target.CreateAsync(job, vals, ct);
+                    await KeepCompletedPdfAsync(job, target.RecordType, newId, ct);
                     db.ImportedItems.Add(new ImportedItem { ImportJobId = job.Id, RowNumber = line, TargetType = target.RecordType, TargetId = newId });
                     created++;
                     if (created % 200 == 0) { job.Progress = Math.Min(99, 60 + (int)(40.0 * created / Math.Max(1, job.TotalRows))); await db.SaveChangesAsync(ct); }
