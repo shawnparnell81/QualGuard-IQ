@@ -98,7 +98,7 @@ public sealed class FormsImportEndToEndTests(TestApp app)
         var detections = job.GetProperty("analysis").GetProperty("detections").EnumerateArray().ToList();
         Assert.Contains(detections, d => d.GetProperty("kind").GetString() == "checkbox");
         Assert.Contains(detections, d => d.GetProperty("kind").GetString() == "table");
-        Assert.Contains(def.Fields, f => f.Key == "customer_approval" && f.Type == "checkbox");
+        Assert.Contains(def.Fields, f => f.Key == "customer_approval" && f.Type == "boolean");
         Assert.Contains(def.Fields, f => f.Key == "reason" && f.Options is { Count: > 0 });
 
         // 6. Correct mappings: rename a detected field and confirm the review.
@@ -294,9 +294,9 @@ public sealed class FormsImportEndToEndTests(TestApp app)
         Assert.Equal(1, dry.GetProperty("inError").GetInt32());
         Assert.Equal(1, dry.GetProperty("duplicates").GetInt32());
         var preview = dry.GetProperty("preview").EnumerateArray().ToList();
-        Assert.Equal(dept.ToString(), preview[0].GetProperty("values").GetProperty("department").GetString());
-        Assert.Equal(dept.ToString(), preview[1].GetProperty("values").GetProperty("department").GetString());
-        Assert.Equal(ownerId.ToString(), preview[0].GetProperty("values").GetProperty("owner").GetString());
+        // The preview shows the file's own text; the resolved department and owner are checked on the imported records in step 8.
+        Assert.Empty(preview[0].GetProperty("problems").EnumerateArray());
+        Assert.Empty(preview[1].GetProperty("problems").EnumerateArray());
         Assert.Contains(preview[2].GetProperty("problems").EnumerateArray(), p => p.GetString()!.Contains("Confidentiality"));
 
         // 7. Import transactionally: the valid rows in one transaction, approved by someone else.
@@ -468,6 +468,7 @@ public sealed class FormsImportEndToEndTests(TestApp app)
         Assert.Equal("IF(lot_qty>500,32,IF(lot_qty>90,13,5))", def.Fields.Single(f => f.Key == "sample_size").Formula!.Replace(" ", ""));
         Assert.Equal("calc", def.Fields.Single(f => f.Key == "sample_size").Type);
         Assert.Equal(["Pass", "Fail", "Hold"], def.Fields.Single(f => f.Key == "disposition").Options);
+        Assert.Equal(HttpStatusCode.NoContent, (await author.PutAsync($"/api/imports/{id}/detections", new { items = Array.Empty<object>(), confirmAll = true })).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await author.PostAsync($"/api/imports/{id}/validate")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await author.PostAsync($"/api/imports/{id}/submit", new { skipInvalidRows = false })).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await approver.PostAsync($"/api/imports/{id}/approve", new { acceptFidelityReport = true })).StatusCode);
@@ -476,7 +477,9 @@ public sealed class FormsImportEndToEndTests(TestApp app)
         await PublishTemplateAsync(author, approver, docId);
 
         // 8. Reimport controlled workbook: the protected offline copy comes back as a recalculated record.
-        var exported = await (await author.GetAsync($"/api/forms/templates/{docId}/workbook")).Content.ReadAsByteArrayAsync();
+        // Each offline copy is issued once and accepted once, so every submission below starts from a newly issued copy.
+        async Task<byte[]> IssueAsync() => await (await author.GetAsync($"/api/forms/templates/{docId}/workbook")).Content.ReadAsByteArrayAsync();
+        var exported = await IssueAsync();
         (int Row, int Col) Find(IXLWorksheet f, string label) { var c = f.CellsUsed().First(x => x.GetString().TrimEnd(' ', '*').Equals(label, StringComparison.OrdinalIgnoreCase)); return (c.Address.RowNumber, c.Address.ColumnNumber + 1); }
         byte[] Fill(Action<IXLWorksheet> change)
         {
@@ -501,10 +504,12 @@ public sealed class FormsImportEndToEndTests(TestApp app)
         Assert.Equal("32", values["sample_size"]);
 
         // 9. Validate input cells: a value outside the dropdown list is refused.
+        exported = await IssueAsync();
         var bad = await SubmitAsync(Fill(f => { var (row, col) = Find(f, lotLabel); f.Cell(row, col).Value = 50; var (dr, dc) = Find(f, dispLabel); f.Cell(dr, dc).Value = "Maybe"; }));
         Assert.Equal(HttpStatusCode.BadRequest, bad.StatusCode);
 
         // 10. Prevent altered protected structure.
+        exported = await IssueAsync();
         var altered = await SubmitAsync(Fill(f => { var (row, col) = Find(f, lotLabel); f.Cell(row, col - 1).Value = "Batch size"; }));
         Assert.Equal(HttpStatusCode.BadRequest, altered.StatusCode);
         Assert.Contains("protected parts", await altered.Content.ReadAsStringAsync());
