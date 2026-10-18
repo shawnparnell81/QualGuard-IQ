@@ -48,7 +48,7 @@ public sealed partial class ImportCenterService
         var wb = await LoadWorkbookAsync(job, ct);
         var summary = WorkbookIntake.Analyze(wb);
         var es = ExcelSettings(job);
-        await ClearIssuesAsync(job, "SHAPE", "EMPTY", "FIDELITY", "FORMULA", "WORKBOOK_SECURITY", "CONVERSION");
+        await ClearIssuesAsync(job, "SHAPE", "EMPTY", "FIDELITY", "FORMULA", "WORKBOOK_SECURITY", "CONVERSION", "REVIEW", "PROFILE");
         foreach (var w in summary.Security.Take(100)) AddIssue(job, "workbook", null, ImportIssueSeverity.Warning, "WORKBOOK_SECURITY", w, "Nothing active is run; review the item in the original workbook.");
         foreach (var f in summary.Formulas.Where(f => f.Classes.Any(c => c is FormulaClass.External or FormulaClass.Macro or FormulaClass.Unsupported)).Take(200))
             AddIssue(job, f.Location, null, ImportIssueSeverity.Warning, "FORMULA", $"{f.Formula}: {f.Warning}", "The stored result is kept; the formula is not run.");
@@ -59,6 +59,7 @@ public sealed partial class ImportCenterService
             case "template":
             {
                 var x = new ExcelFormConverter(wb, new ExcelConversionOptions(es.Sheets, es.Regions, es.Title ?? Path.GetFileNameWithoutExtension(job.OriginalFileName))).Convert();
+                RunEngine(job, analysis, x.Definition, x.Report, "xlsx");
                 analysis["conversion"] = new JsonObject
                 {
                     ["definition"] = JsonNode.Parse(FormDefinitions.Serialize(x.Definition)),
@@ -155,6 +156,12 @@ public sealed partial class ImportCenterService
         var full = await db.Documents.Include(d => d.Revisions).FirstAsync(d => d.Id == doc.Id, ct);
         full.Source = job.FileType switch { "xlsx" or "xlsm" or "xls" => TemplateSource.Excel, "docx" or "doc" => TemplateSource.Word, "pdf" or "image" => TemplateSource.Pdf, "csv" => TemplateSource.Csv, _ => TemplateSource.Native };
         full.Description = $"Imported by {job.Number} from {job.OriginalFileName} (SHA-256 {job.FileHash[..12]}…).";
+        if (kind == DocumentKind.FormTemplate && Conversion.ConversionEngine.Profile(ConversionTarget(job)) is { } family)
+        {
+            // converted as an NCR, CAPA, calibration, supplier, audit, APQP or PPAP form: the template is filed with that module
+            full.ModuleKey = family.ModuleKey;
+            full.CategoryId ??= await db.TemplateCategories.Where(c => c.ModuleKey == family.ModuleKey && c.IsActive).OrderBy(c => c.ParentId == null ? 0 : 1).ThenBy(c => c.DisplayOrder).Select(c => (Guid?)c.Id).FirstOrDefaultAsync(ct);
+        }
         var rev = full.Revisions.Single();
         await db.SaveChangesAsync(ct);
         if (kind == DocumentKind.FormTemplate)

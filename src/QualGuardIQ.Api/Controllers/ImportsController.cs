@@ -92,6 +92,9 @@ public sealed class ImportsController(ImportCenterService imports, AppDbContext 
     /// <summary>Review of detected fields, tables, checkboxes and signature areas: include or leave out, correct, confirm.</summary>
     [HttpPut("{id:guid}/detections")] public async Task<IActionResult> Detections(Guid id, DetectionReviewRequest req, CancellationToken ct) { await imports.ReviewDetectionsAsync(id, req, ct); return NoContent(); }
     /// <summary>Files derived from the original: rendered page images, recognized text, generated previews.</summary>
+    [HttpPut("{id:guid}/conversion-target")] public async Task<IActionResult> ConversionTarget(Guid id, ConversionTargetRequest req, CancellationToken ct) { await imports.SetConversionTargetAsync(id, req, ct); return NoContent(); }
+    [HttpGet("conversion-targets")] public IEnumerable<object> ConversionTargets() => QualGuardIQ.Infrastructure.Modules.Imports.Conversion.ConversionEngine.Profiles.Select(p => new { p.Key, p.Name, p.ModuleKey, elements = p.Elements.Select(e => e.Name) });
+    [HttpGet("{id:guid}/pipeline")] public async Task<IReadOnlyList<ImportCenterService.PipelineStep>> Pipeline(Guid id, CancellationToken ct) => await imports.PipelineAsync(await imports.LoadAsync(id, Domain.Security.Permissions.ImportsView, ct), ct);
     [HttpGet("{id:guid}/derived")] public Task<IReadOnlyList<object>> Derived(Guid id, CancellationToken ct) => imports.DerivedFilesAsync(id, ct);
     [HttpGet("{id:guid}/derived/{fileId:guid}")]
     public async Task<IActionResult> DerivedFile(Guid id, Guid fileId, CancellationToken ct)

@@ -172,7 +172,7 @@ public sealed partial class ImportCenterService
         var ps = PdfSettings(job);
         var (m, ocrUsed) = await LoadPdfAsync(job, ps.Ocr != false && job.ImportMode != "document", ct);
         var a = Reviewed(job, m, ocrUsed);
-        await ClearIssuesAsync(job, "SHAPE", "EMPTY", "FIDELITY", "DOCUMENT_SECURITY", "CONVERSION", "OCR", "REVIEW");
+        await ClearIssuesAsync(job, "SHAPE", "EMPTY", "FIDELITY", "DOCUMENT_SECURITY", "CONVERSION", "OCR", "REVIEW", "PROFILE");
         foreach (var w in m.Security.Take(50)) AddIssue(job, "document", null, ImportIssueSeverity.Warning, "DOCUMENT_SECURITY", w, "Nothing active is run or retrieved; review the item in the original PDF.");
         foreach (var p in m.Pages.Where(p => p.Status is "needs-ocr" or "ocr-failed"))
             AddIssue(job, $"Page {p.Number}", null, job.ImportMode == "document" ? ImportIssueSeverity.Info : ImportIssueSeverity.Warning, "OCR", p.StatusDetail ?? "The page has no text layer.",
@@ -191,6 +191,7 @@ public sealed partial class ImportCenterService
                 try
                 {
                     var x = new PdfFormConverter(m, a, ps.Title, job.OriginalFileName).Convert();
+                    ProfileInto(job, analysis, x.Definition);
                     analysis["conversion"] = new JsonObject
                     {
                         ["definition"] = JsonNode.Parse(FormDefinitions.Serialize(x.Definition)), ["report"] = JsonSerializer.SerializeToNode(x.Report, JsonOpts),
@@ -295,8 +296,9 @@ public sealed partial class ImportCenterService
     public async Task ReviewDetectionsAsync(Guid id, DetectionReviewRequest req, CancellationToken ct)
     {
         var job = await LoadAsync(id, Permissions.ImportsEdit, ct);
-        if (!IsPdf(job) || job.ImportMode != "template") throw new AppException("Detections are reviewed for PDF and scanned form conversions.");
+        if (job.ImportMode != "template") throw new AppException("Detections are reviewed for conversions into a form.");
         if (job.Status is not (ImportJobStatus.PreviewReady or ImportJobStatus.ValidationFailed)) throw new ConflictException("Detections can be reviewed before the conversion is submitted.");
+        if (!IsPdf(job)) { await ReviewConversionAsync(job, req, ct); return; }
         var known = (Obj(job.Analysis)["detections"] as JsonArray)?.Select(d => d?["id"]?.GetValue<string>()).Where(x => x is not null).ToHashSet() ?? [];
         var review = Review(job);
         foreach (var i in req.Items)
@@ -317,15 +319,6 @@ public sealed partial class ImportCenterService
         Transition(job, ImportJobStatus.Parsing, "Detections reviewed");
         await db.SaveChangesAsync(ct);
         await AdvanceAsync(job, ct);
-    }
-
-    /// <summary>Submission check for PDF conversions: nothing detected is published until it has been reviewed.</summary>
-    static void CheckPdfReview(ImportJob job)
-    {
-        if (!IsPdf(job) || job.ImportMode != "template") return;
-        if (Obj(job.Analysis)["conversion"] is null) throw new AppException("Nothing was converted from this file; keep it as a controlled document instead.");
-        var pending = Obj(job.Analysis)["review"]?["required"]?.GetValue<int>() ?? 0;
-        if (pending > 0) throw new AppException($"Confirm the {pending} detection(s) with medium or low confidence (or read by OCR) before submitting.");
     }
 
     /// <summary>Mode B: the completed PDF stays with each record created from it.</summary>
