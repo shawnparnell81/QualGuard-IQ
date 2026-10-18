@@ -67,6 +67,7 @@ export const modules: ModuleDef[] = [
         { label: 'Form records', path: '/forms/records', permission: 'forms.view' },
         { label: 'Fill in a form', path: '/forms/records/new', permission: 'forms.edit' },
         { label: 'Template library', path: '/forms/library', permission: 'forms.view' },
+        { label: 'Import Center', path: '/imports', permission: 'imports.view' },
         { label: 'Form templates', path: '/forms/templates', permission: 'forms.view' },
         { label: 'New template', path: '/forms/templates/new', permission: 'forms.edit' },
       ] },

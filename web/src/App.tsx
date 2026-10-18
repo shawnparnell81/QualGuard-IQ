@@ -70,6 +70,8 @@ const DocumentDetail = lazy(() => import('./pages/Documents').then((m) => ({ def
 const DocumentList = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentList })));
 const DocumentNew = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentNew })));
 const DocumentTypesPage = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentTypesPage })));
+const ImportCenter = lazy(() => import('./pages/ImportCenter').then((m) => ({ default: m.ImportCenter })));
+const ImportJobDetail = lazy(() => import('./pages/ImportCenter').then((m) => ({ default: m.ImportJobDetail })));
 const TemplateLibrary = lazy(() => import('./pages/TemplateLibrary').then((m) => ({ default: m.TemplateLibrary })));
 const FormRecordDetail = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordDetail })));
 const FormRecordList = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordList })));
@@ -255,6 +257,8 @@ export function App() {
               <Route path="/drawings/new" element={<DocumentNew kind={1} />} />
               <Route path="/drawings/:id" element={<DocumentDetail kind={1} />} />
               <Route path="/forms/library" element={<TemplateLibrary />} />
+              <Route path="/imports" element={<ImportCenter />} />
+              <Route path="/imports/:id" element={<ImportJobDetail />} />
               <Route path="/forms/templates" element={<DocumentList kind={2} />} />
               <Route path="/forms/templates/new" element={<DocumentNew kind={2} />} />
               <Route path="/forms/templates/:id" element={<DocumentDetail kind={2} />} />
