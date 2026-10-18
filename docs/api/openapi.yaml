@@ -48966,6 +48966,297 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/sequfloh/reports:
+    get:
+      tags:
+        - SequflohReports
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.view_reports` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/reports/{key}':
+    get:
+      tags:
+        - SequflohReports
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.view_reports` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: site
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: user
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 25
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/reports/{key}/xlsx':
+    get:
+      tags:
+        - SequflohReports
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.view_reports` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: site
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: user
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: fileName
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/audit/{view}':
+    get:
+      tags:
+        - SequflohReports
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.view_audit_trail` (site/department scoped).'
+      parameters:
+        - name: view
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: user
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: entityType
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 25
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/audit/entry/{id}':
+    get:
+      tags:
+        - SequflohReports
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.view_audit_trail` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/audit/{view}/print':
+    get:
+      tags:
+        - SequflohReports
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.view_audit_trail` (site/department scoped).'
+      parameters:
+        - name: view
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: user
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: entityType
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/search:
+    get:
+      tags:
+        - SequflohReports
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/sequfloh/tracking:
     get:
       tags:
@@ -49229,6 +49520,25 @@ paths:
         '403':
           description: Missing permission or outside site scope
   '/api/sequfloh/tracking/{id}/history':
+    get:
+      tags:
+        - SequflohTracking
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/tracking/{id}/print':
     get:
       tags:
         - SequflohTracking
@@ -83055,4 +83365,5 @@ tags:
   - name: SequflohFoundation
   - name: SequflohInstructions
   - name: SequflohParts
+  - name: SequflohReports
   - name: SequflohTracking

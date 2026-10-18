@@ -22,6 +22,7 @@ export function SequflohHome() {
     ['New repair record', '/sequfloh/tracking/new?type=Repair', 'sequfloh.create_repair_record'],
     ['Parts Lists', '/sequfloh/parts-lists', 'sequfloh.access'],
     ['Reports', '/sequfloh/reports/task-performance', 'sequfloh.view_reports'],
+    ['Search', '/sequfloh/search', 'sequfloh.access'],
   ];
   const List2 = ({ title, rows, empty }: { title: string; rows?: Item[]; empty: string }) => (
     <Paper variant="outlined" sx={{ p: 2 }}>

@@ -241,6 +241,10 @@ const SqfEDash = lazy(() => import('./sequfloh/Personnel').then((m) => ({ defaul
 const SqfEVal = lazy(() => import('./sequfloh/Personnel').then((m) => ({ default: m.EngineeringValidationPage })));
 const SqfEDev = lazy(() => import('./sequfloh/Personnel').then((m) => ({ default: m.DevelopmentPage })));
 const SqfEQueue = lazy(() => import('./sequfloh/Personnel').then((m) => ({ default: () => <m.ReviewQueuePage area="engineering" /> })));
+const SqfReport = lazy(() => import('./sequfloh/Reports').then((m) => ({ default: m.ReportPage })));
+const SqfExportCenter = lazy(() => import('./sequfloh/Reports').then((m) => ({ default: m.ExportCenterPage })));
+const SqfAudit = lazy(() => import('./sequfloh/Reports').then((m) => ({ default: m.AuditPage })));
+const SqfSearch = lazy(() => import('./sequfloh/Reports').then((m) => ({ default: m.SearchPage })));
 const SqfExQueue = lazy(() => import('./sequfloh/Execution').then((m) => ({ default: m.ExecutionQueuePage })));
 const SqfExStation = lazy(() => import('./sequfloh/Execution').then((m) => ({ default: m.ActiveStationPage })));
 const SqfExHistory = lazy(() => import('./sequfloh/Execution').then((m) => ({ default: m.WorkHistoryPage })));
@@ -429,6 +433,10 @@ export function App() {
               <Route path="/sequfloh/tracking/:folder" element={<SqfTrFolder />} />
               <Route path="/sequfloh/record/:id" element={<SqfTr />} />
               <Route path="/sequfloh/execution/active" element={<SqfExStation />} />
+              <Route path="/sequfloh/reports/export-center" element={<SqfExportCenter />} />
+              <Route path="/sequfloh/reports/:slug" element={<SqfReport />} />
+              <Route path="/sequfloh/audit/:view" element={<SqfAudit />} />
+              <Route path="/sequfloh/search" element={<SqfSearch />} />
               <Route path="/sequfloh/quality" element={<SqfQDash />} />
               <Route path="/sequfloh/quality/validation" element={<SqfQVal />} />
               <Route path="/sequfloh/quality/repair" element={<SqfQRep />} />
