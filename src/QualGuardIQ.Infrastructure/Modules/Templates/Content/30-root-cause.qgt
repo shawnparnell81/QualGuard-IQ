@@ -1,0 +1,274 @@
+# Root cause and problem solving templates (TECH 4; FI 1 corrective action family)
+
+template five-whys | Five Whys | ROOT_CAUSE
+packs manufacturing
+tags five whys, root cause
+purpose Trace a problem back to a root cause the organization can act on by asking why repeatedly, with evidence for each answer, along both the occurrence and the escape paths.
+scope Problems with a single clear cause chain. Use a fishbone or fault tree first when several causes are possible.
+instructions Start from the problem statement. For each why, record the answer and the evidence that confirms it. Stop when the answer is a cause the organization controls and removing it would prevent recurrence. Complete a chain for why it happened and one for why it was not detected.
+workflow Problem stated, chains completed, root causes confirmed, reviewed.
+retention Keep with the parent record for ten years after closure.
+section problem_def | Problem | 2
+f problem_text | Problem statement | longtext | *
+f parent_record | Parent record | record
+section occurrence_chain | Why it happened | 1
+table occurrence_whys | Occurrence chain | 3
+rows Why 1; Why 2; Why 3; Why 4; Why 5; Why 6; Why 7
+c why_answer | Because | longtext
+c why_evidence | Evidence | text
+c why_confirmed | Confirmed | boolean
+section escape_chain | Why it was not detected | 1
+table escape_whys | Escape chain | 3
+rows Why 1; Why 2; Why 3; Why 4; Why 5; Why 6; Why 7
+c esc_answer | Because | longtext
+c esc_evidence | Evidence | text
+c esc_confirmed | Confirmed | boolean
+section conclusions | Conclusions | 2
+f occurrence_root | Root cause of occurrence | longtext | *
+f escape_root | Root cause of escape | longtext
+f systemic_root | Systemic root cause | longtext
+f proposed_actions | Proposed actions | longtext
+use approval_trio
+end
+
+template fishbone-analysis | Fishbone Analysis | ROOT_CAUSE
+packs manufacturing
+tags fishbone, cause and effect, Ishikawa
+purpose Organize the possible causes of a problem by category so that the team considers every source of variation before choosing causes to test.
+scope Problems with several possible causes, used as the first step of an investigation.
+instructions Write the effect at the head. Brainstorm causes under each category, then mark the likely causes and test each against data. Only verified causes move to the action plan.
+workflow Effect defined, causes brainstormed, likely causes selected, causes tested, reviewed.
+retention Keep with the parent record for ten years after closure.
+use team
+section effect | Effect | 2
+f effect_text | Effect (problem) | longtext | *
+f parent_record | Parent record | record
+section bones | Causes by category | 1
+table fishbone_causes | Causes | 6
+c bone | Category | choice | * [Method; Machine; Material; Measurement; People; Environment; Management; Design]
+c bone_cause | Possible cause | text | *
+c bone_sub | Sub-cause | text
+c bone_likely | Likely | boolean
+c bone_test | How tested | text
+c bone_result | Test result | choice | [Verified cause; Contributing; Ruled out; Not tested]
+rule fishbone_causes.bone_result | equals | Verified cause | #E6F4EA | bold
+section fishbone_summary | Summary | 2
+f causes_listed | Causes listed | calc | {COUNTA(fishbone_causes.bone_cause)}
+f causes_verified | Verified causes | calc | {COUNTIF(fishbone_causes.bone_result, "Verified cause")}
+f fishbone_conclusion | Conclusion | longtext | *
+use approval_trio
+end
+
+template is-is-not | Is and Is Not Analysis | ROOT_CAUSE
+packs manufacturing
+tags is is not, problem definition
+purpose Sharpen the problem definition by contrasting where, when, what and how big the problem is with where it could be but is not, and use the distinctions to point to the cause.
+scope Problem definition for investigations where the cause is unknown.
+instructions For each question, record what the problem is and what it could be but is not. List the distinctions between the two and the changes associated with each distinction. Candidate causes must explain both columns.
+workflow Questions answered, distinctions and changes listed, candidate causes derived, reviewed.
+retention Keep with the parent record for ten years after closure.
+section is_problem | Problem | 2
+f is_problem_text | Problem statement | longtext | *
+f parent_record | Parent record | record
+section is_table_section | Is and is not | 1
+table is_is_not | Is and is not | 12
+rows What object has the problem; What is the defect; Where is the object when seen; Where on the object; When first seen; When since (pattern); At what stage of the life cycle; How many objects; How many defects per object; What is the trend
+c is_col | Is | longtext
+c is_not_col | Is not (but could be) | longtext
+c distinction | Distinction | text
+c change_col | Change associated | text
+section is_conclusion | Candidate causes | 2
+f candidate_causes | Candidate causes that explain both columns | longtext | *
+f most_likely | Most likely cause | longtext
+use approval_trio
+end
+
+template fault-tree-reference | Fault Tree Reference | ROOT_CAUSE
+packs manufacturing, aerospace
+tags fault tree
+purpose Record the events and logic gates of a fault tree analysis in tabular form, with references to the full diagram, so that each basic event can be tested and linked to actions.
+scope Safety-related, complex or multi-cause failures where the combination of events matters.
+instructions Define the top event. List each intermediate and basic event with its parent and gate type. Attach the diagram. Record the minimal cut sets and the status of each basic event.
+workflow Top event defined, tree built, cut sets identified, basic events tested, reviewed.
+retention Keep with the parent record for the life of the product.
+section top_event | Top event | 2
+f top_event_text | Top event | longtext | *
+f parent_record | Parent record | record
+f diagram | Fault tree diagram | attachment
+section tree_events | Events | 1
+table fault_events | Events and gates | 3
+c event_id | Event id | text | *
+c event_text | Event | text | *
+c event_parent | Parent event | text
+c event_gate | Gate into parent | choice | [AND; OR; Inhibit; Priority AND; None]
+c event_type | Event type | choice | * [Intermediate; Basic; Undeveloped; External]
+c event_probability | Probability | number | min=0 max=1 dec=6
+c event_status | Status | choice | [Confirmed; Ruled out; Under test]
+section cut_sets | Minimal cut sets | 1
+table cut_set_table | Cut sets | 0
+c cut_events | Events in set | text | *
+c cut_order | Order | integer | min=1
+c cut_note | Note | text
+use approval_trio
+end
+
+template cause-effect-matrix | Cause and Effect Matrix | ROOT_CAUSE
+packs manufacturing, automotive
+tags cause and effect matrix, prioritization
+purpose Rank process inputs by how strongly they affect the outputs that matter to the customer, to decide which inputs to study or control first.
+scope Process improvement and investigation where many inputs may affect several outputs.
+instructions Weight each output from 1 to 10 by importance to the customer. Rate each input against each output (0, 1, 3 or 9). The score of an input is the weighted sum; investigate the highest scores first.
+workflow Outputs weighted, inputs rated, priorities reviewed.
+retention Keep with the parent record for ten years after closure.
+section outputs | Outputs and weights | 3
+f output_1 | Output 1 | text | *
+f weight_1 | Weight 1 | integer | * min=1 max=10
+f output_2 | Output 2 | text
+f weight_2 | Weight 2 | integer | min=0 max=10
+f output_3 | Output 3 | text
+f weight_3 | Weight 3 | integer | min=0 max=10
+f output_4 | Output 4 | text
+f weight_4 | Weight 4 | integer | min=0 max=10
+section matrix | Matrix | 1
+table ce_inputs | Inputs | 3
+groups Input:2; Rating against output:4; Result:1
+c input_step | Process step | text
+c input_name | Input | text | *
+c rate_1 | Output 1 | integer | min=0 max=9
+c rate_2 | Output 2 | integer | min=0 max=9
+c rate_3 | Output 3 | integer | min=0 max=9
+c rate_4 | Output 4 | integer | min=0 max=9
+c input_score | Score | calc | {rate_1 * weight_1 + rate_2 * weight_2 + rate_3 * weight_3 + rate_4 * weight_4}
+rule ce_inputs.input_score | greaterOrEqual | 150 | #FFF4D6 | bold
+section ce_summary | Priorities | 2
+f top_score | Highest score | calc | {MAX(ce_inputs.input_score)}
+f priority_inputs | Inputs selected for study | longtext
+use approval_trio
+end
+
+template escape-point-analysis | Escape Point Analysis | ROOT_CAUSE
+packs manufacturing, automotive
+tags escape point, detection
+purpose Find the point in the process closest to the root cause where the problem should have been detected and was not, and why that control failed.
+scope Problems that reached a later operation, the customer or the field.
+instructions List each control point from the root cause location to where the problem was found. For each, record whether it was capable of detecting the problem and why it did not. The first capable control that failed is the escape point.
+workflow Control points listed, each assessed, escape point identified, actions proposed, reviewed.
+retention Keep with the parent record for ten years after closure.
+section escape_problem | Problem | 2
+f escape_problem_text | Problem | longtext | *
+f found_at | Where it was found | text | *
+f origin_point | Where it originated | text
+section control_points | Control points | 1
+table escape_controls | Controls between origin and detection | 2
+c control_step | Operation | text | *
+c control_type | Control | choice | * [Error proofing; Automated test; Gauge check; Visual inspection; Audit; Review; None]
+c control_capable | Capable of detecting | boolean
+c control_detected | Detected | boolean
+c control_why | Why it did not detect | text
+c control_escape | Escape point | calc | {IF(AND(control_capable, NOT(control_detected)), "Escape", "")}
+rule escape_controls.control_escape | equals | Escape | #FDE7E9 | bold
+section escape_conclusion | Conclusion | 2
+f escape_point | Escape point | text | *
+f escape_cause_text | Why the control failed | longtext | *
+f detection_actions | Actions to strengthen detection | longtext
+use approval_trio
+end
+
+template barrier-analysis | Barrier Analysis | ROOT_CAUSE
+packs manufacturing, medical-device
+tags barrier analysis
+purpose Identify the barriers that should have prevented a hazard from reaching a target, and determine which were missing, failed or weakened.
+scope Safety events, serious deviations and failures involving physical, administrative or human barriers.
+instructions Define the hazard and the target. List each barrier, its type and its expected function, and record how it performed. Missing and failed barriers become candidate causes.
+workflow Hazard and target defined, barriers assessed, conclusions reviewed.
+retention Keep with the parent record for ten years after closure.
+section barrier_event | Event | 2
+f hazard | Hazard | text | *
+f target | Target (person, product, process) | text | *
+f event_summary | Event summary | longtext | *
+section barriers | Barriers | 1
+table barrier_table | Barriers | 2
+c barrier | Barrier | text | *
+c barrier_type | Type | choice | * [Physical; Engineering control; Administrative; Training; Supervision; Detection]
+c barrier_function | Expected function | text
+c barrier_performance | Performance | choice | * [Worked; Weakened; Failed; Missing; Not applicable]
+c barrier_why | Why | text
+rule barrier_table.barrier_performance | in | Failed,Missing | #FDE7E9 | bold
+section barrier_summary | Conclusions | 2
+f failed_barriers | Failed or missing barriers | calc | {COUNTIF(barrier_table.barrier_performance, "Failed") + COUNTIF(barrier_table.barrier_performance, "Missing")}
+f barrier_conclusion | Conclusion | longtext | *
+use approval_trio
+end
+
+template eight-d-package | Eight Discipline Problem Solving Package | ROOT_CAUSE
+packs manufacturing, automotive
+tags 8D, problem solving
+purpose Solve a significant problem with a disciplined team approach in eight steps, from team formation to recognition, with containment, verified root causes, permanent corrective actions and prevention of recurrence.
+scope Customer complaints, significant internal nonconformances and supplier problems where the customer or the organization requires an eight discipline report.
+instructions Complete each discipline in order and keep each one updated as the work progresses. Containment must be in place before root cause work is reported. Each root cause must be verified, and each permanent action must be validated before implementation.
+workflow D1 team, D2 problem, D3 containment, D4 root cause, D5 permanent actions chosen, D6 implemented and validated, D7 recurrence prevented, D8 team recognized and closed.
+retention Keep for ten years after closure or as the customer requires.
+status Draft; D1-D3 in progress; D4-D5 in progress; D6-D7 in progress; Closed; Cancelled
+landscape
+use team, capa_problem, ncr_containment
+section d4 | D4 Root cause | 2 | Verify each cause by reproducing the problem or by data that shows the effect follows the cause.
+f d4_occurrence | Root cause of occurrence | longtext | *
+f d4_occurrence_verified | Occurrence cause verified | boolean
+f d4_escape | Root cause of escape | longtext | *
+f d4_escape_verified | Escape cause verified | boolean
+f d4_analysis | Analysis attached | attachment
+section d5 | D5 Permanent corrective actions | 1
+table d5_actions | Chosen actions | 1
+c d5_action | Action | longtext | *
+c d5_addresses | Addresses | choice | * [Occurrence; Escape; Systemic]
+c d5_validation | How validated before implementation | text
+c d5_risk | Risk of the action | text
+section d6 | D6 Implementation and validation | 1
+table d6_implementation | Implementation | 1
+c d6_action | Action | text | *
+c d6_owner | Owner | user | *
+c d6_due | Due | date
+c d6_done | Implemented | date
+c d6_validated | Validated | passfail
+f d6_containment_removed | Containment removed on | date
+section d7 | D7 Prevent recurrence | 2
+f d7_documents | Documents updated (procedures, FMEA, control plan) | longtext
+f d7_similar | Similar products and processes reviewed | longtext
+f d7_lessons | Lessons learned recorded | boolean
+section d8 | D8 Team recognition and closure | 2
+f d8_recognition | Recognition | longtext
+f d8_customer_accepted | Customer accepted the report | boolean
+f d8_closed_on | Closed on | date
+sign d8_leader | Team leader | prepared | I confirm the eight disciplines are complete as recorded.
+sign d8_champion | Champion | reviewed | I reviewed this problem solving report.
+sign d8_quality | Quality approval | approved | I approve closure of this report. | capa.approve
+sign d8_customer | Customer acceptance | customer | The customer accepts this report. | | optional
+end
+
+template verification-plan | Verification Plan | ROOT_CAUSE
+packs manufacturing
+tags verification, corrective action
+purpose Plan how each corrective action will be verified for implementation and for effect, with methods, sample sizes, acceptance criteria and responsibilities, before the actions are implemented.
+scope Corrective actions from CAPAs, eight discipline reports and audit findings.
+instructions For each action define the verification method, the sample or period, the acceptance criterion and who verifies. Record the results against the plan when verification is complete.
+workflow Planned, approved, verification performed, results reviewed.
+retention Keep with the parent record for ten years after closure.
+section plan_ref | Plan | 2
+f parent_record | Parent record | record | *
+f plan_scope | Actions covered | longtext
+section verification_items | Verification items | 1
+table verification_rows | Verification | 1
+c ver_action | Action | text | *
+c ver_type | Verification of | choice | * [Implementation; Effectiveness]
+c ver_method | Method | text | *
+c ver_sample | Sample or period | text
+c ver_criterion | Acceptance criterion | text | *
+c ver_owner | Verified by | user
+c ver_due | Due | date
+c ver_result | Result | passfail
+c ver_evidence | Evidence | text
+f ver_open | Open verifications | calc | {COUNTBLANK(verification_rows.ver_result)}
+f ver_failed | Failed verifications | calc | {COUNTIF(verification_rows.ver_result, "FAIL")}
+rule verification_rows.ver_result | equals | FAIL | #FDE7E9 | bold
+use approval_trio
+end

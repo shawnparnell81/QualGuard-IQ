@@ -1,0 +1,625 @@
+# APQP templates: configurable, organization-authored (TECH 4, FI 1, FI 5 automotive pack)
+
+template apqp-project-charter | Project Charter | APQP
+packs automotive
+tags APQP, charter, plan and define
+purpose Authorize a product quality planning project and record its objectives, scope, customer requirements, team, constraints and milestones.
+scope New products, significant changes and transfers that the organization manages through quality planning.
+instructions Complete the charter at kick-off with the cross-functional team. Quantify the quality, cost and timing objectives. The charter is approved by management before resources are committed and is revised when scope changes.
+workflow Drafted, team review, management approval, revised on scope change.
+retention Keep for the life of the program plus ten years.
+use program_header, team
+section charter | Charter | 2
+f business_case | Business case | longtext | *
+f project_scope | In scope | longtext | *
+f out_of_scope | Out of scope | longtext
+f quality_objectives | Quality objectives | longtext | *
+f reliability_target | Reliability target | text
+f cost_target | Cost target | currency | min=0
+f annual_volume | Annual volume | integer | min=0
+f peak_volume | Peak volume per week | integer | min=0
+f constraints | Constraints and assumptions | longtext
+f key_risks | Key risks | longtext
+table milestones | Milestones | 4
+c milestone | Milestone | text | *
+c milestone_date | Planned date | date | *
+c milestone_owner | Owner | user
+c milestone_gate | Gate review | boolean
+use apqp_signatures
+end
+
+template apqp-timing-plan | APQP Timing Plan | APQP
+packs automotive
+tags APQP, timing, schedule
+purpose Plan and track every quality planning activity by phase with owners, planned and actual dates and status, so that slippage against start of production is visible.
+scope All quality planning projects.
+instructions List the activities for each phase, with the owner and planned dates agreed with the team. Update actual dates and status at each project review. Activities at risk need a recovery action.
+workflow Baseline approved, updated at each review, closed at launch sign-off.
+retention Keep for the life of the program plus ten years.
+landscape
+use program_header
+section timing | Timing | 1
+table timing_activities | Activities | 5
+groups Activity:3; Planned:2; Actual:2; Status:2
+c timing_phase | Phase | choice | * [Plan and define; Product design; Process design; Validation; Launch and feedback]
+c timing_activity | Activity | text | *
+c timing_owner | Owner | user | *
+c planned_start | Start | date | *
+c planned_finish | Finish | date | *
+c actual_start | Start | date
+c actual_finish | Finish | date
+c timing_status | Status | choice | [Not started; On track; At risk; Late; Complete]
+c days_late | Days late | calc | {IF(AND(ISNUMBER(actual_finish), ISNUMBER(planned_finish)), MAX(0, DAYS(actual_finish, planned_finish)), "")}
+rule timing_activities.timing_status | in | At risk,Late | #FDE7E9 | bold
+rule timing_activities.timing_status | equals | Complete | #E6F4EA
+f activities_late | Activities at risk or late | calc | {COUNTIF(timing_activities.timing_status, "At risk") + COUNTIF(timing_activities.timing_status, "Late")}
+f activities_done | Activities complete | calc | {COUNTIF(timing_activities.timing_status, "Complete")}
+use apqp_signatures
+end
+
+template apqp-responsibility-matrix | Responsibility Matrix | APQP
+packs automotive
+tags APQP, RACI, responsibility
+purpose Assign responsibility for each planning deliverable to functions, recording who is responsible, accountable, consulted and informed.
+scope All quality planning projects.
+instructions List the deliverables. For each function enter R, A, C or I. Each deliverable must have exactly one accountable function.
+workflow Drafted, agreed with the team, approved, revised on change.
+retention Keep for the life of the program plus ten years.
+landscape
+use program_header
+section raci | Responsibilities | 1
+table raci_rows | Deliverables | 5
+groups Deliverable:1; Functions:7
+c raci_deliverable | Deliverable | text | *
+c raci_program | Program management | choice | [R; A; C; I; -]
+c raci_engineering | Product engineering | choice | [R; A; C; I; -]
+c raci_process | Process engineering | choice | [R; A; C; I; -]
+c raci_quality | Quality | choice | [R; A; C; I; -]
+c raci_purchasing | Purchasing | choice | [R; A; C; I; -]
+c raci_production | Production | choice | [R; A; C; I; -]
+c raci_logistics | Logistics | choice | [R; A; C; I; -]
+use apqp_signatures
+end
+
+template apqp-feasibility-review | Feasibility Review | APQP
+packs automotive
+tags APQP, feasibility
+purpose Decide whether the organization can make the product to all requirements, at the required volume and cost, and record the conditions and risks of the commitment.
+scope New products, engineering changes and new processes before quotation or commitment.
+instructions Answer each question with the evidence considered. Record any condition on the commitment. The conclusion is agreed by the cross-functional team and signed by each function.
+workflow Reviewed by the team, conclusion agreed, signed.
+retention Keep for the life of the program plus ten years.
+use program_header, review_checklist
+rows Is the product adequately defined to allow feasibility evaluation; Can the engineering performance specifications be met; Can the product be made to the tolerances on the drawing; Can the product be made with capability that meets requirements; Is there adequate capacity at the required volume; Does the design allow efficient material handling; Can the product be made without unusual capital, tooling or costs; Are special characteristics identified and can they be controlled; Are material and supplier sources available; Are test and inspection requirements achievable with available methods; Are regulatory and statutory requirements understood
+section feasibility_conclusion | Conclusion | 2
+f feasibility_result | Conclusion | choice | * [Feasible - product can be produced as specified; Feasible - changes recommended; Not feasible - design revision required]
+f feasibility_conditions | Conditions and recommended changes | longtext
+f questions_no_f | Questions answered No | calc | {COUNTIF(checklist.answer, "No")}
+sign feas_engineering | Engineering | reviewed | I agree with this feasibility conclusion for engineering.
+sign feas_production | Production | reviewed | I agree with this feasibility conclusion for production.
+sign feas_quality | Quality | approved | I agree with this feasibility conclusion for quality. | apqp.approve
+end
+
+template apqp-customer-requirement-review | Customer Requirement Review | APQP
+packs automotive
+tags APQP, requirements, contract review
+purpose Review every customer requirement for the product, including customer-specific requirements, and confirm each is understood, assigned and achievable before commitment.
+scope Requests for quotation, purchase orders, contracts and amendments.
+instructions List each requirement with its source. Confirm understanding, the function responsible and whether the organization can meet it. Unresolved requirements are clarified with the customer in writing.
+workflow Requirements listed, reviewed by functions, clarified, approved.
+retention Keep for the life of the program plus ten years.
+use program_header
+section requirements_section | Requirements | 1
+table customer_requirements | Requirements | 3
+c req_source | Source | choice | * [Drawing; Specification; Purchase order; Customer-specific requirement; Packaging specification; Quality agreement; Regulation; Other]
+c req_reference | Reference | text | *
+c req_text | Requirement | longtext | *
+c req_owner | Responsible | user
+c req_can_meet | Can be met | choice | * [Yes; No; Clarification needed]
+c req_note | Note or clarification | text
+rule customer_requirements.req_can_meet | in | No,Clarification needed | #FFF4D6 | bold
+section requirement_summary | Summary | 2
+f req_open | Requirements needing clarification | calc | {COUNTIF(customer_requirements.req_can_meet, "Clarification needed")}
+f req_cannot | Requirements that cannot be met | calc | {COUNTIF(customer_requirements.req_can_meet, "No")}
+f req_conclusion | Conclusion | longtext | *
+use apqp_signatures
+end
+
+template apqp-design-input-review | Design Input Review | APQP
+packs automotive, medical-device
+tags design, inputs
+purpose Confirm that design inputs are complete, unambiguous, verifiable and not in conflict before design work proceeds.
+scope Product designs and design changes under the organization's design responsibility.
+instructions Record each input with its source and how it will be verified. Resolve incomplete, ambiguous or conflicting inputs before approval.
+workflow Inputs listed, reviewed, conflicts resolved, approved.
+retention Keep for the life of the product plus ten years.
+use program_header
+section design_inputs | Design inputs | 1
+table design_input_rows | Inputs | 3
+c input_category | Category | choice | * [Functional; Performance; Interface; Safety; Regulatory; Environmental; Reliability; Service; Packaging; Lessons learned]
+c input_text | Input | longtext | *
+c input_source | Source | text
+c input_verification | Verification method | choice | [Test; Analysis; Inspection; Demonstration; Similarity]
+c input_status | Status | choice | * [Complete; Ambiguous; Conflicting; Missing data]
+rule design_input_rows.input_status | in | Ambiguous,Conflicting,Missing data | #FFF4D6 | bold
+use review_outcome, apqp_signatures
+section design_input_q | Review questions | 1
+table checklist | Questions | 1
+rows Are all customer requirements translated into design inputs; Are statutory and regulatory requirements included; Are inputs from previous similar designs included; Are conflicting inputs resolved; Can every input be verified
+c answer | Answer | choice | * [Yes; No; Not applicable]
+c comment | Comment or evidence | text
+end
+
+template apqp-design-output-review | Design Output Review | APQP
+packs automotive, medical-device
+tags design, outputs
+purpose Confirm that design outputs meet the design inputs, give the information needed for purchasing, production and service, and identify the characteristics essential for safe and proper use.
+scope Design outputs released for verification, validation or production.
+instructions Trace each output to its inputs. Confirm acceptance criteria and special characteristics are stated. Record the outputs released and their revisions.
+workflow Outputs listed, traced to inputs, reviewed, released.
+retention Keep for the life of the product plus ten years.
+use program_header
+section outputs_section | Design outputs | 1
+table design_outputs | Outputs | 3
+c output_doc | Output document | record | *
+c output_revision | Revision | text | *
+c output_inputs | Inputs satisfied | text
+c output_criteria | Acceptance criteria stated | boolean
+c output_special | Special characteristics identified | boolean
+c output_ok | Meets inputs | passfail
+use review_checklist
+rows Do outputs meet all design inputs; Are acceptance criteria stated; Are characteristics essential for safe use identified; Are outputs reviewed before release; Are manufacturing and service needs addressed
+use review_outcome, apqp_signatures
+end
+
+template apqp-design-verification-plan | Design Verification Plan | APQP
+packs automotive, medical-device
+tags design verification, DVP
+purpose Plan and report the tests and analyses that show the design outputs meet the design inputs, with sample sizes, acceptance criteria, timing and results.
+scope Products and changes requiring design verification.
+instructions List each verification activity against the requirement it verifies. Agree the sample size and acceptance criterion before testing. Record the result and the report reference when complete.
+workflow Plan approved, tests run, results recorded, report approved.
+retention Keep for the life of the product plus ten years.
+landscape
+use program_header
+section dvp | Verification plan and report | 1
+table dvp_rows | Verification activities | 3
+groups Plan:6; Report:4
+c dvp_requirement | Requirement | text | *
+c dvp_test | Test or analysis | text | *
+c dvp_procedure | Procedure | text
+c dvp_criterion | Acceptance criterion | text | *
+c dvp_samples | Sample size | integer | min=1
+c dvp_planned | Planned date | date
+c dvp_passed | Passed | integer | min=0
+c dvp_failed | Failed | integer | min=0
+c dvp_result | Result | calc | {IF(dvp_failed > 0, "FAIL", IF(dvp_passed >= dvp_samples, "PASS", "OPEN"))}
+c dvp_report | Report | text
+rule dvp_rows.dvp_result | equals | FAIL | #FDE7E9 | bold
+f dvp_open | Activities open | calc | {COUNTIF(dvp_rows.dvp_result, "OPEN")}
+f dvp_fail | Activities failed | calc | {COUNTIF(dvp_rows.dvp_result, "FAIL")}
+use apqp_signatures
+end
+
+template apqp-design-validation-plan | Design Validation Plan | APQP
+packs automotive, medical-device
+tags design validation
+purpose Plan and record the validation that the product meets user needs and intended uses under defined operating conditions, on production-equivalent units.
+scope Products and significant design changes.
+instructions Define the user needs and the intended use conditions. Validate on initial production units or their equivalent and record the justification of equivalence. Record each result and any deviation.
+workflow Plan approved, validation executed, deviations resolved, report approved.
+retention Keep for the life of the product plus ten years.
+use program_header
+section validation_basis | Basis | 2
+f user_needs | User needs and intended uses | longtext | *
+f use_conditions | Operating conditions | longtext | *
+f units_used | Units used | text | *
+f equivalence | Production equivalence justification | longtext
+section validation_runs | Validation activities | 1
+table validation_rows | Activities | 2
+c val_need | User need | text | *
+c val_method | Method | text | *
+c val_criterion | Acceptance criterion | text | *
+c val_result | Result | passfail
+c val_deviation | Deviation | text
+use apqp_signatures
+end
+
+template apqp-product-assurance-plan | Product Assurance Plan | APQP
+packs automotive
+tags product assurance, reliability
+purpose Define how the program will assure product quality and reliability: goals, assurance activities, special characteristics, verification and the reviews at which progress is checked.
+scope Programs where the customer or the organization requires a product assurance plan.
+instructions Translate the customer's quality and reliability expectations into measurable goals, then list the assurance activities that will demonstrate each goal and when they are reviewed.
+workflow Drafted, team review, approved, updated at gate reviews.
+retention Keep for the life of the program plus ten years.
+use program_header
+section assurance_goals | Goals | 2
+f reliability_goal | Reliability goal | text | *
+f quality_goal | Quality goal (for example defects per million) | text | *
+f warranty_goal | Warranty or field goal | text
+f service_life | Service life | text
+section assurance_activities | Assurance activities | 1
+table assurance_rows | Activities | 3
+c pa_activity | Activity | text | *
+c pa_goal | Goal addressed | text
+c pa_owner | Owner | user
+c pa_review | Reviewed at | choice | [Gate 1; Gate 2; Gate 3; Gate 4; Launch]
+c pa_status | Status | choice | [Planned; In progress; Complete]
+use apqp_signatures
+end
+
+template apqp-process-flow | Process Flow | APQP
+packs automotive
+tags process flow, PFD
+purpose Describe the sequence of operations from receipt of material to shipment, including inspection, rework and storage, as the basis for the PFMEA and the control plan.
+scope All processes for products in quality planning.
+instructions List every step in sequence with its type. Include moves, storage, inspection, rework loops and scrap paths. Each operation number must match the PFMEA and the control plan.
+workflow Drafted, reviewed with the team, approved, revised with the PFMEA and control plan.
+retention Keep for the life of the product plus ten years.
+landscape
+use program_header
+section flow | Process steps | 1
+table flow_steps | Steps | 5
+c step_no | Operation | text | *
+c step_type | Type | choice | * [Operation; Inspection; Move; Storage; Delay; Rework; Decision]
+c step_description | Description | text | *
+c step_machine | Machine, tool or fixture | text
+c product_chars | Product characteristics | text
+c process_chars | Process characteristics | text
+c step_special | Special characteristic | boolean
+c step_next | Next step | text
+use apqp_signatures
+end
+
+template apqp-special-characteristics | Special Characteristics List | APQP
+packs automotive
+tags special characteristics, safety, key
+purpose List the product and process characteristics that affect safety, regulatory compliance, fit, function or subsequent processing, with their classification and where each is controlled.
+scope All products in quality planning.
+instructions Identify each characteristic and its source. Use the organization's classification symbols or the customer's where required. Every characteristic must appear in the PFMEA and the control plan.
+workflow Drafted, reviewed with the customer where required, approved, revised on change.
+retention Keep for the life of the product plus ten years.
+use program_header
+section special_list | Characteristics | 1
+table special_rows | Characteristics | 3
+c sc_number | Number | text | *
+c sc_characteristic | Characteristic | text | *
+c sc_type | Type | choice | * [Product; Process]
+c sc_class | Classification | choice | * [Safety; Regulatory; Fit or function; Key process]
+c sc_symbol | Symbol | text
+c sc_source | Source | text
+c sc_operation | Controlled at operation | text
+c sc_in_pfmea | In PFMEA | boolean
+c sc_in_cp | In control plan | boolean
+rule special_rows.sc_class | equals | Safety | #FDE7E9 | bold
+use apqp_signatures
+end
+
+template apqp-pfmea | PFMEA | APQP
+packs automotive
+tags PFMEA, FMEA, process risk
+purpose Analyse each process step for the ways it can fail to meet requirements, the effects, causes and current controls, and drive actions that reduce risk.
+scope Every process step in the process flow.
+instructions Work through the process flow step by step with the cross-functional team. Rate severity, occurrence and detection on the organization's scales, then prioritize actions. Re-rate after actions are complete.
+workflow Drafted with the team, reviewed, approved, revised on change, nonconformance or new data.
+retention Keep for the life of the product plus ten years.
+landscape
+use program_header, team
+section pfmea_rows_section | Analysis | 1
+table pfmea_rows | Failure modes | 3
+groups Step:2; Failure:3; Ratings:4; Controls:2; Action:3
+c fm_step | Operation | text | *
+c fm_function | Function and requirement | text | *
+c fm_mode | Failure mode | text | *
+c fm_effect | Effect | text | *
+c fm_cause | Cause | text | *
+c fm_sev | S | integer | * min=1 max=10
+c fm_occ | O | integer | * min=1 max=10
+c fm_det | D | integer | * min=1 max=10
+c fm_rpn | RPN | calc | {fm_sev * fm_occ * fm_det}
+c fm_prevention | Prevention control | text
+c fm_detection | Detection control | text
+c fm_action | Recommended action | text
+c fm_owner | Owner | user
+c fm_due | Due | date
+rule pfmea_rows.fm_rpn | greaterOrEqual | 100 | #FDE7E9 | bold
+rule pfmea_rows.fm_sev | greaterOrEqual | 9 | #FDE7E9 | bold
+section pfmea_summary | Summary | 3
+f fm_count | Failure modes | calc | {COUNTA(pfmea_rows.fm_mode)}
+f fm_max_rpn | Highest RPN | calc | {MAX(pfmea_rows.fm_rpn)}
+f fm_high_sev | Severity 9 or 10 | calc | {COUNTIF(pfmea_rows.fm_sev, ">=9")}
+use apqp_signatures
+end
+
+template apqp-control-plan | Control Plan | APQP
+packs automotive
+tags control plan
+purpose Describe the controls applied to each product and process characteristic at each operation: specification, measurement method, sample size and frequency, control method and reaction plan.
+scope Prototype, pre-launch and production phases of every product in quality planning.
+instructions Build the control plan from the process flow and the PFMEA. Every special characteristic must be controlled. Each reaction plan states what the operator does when a result is out of specification.
+workflow Drafted, reviewed with the team, approved, revised on change.
+retention Keep for the life of the product plus ten years.
+landscape
+use program_header
+section cp_type | Control plan type | 3
+f cp_phase | Phase | choice | * [Prototype; Pre-launch; Production]
+f cp_key_contact | Key contact | user
+f cp_revision_date | Revision date | date
+section cp_lines | Controls | 1
+table cp_rows | Characteristics | 3
+groups Process:3; Characteristic:3; Methods:5; Reaction:1
+c cp_op | Operation | text | *
+c cp_process | Process name | text | *
+c cp_machine | Machine or fixture | text
+c cp_char | Characteristic | text | *
+c cp_class | Class | choice | [Safety; Regulatory; Fit or function; Key process; Standard]
+c cp_spec | Specification and tolerance | text | *
+c cp_method | Measurement method | text | *
+c cp_sample | Sample size | text | *
+c cp_frequency | Frequency | text | *
+c cp_control | Control method | text | *
+c cp_record | Record | text
+c cp_reaction | Reaction plan | text | *
+rule cp_rows.cp_class | equals | Safety | #FDE7E9 | bold
+use apqp_signatures
+end
+
+template apqp-packaging-evaluation | Packaging Evaluation | APQP
+packs automotive
+tags packaging
+purpose Evaluate the packaging design for protection of the product, handling, labelling, returnable containers and the customer's packaging requirements before launch.
+scope New products, new packaging and changes in shipping route or container.
+instructions Record the packaging specification and the trial results. Ship trial conditions should represent the real route. Damage found in trial needs a packaging change before approval.
+workflow Specification agreed, trial shipped, results reviewed, approved.
+retention Keep for the life of the product plus five years.
+use program_header
+section pack_spec | Packaging specification | 3
+f pack_type | Packaging type | choice | * [Returnable; Expendable; Customer-owned returnable]
+f pack_qty | Quantity per container | integer | * min=1
+f pack_dimensions | Container dimensions | text
+f pack_weight | Gross weight | number | unit=kg dec=2
+f pack_dunnage | Dunnage and separators | text
+f pack_label | Label specification | text
+f pack_customer_spec | Customer packaging specification | text
+section pack_trial | Trial | 2
+f trial_route | Trial route | text
+f trial_date | Trial date | date
+f trial_damage | Damage found | boolean
+f trial_findings | Findings | longtext
+f trial_result | Result | passfail | *
+use apqp_signatures
+end
+
+template apqp-measurement-system-plan | Measurement System Plan | APQP
+packs automotive
+tags MSA, measurement, plan
+purpose Plan the measurement systems for every characteristic in the control plan and the studies that will show each system is adequate before production.
+scope Gauges, test equipment and inspection methods named in the control plan.
+instructions List each characteristic with its gauge and the study type planned. Record the acceptance criteria the organization applies and link the study results when complete.
+workflow Planned, studies performed, results reviewed, approved.
+retention Keep for the life of the product plus ten years.
+use program_header
+section msa_plan_rows | Planned studies | 1
+table msa_plan | Measurement systems | 3
+c msp_char | Characteristic | text | *
+c msp_gauge | Gauge or method | text | *
+c msp_equipment | Equipment | equipment
+c msp_resolution | Resolution | text
+c msp_study | Study | choice | * [Variable gage R and R; Attribute agreement; Bias; Linearity; Stability; Not required]
+c msp_due | Due | date
+c msp_result | Result | choice | [Acceptable; Conditionally acceptable; Not acceptable; Open]
+c msp_record | Study record | record
+rule msa_plan.msp_result | equals | Not acceptable | #FDE7E9 | bold
+use apqp_signatures
+end
+
+template apqp-capability-study-plan | Capability Study Plan | APQP
+packs automotive
+tags capability, Cpk, Ppk
+purpose Plan the preliminary and ongoing capability studies for special and key characteristics, with sample plans and the indices the organization requires.
+scope Special characteristics and others selected by the team or the customer.
+instructions List each characteristic, the specification limits, the study type and sample plan, and the required index. Record the result and the action when the requirement is not met.
+workflow Planned, studies performed, results reviewed, approved.
+retention Keep for the life of the product plus ten years.
+use program_header
+section capability_rows | Studies | 1
+table capability_plan | Characteristics | 3
+groups Characteristic:3; Plan:3; Result:3
+c cap_char | Characteristic | text | *
+c cap_lsl | LSL | number | dec=4
+c cap_usl | USL | number | dec=4
+c cap_study | Study | choice | * [Preliminary (Ppk); Ongoing (Cpk)]
+c cap_sample | Sample plan | text | *
+c cap_required | Required index | number | * dec=2
+c cap_achieved | Achieved index | number | dec=2
+c cap_meets | Meets requirement | calc | {IF(ISNUMBER(cap_achieved), IF(cap_achieved >= cap_required, "PASS", "FAIL"), "")}
+c cap_action | Action | text
+rule capability_plan.cap_meets | equals | FAIL | #FDE7E9 | bold
+use apqp_signatures
+end
+
+template apqp-production-trial-plan | Production Trial Plan | APQP
+packs automotive
+tags production trial, run at rate
+purpose Plan and report a production trial run using production tooling, equipment, environment, operators and cycle time, to validate the process before launch.
+scope Pre-launch validation of new or changed processes.
+instructions Define the planned quantity and duration, the conditions that must be production-representative, and the measures to collect. Record the actual results and the issues found with their actions.
+workflow Planned, trial run, results reviewed, approved.
+retention Keep for the life of the product plus ten years.
+use program_header, action_plan
+section trial_plan | Trial | 3
+f trial_quantity | Planned quantity | integer | * min=1
+f trial_duration | Planned duration | number | unit=h dec=1
+f trial_cycle_target | Target cycle time | number | unit=s dec=1
+f trial_produced | Quantity produced | integer | min=0
+f trial_good | Good parts | integer | min=0
+f trial_yield | First pass yield | calc | {IF(trial_produced > 0, trial_good / trial_produced * 100, 0)} dec=1 unit=%
+f trial_actual_cycle | Actual cycle time | number | unit=s dec=1
+f trial_cycle_ok | Cycle time met | calc | {IF(ISNUMBER(trial_actual_cycle), IF(trial_actual_cycle <= trial_cycle_target, "PASS", "FAIL"), "")}
+f trial_conditions | Production-representative conditions confirmed | boolean | *
+f trial_issues | Issues found | longtext
+use apqp_signatures
+end
+
+template apqp-launch-readiness | Launch Readiness Review | APQP
+packs automotive
+tags launch, readiness
+purpose Confirm before start of production that people, process, materials, equipment, documents and the customer's requirements are ready for launch, and record any open items with recovery dates.
+scope Every launch of a new product, process or significant change.
+instructions Review each area with its owner and the evidence. Launch is approved only when no item that affects the product or the customer is open, or when the open items have an approved recovery plan.
+workflow Areas reviewed, open items assigned, launch decision approved.
+retention Keep for the life of the program plus ten years.
+use program_header, review_checklist
+rows Are process flow PFMEA and control plan approved and aligned; Are work instructions and inspection instructions released; Are operators trained and qualified; Are gauges calibrated with acceptable measurement studies; Is capability at the required level for special characteristics; Is production tooling approved; Is the production trial complete with actions closed; Is packaging approved; Are supplier parts approved; Is part approval granted or planned; Is the safe launch plan in place; Is spare and service part planning complete
+use review_outcome, apqp_signatures
+end
+
+template apqp-safe-launch-plan | Safe Launch Plan | APQP
+packs automotive
+tags safe launch, early containment
+purpose Define the additional controls applied during launch to protect the customer until the process proves stable, and the criteria for removing them.
+scope New product launches and significant changes, for the period the organization or the customer requires.
+instructions List each added control with the characteristic, the method and frequency, the responsible person and the exit criterion. Track the results and remove controls only when the exit criteria are met.
+workflow Planned, approved, active, exit criteria met, ended.
+retention Keep for the life of the program plus five years.
+status Draft; Approved; Active; Ended; Cancelled
+use program_header
+section safe_launch | Controls | 1
+f sl_start | Start date | date | *
+f sl_end_target | Planned end date | date
+table safe_controls | Added controls | 2
+c slc_char | Characteristic or concern | text | *
+c slc_method | Added control | text | *
+c slc_frequency | Frequency | text | *
+c slc_owner | Owner | user
+c slc_exit | Exit criterion | text | *
+c slc_met | Exit criterion met | boolean
+f sl_controls_open | Controls still active | calc | {COUNTIF(safe_controls.slc_met, FALSE)}
+use apqp_signatures
+end
+
+template apqp-lessons-learned | Lessons Learned | APQP
+packs automotive
+tags lessons learned, knowledge
+purpose Capture what went well and what should change from a program, problem or launch, so that future programs use the knowledge in their plans, FMEAs and designs.
+scope Program closure, major problems, customer escalations and gate reviews.
+instructions Record each lesson with its context and the change it should cause. Assign each lesson to a process owner to update the standard documents, FMEA or checklists.
+workflow Collected, reviewed, assigned, embedded in standards.
+retention Keep indefinitely as organizational knowledge.
+use program_header
+section lessons | Lessons | 1
+table lesson_rows | Lessons | 2
+c lesson_area | Area | choice | * [Design; Process; Supplier; Launch; Quality; Logistics; Program management]
+c lesson_text | Lesson | longtext | *
+c lesson_type | Type | choice | [Went well; Should change]
+c lesson_action | Change to standard, FMEA or checklist | text
+c lesson_owner | Owner | user
+c lesson_embedded | Embedded | boolean
+use apqp_signatures
+end
+
+template apqp-gate-review | Gate Review | APQP
+packs automotive
+tags gate review, phase review
+purpose Decide at the end of a planning phase whether the project may proceed, based on the status of deliverables, risks, quality, cost and timing.
+scope Each phase gate defined in the program's timing plan.
+instructions Review each deliverable required for the gate and the program indicators. The gate decision is go, conditional go with dated actions, or no go.
+workflow Gate prepared, reviewed, decision recorded, actions tracked.
+retention Keep for the life of the program plus ten years.
+use program_header, deliverables, action_plan
+section gate_decision | Gate decision | 2
+f gate_name | Gate | choice | * [Gate 1 - concept approval; Gate 2 - design release; Gate 3 - process release; Gate 4 - production validation; Gate 5 - launch sign-off]
+f gate_quality | Quality status | choice | [Green; Yellow; Red]
+f gate_cost | Cost status | choice | [Green; Yellow; Red]
+f gate_timing | Timing status | choice | [Green; Yellow; Red]
+f gate_risks | Top risks | longtext
+f gate_result | Decision | choice | * [Go; Conditional go; No go]
+rule gate_result | equals | No go | #FDE7E9 | bold
+use apqp_signatures
+end
+
+template apqp-deliverables-checklist | Deliverables Checklist | APQP
+packs automotive
+tags deliverables, checklist
+purpose Track the full set of quality planning deliverables for a program, across all phases, with owner, status and the record that completes each one.
+scope All quality planning projects.
+instructions Remove deliverables that do not apply with a reason, assign owners and due dates, and link the record that completes each one.
+workflow Baseline approved, updated at reviews, closed at launch sign-off.
+retention Keep for the life of the program plus ten years.
+use program_header, deliverables
+rows Design FMEA; Design verification plan and report; Special characteristics list; Process flow; Process FMEA; Pre-launch control plan; Production control plan; Process and inspection instructions; Measurement system plan and studies; Preliminary capability studies; Packaging evaluation; Production trial; Part approval; Launch readiness review; Lessons learned
+use apqp_signatures
+end
+
+template apqp-phase-program-planning | Program Planning Phase Review | APQP
+packs automotive
+tags APQP phase, plan and define
+purpose Review the outputs of the plan and define phase: customer voice, business plan, product and reliability goals, preliminary bill of materials, process flow, special characteristics and the product assurance plan.
+scope The first phase of every quality planning project.
+instructions Confirm each output exists and is approved. Record the gaps and the actions needed before the phase is closed.
+workflow Outputs reviewed, gaps actioned, phase closure approved.
+retention Keep for the life of the program plus ten years.
+use program_header, deliverables
+rows Customer requirements captured; Business plan and targets; Design goals; Reliability and quality goals; Preliminary bill of materials; Preliminary process flow; Preliminary special characteristics; Product assurance plan; Management support confirmed
+use apqp_signatures
+end
+
+template apqp-phase-product-design | Product Design Phase Review | APQP
+packs automotive
+tags APQP phase, product design
+purpose Review the outputs of the product design and development phase before design release.
+scope The product design phase of quality planning projects under the organization's design responsibility.
+instructions Confirm each output exists, is approved and feeds the process design phase. Record the gaps and the actions needed before the phase is closed.
+workflow Outputs reviewed, gaps actioned, phase closure approved.
+retention Keep for the life of the program plus ten years.
+use program_header, deliverables
+rows Design FMEA; Design for manufacture and assembly review; Design verification; Design reviews; Prototype build and control plan; Engineering drawings and specifications; Material specifications; Drawing and specification changes; New equipment tooling and facilities requirements; Special characteristics; Gauge and test equipment requirements; Team feasibility commitment
+use apqp_signatures
+end
+
+template apqp-phase-process-design | Process Design Phase Review | APQP
+packs automotive
+tags APQP phase, process design
+purpose Review the outputs of the process design and development phase before the process is validated.
+scope The process design phase of quality planning projects.
+instructions Confirm each output exists and is approved. Record the gaps and the actions needed before the phase is closed.
+workflow Outputs reviewed, gaps actioned, phase closure approved.
+retention Keep for the life of the program plus ten years.
+use program_header, deliverables
+rows Packaging standards and specification; Quality system review; Process flow chart; Floor plan layout; Characteristics matrix; Process FMEA; Pre-launch control plan; Process instructions; Measurement systems analysis plan; Preliminary process capability plan
+use apqp_signatures
+end
+
+template apqp-phase-process-validation | Product and Process Validation Phase Review | APQP
+packs automotive
+tags APQP phase, validation
+purpose Review the outputs of the product and process validation phase before production approval.
+scope The validation phase of quality planning projects.
+instructions Confirm each output exists with results that meet the requirements. Record the gaps and the actions needed before the phase is closed.
+workflow Outputs reviewed, gaps actioned, phase closure approved.
+retention Keep for the life of the program plus ten years.
+use program_header, deliverables
+rows Significant production run; Measurement systems evaluation; Preliminary process capability study; Production part approval; Production validation testing; Packaging evaluation; Production control plan; Quality planning sign-off and management support
+use apqp_signatures
+end
+
+template apqp-phase-feedback | Feedback Assessment and Corrective Action Review | APQP
+packs automotive
+tags APQP phase, feedback
+purpose Assess production and field performance after launch, confirm variation is reduced, customer satisfaction and delivery are as planned, and capture the lessons for future programs.
+scope The launch, feedback and corrective action phase of quality planning projects.
+instructions Review the indicators for the period, the open problems and the lessons learned. Record the actions and confirm the program can move to ordinary production control.
+workflow Indicators reviewed, actions assigned, phase closure approved.
+retention Keep for the life of the program plus ten years.
+use program_header, deliverables
+rows Reduced variation; Improved customer satisfaction; Improved delivery and service; Effective use of lessons learned and best practices
+section feedback_kpis | Indicators | 3
+f fb_ppm | Customer defects per million | number | min=0 dec=0
+f fb_delivery | On-time delivery | percent | min=0 max=100
+f fb_complaints | Complaints in period | integer | min=0
+f fb_scrap | Internal scrap rate | percent | min=0 max=100
+f fb_capability_ok | Capability requirements met | boolean
+f fb_summary | Summary | longtext
+use apqp_signatures
+end
