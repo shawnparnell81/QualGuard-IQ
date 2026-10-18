@@ -46,6 +46,14 @@ public class Part : Entity, IAudited, ISiteScoped
     public Guid? ProductId { get; set; }
     public string? Material { get; set; }
     public bool HasSpecialCharacteristics { get; set; }
+    // execution attributes used by SEQUFLOH (shared Part Master, no second part store)
+    public string? ProductFamily { get; set; }
+    public string? AssemblyType { get; set; }
+    public bool IsRepairable { get; set; }
+    public bool IsSerialized { get; set; }
+    public bool IsLotControlled { get; set; }
+    public string? DrawingNumber { get; set; }
+    public string? Specification { get; set; }
     public Guid SiteId { get; set; }
     public Guid? DepartmentId { get; set; }
     public MasterStatus Status { get; set; }
