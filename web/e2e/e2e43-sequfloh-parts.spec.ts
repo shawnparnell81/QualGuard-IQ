@@ -12,7 +12,7 @@ test.describe('SEQUFLOH parts and items', () => {
     await page.getByRole('button', { name: 'New part' }).click();
     const d = page.getByRole('dialog');
     await d.getByLabel('Part number').fill(pn);
-    await d.getByLabel('Name', { exact: true }).fill('Pump housing');
+    await d.getByRole('textbox', { name: 'Name', exact: true }).fill('Pump housing');
     await d.getByLabel('Product family').fill('Pumps');
     await d.getByLabel('Drawing number').fill('DWG-' + pn);
     await d.getByLabel('Repairable').check();
@@ -39,7 +39,7 @@ test.describe('SEQUFLOH parts and items', () => {
       await i.getByLabel('Description').fill('Seal ' + num);
       await i.getByLabel('Quantity').fill(qty);
       await i.getByRole('button', { name: 'Save item' }).click();
-      await expect(page.getByRole('cell', { name: num })).toBeVisible();
+      await expect(page.getByRole('cell', { name: num, exact: true })).toBeVisible();
     }
     await page.getByRole('button', { name: 'Move item 2 up' }).click();
     await expect(page.getByRole('row').nth(1)).toContainText('GS-' + pn);
@@ -56,8 +56,8 @@ test.describe('SEQUFLOH parts and items', () => {
     await expect(page.getByRole('cell', { name: 'Add backup ring' })).toBeVisible();
 
     await page.goto(`/sequfloh/revision-history`);
-    await page.getByLabel('Search').fill(pn);
-    await page.getByRole('button', { name: 'Search' }).click();
+    await page.getByRole('textbox', { name: 'Search', exact: true }).fill(pn);
+    await page.getByRole('textbox', { name: 'Search', exact: true }).press('Enter');
     await expect(page.getByRole('cell', { name: 'Add backup ring' })).toBeVisible();
     await shot(page, 'sequfloh/s2-revision-history');
   });

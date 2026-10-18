@@ -47342,6 +47342,1645 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/sequfloh/instructions/schema:
+    get:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/instructions:
+    get:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: folder
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/WorkInstructionStatus'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/WorkInstructionType'
+        - name: part
+          in: query
+          schema:
+            type: string
+        - name: repairCategory
+          in: query
+          schema:
+            type: string
+        - name: repairType
+          in: query
+          schema:
+            type: string
+        - name: validationType
+          in: query
+          schema:
+            type: string
+        - name: resultStatus
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 25
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.create_work_instruction` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstructionCreateInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/InstructionCreateInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/InstructionCreateInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}':
+    get:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_draft_work_instruction` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstructionSaveInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/InstructionSaveInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/InstructionSaveInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/actions/{name}':
+    post:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstructionActionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/InstructionActionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/InstructionActionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/revise':
+    post:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.revise_work_instruction` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviseInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReviseInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReviseInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/duplicate':
+    post:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.create_work_instruction` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/copy-operation-steps':
+    post:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_draft_work_instruction` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CopyStepsInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CopyStepsInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CopyStepsInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/copy-parts':
+    post:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_draft_work_instruction` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CopyPartsListInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CopyPartsListInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CopyPartsListInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/copy-characteristics':
+    post:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_draft_work_instruction` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CopyCharacteristicsInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CopyCharacteristicsInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CopyCharacteristicsInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/characteristic-sources':
+    get:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+            application/json:
+              schema:
+                type: array
+            text/json:
+              schema:
+                type: array
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/import-characteristics':
+    post:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_draft_work_instruction` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportCharacteristicsInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ImportCharacteristicsInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ImportCharacteristicsInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/print':
+    get:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/history':
+    get:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/parts:
+    get:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: view
+          in: query
+          schema:
+            type: string
+        - name: family
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/MasterStatus'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/PartType'
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 25
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_parts` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SqfPartInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SqfPartInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SqfPartInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/parts/families:
+    get:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  type: string
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+            text/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts/{id}':
+    get:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_parts` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SqfPartInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SqfPartInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SqfPartInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts/{id}/execution':
+    put:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_parts` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartExecutionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PartExecutionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PartExecutionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts/{id}/deactivate':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_parts` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts/{id}/reactivate':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_parts` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts/{id}/history':
+    get:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/parts-lists:
+    get:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/PartsListStatus'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/PartsListType'
+        - name: partId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 25
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartsListInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PartsListInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PartsListInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}':
+    get:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartsListInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PartsListInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PartsListInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}/duplicate':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}/approve':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}/revise':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviseInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReviseInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReviseInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}/deactivate':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}/reactivate':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}/items':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartsListItemInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PartsListItemInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PartsListItemInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}/items/{itemId}':
+    put:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PartsListItemInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PartsListItemInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PartsListItemInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    delete:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}/items/{itemId}/duplicate':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}/items/reorder':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}/copy-items':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_parts_lists` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CopyItemsInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CopyItemsInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CopyItemsInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/parts-lists/{id}/history':
+    get:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/operation-steps:
+    get:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: active
+          in: query
+          schema:
+            type: boolean
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 100
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_operation_steps` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationStepInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/OperationStepInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/OperationStepInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/operation-steps/{id}':
+    get:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_operation_steps` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OperationStepInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/OperationStepInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/OperationStepInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/operation-steps/{id}/duplicate':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_operation_steps` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/operation-steps/{id}/activate':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_operation_steps` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/operation-steps/{id}/deactivate':
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_operation_steps` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/operation-steps/reorder:
+    post:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_operation_steps` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/operation-steps/{id}/history':
+    get:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/revision-history:
+    get:
+      tags:
+        - SequflohParts
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 25
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/tracking:
+    get:
+      tags:
+        - SequflohTracking
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: folder
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TrackingStatus'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/TrackingType'
+        - name: owner
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: assigned
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: part
+          in: query
+          schema:
+            type: string
+        - name: department
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: site
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: dateField
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: priority
+          in: query
+          schema:
+            type: string
+        - name: result
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 25
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - SequflohTracking
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackingCreateInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TrackingCreateInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TrackingCreateInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/tracking/instructions:
+    get:
+      tags:
+        - SequflohTracking
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/TrackingType'
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: part
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/tracking/{id}':
+    get:
+      tags:
+        - SequflohTracking
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - SequflohTracking
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TrackingSaveInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TrackingSaveInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TrackingSaveInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/tracking/{id}/actions/{name}':
+    post:
+      tags:
+        - SequflohTracking
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: name
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TaskActionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TaskActionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TaskActionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/tracking/{id}/signoffs':
+    post:
+      tags:
+        - SequflohTracking
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SignoffInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SignoffInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SignoffInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/tracking/{id}/history':
+    get:
+      tags:
+        - SequflohTracking
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
 components:
   schemas:
     AbsenceInput:
@@ -52736,6 +54375,43 @@ components:
           type:
             - 'null'
             - string
+    CopyCharacteristicsInput:
+      required:
+        - fromInstructionId
+      type: object
+      properties:
+        fromInstructionId:
+          type: string
+          format: uuid
+    CopyItemsInput:
+      required:
+        - sourceListId
+      type: object
+      properties:
+        sourceListId:
+          type: string
+          format: uuid
+    CopyPartsListInput:
+      required:
+        - partsListId
+        - partIds
+      type: object
+      properties:
+        partsListId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partIds:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+            format: uuid
+        replace:
+          type: boolean
+          default: false
     CopyRequest:
       required:
         - type
@@ -52745,6 +54421,16 @@ components:
           oneOf:
             - type: 'null'
             - $ref: '#/components/schemas/FaiType'
+    CopyStepsInput:
+      required:
+        - operationStepIds
+      type: object
+      properties:
+        operationStepIds:
+          type: array
+          items:
+            type: string
+            format: uuid
     CoqCategory:
       type: integer
     CoqEntry:
@@ -59121,6 +60807,14 @@ components:
           format: date
         notes:
           type: string
+    ImportCharacteristicsInput:
+      required:
+        - inspectionPlanId
+      type: object
+      properties:
+        inspectionPlanId:
+          type: string
+          format: uuid
     ImportColumn:
       required:
         - key
@@ -59382,6 +61076,198 @@ components:
             - integer
             - string
           format: int32
+    InstructionActionInput:
+      required:
+        - comment
+        - effectiveDate
+      type: object
+      properties:
+        comment:
+          type:
+            - 'null'
+            - string
+        effectiveDate:
+          type:
+            - 'null'
+            - string
+          format: date
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
+    InstructionCreateInput:
+      required:
+        - type
+        - title
+        - siteId
+        - departmentId
+        - partId
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/WorkInstructionType'
+        title:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    InstructionSaveInput:
+      required:
+        - title
+        - siteId
+        - departmentId
+        - ownerId
+        - reviewerId
+        - approverId
+        - partId
+        - productFamily
+        - assembly
+        - model
+        - variant
+        - process
+        - operation
+        - workstation
+        - location
+        - validationType
+        - faiType
+        - repairCategory
+        - repairType
+        - repairDescription
+        - resultStatus
+        - effectiveDate
+        - content
+        - steps
+        - characteristics
+        - partsRows
+      type: object
+      properties:
+        title:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ownerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        reviewerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        approverId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        productFamily:
+          type:
+            - 'null'
+            - string
+        assembly:
+          type:
+            - 'null'
+            - string
+        model:
+          type:
+            - 'null'
+            - string
+        variant:
+          type:
+            - 'null'
+            - string
+        process:
+          type:
+            - 'null'
+            - string
+        operation:
+          type:
+            - 'null'
+            - string
+        workstation:
+          type:
+            - 'null'
+            - string
+        location:
+          type:
+            - 'null'
+            - string
+        validationType:
+          type:
+            - 'null'
+            - string
+        faiType:
+          type:
+            - 'null'
+            - string
+        repairCategory:
+          type:
+            - 'null'
+            - string
+        repairType:
+          type:
+            - 'null'
+            - string
+        repairDescription:
+          type:
+            - 'null'
+            - string
+        resultStatus:
+          type:
+            - 'null'
+            - string
+        effectiveDate:
+          type:
+            - 'null'
+            - string
+          format: date
+        content:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonObject'
+        steps:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonArray'
+        characteristics:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonArray'
+        partsRows:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonArray'
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
     IntakeResult:
       required:
         - id
@@ -60080,8 +61966,12 @@ components:
             - string
         requestedBy:
           type: string
+    JsonArray:
+      type: array
     JsonElement: { }
     JsonNode: { }
+    JsonObject:
+      type: object
     KnowledgeArticle:
       type: object
       properties:
@@ -64248,6 +66138,105 @@ components:
           type:
             - 'null'
             - string
+    OperationStepInput:
+      required:
+        - title
+        - category
+        - detailedAction
+        - defaultTools
+        - defaultParts
+        - specification
+        - target
+        - minimum
+        - maximum
+        - unit
+        - safetyWarning
+        - qualityCheckpoint
+        - expectedResult
+        - evidenceRequirement
+        - requiredRole
+        - requiredQualification
+      type: object
+      properties:
+        title:
+          type: string
+        category:
+          type:
+            - 'null'
+            - string
+        detailedAction:
+          type: string
+        defaultTools:
+          type:
+            - 'null'
+            - string
+        defaultParts:
+          type:
+            - 'null'
+            - string
+        specification:
+          type:
+            - 'null'
+            - string
+        target:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        minimum:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        maximum:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        unit:
+          type:
+            - 'null'
+            - string
+        safetyWarning:
+          type:
+            - 'null'
+            - string
+        qualityCheckpoint:
+          type:
+            - 'null'
+            - string
+        expectedResult:
+          type:
+            - 'null'
+            - string
+        evidenceRequirement:
+          type:
+            - 'null'
+            - string
+        requiredRole:
+          type:
+            - 'null'
+            - string
+        requiredQualification:
+          type:
+            - 'null'
+            - string
+        isActive:
+          type: boolean
+          default: true
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
     OptionalTextRequest:
       required:
         - text
@@ -65075,6 +67064,136 @@ components:
           format: double
         confidentiality:
           type: string
+    PartExecutionInput:
+      required:
+        - productFamily
+        - assemblyType
+        - isRepairable
+        - isSerialized
+        - isLotControlled
+        - drawingNumber
+        - specification
+      type: object
+      properties:
+        productFamily:
+          type:
+            - 'null'
+            - string
+        assemblyType:
+          type:
+            - 'null'
+            - string
+        isRepairable:
+          type: boolean
+        isSerialized:
+          type: boolean
+        isLotControlled:
+          type: boolean
+        drawingNumber:
+          type:
+            - 'null'
+            - string
+        specification:
+          type:
+            - 'null'
+            - string
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
+    PartsListInput:
+      required:
+        - title
+        - parentPartId
+        - description
+        - listType
+      type: object
+      properties:
+        title:
+          type: string
+        parentPartId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        description:
+          type:
+            - 'null'
+            - string
+        listType:
+          $ref: '#/components/schemas/PartsListType'
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
+    PartsListItemInput:
+      required:
+        - partId
+        - partNumber
+        - description
+        - quantity
+        - unit
+        - required
+        - alternatePartNumber
+        - traceability
+        - notes
+      type: object
+      properties:
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partNumber:
+          type:
+            - 'null'
+            - string
+        description:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        unit:
+          type:
+            - 'null'
+            - string
+        required:
+          type: boolean
+        alternatePartNumber:
+          type:
+            - 'null'
+            - string
+        traceability:
+          $ref: '#/components/schemas/TraceabilityRequirement'
+        notes:
+          type:
+            - 'null'
+            - string
+    PartsListStatus:
+      enum:
+        - Draft
+        - Approved
+        - Inactive
+        - null
+    PartsListType:
+      enum:
+        - Standard
+        - RepairKit
+        - AssemblyBom
+        - RepairParts
+        - Custom
+        - null
     PartSummary:
       required:
         - partId
@@ -71298,6 +73417,15 @@ components:
           format: uint32
     ReviewStatus:
       type: integer
+    ReviseInput:
+      required:
+        - reason
+      type: object
+      properties:
+        reason:
+          type:
+            - 'null'
+            - string
     RevisePartRequest:
       required:
         - revision
@@ -75153,6 +77281,28 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SignInDto'
+    SignoffInput:
+      required:
+        - operationId
+        - stateVersion
+        - role
+      type: object
+      properties:
+        operationId:
+          type: string
+          format: uuid
+        stateVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        role:
+          type: string
+        meaning:
+          type:
+            - 'null'
+            - string
     SignRequest:
       required:
         - approve
@@ -76035,6 +78185,16 @@ components:
           type:
             - 'null'
             - string
+    SqfPartInput:
+      required:
+        - part
+        - execution
+      type: object
+      properties:
+        part:
+          $ref: '#/components/schemas/SavePartRequest'
+        execution:
+          $ref: '#/components/schemas/PartExecutionInput'
     SsoCompleteRequest:
       required:
         - challenge
@@ -77511,6 +79671,47 @@ components:
           type: boolean
         masterList:
           type: boolean
+    TaskActionInput:
+      required:
+        - operationId
+        - stateVersion
+      type: object
+      properties:
+        operationId:
+          type: string
+          format: uuid
+        stateVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        reason:
+          type:
+            - 'null'
+            - string
+        comment:
+          type:
+            - 'null'
+            - string
+        assignedUserId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        expectedAssignedUserId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        targetStatus:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/TrackingStatus'
+        varianceReason:
+          type:
+            - 'null'
+            - string
     TemplateChoice:
       required:
         - kind
@@ -77846,6 +80047,12 @@ components:
           type:
             - 'null'
             - string
+    TraceabilityRequirement:
+      enum:
+        - None
+        - Lot
+        - Serial
+        - LotAndSerial
     TraceEventInput:
       required:
         - kind
@@ -78050,6 +80257,99 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TraceHit'
+    TrackingCreateInput:
+      required:
+        - type
+        - workInstructionId
+        - siteId
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/TrackingType'
+        workInstructionId:
+          type: string
+          format: uuid
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        workOrder:
+          type:
+            - 'null'
+            - string
+        repairOrder:
+          type:
+            - 'null'
+            - string
+        customerReturnReference:
+          type:
+            - 'null'
+            - string
+        project:
+          type:
+            - 'null'
+            - string
+        operation:
+          type:
+            - 'null'
+            - string
+        assignedUserId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        priority:
+          type:
+            - 'null'
+            - string
+        plannedStart:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        dueAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        minBenchmarkMinutes:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        maxBenchmarkMinutes:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        engineeringReviewRequired:
+          type: boolean
+          default: false
+        reportedCondition:
+          type:
+            - 'null'
+            - string
     TrackingRow:
       required:
         - occurredAt
@@ -78075,6 +80375,144 @@ components:
             - string
         delivered:
           type: boolean
+    TrackingSaveInput:
+      required:
+        - operationId
+        - stateVersion
+      type: object
+      properties:
+        operationId:
+          type: string
+          format: uuid
+        stateVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        serialNumber:
+          type:
+            - 'null'
+            - string
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        workOrder:
+          type:
+            - 'null'
+            - string
+        repairOrder:
+          type:
+            - 'null'
+            - string
+        customerReturnReference:
+          type:
+            - 'null'
+            - string
+        project:
+          type:
+            - 'null'
+            - string
+        priority:
+          type:
+            - 'null'
+            - string
+        plannedStart:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        dueAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        evidenceReferences:
+          type:
+            - 'null'
+            - string
+        technicianComments:
+          type:
+            - 'null'
+            - string
+        qualityComments:
+          type:
+            - 'null'
+            - string
+        engineeringComments:
+          type:
+            - 'null'
+            - string
+        deviations:
+          type:
+            - 'null'
+            - string
+        nonconformanceReferences:
+          type:
+            - 'null'
+            - string
+        reportedCondition:
+          type:
+            - 'null'
+            - string
+        observedCondition:
+          type:
+            - 'null'
+            - string
+        finalDisposition:
+          type:
+            - 'null'
+            - string
+        varianceReason:
+          type:
+            - 'null'
+            - string
+        result:
+          type:
+            - 'null'
+            - string
+        engineeringConclusion:
+          type:
+            - 'null'
+            - string
+        details:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonObject'
+        steps:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonArray'
+        characteristics:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonArray'
+        partsRows:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonArray'
+    TrackingStatus:
+      enum:
+        - NotStarted
+        - Assigned
+        - InProgress
+        - Paused
+        - OnHold
+        - PendingInspection
+        - PendingReview
+        - Completed
+        - Failed
+        - Rejected
+        - Canceled
+        - null
+    TrackingType:
+      enum:
+        - Validation
+        - Fai
+        - Repair
+        - Production
+        - null
     TrackResult:
       required:
         - newEvents
@@ -80016,6 +82454,27 @@ components:
           type:
             - 'null'
             - string
+    WorkInstructionStatus:
+      enum:
+        - Draft
+        - InDevelopment
+        - PendingReview
+        - ChangesRequested
+        - PendingApproval
+        - Approved
+        - Released
+        - Superseded
+        - Obsolete
+        - Archived
+        - null
+    WorkInstructionType:
+      enum:
+        - Validation
+        - ValidationFai
+        - Fai
+        - RepairTest
+        - RepairWork
+        - null
     WorkOrder:
       type: object
       properties:
@@ -80297,3 +82756,6 @@ tags:
   - name: CarrierIntegration
   - name: ShippingDocument
   - name: SequflohFoundation
+  - name: SequflohInstructions
+  - name: SequflohParts
+  - name: SequflohTracking
