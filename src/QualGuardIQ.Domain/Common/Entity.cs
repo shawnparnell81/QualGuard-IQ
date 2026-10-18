@@ -34,3 +34,13 @@ public interface ISiteScoped
 
 /// <summary>Ledger records that can be added but never changed or deleted (corrections are new entries).</summary>
 public interface IAppendOnly { }
+
+/// <summary>
+/// Reference to another record, person, role or site inside an audit label. The audit writer replaces it with that record's
+/// readable name (a record number, a person's name, a role or site), or the fallback text when it can't be found, so audit
+/// descriptions never show raw ids.
+/// </summary>
+public static class AuditRef
+{
+    public static string To(Guid? id, string fallback) => id is { } g ? $"\u27E6{g:D}|{fallback}\u27E7" : fallback;
+}

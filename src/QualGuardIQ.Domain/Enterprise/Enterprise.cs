@@ -53,7 +53,7 @@ public class StandardRollout : Entity, IAudited, ISiteScoped
     public Guid? VerifiedById { get; set; }
     public DateTimeOffset? VerifiedAt { get; set; }
     public string? Notes { get; set; }
-    public string AuditLabel => $"rollout of standard {StandardId} at site {SiteId}";
+    public string AuditLabel => $"rollout of standard {AuditRef.To(StandardId, "")} at site {AuditRef.To(SiteId, "")}";
 }
 
 // ---------- skills, qualifications, curricula ----------
@@ -86,7 +86,7 @@ public class SkillRequirement : Entity, IAudited, ISiteScoped
     public Guid SiteId { get; set; }
     public Guid? DepartmentId { get; set; }
     public Guid? WorkCenterId { get; set; }
-    public string AuditLabel => $"skill requirement {SkillId}";
+    public string AuditLabel => $"skill requirement {AuditRef.To(SkillId, "")} at site {AuditRef.To(SiteId, "")}";
 }
 
 public enum CertificationStatus { Active = 0, Revoked = 1 }
@@ -103,7 +103,7 @@ public class EmployeeCertification : Entity, IAudited, ISiteScoped
     public string? IssuedBy { get; set; }
     public CertificationStatus Status { get; set; }
     public string? RevokedReason { get; set; }
-    public string AuditLabel => $"certification {SkillId}/{UserId}";
+    public string AuditLabel => $"certification of {AuditRef.To(UserId, "a person")} for {AuditRef.To(SkillId, "a skill")}";
 }
 
 public enum CurriculumKind { Curriculum = 0, TrainingPath = 1, CertificationProgram = 2, QualificationProgram = 3 }
@@ -280,7 +280,7 @@ public class ValidationDeviation : Entity, IAudited
     public string? Impact { get; set; }
     public string? Resolution { get; set; }
     public DeviationStatus Status { get; set; }
-    public string AuditLabel => $"validation deviation {Id}";
+    public string AuditLabel => $"validation deviation on {AuditRef.To(ProjectId, "a validation project")}";
 }
 
 // ---------- project quality planning / APQP / PPAP / capability ----------

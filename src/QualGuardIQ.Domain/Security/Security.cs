@@ -28,7 +28,7 @@ public class UserRoleAssignment : Entity, IAudited
     public Role? Role { get; set; }
     public Guid? SiteId { get; set; }
     public Guid? DepartmentId { get; set; }
-    public string AuditLabel => $"Role assignment {RoleId}";
+    public string AuditLabel => $"role assignment {AuditRef.To(RoleId, "")} for {AuditRef.To(UserId, "a person")}{(SiteId is { } s ? " at site " + AuditRef.To(s, "") : "")}";
 }
 
 /// <summary>Security events (sign-in, lockout, denial). Kept separate from the QMS business audit trail.</summary>

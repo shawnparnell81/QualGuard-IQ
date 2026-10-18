@@ -47,7 +47,7 @@ public class Comment : Entity, IAudited
     public Guid AuthorId { get; set; }
     public string AuthorName { get; set; } = "";
     public string Body { get; set; } = "";
-    public string AuditLabel => $"comment on {OwnerType}";
+    public string AuditLabel => $"comment on {AuditRef.To(OwnerId, OwnerType)}";
 }
 
 /// <summary>Directed link between two records of any type, such as NCR -> CAPA.</summary>
@@ -58,7 +58,7 @@ public class RecordLink : Entity, IAudited
     public string ToType { get; set; } = "";
     public Guid ToId { get; set; }
     public string LinkType { get; set; } = "Related";
-    public string AuditLabel => $"link {FromType} -> {ToType} ({LinkType})";
+    public string AuditLabel => $"link from {AuditRef.To(FromId, FromType)} to {AuditRef.To(ToId, ToType)} ({LinkType})";
 }
 
 public class Tag : Entity
