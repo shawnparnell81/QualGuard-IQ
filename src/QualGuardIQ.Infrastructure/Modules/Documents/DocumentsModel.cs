@@ -255,6 +255,6 @@ public partial class AppDbContext
         ConfigureEngineering(b);
         ConfigurePlatform(b);
         ConfigureStudio(b);
-        ConfigureLabels(b); ConfigureCarrierIntegration(b); ConfigureShippingDocuments(b); ConfigureMessaging(b); ConfigureGenerationBoundary(b); ConfigureVideo(b); ConfigureSignInSecurity(b); ConfigureSso(b); ConfigureImports(b);
+        ConfigureLabels(b); ConfigureCarrierIntegration(b); ConfigureShippingDocuments(b); ConfigureMessaging(b); ConfigureGenerationBoundary(b); ConfigureVideo(b); ConfigureSignInSecurity(b); ConfigureSso(b); ConfigureImports(b); ConfigureQualityOps(b);
     }
 }

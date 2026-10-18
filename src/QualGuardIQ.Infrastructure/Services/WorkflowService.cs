@@ -58,10 +58,19 @@ public sealed class WorkflowService(
         ApprovalRouteStep? step = null;
         foreach (var candidate in open)
             if (await access.CanAccessAsync(uid, candidate.RequiredPermission, req.SiteId, req.DepartmentId, ct)) { step = candidate; break; }
+        // Delegated approval: an active delegation lets the delegate sign a step the delegator could sign.
+        (Guid Id, string Name)? onBehalf = null;
+        if (step is null)
+            foreach (var d in await ActiveDelegationsAsync(uid, req.RecordType, ct))
+            {
+                foreach (var candidate in open)
+                    if (await access.CanAccessAsync(d.DelegatorId, candidate.RequiredPermission, req.SiteId, req.DepartmentId, ct)) { step = candidate; break; }
+                if (step is not null) { onBehalf = (d.DelegatorId, await db.Users.Where(u => u.Id == d.DelegatorId).Select(u => u.DisplayName).FirstAsync(ct)); break; }
+            }
         if (step is null) throw new ForbiddenException("You are not an approver for this step.");
-        if (route.PreventSelfApproval && req.SubmittedById == uid)
+        if (route.PreventSelfApproval && (req.SubmittedById == uid || onBehalf?.Id == req.SubmittedById))
             throw new ForbiddenException("You cannot approve a record you submitted.");
-        if (req.Decisions.Any(d => d.SignerId == uid))
+        if (req.Decisions.Any(d => d.SignerId == uid || d.OnBehalfOfId == uid || (onBehalf != null && (d.SignerId == onBehalf.Value.Id || d.OnBehalfOfId == onBehalf.Value.Id))))
             throw new ForbiddenException("You have already signed this approval.");
         if (!approve && string.IsNullOrWhiteSpace(comment))
             throw new AppException("A reason is required to reject.");
@@ -77,6 +86,7 @@ public sealed class WorkflowService(
         req.Decisions.Add(new ApprovalDecision
         {
             RequestId = req.Id, StepOrder = step.Order, StepId = step.Id, StepName = step.Name, SignerId = uid, SignerName = user.DisplayName,
+            OnBehalfOfId = onBehalf?.Id, OnBehalfOfName = onBehalf?.Name,
             Approved = approve, Meaning = approve ? step.SignatureMeaning : "Rejected", Comment = comment, SignedAt = clock.UtcNow, Verification = verification
         });
         var signed = req.Decisions[^1];
@@ -118,7 +128,7 @@ public sealed class WorkflowService(
         {
             OccurredAt = clock.UtcNow, UserId = uid, UserName = user.DisplayName, Action = approve ? "Signed" : "Rejected",
             EntityType = req.RecordType, EntityId = req.RecordId, SiteId = req.SiteId, Reason = comment,
-            Description = $"{user.DisplayName} signed {req.RecordNumber} step '{step.Name}' meaning '{(approve ? step.SignatureMeaning : "Rejected")}'"
+            Description = $"{user.DisplayName} signed {req.RecordNumber} step '{step.Name}' meaning '{(approve ? step.SignatureMeaning : "Rejected")}'" + (onBehalf is { } ob ? $" on behalf of {ob.Name} (delegation)" : "")
         });
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
@@ -152,10 +162,34 @@ public sealed class WorkflowService(
             var stage = route.Steps.Where(s => s.Stage == r.CurrentStep).ToList();
             if (stage.Any(s => s.ConditionField != null)) stage = OpenSteps(route, r, await conditions.ValuesAsync(r.RecordType, r.RecordId, ct));
             else stage = stage.Where(s => !Signed(r, s)).ToList();
+            var found = false;
             foreach (var step in stage)
-                if (await access.CanAccessAsync(uid, step.RequiredPermission, r.SiteId, r.DepartmentId, ct)) { result.Add((r, step.Name)); break; }
+                if (await access.CanAccessAsync(uid, step.RequiredPermission, r.SiteId, r.DepartmentId, ct)) { result.Add((r, step.Name)); found = true; break; }
+            if (found) continue;
+            foreach (var d in await ActiveDelegationsAsync(uid, r.RecordType, ct))
+            {
+                if ((route.PreventSelfApproval && r.SubmittedById == d.DelegatorId) || r.Decisions.Any(x => x.SignerId == d.DelegatorId || x.OnBehalfOfId == d.DelegatorId)) continue;
+                var step = await FirstAsync(stage, d.DelegatorId, r, ct);
+                if (step is not null) { result.Add((r, step.Name + " (delegated)")); break; }
+            }
         }
         return result;
+    }
+
+    private async Task<ApprovalRouteStep?> FirstAsync(List<ApprovalRouteStep> steps, Guid userId, ApprovalRequest r, CancellationToken ct)
+    {
+        foreach (var s in steps)
+            if (await access.CanAccessAsync(userId, s.RequiredPermission, r.SiteId, r.DepartmentId, ct)) return s;
+        return null;
+    }
+
+    /// <summary>Delegations to <paramref name="delegateId"/> in force now that cover the record type.</summary>
+    private Task<List<Domain.Quality.ApprovalDelegation>> ActiveDelegationsAsync(Guid delegateId, string recordType, CancellationToken ct)
+    {
+        var now = clock.UtcNow;
+        return db.ApprovalDelegations.AsNoTracking()
+            .Where(d => d.DelegateId == delegateId && !d.Revoked && d.StartsAt <= now && d.EndsAt > now && (d.RecordType == null || d.RecordType == recordType))
+            .OrderBy(d => d.StartsAt).ToListAsync(ct);
     }
 
     private async Task NotifyStepAsync(ApprovalRequest req, ApprovalRoute route, RecordInfo record, CancellationToken ct)
@@ -225,5 +259,5 @@ public sealed class WorkflowService(
     /// <summary>Binds the signature to its record: any later change to signer, meaning, time or record number breaks the hash.</summary>
     public static string SignatureHash(ApprovalDecision d, string recordNumber) =>
         Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
-            $"{d.RequestId}|{d.StepOrder}|{d.SignerId}|{d.SignerName}|{d.Approved}|{d.Meaning}|{d.SignedAt.UtcTicks / 10}|{recordNumber}|{d.Comment}"))).ToLowerInvariant();
+            $"{d.RequestId}|{d.StepOrder}|{d.SignerId}|{d.SignerName}|{d.Approved}|{d.Meaning}|{d.SignedAt.UtcTicks / 10}|{recordNumber}|{d.Comment}" + (d.OnBehalfOfId is { } ob ? $"|on-behalf:{ob}" : "")))).ToLowerInvariant();
 }
