@@ -199,6 +199,12 @@ public partial class AppDbContext
             e.Property(x => x.RequiresCalibration).HasDefaultValue(true);
             e.Property(x => x.AssetNumber).HasMaxLength(60);
             e.HasIndex(x => x.Category);
+            e.Property(x => x.Resolution).HasMaxLength(100);
+            e.Property(x => x.Accuracy).HasMaxLength(100);
+            e.Property(x => x.AcceptanceCriteria).HasMaxLength(500);
+            e.Property(x => x.CalibrationProvider).HasMaxLength(200);
+            e.Property(x => x.LimitedUseNote).HasMaxLength(500);
+            e.HasIndex(x => x.SerialNumber);
         });
         Scoped<Equipment>(b);
         b.Entity<MaintenancePlan>(e =>
