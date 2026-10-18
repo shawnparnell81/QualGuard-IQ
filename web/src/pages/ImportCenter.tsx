@@ -23,7 +23,7 @@ const docsModule = () => modules.find((m) => m.key === 'documents')!;
 
 interface Job { id: string; number: string; originalFileName: string; fileType: string; importMode: string; targetModule: string | null; status: number; progress: number; totalRows: number; importedRows: number; warningCount: number; errorCount: number; submittedAt: string; submittedBy: string; siteCode: string }
 interface Site { id: string; code: string; name: string }
-interface Target { key: string; name: string; needsTemplate: boolean }
+interface Target { key: string; name: string; needsTemplate: boolean; masterList: boolean }
 
 export function ImportCenter() {
   const nav = useNavigate();
@@ -68,8 +68,13 @@ function UploadPanel({ onStarted }: { onStarted: (id: string) => void }) {
   const targets = useQuery({ queryKey: ['import-targets'], queryFn: () => get<Target[]>('/api/imports/targets') });
   const templates = useQuery({ queryKey: ['import-templates'], queryFn: () => get<{ items: { id: string; number: string; title: string }[] }>('/api/template-library?view=effective&pageSize=200') });
   const [siteId, setSiteId] = useState('');
-  const [target, setTarget] = useState('form-records');
-  const [mode, setMode] = useState('records');
+  const [params] = useSearchParams();
+  const preset = params.get('target');
+  const [target, setTarget] = useState(preset ?? 'form-records');
+  const [mode, setMode] = useState(preset?.startsWith('master-') ? 'master-list' : 'records');
+  const rowsMode = mode === 'records' || mode === 'master-list';
+  const choices = (targets.data ?? []).filter((x) => !!x.masterList === (mode === 'master-list'));
+  const pickMode = (m: string) => { setMode(m); if (m === 'master-list' && !target.startsWith('master-')) setTarget(targets.data?.find((x) => x.masterList)?.key ?? ''); if (m === 'records' && target.startsWith('master-')) setTarget('form-records'); };
   const [templateId, setTemplateId] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [over, setOver] = useState(false);
@@ -83,11 +88,11 @@ function UploadPanel({ onStarted }: { onStarted: (id: string) => void }) {
     try {
       const fd = new FormData();
       fd.append('file', file); fd.append('siteId', site); fd.append('mode', mode);
-      if (mode === 'records') { fd.append('targetModule', target); if (templateId) fd.append('targetTemplateId', templateId); }
+      if (rowsMode) { fd.append('targetModule', target); if (templateId) fd.append('targetTemplateId', templateId); }
       onStarted(await post<string>('/api/imports', fd));
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
-  const t = mode === 'records' ? targets.data?.find((x) => x.key === target) : undefined;
+  const t = rowsMode ? targets.data?.find((x) => x.key === target) : undefined;
   const isBook = !!file && WHOLE_FILE.test(file.name);
   const isWord = !!file && /\.(docx|doc)$/i.test(file.name);
   const isPdf = !!file && /\.(pdf|png|jpe?g|tiff?)$/i.test(file.name);
@@ -98,21 +103,22 @@ function UploadPanel({ onStarted }: { onStarted: (id: string) => void }) {
       <Box onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={drop} aria-label="Drop a file here"
         sx={{ border: '2px dashed', borderColor: over ? 'primary.main' : 'divider', borderRadius: 1, p: 3, textAlign: 'center', bgcolor: over ? 'action.hover' : undefined, mb: 2 }}>
         <Typography>{file ? `${file.name} (${(file.size / 1024).toFixed(1)} KB)` : 'Drop a CSV, Excel, Word or PDF file or a scanned image here, or choose one.'}</Typography>
-        <Button component="label" sx={{ mt: 1 }}>Choose file<input hidden type="file" data-testid="import-file" accept=".csv,.txt,.tsv,.xlsx,.xlsm,.xls,.docx,.doc,.pdf,.png,.jpg,.jpeg,.tif,.tiff" onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); if (f && !WHOLE_FILE.test(f.name)) setMode('records'); }} /></Button>
+        <Button component="label" sx={{ mt: 1 }}>Choose file<input hidden type="file" data-testid="import-file" accept=".csv,.txt,.tsv,.xlsx,.xlsm,.xls,.docx,.doc,.pdf,.png,.jpg,.jpeg,.tif,.tiff" onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); if (f && !WHOLE_FILE.test(f.name) && mode !== 'master-list') setMode('records'); }} /></Button>
       </Box>
       <Stack direction={{ xs: 'column', md: 'row' }} gap={2}>
         <TextField select size="small" label="Site" value={site} onChange={(e) => setSiteId(e.target.value)} sx={{ minWidth: 180 }}>
           {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}</TextField>
-        <TextField select size="small" label="What to do" value={mode} onChange={(e) => setMode(e.target.value)} sx={{ minWidth: 260 }} SelectProps={{ SelectDisplayProps: { 'aria-label': 'Import mode' } as object }}>
+        <TextField select size="small" label="What to do" value={mode} onChange={(e) => pickMode(e.target.value)} sx={{ minWidth: 260 }} SelectProps={{ SelectDisplayProps: { 'aria-label': 'Import mode' } as object }}>
           <MenuItem value="records">{isWord ? 'Extract content controls or table rows as records' : isImage ? 'Extract table rows as records' : isPdf ? 'Extract fillable fields or table rows as records' : 'Import rows as records'}</MenuItem>
+          <MenuItem value="master-list" disabled={isWord || isPdf}>Migrate a master list (equipment, documents, suppliers …)</MenuItem>
           <MenuItem value="template" disabled={!isBook}>Convert to an electronic form</MenuItem>
           <MenuItem value="document" disabled={!isBook}>{isWord ? 'Keep the document as a controlled document' : isImage ? 'Keep the image as a controlled document' : isPdf ? 'Keep the PDF as a controlled document' : 'Keep the workbook as a controlled document'}</MenuItem>
         </TextField>
-        {mode === 'records' && <TextField select size="small" label="Import into" value={target} onChange={(e) => setTarget(e.target.value)} sx={{ minWidth: 200 }}>
-          {(targets.data ?? []).map((x) => <MenuItem key={x.key} value={x.key}>{x.name}</MenuItem>)}</TextField>}
+        {rowsMode && <TextField select size="small" label={mode === 'master-list' ? 'Master list' : 'Import into'} value={choices.some((x) => x.key === target) ? target : ''} onChange={(e) => setTarget(e.target.value)} sx={{ minWidth: 260 }}>
+          {choices.map((x) => <MenuItem key={x.key} value={x.key}>{x.name}</MenuItem>)}</TextField>}
         {t?.needsTemplate && <TextField select size="small" label="Form template" value={templateId} onChange={(e) => setTemplateId(e.target.value)} sx={{ minWidth: 280 }}>
           {(templates.data?.items ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.number} · {x.title}</MenuItem>)}</TextField>}
-        <Button variant="contained" disabled={!file || !site || busy || (t?.needsTemplate && !templateId)} onClick={start}>Upload and inspect</Button>
+        <Button variant="contained" disabled={!file || !site || busy || (t?.needsTemplate && !templateId) || (rowsMode && !t)} onClick={start}>Upload and inspect</Button>
       </Stack>
       {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
     </Paper>

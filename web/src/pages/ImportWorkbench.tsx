@@ -8,7 +8,7 @@ import { ConfidenceChip } from './ImportPdf';
 /* ------------------------------------------------------------------ workbench */
 
 interface Step { number: number; name: string; status: 'done' | 'pending' | 'attention'; content: Record<string, unknown> }
-interface Target { key: string; name: string; needsTemplate: boolean }
+interface Target { key: string; name: string; needsTemplate: boolean; masterList: boolean }
 type Any = Record<string, any>;
 
 const STEP_COLOR: Record<string, 'success' | 'warning' | 'default'> = { done: 'success', attention: 'warning', pending: 'default' };
@@ -107,6 +107,8 @@ function PurposeEditor({ jobId, purpose, target, editable, onDone }: { jobId: st
   const [busy, setBusy] = useState(false);
   const records = ['historical-records', 'transactional-records', 'master-list'].includes(p);
   const t = targets.data?.find((x) => x.key === module);
+  const choices = (targets.data ?? []).filter((x) => !!x.masterList === (p === 'master-list'));
+  const pick = (v: string) => { setP(v); const want = v === 'master-list'; if (t && !!t.masterList !== want) setModule((targets.data ?? []).find((x) => !!x.masterList === want)?.key ?? ''); };
   const apply = async () => {
     setBusy(true);
     try {
@@ -121,10 +123,10 @@ function PurposeEditor({ jobId, purpose, target, editable, onDone }: { jobId: st
     <Stack gap={1.5}>
       <Typography variant="body2">Imported as: <strong>{purpose.label}</strong></Typography>
       {editable && <Stack direction={{ xs: 'column', md: 'row' }} gap={1.5} flexWrap="wrap" alignItems="flex-start">
-        <TextField select size="small" label="Import as" value={p} onChange={(e) => setP(e.target.value)} sx={{ minWidth: 230 }} SelectProps={{ SelectDisplayProps: { 'aria-label': 'Import purpose' } as object }}>
+        <TextField select size="small" label="Import as" value={p} onChange={(e) => pick(e.target.value)} sx={{ minWidth: 230 }} SelectProps={{ SelectDisplayProps: { 'aria-label': 'Import purpose' } as object }}>
           {(purpose.options as Any[]).map((o) => <MenuItem key={o.key} value={o.key} disabled={!o.available}>{o.label}</MenuItem>)}</TextField>
-        {records && <TextField select size="small" label="Into" value={module} onChange={(e) => setModule(e.target.value)} sx={{ minWidth: 190 }}>
-          {(targets.data ?? []).map((x) => <MenuItem key={x.key} value={x.key}>{x.name}</MenuItem>)}</TextField>}
+        {records && <TextField select size="small" label="Into" value={choices.some((x) => x.key === module) ? module : ''} onChange={(e) => setModule(e.target.value)} sx={{ minWidth: 240 }}>
+          {choices.map((x) => <MenuItem key={x.key} value={x.key}>{x.name}</MenuItem>)}</TextField>}
         {((records && t?.needsTemplate) || (p === 'controlled-form-template' && revision === 'new-revision')) && <TextField select size="small" label="Form template" value={templateId} onChange={(e) => setTemplateId(e.target.value)} sx={{ minWidth: 260 }} SelectProps={{ SelectDisplayProps: { 'aria-label': 'Target template' } as object }}>
           {(templates.data?.items ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.number} · {x.title}</MenuItem>)}</TextField>}
         {records && <TextField select size="small" label="Existing records" value={existing} onChange={(e) => setExisting(e.target.value)} sx={{ minWidth: 220 }} SelectProps={{ SelectDisplayProps: { 'aria-label': 'Existing records' } as object }}>
