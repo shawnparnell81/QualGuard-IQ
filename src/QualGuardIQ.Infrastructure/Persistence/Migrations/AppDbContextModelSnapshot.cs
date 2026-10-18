@@ -598,6 +598,128 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("document_types", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Documents.FormMigration", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ChangedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Comparison")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("FieldCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("FromSchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<int>("RecordCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RollbackReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid?>("RollbackRevisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("RolledBackAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RolledBackById")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Snapshot")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("SnapshotSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("SourceRevision")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("SourceRevisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TargetRevision")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("TargetRevisionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ToSchemaVersion")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("RollbackRevisionId");
+
+                    b.HasIndex("RolledBackById");
+
+                    b.HasIndex("SiteId");
+
+                    b.HasIndex("SourceRevisionId");
+
+                    b.HasIndex("TargetRevisionId")
+                        .IsUnique();
+
+                    b.HasIndex("DocumentId", "CreatedAt");
+
+                    b.ToTable("form_migrations", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_fmig_rollback", "(\"Status\" = 4) = (\"RolledBackAt\" IS NOT NULL)");
+
+                            t.HasCheckConstraint("ck_fmig_status", "\"Status\" BETWEEN 0 AND 4");
+
+                            t.HasCheckConstraint("ck_fmig_versions", "\"ToSchemaVersion\" > \"FromSchemaVersion\"");
+                        });
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Documents.SavedListView", b =>
                 {
                     b.Property<Guid>("Id")
@@ -7541,6 +7663,62 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasFilter("\"Status\" = 1");
 
                     b.ToTable("form_components", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Platform.IdempotencyRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<byte[]>("Body")
+                        .HasColumnType("bytea");
+
+                    b.Property<string>("Caller")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ContentType")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Fingerprint")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Method")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("StatusCode")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("Caller", "Key")
+                        .IsUnique();
+
+                    b.ToTable("idempotency_records", "qms");
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Platform.LicenseRevocation", b =>
@@ -22271,6 +22449,43 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Document");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Documents.FormMigration", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Documents.ControlledDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Documents.DocumentRevision", null)
+                        .WithMany()
+                        .HasForeignKey("RollbackRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RolledBackById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Organization.Site", null)
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Documents.DocumentRevision", null)
+                        .WithMany()
+                        .HasForeignKey("SourceRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Documents.DocumentRevision", null)
+                        .WithMany()
+                        .HasForeignKey("TargetRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Documents.SavedListView", b =>

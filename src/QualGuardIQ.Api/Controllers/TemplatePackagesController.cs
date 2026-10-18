@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using QualGuardIQ.Infrastructure.Modules.Templates;
 
 namespace QualGuardIQ.Api.Controllers;
@@ -26,9 +27,11 @@ public sealed class TemplatePackagesController(TemplatePackageService packages) 
     [HttpGet("{key}")] public Task<PackageDetail> Get(string key, [FromQuery] string? version, CancellationToken ct) => packages.GetAsync(key, version, ct);
 
     /// <summary>Install a package, or selected templates from it (key "library" installs individual library templates), as draft form templates.</summary>
+    [EnableRateLimiting("processing")]
     [HttpPost("{key}/install")] public Task<InstallResult> Install(string key, InstallRequest req, CancellationToken ct) => packages.InstallAsync(key, req, ct);
 
     /// <summary>Export form templates as a package file (.qgpkg).</summary>
+    [EnableRateLimiting("processing")]
     [HttpPost("export")]
     public async Task<IActionResult> Export(ExportRequest req, CancellationToken ct)
     {
@@ -37,6 +40,7 @@ public sealed class TemplatePackagesController(TemplatePackageService packages) 
     }
 
     /// <summary>Import a package file exported by another installation. Every definition is hash-checked and validated; nothing is installed until requested.</summary>
+    [EnableRateLimiting("processing")]
     [HttpPost("import")]
     [RequestSizeLimit(TemplatePackageService.MaxPackageBytes + 1024 * 1024), RequestFormLimits(MultipartBodyLengthLimit = TemplatePackageService.MaxPackageBytes + 1024 * 1024)]
     public async Task<PackageSummary> Import(IFormFile file, CancellationToken ct)

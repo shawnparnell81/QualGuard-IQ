@@ -2,6 +2,7 @@ using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Application.Forms;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using QualGuardIQ.Api.Auth;
 using QualGuardIQ.Domain.Documents;
@@ -80,6 +81,7 @@ public sealed class FormsController(AppDbContext db, FormService forms, ModuleSu
     }
 
     /// <summary>Form record as PDF: style=standardized (QualGuard IQ layout) or original (converted source layout). Printing is audited.</summary>
+    [EnableRateLimiting("processing")]
     [HttpGet("records/{id:guid}/pdf")]
     public async Task<IActionResult> RecordPdf(Guid id, [FromQuery] string? style, [FromServices] FormPrintService print, CancellationToken ct)
     {
@@ -89,6 +91,7 @@ public sealed class FormsController(AppDbContext db, FormService forms, ModuleSu
     }
 
     /// <summary>Blank form template revision as PDF (controlled copy when effective, watermarked otherwise). Printing is audited.</summary>
+    [EnableRateLimiting("processing")]
     [HttpGet("templates/revisions/{revisionId:guid}/pdf")]
     public async Task<IActionResult> TemplatePdf(Guid revisionId, [FromQuery] string? style, [FromServices] FormPrintService print, CancellationToken ct)
     {
@@ -106,6 +109,7 @@ public sealed class FormsController(AppDbContext db, FormService forms, ModuleSu
     }
 
     /// <summary>Reimports a completed offline workbook as a draft form record (integrity, revision and structure checked; input cells only; recalculated; kept as evidence; one submission per copy).</summary>
+    [EnableRateLimiting("processing")]
     [HttpPost("templates/{templateId:guid}/workbook")]
     [RequestSizeLimit(55L * 1024 * 1024), RequestFormLimits(MultipartBodyLengthLimit = 55L * 1024 * 1024)]
     public async Task<FormWorkbookService.Submission> SubmitOfflineWorkbook(Guid templateId, IFormFile file, [FromForm] Guid siteId, [FromForm] Guid? departmentId, [FromServices] FormWorkbookService books, CancellationToken ct)
@@ -117,6 +121,7 @@ public sealed class FormsController(AppDbContext db, FormService forms, ModuleSu
     public sealed record PreviewRequest(string FieldSchema, string? Style, Dictionary<string, string?>? Values);
 
     /// <summary>Designer print preview of an unsaved definition (validated first). Returns a PDF watermarked PREVIEW.</summary>
+    [EnableRateLimiting("processing")]
     [HttpPost("preview/pdf")]
     [RequirePermission(Permissions.FormsEdit)]
     public async Task<IActionResult> PreviewPdf(PreviewRequest req, [FromServices] FormPrintService print, CancellationToken ct)
