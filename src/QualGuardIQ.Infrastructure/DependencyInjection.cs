@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<SessionRevocation>();
         services.AddMemoryCache();
         services.AddHttpClient("sso", c => c.Timeout = TimeSpan.FromSeconds(15));
+        services.AddSingleton<OutboundGuard>();
         services.AddSingleton<OidcClient>();
         services.AddScoped<SsoService>();
         services.AddSingleton<AuthMailQueue>();
@@ -273,7 +274,7 @@ public static class DependencyInjection
     /// <summary>Prompt 6: multi-site governance, workforce qualification, compliance, validation, APQP projects/PPAP/capability, retention, continuity and public API.</summary>
     private static void AddEnterprise(IServiceCollection s)
     {
-        s.AddHttpClient("notify", c => c.Timeout = TimeSpan.FromSeconds(10));
+        s.AddHttpClient("notify", c => c.Timeout = TimeSpan.FromSeconds(10)).ConfigurePrimaryHttpMessageHandler(sp => sp.GetRequiredService<OutboundGuard>().Handler());
         s.AddScoped<Modules.Enterprise.QualificationService>();
         s.AddScoped<Modules.Enterprise.WorkforceService>();
         s.AddScoped<Modules.Quality.ITrainingCompletedHandler>(sp => sp.GetRequiredService<Modules.Enterprise.WorkforceService>());
@@ -330,6 +331,13 @@ public static class DependencyInjection
     {
         var dp = s.AddDataProtection().SetApplicationName("QualGuardIQ");
         if (config["DataProtection:KeyPath"] is { Length: > 0 } keyPath) dp.PersistKeysToFileSystem(new System.IO.DirectoryInfo(keyPath));
+        // Optional: encrypt the key files with a certificate the organization holds (DataProtection:CertificatePath, a .pfx with its
+        // private key, and DataProtection:CertificatePassword). Keys written before this is turned on stay readable.
+        if (config["DataProtection:CertificatePath"] is { Length: > 0 } certPath)
+        {
+            var cert = DataProtectionCertificate.Load(certPath, config["DataProtection:CertificatePassword"]);
+            dp.ProtectKeysWithCertificate(cert).UnprotectKeysWithAnyCertificate(cert);
+        }
         s.AddSingleton<Modules.Integration.SecretProtector>();
         s.AddSingleton<Modules.Integration.ErpHttpHandlerProvider>();
         s.AddSingleton<Modules.Integration.Erp.ErpTokenCache>();
@@ -357,7 +365,7 @@ public static class DependencyInjection
         s.AddScoped<Modules.Inventory.ShippingService>();
         s.AddScoped<Modules.Inventory.CountService>();
         s.AddScoped<Modules.Inventory.WarehouseInsights>();
-        s.AddHttpClient("print", c => c.Timeout = TimeSpan.FromSeconds(10));
+        s.AddHttpClient("print", c => c.Timeout = TimeSpan.FromSeconds(10)).ConfigurePrimaryHttpMessageHandler(sp => sp.GetRequiredService<OutboundGuard>().Handler());
         s.AddSingleton<Modules.Logistics.IPrintTransport, Modules.Logistics.VirtualPrintTransport>();
         s.AddSingleton<Modules.Logistics.IPrintTransport, Modules.Logistics.RawTcpPrintTransport>();
         s.AddSingleton<Modules.Logistics.IPrintTransport, Modules.Logistics.HttpRelayPrintTransport>();

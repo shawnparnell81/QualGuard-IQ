@@ -56,9 +56,9 @@ public interface ICarrierAdapter
 }
 
 /// <summary>Supplies the HTTP handler for carrier adapters. Tests swap in recorded fixtures; production uses one pooled handler without cookies.</summary>
-public sealed class CarrierHttpHandlerProvider
+public sealed class CarrierHttpHandlerProvider(Security.OutboundGuard guard)
 {
-    static readonly SocketsHttpHandler Shared = new() { UseCookies = false, PooledConnectionLifetime = TimeSpan.FromMinutes(5), AutomaticDecompression = DecompressionMethods.All };
+    readonly SocketsHttpHandler Shared = guard.Handler(h => { h.UseCookies = false; h.PooledConnectionLifetime = TimeSpan.FromMinutes(5); h.AutomaticDecompression = DecompressionMethods.All; });
     public Func<HttpMessageHandler>? Override { get; set; }
     /// <summary>Delay before retry attempt n (1-based). Tests set it to zero.</summary>
     public Func<int, TimeSpan> RetryDelay { get; set; } = n => TimeSpan.FromMilliseconds(500 * n);

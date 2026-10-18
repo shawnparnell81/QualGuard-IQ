@@ -220,7 +220,7 @@ public sealed class InsightsController(InsightsService svc) : ControllerBase
 
 /// <summary>External portal. Portal accounts reach only these routes (and sign-in); staff use /api/portal/admin.</summary>
 [ApiController, Authorize, Route("api/portal")]
-public sealed class PortalController(PortalService svc, QualGuardIQ.Infrastructure.Storage.IFileStorage storage) : ControllerBase
+public sealed class PortalController(PortalService svc, QualGuardIQ.Infrastructure.Services.AttachmentService files) : ControllerBase
 {
     [HttpGet("me")] public Task<PortalMe> Me(CancellationToken ct) => svc.MeAsync(null, ct);
     [HttpGet("complaints")] public Task<List<object>> Complaints(CancellationToken ct) => svc.ComplaintsAsync(ct);
@@ -246,7 +246,8 @@ public sealed class PortalController(PortalService svc, QualGuardIQ.Infrastructu
     public async Task<IActionResult> Download(Guid attachmentId, CancellationToken ct)
     {
         var a = await svc.EvidenceFileAsync(attachmentId, ct);
-        return File(await storage.GetAsync(a.StorageKey, ct), "application/octet-stream", a.FileName);
+        // same checks as staff downloads: quarantined files are refused and the checksum must match
+        return File(await files.ReadVerifiedAsync(a, ct), "application/octet-stream", a.FileName);
     }
 
     [HttpGet("admin/accounts")] [RequirePermission(Permissions.PortalAdmin)] public Task<List<PortalAccountDto>> Accounts(CancellationToken ct) => svc.AccountsAsync(ct);

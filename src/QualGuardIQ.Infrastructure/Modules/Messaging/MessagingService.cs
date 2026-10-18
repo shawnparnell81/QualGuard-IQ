@@ -28,9 +28,9 @@ public sealed record DeliveryRow(Guid Id, Guid ProviderId, long? NotificationId,
     string? ProviderMessageId, bool IsTest, DateTimeOffset CreatedAt, DateTimeOffset? SentAt, DateTimeOffset? DeliveredAt);
 
 /// <summary>Supplies the HTTP handler for messaging adapters; tests replace it.</summary>
-public sealed class MessagingHttpProvider
+public sealed class MessagingHttpProvider(Security.OutboundGuard guard)
 {
-    static readonly SocketsHttpHandler Shared = new() { UseCookies = false, PooledConnectionLifetime = TimeSpan.FromMinutes(5) };
+    readonly SocketsHttpHandler Shared = guard.Handler(h => { h.UseCookies = false; h.PooledConnectionLifetime = TimeSpan.FromMinutes(5); });
     public Func<HttpMessageHandler>? Override { get; set; }
     public HttpClient Create() => Override is { } f ? new HttpClient(f(), true) { Timeout = TimeSpan.FromSeconds(30) } : new HttpClient(Shared, false) { Timeout = TimeSpan.FromSeconds(30) };
 }

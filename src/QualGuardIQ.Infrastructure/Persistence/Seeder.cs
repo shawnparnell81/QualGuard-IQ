@@ -33,7 +33,13 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
         var admin = await db.QmsRoles.Include(r => r.Permissions).FirstOrDefaultAsync(r => r.IsSystem && r.Name == "Administrator", ct);
         if (admin is null)
         {
-            admin = new Role { Name = "Administrator", Description = "Full access to every module and administration.", IsSystem = true };
+            // New installations can start with two-step verification required for administrators (Seed:AdministratorRequiresMfa);
+            // administrators change it later in Admin > Roles.
+            admin = new Role
+            {
+                Name = "Administrator", Description = "Full access to every module and administration.", IsSystem = true,
+                RequiresMfa = seed.GetValue("AdministratorRequiresMfa", false)
+            };
             db.QmsRoles.Add(admin);
         }
         foreach (var p in Permissions.All.Where(p => admin.Permissions.All(x => x.Permission != p)))

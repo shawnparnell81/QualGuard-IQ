@@ -43,7 +43,7 @@ public sealed class VirtualPrintTransport : IPrintTransport
 }
 
 /// <summary>Raw TCP to a network label printer (ZPL; port 9100 unless the address names another). 5-second connect and send timeout.</summary>
-public sealed class RawTcpPrintTransport : IPrintTransport
+public sealed class RawTcpPrintTransport(Security.OutboundGuard guard) : IPrintTransport
 {
     public PrinterDriver Driver => PrinterDriver.RawTcp;
     public static (string Host, int Port) Parse(string? address)
@@ -63,10 +63,16 @@ public sealed class RawTcpPrintTransport : IPrintTransport
         using var client = new TcpClient();
         try
         {
-            await client.ConnectAsync(host, port, cts.Token);
+            // label printers sit on the plant network: only addresses in Outbound:PrinterNetworks are dialled
+            var addresses = await Security.OutboundGuard.ResolveAsync(host, guard.IsPrinterAllowed, cts.Token);
+            await client.ConnectAsync(addresses, port, cts.Token);
             await using var s = client.GetStream();
             await s.WriteAsync(payload, cts.Token);
             await s.FlushAsync(cts.Token);
+        }
+        catch (HttpRequestException e)
+        {
+            throw new PrintFailure($"Printer address not allowed: {e.Message.Replace("Outbound:AllowedNetworks", "Outbound:PrinterNetworks")}", offline: false);
         }
         catch (Exception e) when (e is SocketException or OperationCanceledException or IOException)
         {

@@ -28,9 +28,9 @@ public sealed class SecretProtector(IDataProtectionProvider provider)
 }
 
 /// <summary>Supplies the HTTP handler for adapters. Tests swap in recorded vendor fixtures; production uses one pooled handler without cookies.</summary>
-public sealed class ErpHttpHandlerProvider
+public sealed class ErpHttpHandlerProvider(Security.OutboundGuard guard)
 {
-    private static readonly SocketsHttpHandler Shared = new() { UseCookies = false, PooledConnectionLifetime = TimeSpan.FromMinutes(5), AutomaticDecompression = System.Net.DecompressionMethods.All };
+    private readonly SocketsHttpHandler Shared = guard.Handler(h => { h.UseCookies = false; h.PooledConnectionLifetime = TimeSpan.FromMinutes(5); h.AutomaticDecompression = System.Net.DecompressionMethods.All; });
     public Func<HttpMessageHandler>? Override { get; set; }
     public HttpClient Create() => Override is { } f ? new HttpClient(f(), disposeHandler: true) { Timeout = TimeSpan.FromMinutes(11) } : new HttpClient(Shared, disposeHandler: false) { Timeout = TimeSpan.FromMinutes(11) };
 }

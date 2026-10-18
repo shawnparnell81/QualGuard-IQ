@@ -60,6 +60,33 @@ public sealed class AuthController(
         }
     }
 
+    /// <summary>
+    /// Password check shared by sign-in and tokens. Unknown and disabled accounts take as long as real ones (a password hash is still
+    /// checked), and "account locked" is only said to someone who typed the right password, so the answers don't reveal which
+    /// email addresses have accounts. Returns null when the password is right and the account may continue.
+    /// </summary>
+    async Task<IActionResult?> CheckPasswordAsync(ApplicationUser? user, string email, string password, string failEvent)
+    {
+        var wrong = Unauthorized(new { title = "Email or password is incorrect." });
+        if (user is null || !user.IsActive)
+        {
+            users.PasswordHasher.VerifyHashedPassword(user ?? new ApplicationUser(), QualGuardIQ.Api.Infrastructure.PasswordTiming.DummyHash(users.PasswordHasher), password);
+            await security.LogAsync(failEvent, false, user?.Id, email, user is null ? "Unknown account" : "Account disabled");
+            return wrong;
+        }
+        if (await users.IsLockedOutAsync(user))
+        {
+            var right = await users.CheckPasswordAsync(user, password);
+            await security.LogAsync("SignInLockedOut", false, user.Id, user.Email, right ? "Right password while locked" : "Wrong password while locked");
+            return right ? Locked() : wrong;
+        }
+        var result = await signIn.CheckPasswordSignInAsync(user, password, lockoutOnFailure: true);
+        if (result.Succeeded) return null;
+        await security.LogAsync(result.IsLockedOut ? "SignInLockedOut" : failEvent, false, user.Id, user.Email,
+            result.IsLockedOut ? "Locked after wrong passwords" : "Wrong password");
+        return wrong;
+    }
+
     /// <summary>Issues the CSRF token the client must send in the X-CSRF-TOKEN header on every state-changing request.</summary>
     [HttpGet("csrf")]
     [AllowAnonymous]
@@ -87,22 +114,8 @@ public sealed class AuthController(
         await validator.ValidateAndThrowAsync(req);
         var user = await users.FindByEmailAsync(req.Email);
         if (await SsoRequiredAsync(req.Email, user) is { } ssoOnly) return ssoOnly;
-        if (user is null || !user.IsActive)
-        {
-            await security.LogAsync("SignInFailed", false, user?.Id, req.Email, user is null ? "Unknown account" : "Account disabled");
-            return Unauthorized(new { title = "Email or password is incorrect." });
-        }
-        var result = await signIn.CheckPasswordSignInAsync(user, req.Password, lockoutOnFailure: true);
-        if (result.IsLockedOut)
-        {
-            await security.LogAsync("SignInLockedOut", false, user.Id, user.Email);
-            return Locked();
-        }
-        if (!result.Succeeded)
-        {
-            await security.LogAsync("SignInFailed", false, user.Id, user.Email, "Wrong password");
-            return Unauthorized(new { title = "Email or password is incorrect." });
-        }
+        var refused = await CheckPasswordAsync(user, req.Email, req.Password, "SignInFailed");
+        if (refused is not null || user is null) return refused ?? Unauthorized();
         return await NextStepAsync(user, passwordJustChanged: false);
     }
 
@@ -225,22 +238,8 @@ public sealed class AuthController(
         await validator.ValidateAndThrowAsync(req);
         var user = await users.FindByEmailAsync(req.Email);
         if (await SsoRequiredAsync(req.Email, user) is { } ssoOnly) return ssoOnly;
-        if (user is null || !user.IsActive)
-        {
-            await security.LogAsync("TokenFailed", false, user?.Id, req.Email, user is null ? "Unknown account" : "Account disabled");
-            return Unauthorized(new { title = "Email or password is incorrect." });
-        }
-        var result = await signIn.CheckPasswordSignInAsync(user, req.Password, lockoutOnFailure: true);
-        if (result.IsLockedOut)
-        {
-            await security.LogAsync("SignInLockedOut", false, user.Id, user.Email);
-            return Locked();
-        }
-        if (!result.Succeeded)
-        {
-            await security.LogAsync("TokenFailed", false, user.Id, user.Email, "Wrong password");
-            return Unauthorized(new { title = "Email or password is incorrect." });
-        }
+        var refused = await CheckPasswordAsync(user, req.Email, req.Password, "TokenFailed");
+        if (refused is not null || user is null) return refused ?? Unauthorized();
         if (user.MustChangePassword)
         {
             await security.LogAsync("TokenFailed", false, user.Id, user.Email, "Password change required");
