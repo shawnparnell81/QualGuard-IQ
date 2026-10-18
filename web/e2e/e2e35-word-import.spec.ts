@@ -15,10 +15,10 @@ test.describe('Forms B7: Word conversion', () => {
     await page.getByRole('option', { name: 'Convert to an electronic form' }).click();
     await page.getByRole('button', { name: 'Upload and inspect' }).click();
     await expect(page).toHaveURL(/\/imports\/[0-9a-f-]{36}$/);
-    await expect(page.getByText('Preview ready')).toBeVisible();
+    await expect(page.getByText('Preview ready').first()).toBeVisible();
 
-    // the original is rendered by the server; the converted form keeps dropdown, date, checkbox and the calculated reject rate
-    await expect(page.locator('iframe[title="Original document"]')).toBeVisible({ timeout: 60_000 });
+    // the original is rendered to PDF when LibreOffice is available; otherwise the extracted outline is shown
+    await expect(page.locator('iframe[title="Original document"]').or(page.getByLabel('Document outline'))).toBeVisible({ timeout: 60_000 });
     await expect(page.getByLabel('Disposition')).toBeVisible();
     await page.getByLabel('Lot size').fill('200');
     await page.getByLabel('Rejected').fill('10');
@@ -39,7 +39,7 @@ test.describe('Forms B7: Word conversion', () => {
     await page.getByRole('tab', { name: 'Check and approve' }).click();
     await page.getByLabel('Form title').fill(title);
     await page.getByRole('button', { name: 'Apply' }).click();
-    await expect(page.getByText('Preview ready')).toBeVisible();
+    await expect(page.getByText('Preview ready').first()).toBeVisible();
     await page.getByRole('tab', { name: 'Check and approve' }).click();
     await page.getByRole('button', { name: 'Submit for approval' }).click();
     await expect(page.getByText('Waiting for approval by someone other than the uploader.')).toBeVisible();
@@ -67,7 +67,7 @@ test.describe('Forms B7: Word conversion', () => {
     await page.getByRole('combobox', { name: 'Import mode' }).click();
     await page.getByRole('option', { name: 'Keep the document as a controlled document' }).click();
     await page.getByRole('button', { name: 'Upload and inspect' }).click();
-    await expect(page.getByText('Preview ready')).toBeVisible();
+    await expect(page.getByText('Preview ready').first()).toBeVisible();
     await expect(page.getByText(/paragraphs, 3 tables/)).toBeVisible();
     await page.getByRole('tab', { name: 'Document' }).click();
     await expect(page.getByRole('table', { name: 'Document tables' })).toBeVisible();
