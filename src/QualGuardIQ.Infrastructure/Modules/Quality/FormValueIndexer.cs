@@ -14,13 +14,22 @@ namespace QualGuardIQ.Infrastructure.Modules.Quality;
 /// </summary>
 public sealed class FormValueIndexer(AppDbContext db, FormDefinitionProjector projector)
 {
-    public async Task IndexAsync(FormRecord rec, IReadOnlyDictionary<string, string?> values, CancellationToken ct)
+    private readonly Dictionary<Guid, (List<TemplateFormField> Fields, Dictionary<Guid, string> Tables)> layouts = [];
+
+    /// <param name="isNew">The record has just been created (bulk import): there are no earlier values to clear, and the revision's field layout is reused across rows.</param>
+    public async Task IndexAsync(FormRecord rec, IReadOnlyDictionary<string, string?> values, CancellationToken ct, bool isNew = false)
     {
-        var defId = await EnsureDefinitionAsync(rec.TemplateRevisionId, ct);
-        if (defId is null) return;
-        var fields = await db.TemplateFormFields.AsNoTracking().Where(f => f.DefinitionId == defId).ToListAsync(ct);
-        var tables = await db.TemplateFormTables.AsNoTracking().Where(t => t.DefinitionId == defId).ToDictionaryAsync(t => t.Id, t => t.Key, ct);
-        await db.FormRecordValues.Where(v => v.FormRecordId == rec.Id).ExecuteDeleteAsync(ct);
+        List<TemplateFormField> fields; Dictionary<Guid, string> tables;
+        if (isNew && layouts.TryGetValue(rec.TemplateRevisionId, out var cached)) (fields, tables) = cached;
+        else
+        {
+            var defId = await EnsureDefinitionAsync(rec.TemplateRevisionId, ct);
+            if (defId is null) return;
+            fields = await db.TemplateFormFields.AsNoTracking().Where(f => f.DefinitionId == defId).ToListAsync(ct);
+            tables = await db.TemplateFormTables.AsNoTracking().Where(t => t.DefinitionId == defId).ToDictionaryAsync(t => t.Id, t => t.Key, ct);
+            if (isNew) layouts[rec.TemplateRevisionId] = (fields, tables);
+        }
+        if (!isNew) await db.FormRecordValues.Where(v => v.FormRecordId == rec.Id).ExecuteDeleteAsync(ct);
         var rows = new List<FormRecordValue>();
         foreach (var f in fields.Where(f => f.TableId is null && f.DataType != "none"))
             if (values.TryGetValue(f.Key, out var v) && !string.IsNullOrEmpty(v)) rows.Add(Typed(rec.Id, f, null, v));
