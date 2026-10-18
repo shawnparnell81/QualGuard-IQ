@@ -128,6 +128,8 @@ public sealed class RecallsController(RecallService svc) : ControllerBase
     [HttpGet] [RequirePermission(Permissions.RecallsView)] public Task<List<Recall>> List(CancellationToken ct) => svc.ListAsync(ct);
     [HttpPost] [RequirePermission(Permissions.RecallsEdit)] public async Task<object> Create(RecallInput r, CancellationToken ct) { var x = await svc.CreateAsync(r, ct); return new { x.Id, x.Number }; }
     [HttpGet("{id:guid}")] public async Task<object> Get(Guid id, CancellationToken ct) => new { Recall = await svc.GetAsync(id, ct), Items = await svc.ItemsAsync(id, ct), Parties = await svc.PartiesAsync(id, ct) };
+    /// <summary>Mock recall result: trace time, parties and quantity traced, containment progress.</summary>
+    [HttpGet("{id:guid}/exercise")] public Task<object> Exercise(Guid id, CancellationToken ct) => svc.ExerciseReportAsync(id, ct);
     [HttpPost("{id:guid}/trace")] public Task<List<RecallParty>> Trace(Guid id, CancellationToken ct) => svc.TraceAsync(id, ct);
     [HttpPost("{id:guid}/contain")] public async Task<IActionResult> Contain(Guid id, RecallStepInput r, CancellationToken ct) { await svc.ContainAsync(id, r, ct); return NoContent(); }
     [HttpPost("{id:guid}/parties")] public async Task<IActionResult> Party(Guid id, PartyUpdate r, CancellationToken ct) { await svc.UpdatePartyAsync(id, r, ct); return NoContent(); }

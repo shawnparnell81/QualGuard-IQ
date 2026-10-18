@@ -37,7 +37,7 @@ public sealed class QualityAnalyticsService(AppDbContext db, ModuleSupport m, Qu
         ("findings", "Audit findings", nameof(AuditFinding), Permissions.AuditsView, typeof(FindingStatus)),
         ("events", "Quality events", nameof(QualityEvent), Permissions.QualityOpsView, typeof(QualityEventStatus)),
         ("deviations", "Deviations", nameof(Deviation), Permissions.QualityOpsView, typeof(QualityDeviationStatus)),
-        ("investigations", "Investigations", nameof(Investigation), Permissions.QualityOpsView, typeof(InvestigationStatus)),
+        ("investigations", "Investigations", InvestigationService.RecordType, Permissions.QualityOpsView, typeof(InvestigationStatus)),
     ];
 
     static readonly HashSet<string> ClosedNames = ["Closed", "Cancelled", "Rejected", "Verified"];

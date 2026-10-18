@@ -110,7 +110,7 @@ public enum InvestigationKind { CrossModule = 0, Laboratory = 1, Escalation = 2 
 public enum InvestigationStatus { Open = 0, InProgress = 1, Concluded = 2, Closed = 3, Cancelled = 4 }
 
 /// <summary>An investigation spanning several module records (linked through the shared record links) or a laboratory result.</summary>
-public class Investigation : Entity, IAudited, ISiteScoped
+public class QualityInvestigation : Entity, IAudited, ISiteScoped
 {
     public string Number { get; set; } = "";
     public InvestigationKind Kind { get; set; }
