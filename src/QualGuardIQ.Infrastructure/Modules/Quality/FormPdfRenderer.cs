@@ -546,6 +546,16 @@ public sealed class FormPdfRenderer
             return;
         }
         var (text, valueTs) = CellText(c, inst, tables, ts);
+        if (c.Bind is not null && !string.IsNullOrEmpty(c.Text))
+        {
+            // a label and its value in one cell (document layouts): the label is drawn in the cell's own style, the value after it
+            var lw = PdfCanvas.Width(c.Text + " ", size, st.Font, st.Bold);
+            var ly = st.VAlign switch { "top" => y + 1.5, "middle" => y + (h - size * 1.2) / 2, _ => y + h - size * 1.2 - 1 };
+            _pdf!.TextAligned(x + 2, ly, size, Math.Max(4, w - 4), c.Text, ts, "left");
+            if (string.IsNullOrEmpty(text) || lw >= w - 6) return;
+            _pdf.TextAligned(x + 2 + lw, ly, size, w - 4 - lw, text, valueTs, "left");
+            return;
+        }
         if (string.IsNullOrEmpty(text)) return;
         var tw = textWidth ?? w;
         var lines = st.Wrap || text.Contains('\n') ? PdfCanvas.Wrap(text, size, w - 4, st.Font).ToList() : [text];
