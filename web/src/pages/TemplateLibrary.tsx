@@ -69,7 +69,7 @@ export function TemplateLibrary() {
             <TextField size="small" label="Search templates" placeholder="Number, title or description" value={q} onChange={(e) => setQ(e.target.value)} sx={{ width: 280 }} />
             <TextField size="small" select label="Category" value={p.get('categoryId') ?? ''} onChange={(e) => set('categoryId', e.target.value || null)} sx={{ width: 220 }}>
               <MenuItem value="">All categories</MenuItem>
-              {cats.data?.filter((c) => c.isActive).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}{c.count ? ` (${c.count})` : ''}</MenuItem>)}
+              {(cats.data ?? []).filter((c) => c.isActive).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}{c.count ? ` (${c.count})` : ''}</MenuItem>)}
             </TextField>
             <TextField size="small" select label="Status" value={p.get('status') ?? ''} onChange={(e) => set('status', e.target.value || null)} sx={{ width: 150 }}>
               <MenuItem value="">Any</MenuItem>{docStatus.map((s, i) => <MenuItem key={i} value={String(i)}>{s}</MenuItem>)}

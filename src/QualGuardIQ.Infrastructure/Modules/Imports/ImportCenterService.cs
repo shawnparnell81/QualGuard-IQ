@@ -573,8 +573,8 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
         var job = await LoadAsync(id, Permissions.ImportsApprove, ct);
         if (job.Status != ImportJobStatus.AwaitingApproval) throw new ConflictException("Only an import awaiting approval can be approved.");
         if (job.SubmittedById == Me) throw new AppException("Someone other than the person who uploaded the file must approve the import.");
-        var target = Target(job.TargetModule);
-        if (!await access.CanAccessAsync(Me, target.Info.EditPermission, job.SiteId, job.DepartmentId, ct)) throw new ForbiddenException();
+        // the submitter needed the target module's edit permission to map and validate; approval needs the import approval permission
+        _ = Target(job.TargetModule);
         job.ApprovedById = Me; job.ApprovedAt = clock.UtcNow;
         Transition(job, ImportJobStatus.Importing, "Approved");
         await db.SaveChangesAsync(ct);
@@ -663,7 +663,6 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
         if (string.IsNullOrWhiteSpace(reason)) throw new AppException("A reason is required.");
         if (!CanMove(job.Status, ImportJobStatus.RolledBack)) throw new ConflictException("Only a completed import can be rolled back.");
         var target = Target(job.TargetModule);
-        if (!await access.CanAccessAsync(Me, target.Info.EditPermission, job.SiteId, job.DepartmentId, ct)) throw new ForbiddenException();
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var items = await db.ImportedItems.Where(i => i.ImportJobId == job.Id && !i.RolledBack).ToListAsync(ct);
         var blocked = new List<string>();
