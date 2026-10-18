@@ -213,6 +213,13 @@ const QoReviewNew = lazy(() => import('./pages/QualityOps').then((m) => ({ defau
 const QoReviewDetail = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.ReviewDetail })));
 const QoQualityAnalyticsPage = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.QualityAnalyticsPage })));
 const QoQualityOpsSettingsPage = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.QualityOpsSettingsPage })));
+const SqfHome = lazy(() => import('./sequfloh/Home').then((m) => ({ default: m.SequflohHome })));
+const SqfSettings = lazy(() => import('./sequfloh/Admin').then((m) => ({ default: m.SettingsPage })));
+const SqfReference = lazy(() => import('./sequfloh/Admin').then((m) => ({ default: m.ReferenceDataPage })));
+const SqfDropdowns = lazy(() => import('./sequfloh/Admin').then((m) => ({ default: m.DropdownsPage })));
+const SqfModuleAccess = lazy(() => import('./sequfloh/Admin').then((m) => ({ default: m.ModuleAccessPage })));
+const SqfRoles = lazy(() => import('./sequfloh/Admin').then((m) => ({ default: m.RolesMatrixPage })));
+const SqfConfiguration = lazy(() => import('./sequfloh/Admin').then((m) => ({ default: m.ConfigurationPage })));
 const RiskList = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskList })));
 const RiskNew = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskNew })));
 const RiskDetail = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskDetail })));
@@ -377,6 +384,13 @@ export function App() {
               <Route path="/quality-ops/reviews/:id" element={<QoReviewDetail />} />
               <Route path="/quality-ops/analytics" element={<QoQualityAnalyticsPage />} />
               <Route path="/quality-ops/settings" element={<QoQualityOpsSettingsPage />} />
+              <Route path="/sequfloh" element={<SqfHome />} />
+              <Route path="/sequfloh/settings/:section" element={<SqfSettings />} />
+              <Route path="/sequfloh/admin/reference" element={<SqfReference />} />
+              <Route path="/sequfloh/admin/dropdowns" element={<SqfDropdowns />} />
+              <Route path="/sequfloh/admin/module-access" element={<SqfModuleAccess />} />
+              <Route path="/sequfloh/admin/roles" element={<SqfRoles />} />
+              <Route path="/sequfloh/admin/configuration" element={<SqfConfiguration />} />
               <Route path="/risks" element={<RiskList />} />
               <Route path="/risks/new" element={<RiskNew />} />
               <Route path="/risks/matrix" element={<RiskMatrix />} />
