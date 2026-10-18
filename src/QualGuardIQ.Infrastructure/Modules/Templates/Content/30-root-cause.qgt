@@ -1,7 +1,6 @@
 # Root cause and problem solving templates (TECH 4; FI 1 corrective action family)
 
 template five-whys | Five Whys | ROOT_CAUSE
-packs manufacturing
 tags five whys, root cause
 purpose Trace a problem back to a root cause the organization can act on by asking why repeatedly, with evidence for each answer, along both the occurrence and the escape paths.
 scope Problems with a single clear cause chain. Use a fishbone or fault tree first when several causes are possible.
@@ -32,7 +31,6 @@ use approval_trio
 end
 
 template fishbone-analysis | Fishbone Analysis | ROOT_CAUSE
-packs manufacturing
 tags fishbone, cause and effect, Ishikawa
 purpose Organize the possible causes of a problem by category so that the team considers every source of variation before choosing causes to test.
 scope Problems with several possible causes, used as the first step of an investigation.
@@ -60,7 +58,6 @@ use approval_trio
 end
 
 template is-is-not | Is and Is Not Analysis | ROOT_CAUSE
-packs manufacturing
 tags is is not, problem definition
 purpose Sharpen the problem definition by contrasting where, when, what and how big the problem is with where it could be but is not, and use the distinctions to point to the cause.
 scope Problem definition for investigations where the cause is unknown.
@@ -84,7 +81,6 @@ use approval_trio
 end
 
 template fault-tree-reference | Fault Tree Reference | ROOT_CAUSE
-packs manufacturing, aerospace
 tags fault tree
 purpose Record the events and logic gates of a fault tree analysis in tabular form, with references to the full diagram, so that each basic event can be tested and linked to actions.
 scope Safety-related, complex or multi-cause failures where the combination of events matters.
@@ -113,7 +109,6 @@ use approval_trio
 end
 
 template cause-effect-matrix | Cause and Effect Matrix | ROOT_CAUSE
-packs manufacturing, automotive
 tags cause and effect matrix, prioritization
 purpose Rank process inputs by how strongly they affect the outputs that matter to the customer, to decide which inputs to study or control first.
 scope Process improvement and investigation where many inputs may affect several outputs.
@@ -147,7 +142,6 @@ use approval_trio
 end
 
 template escape-point-analysis | Escape Point Analysis | ROOT_CAUSE
-packs manufacturing, automotive
 tags escape point, detection
 purpose Find the point in the process closest to the root cause where the problem should have been detected and was not, and why that control failed.
 scope Problems that reached a later operation, the customer or the field.
@@ -175,7 +169,6 @@ use approval_trio
 end
 
 template barrier-analysis | Barrier Analysis | ROOT_CAUSE
-packs manufacturing, medical-device
 tags barrier analysis
 purpose Identify the barriers that should have prevented a hazard from reaching a target, and determine which were missing, failed or weakened.
 scope Safety events, serious deviations and failures involving physical, administrative or human barriers.
@@ -201,7 +194,6 @@ use approval_trio
 end
 
 template eight-d-package | Eight Discipline Problem Solving Package | ROOT_CAUSE
-packs manufacturing, automotive
 tags 8D, problem solving
 purpose Solve a significant problem with a disciplined team approach in eight steps, from team formation to recognition, with containment, verified root causes, permanent corrective actions and prevention of recurrence.
 scope Customer complaints, significant internal nonconformances and supplier problems where the customer or the organization requires an eight discipline report.
@@ -246,7 +238,6 @@ sign d8_customer | Customer acceptance | customer | The customer accepts this re
 end
 
 template verification-plan | Verification Plan | ROOT_CAUSE
-packs manufacturing
 tags verification, corrective action
 purpose Plan how each corrective action will be verified for implementation and for effect, with methods, sample sizes, acceptance criteria and responsibilities, before the actions are implemented.
 scope Corrective actions from CAPAs, eight discipline reports and audit findings.

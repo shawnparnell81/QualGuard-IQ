@@ -11,7 +11,6 @@ note Levels: 0 not trained, 1 in training (supervised), 2 trained (works alone),
 end
 
 template training-matrix | Training Matrix | TRAINING
-packs manufacturing, aerospace, medical-device, electronics
 tags training matrix, competence, gaps
 purpose Show, for a department or area, which people are trained on which documents and skills, against what their role requires, so gaps are visible and planned.
 scope Departments, cells or work areas.
@@ -45,7 +44,6 @@ use training_signatures
 end
 
 template competency-matrix | Competency Matrix | TRAINING
-packs manufacturing, aerospace, medical-device, electronics
 tags competency matrix, competence
 purpose Record the competencies each role needs (education, training, skills and experience) and assess each person against them.
 scope Roles that affect product conformity and the effectiveness of the management system.
@@ -73,7 +71,6 @@ use training_signatures
 end
 
 template skills-matrix | Skills Matrix | TRAINING
-packs manufacturing, electronics
 tags skills matrix, flexibility, cross-training
 purpose Show who can perform which operations at what level, so shifts can be staffed and cross-training planned to remove single points of dependence.
 scope Production areas, cells and lines.
@@ -111,7 +108,6 @@ use training_signatures
 end
 
 template position-training-requirements | Position Training Requirements | TRAINING
-packs manufacturing, aerospace, medical-device, electronics
 tags position, role, training requirements, curriculum
 purpose Define the training a position needs: the documents, courses and qualifications, when each must be completed and how often it is repeated.
 scope Every position whose work affects quality.
@@ -136,7 +132,6 @@ use training_signatures
 end
 
 template training-curriculum | Training Curriculum | TRAINING
-packs manufacturing, medical-device
 tags curriculum, course plan
 purpose Define a structured curriculum: modules in sequence, with objectives, duration, method and how learning is assessed.
 scope Curricula for roles, programmes and onboarding.
@@ -163,7 +158,6 @@ use training_signatures
 end
 
 template qualification-matrix | Qualification Matrix | TRAINING
-packs manufacturing, aerospace, medical-device, electronics
 tags qualification matrix, certified operations
 purpose Show who is qualified for operations and processes that need formal qualification (special processes, inspection, testing) and when each qualification expires.
 scope Operations and processes that need qualified people.
@@ -190,7 +184,6 @@ use training_signatures
 end
 
 template training-assignment | Training Assignment | TRAINING
-packs manufacturing, medical-device
 tags training assignment
 purpose Assign training to people with a reason and a due date, and track completion.
 scope Training assigned for new starters, changes, findings and development.
@@ -216,7 +209,6 @@ use training_signatures
 end
 
 template training-attendance | Training Attendance | TRAINING
-packs manufacturing, medical-device, aerospace
 tags attendance, sign-in sheet
 purpose Record attendance at a training session: the session, the trainer, the material used and each attendee.
 scope Classroom, workshop and on-the-floor training sessions.
@@ -243,7 +235,6 @@ use training_signatures
 end
 
 template training-assessment | Training Assessment | TRAINING
-packs manufacturing, medical-device
 tags assessment, test, knowledge check
 purpose Assess whether a trainee has learned what the training intended, with the questions or tasks, the marks and the pass mark.
 scope Training that requires an assessment.
@@ -273,7 +264,6 @@ use training_signatures
 end
 
 template on-the-job-qualification | On-the-Job Qualification | TRAINING
-packs manufacturing, electronics, aerospace
 tags on-the-job, OJT, qualification
 purpose Qualify a person to perform an operation on their own after supervised practice, with the tasks demonstrated and the trainer's and supervisor's sign-off.
 scope Operations that require on-the-job training before working alone.
@@ -300,7 +290,6 @@ sign oj_supervisor_sign | Supervisor verification | verified | I verified this p
 end
 
 template supervisor-verification | Supervisor Verification | TRAINING
-packs manufacturing, medical-device
 tags supervisor verification, competence check
 purpose Record the supervisor's verification that a trained person applies the training correctly in their actual work.
 scope Training that requires verification of application at work.
@@ -323,7 +312,6 @@ sign sv_supervisor | Supervisor | verified | I observed this person at work and 
 end
 
 template certification-register | Certification Register | TRAINING
-packs manufacturing, aerospace, medical-device, electronics
 tags certification, register, expiry
 purpose Register certifications held by people (internal and external), with the issuer, the reference and the expiry, so renewals are planned.
 scope Certifications required by roles, customers or regulations.
@@ -351,7 +339,6 @@ use training_signatures
 end
 
 template qualification-register | Qualification Register | TRAINING
-packs manufacturing, aerospace, medical-device
 tags qualification, register, auditors, inspectors
 purpose Register people qualified for roles that need formal approval (auditors, inspectors, testers, approvers), with their scope and the basis of approval.
 scope Roles that the organization approves people for.
@@ -372,7 +359,6 @@ use training_signatures
 end
 
 template retraining-record | Retraining Record | TRAINING
-packs manufacturing, medical-device
 tags retraining, refresher
 purpose Record retraining given because of a revision, a lapse, an error or a finding, and confirm the person is competent again.
 scope Retraining for any reason.
@@ -393,7 +379,6 @@ use training_signatures
 end
 
 template training-effectiveness-review | Training Effectiveness Review | TRAINING
-packs manufacturing, medical-device, aerospace
 tags training effectiveness, evaluation
 purpose Evaluate whether training achieved its purpose by comparing a performance measure before and after, and decide on further action.
 scope Training programmes and significant individual training, as the organization decides.

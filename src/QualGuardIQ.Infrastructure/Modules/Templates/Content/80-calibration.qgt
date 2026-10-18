@@ -175,9 +175,18 @@ c mr_equipment | Equipment | equipment | *
 c mr_category | Category | text
 c mr_control | Control | choice | * [Calibration; Verification before use; Reference only; Not controlled]
 c mr_department | Department | department
+c mr_serial | Serial number | text
+c mr_location | Location | text
+c mr_range | Range | text
+c mr_resolution | Resolution | text
 c mr_used_for | Used for | text
+c mr_interval | Interval (months) | integer | min=0
+c mr_next_due | Next due | date
 c mr_status | Status | choice | [Active; Limited use; Out of service; Retired]
 rule mer_rows.mr_control | equals | Not controlled | #FFF4D6
+rule mer_rows.mr_status | equals | Out of service | #FDE7E9
+f mr_count | Items | calc | {COUNTA(mer_rows.mr_equipment)}
+f mr_uncontrolled | Items not controlled | calc | {COUNTIF(mer_rows.mr_control, "Not controlled")}
 use cal_register_signatures
 end
 

@@ -1,0 +1,248 @@
+# Design history, device master record, device history record and validation templates (FI 5 medical device pack).
+
+block device_header
+section device_identification | Device | 3
+f dv_device | Device | product | *
+f dv_model | Model or catalogue number | text | *
+f dv_class | Device classification | choice | [Class I; Class II; Class III; Not classified]
+f dv_project | Design project | record
+f dv_revision | Revision | text | *
+f dv_owner | Record owner | user | *
+end
+
+block device_signatures
+sign dv_prepared | Prepared by | prepared | I prepared this record and it is complete and accurate.
+sign dv_reviewed | Reviewed by | reviewed | I reviewed this record against the design control procedure.
+sign dv_approved | Approved by | approved | I approve this record. | validation.approve
+end
+
+block validation_header
+section validation_identification | Validation | 3
+f va_subject | Process, equipment or software validated | text | *
+f va_type | Validation type | choice | * [Process; Equipment; Software; Test method; Cleaning; Sterilization; Packaging]
+f va_approach | Approach | choice | * [Prospective; Concurrent; Retrospective; Revalidation]
+f va_equipment | Equipment | equipment
+f va_product | Product | product
+f va_owner | Validation owner | user | *
+end
+
+block validation_signatures
+sign va_prepared | Prepared by | prepared | I prepared this validation record.
+sign va_reviewed | Reviewed by | reviewed | I reviewed this validation record and its evidence.
+sign va_quality | Quality approval | approved | I approve this validation record. | validation.approve
+end
+
+template design-history-file | Design History File Index | DESIGN_DEVICE
+packs medical-device
+tags DHF, design control, medical device
+purpose Index the design history of a device: every design control record from planning to transfer, with its revision, status and location, so the history can be shown to be complete.
+scope One device or device family under design control.
+instructions List each design control record against its phase. Link the controlled record. A required record that is missing or not approved is highlighted and counted.
+workflow Opened at design planning, maintained through each phase, reviewed at each design review, approved at design transfer.
+retention Keep for the life of the device as defined by the organization, and not less than the period regulations require.
+use device_header
+section dhf_index | Design history index | 1 | One row per design control record.
+table dhf_rows | Records | 0
+rows Design and development plan; User needs; Design inputs; Design input review; Design outputs; Design output review; Risk management plan; Risk management file; Design verification protocols; Design verification reports; Design validation protocols; Design validation reports; Design reviews; Design changes; Design transfer plan; Design transfer report; Traceability matrix; Usability engineering file; Software documentation; Biocompatibility evaluation
+c dhf_required | Required | boolean
+c dhf_record | Record | record
+c dhf_rev | Revision | text
+c dhf_status | Status | choice | [Not started; Draft; In review; Approved; Not applicable]
+c dhf_location | Location | text
+rule dhf_rows.dhf_status | equals | Not started | #FDE7E9 | bold
+rule dhf_rows.dhf_status | equals | Draft | #FFF4D6
+f dhf_approved | Records approved | calc | {COUNTIF(dhf_rows.dhf_status, "Approved")}
+f dhf_not_started | Records not started | calc | {COUNTIF(dhf_rows.dhf_status, "Not started")}
+f dhf_required_count | Records required | calc | {COUNTIF(dhf_rows.dhf_required, TRUE)}
+section dhf_phase | Phase | 2
+f dhf_current_phase | Current phase | choice | * [Planning; Inputs; Outputs; Verification; Validation; Transfer; Released; Post-market]
+f dhf_last_review | Last design review | record
+f dhf_complete | History complete for the current phase | boolean
+use device_signatures
+end
+
+template device-master-record | Device Master Record Index | DESIGN_DEVICE
+packs medical-device
+tags DMR, medical device, device master record
+purpose Index the device master record: the specifications, production processes, quality assurance procedures, packaging, labelling and servicing information needed to make the device, each with its current revision.
+scope One device or device family released to production.
+instructions List each controlled document that makes up the device master record with its current revision and effective date. Keep the index current whenever a listed document is revised.
+workflow Created at design transfer, revised through change control, approved at each revision.
+retention Keep for the life of the device as defined by the organization, and not less than the period regulations require.
+use device_header
+section dmr_index | Device master record | 1
+table dmr_rows | Contents | 0
+groups Content:1; Controlled document:3; Status:2
+rows Device specifications and drawings; Component and material specifications; Software specifications; Production process specifications; Production equipment and methods; Production environment specifications; Quality assurance procedures and acceptance criteria; Inspection and test equipment; Packaging specifications; Labelling specifications; Installation procedures; Maintenance and servicing procedures
+c dmr_document | Document | record
+c dmr_number | Number | text
+c dmr_rev | Revision | text
+c dmr_effective | Effective date | date
+c dmr_status | Status | choice | [Current; Under change; Missing; Not applicable]
+rule dmr_rows.dmr_status | equals | Missing | #FDE7E9 | bold
+rule dmr_rows.dmr_status | equals | Under change | #FFF4D6
+f dmr_missing | Contents missing | calc | {COUNTIF(dmr_rows.dmr_status, "Missing")}
+f dmr_under_change | Contents under change | calc | {COUNTIF(dmr_rows.dmr_status, "Under change")}
+section dmr_change | Revision | 2
+f dmr_change_record | Change record for this revision | record
+f dmr_reason | Reason for revision | longtext
+use device_signatures
+end
+
+template device-history-record | Device History Record | DESIGN_DEVICE
+packs medical-device
+tags DHR, medical device, batch record, lot record
+purpose Show that a lot, batch or unit of a device was made in line with the device master record: dates of manufacture, quantities made and released, acceptance records, labelling and the identification used.
+scope Every lot, batch or unit of a device.
+instructions Complete each production step as it is performed. Quantities reconcile automatically. Any step not accepted, or a reconciliation difference, blocks release until it is dispositioned.
+workflow Opened at production start, completed through production and inspection, reviewed, released by quality.
+retention Keep for the life of the device as defined by the organization, and not less than the period regulations require.
+use device_header
+section dhr_lot | Lot | 3
+f dhr_lot | Lot, batch or serial number | text | *
+f dhr_dmr | Device master record revision used | record | *
+f dhr_start | Manufacture started | date | *
+f dhr_end | Manufacture completed | date
+f dhr_udi | Unique device identifier | text
+f dhr_work_order | Work order | text
+section dhr_quantities | Quantities | 4
+f dhr_started | Quantity started | integer | * min=0
+f dhr_released | Quantity released | integer | min=0
+f dhr_rejected | Quantity rejected | integer | min=0
+f dhr_samples | Quantity used as samples | integer | min=0
+f dhr_difference | Unreconciled | calc | {dhr_started - dhr_released - dhr_rejected - dhr_samples}
+f dhr_yield | Yield | calc | {IF(dhr_started > 0, ROUND(dhr_released / dhr_started * 100, 1), "")} | Released as a percentage of started.
+rule dhr_difference | notEquals | 0 | #FDE7E9 | bold
+section dhr_steps | Production and acceptance | 1
+table dhr_step_rows | Steps | 1
+c dhs_step | Step | text | *
+c dhs_procedure | Procedure | record
+c dhs_equipment | Equipment | equipment
+c dhs_date | Date | date
+c dhs_by | Performed by | user
+c dhs_result | Accepted | passfail
+rule dhr_step_rows.dhs_result | equals | fail | #FDE7E9 | bold
+f dhr_failed_steps | Steps not accepted | calc | {COUNTIF(dhr_step_rows.dhs_result, "fail")}
+section dhr_labelling | Labelling | 2
+f dhr_label_rev | Label revision used | text | *
+f dhr_label_verified | Label verified against the device master record | boolean | *
+f dhr_label_sample | Label sample | photo
+f dhr_ncrs | Nonconformances raised | record
+section dhr_release | Release | 2
+f dhr_decision | Release decision | choice | * [Released; Released with deviation; On hold; Rejected]
+f dhr_deviation | Deviation | record | when=dhr_decision=Released_with_deviation reqwhen=dhr_decision=Released_with_deviation
+rule dhr_failed_steps | greaterThan | 0 | #FDE7E9 | bold
+note A lot with a step not accepted is released only with an approved deviation or after the step is dispositioned through a nonconformance.
+rule dhr_decision | equals | Rejected | #FDE7E9 | bold
+sign dhr_prepared | Production review | prepared | I reviewed this device history record and it is complete.
+sign dhr_release_sign | Quality release | approved | I release this lot as made in line with the device master record. | validation.approve
+end
+
+template validation-master-plan | Validation Master Plan | DESIGN_DEVICE
+packs medical-device
+tags validation, VMP, IQ OQ PQ
+purpose Plan the validation of processes, equipment, software and test methods for a site or product: what needs validation, the approach, responsibilities, the order of work and the acceptance policy.
+scope Processes whose output cannot be fully verified by later inspection and test, and the equipment and software they depend on.
+instructions List each item with its validation need and planned stages. Progress is calculated from the stages completed. Items whose output is fully verified need a recorded rationale instead.
+workflow Drafted, reviewed by quality, approved, reviewed at least yearly and when processes change.
+retention Keep while current and for the retention period of the validation records it governs.
+section vmp_scope | Plan | 2
+f vmp_site | Site | site | *
+f vmp_owner | Plan owner | user | *
+f vmp_period | Plan period | text | *
+f vmp_policy | Validation and revalidation policy | longtext | *
+f vmp_acceptance | General acceptance policy | longtext | *
+section vmp_items | Items | 1
+landscape-section
+table vmp_rows | Validation items | 1
+groups Item:3; Stages:4; Plan:3
+c vm_item | Process, equipment or software | text | *
+c vm_type | Type | choice | * [Process; Equipment; Software; Test method; Cleaning; Sterilization; Packaging]
+c vm_risk | Risk | choice | [High; Medium; Low]
+c vm_iq | IQ done | boolean
+c vm_oq | OQ done | boolean
+c vm_pq | PQ done | boolean
+c vm_report | Report approved | boolean
+c vm_progress | Progress % | calc | {ROUND(COUNTIF(CELLS(vm_iq, vm_oq, vm_pq, vm_report), TRUE) / 4 * 100, 0)}
+c vm_owner | Owner | user
+c vm_due | Due | date
+rule vmp_rows.vm_progress | lessThan | 100 | #FFF4D6
+rule vmp_rows.vm_risk | equals | High | #FDE7E9
+f vmp_complete | Items fully validated | calc | {COUNTIF(vmp_rows.vm_progress, ">=100")}
+f vmp_count | Items | calc | {COUNTA(vmp_rows.vm_item)}
+use validation_signatures
+end
+
+template process-validation-protocol | Validation Protocol | DESIGN_DEVICE
+packs medical-device
+tags validation, protocol, IQ OQ PQ
+purpose Define, before execution, how a process, equipment or software item will be validated: the stages, the tests, the sample sizes and the acceptance criteria.
+scope One validation item from the validation master plan.
+instructions Write each test with a measurable acceptance criterion before execution. The protocol must be approved before any test is run. Results go in the validation report.
+workflow Drafted, reviewed, approved before execution, executed, reported.
+retention Keep with the validation report for the retention period of the validated process.
+use validation_header
+section vp_plan | Protocol | 2
+f vp_objective | Objective | longtext | *
+f vp_rationale | Rationale and risk | longtext | *
+f vp_stages | Stages covered | multichoice | * [Installation qualification; Operational qualification; Performance qualification; Software validation]
+f vp_runs | Number of performance runs | integer | min=0 | Usually set by the organization's validation policy.
+f vp_master_plan | Validation master plan | record
+section vp_tests | Tests | 1
+table vp_test_rows | Tests and acceptance criteria | 1
+c vt_id | Test | text | *
+c vt_stage | Stage | choice | * [IQ; OQ; PQ; Software]
+c vt_description | Description | longtext | *
+c vt_method | Method | text
+c vt_sample | Sample size | integer | min=0
+c vt_criterion | Acceptance criterion | text | *
+section vp_parameters | Process parameters | 1
+table vp_param_rows | Parameters challenged | 0
+c vpp_parameter | Parameter | text | *
+c vpp_low | Lower limit | number | dec=3
+c vpp_nominal | Nominal | number | dec=3
+c vpp_high | Upper limit | number | dec=3
+c vpp_unit | Unit | text
+check vp_runs | greaterOrEqual | 0 | The number of runs cannot be negative.
+use validation_signatures
+end
+
+template validation-report | Validation Report | DESIGN_DEVICE
+packs medical-device
+tags validation, report, IQ OQ PQ
+purpose Report the results of an approved validation protocol test by test, record deviations, and conclude whether the process, equipment or software is validated.
+scope One executed validation protocol.
+instructions Enter the result of every protocol test. The count of failed tests and open deviations are calculated. The item can be declared validated only when every test has passed or each failure is resolved by an approved deviation.
+workflow Executed, compiled, reviewed, approved.
+retention Keep for the retention period of the validated process.
+use validation_header
+section vr_ref | Reference | 2
+f vr_protocol | Approved protocol | record | *
+f vr_executed_from | Executed from | date | *
+f vr_executed_to | Executed to | date | *
+f vr_executed_by | Executed by | user | *
+section vr_results | Results | 1
+table vr_result_rows | Test results | 1
+c vrr_id | Test | text | *
+c vrr_criterion | Acceptance criterion | text
+c vrr_result | Result | text | *
+c vrr_outcome | Outcome | passfail | *
+c vrr_evidence | Evidence | attachment
+rule vr_result_rows.vrr_outcome | equals | fail | #FDE7E9 | bold
+f vr_failed | Tests failed | calc | {COUNTIF(vr_result_rows.vrr_outcome, "fail")}
+f vr_passed | Tests passed | calc | {COUNTIF(vr_result_rows.vrr_outcome, "pass")}
+section vr_deviations | Deviations | 1
+table vr_dev_rows | Deviations | 0
+c vd_description | Deviation | longtext | *
+c vd_impact | Impact on the conclusion | text
+c vd_resolution | Resolution | text
+c vd_closed | Closed | boolean
+f vr_open_deviations | Open deviations | calc | {COUNTIF(vr_dev_rows.vd_closed, FALSE)}
+section vr_conclusion | Conclusion | 2
+f vr_decision | Conclusion | choice | * [Validated; Validated with conditions; Not validated]
+f vr_conditions | Conditions | longtext | when=vr_decision=Validated_with_conditions reqwhen=vr_decision=Validated_with_conditions
+f vr_revalidation | Revalidation due | date
+f vr_summary | Summary | longtext | *
+rule vr_decision | equals | Not validated | #FDE7E9 | bold
+use validation_signatures
+end

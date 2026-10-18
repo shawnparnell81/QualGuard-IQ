@@ -35,7 +35,7 @@ rule sc_pct | lessThan | 70 | #FDE7E9 | bold
 end
 
 template approved-supplier-list | Approved Supplier List | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags approved supplier list, ASL, register
 purpose Keep a controlled list of approved suppliers with the scope of approval, criticality, risk, status and review dates, so purchasing uses only approved sources for approved scopes.
 scope Suppliers of products and services that affect product conformity.
@@ -64,7 +64,7 @@ use supplier_signatures
 end
 
 template supplier-qualification | Supplier Qualification | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags supplier qualification, approval, onboarding
 purpose Qualify a new supplier, or a new scope for an existing one, by combining the questionnaire, the risk assessment, the audit where needed and the sample approval into one decision.
 scope New suppliers and new scopes for existing suppliers.
@@ -90,7 +90,7 @@ use supplier_signatures
 end
 
 template supplier-questionnaire | Supplier Questionnaire | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags supplier questionnaire, self-assessment
 purpose Collect a supplier's own description of its organization, certifications, capabilities and quality controls, as the first step of qualification.
 scope Prospective suppliers and suppliers due for reapproval.
@@ -120,7 +120,7 @@ use supplier_signatures
 end
 
 template supplier-risk-assessment | Supplier Risk Assessment | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags supplier risk, risk assessment
 purpose Assess the risk a supplier presents to supply, quality and compliance, and decide the level of control applied.
 scope New suppliers, suppliers at reapproval and suppliers after significant events.
@@ -147,7 +147,7 @@ use supplier_signatures
 end
 
 template supplier-audit-template | Supplier Audit | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags supplier audit, on-site assessment, weighted score
 purpose Assess a supplier on site or remotely against weighted criteria and decide its approval status from the score and the findings.
 scope Suppliers whose criticality or risk requires an audit.
@@ -175,7 +175,7 @@ use supplier_signatures
 end
 
 template supplier-scorecard | Supplier Scorecard | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags scorecard, supplier performance, PPM, on-time delivery
 purpose Rate a supplier's performance for a period on quality, delivery, responsiveness and cost, with each measure calculated from the data entered.
 scope Suppliers in the scorecard programme.
@@ -210,7 +210,7 @@ use supplier_signatures
 end
 
 template supplier-performance-review | Supplier Performance Review | SUPPLIER
-packs manufacturing, aerospace, medical-device
+packs manufacturing
 tags performance review, business review
 purpose Review a supplier's performance with the supplier over several periods: trends, issues, actions and the decision on the relationship.
 scope Critical and high-risk suppliers, at least annually.
@@ -235,7 +235,7 @@ use supplier_signatures
 end
 
 template supplier-development-plan | Supplier Development Plan | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags supplier development, improvement
 purpose Plan and track the improvement of a supplier's capability against measurable targets, with actions on both sides.
 scope Suppliers below target performance or strategic suppliers being developed.
@@ -255,7 +255,7 @@ use action_plan, supplier_signatures
 end
 
 template scar | Supplier Corrective Action Request | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags SCAR, corrective action, supplier
 purpose Request corrective action from a supplier for a nonconformance it caused, and evaluate its response: containment, root cause, corrective action and verification.
 scope Supplier-caused nonconformances that need a supplier response.
@@ -289,7 +289,7 @@ use supplier_signatures
 end
 
 template supplier-change-notification | Supplier Change Notification | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags supplier change, PCN, change notification
 purpose Record a change notified by a supplier (process, material, site, sub-tier or design), assess its effect and decide whether and how it is approved.
 scope Changes that suppliers must notify under the purchase order or quality agreement.
@@ -317,7 +317,7 @@ use supplier_signatures
 end
 
 template supplier-deviation-request | Supplier Deviation Request | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags deviation, waiver, supplier
 purpose Evaluate a supplier's request to ship product that departs from a requirement, for a limited quantity or time, and record the decision and its limits.
 scope Supplier requests to ship product not fully meeting requirements.
@@ -345,7 +345,7 @@ use supplier_signatures
 end
 
 template supplier-certification-register | Supplier Certification Register | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags supplier certification, certificates, expiry
 purpose Register the certificates held by suppliers, with the issuer, scope and expiry, so lapses are seen before they affect approval.
 scope Certificates the organization requires from suppliers.
@@ -371,7 +371,7 @@ use supplier_signatures
 end
 
 template supplier-reapproval | Supplier Reapproval | SUPPLIER
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags reapproval, periodic review, supplier
 purpose Decide at the review interval whether a supplier stays approved, from its performance, risk, certificates and audit results.
 scope Approved suppliers at their review date.

@@ -1,0 +1,227 @@
+# Configuration control and process verification templates (FI 5 aerospace pack).
+
+block config_header
+section config_identification | Configuration item | 3
+f cf_item | Configuration item | text | *
+f cf_part | Part | part
+f cf_baseline | Baseline | choice | [Functional; Allocated; Product; Other]
+f cf_program | Program or contract | text
+f cf_customer_approval | Customer approval required | boolean
+f cf_owner | Configuration manager | user | *
+end
+
+block config_signatures
+sign cf_prepared | Prepared by | prepared | I prepared this configuration record.
+sign cf_reviewed | Reviewed by | reviewed | I reviewed this configuration record.
+sign cf_approved | Approved by | approved | I approve this configuration record. | changes.approve
+end
+
+block pv_header
+section pv_identification | Process | 3
+f pv_process | Process | text | *
+f pv_kind | Process kind | choice | * [Special process; Heat treatment; Welding; Brazing; Plating and coating; Chemical processing; Non-destructive testing; Bonding; Machining; Assembly; Other]
+f pv_spec | Process specification | record | *
+f pv_spec_rev | Specification revision | text | *
+f pv_equipment | Equipment | equipment
+f pv_operator | Operator | user
+end
+
+block pv_signatures
+sign pv_performed | Performed by | performed | I performed this verification as recorded.
+sign pv_verified | Verified by | verified | I verified the results against the process specification.
+sign pv_approved | Quality approval | approved | I approve this process verification. | inspection.approve
+end
+
+template configuration-item-register | Configuration Item Register | CONFIGURATION
+packs aerospace
+tags configuration control, configuration items, baseline
+purpose List the items under configuration control with their current approved configuration, baseline and effectivity, so the configuration of any delivered product can be established.
+scope Products, assemblies, software and documents the organization or its customer places under configuration control.
+instructions Add each configuration item with its identifier, current revision and effectivity. Items with open changes are highlighted.
+workflow Maintained by the configuration manager, updated by each approved change, reviewed at configuration audits.
+retention Keep for the life of the product plus the period required by contract.
+section cir_scope | Register | 3
+f cir_program | Program or contract | text
+f cir_owner | Configuration manager | user | *
+f cir_as_of | As of | date | *
+section cir_items | Items | 1
+landscape-section
+table cir_rows | Configuration items | 1
+groups Item:3; Configuration:3; Status:2
+c ci_id | Identifier | text | *
+c ci_name | Name | text | *
+c ci_type | Type | choice | * [Hardware; Software; Firmware; Document; Interface]
+c ci_rev | Current revision | text | *
+c ci_baseline | Baseline | choice | [Functional; Allocated; Product; Other]
+c ci_effectivity | Effectivity | text
+c ci_open_changes | Open changes | integer | min=0
+c ci_status | Status | choice | [Active; Under change; Superseded; Retired]
+rule cir_rows.ci_open_changes | greaterThan | 0 | #FFF4D6 | bold
+rule cir_rows.ci_status | equals | Superseded | #EEF2F7
+f cir_count | Items | calc | {COUNTA(cir_rows.ci_id)}
+f cir_with_changes | Items with open changes | calc | {COUNTIF(cir_rows.ci_open_changes, ">0")}
+use config_signatures
+end
+
+template configuration-change-record | Configuration Change Record | CONFIGURATION
+packs aerospace
+tags configuration control, change, effectivity
+purpose Propose, classify, evaluate and approve a change to a configuration item, and record its effectivity and the documents it revises.
+scope Changes to items under configuration control.
+instructions Classify the change. A change that affects form, fit, function, safety, reliability or interchangeability is major and needs the approvals the contract requires. Record every document revised and the effectivity.
+workflow Proposed, classified, evaluated, approved by the configuration control board, implemented, verified.
+retention Keep for the life of the product plus the period required by contract.
+use config_header
+section ccr_change | Change | 2
+f ccr_description | Description of the change | longtext | *
+f ccr_reason | Reason | longtext | *
+f ccr_form | Affects form | boolean
+f ccr_fit | Affects fit | boolean
+f ccr_function | Affects function | boolean
+f ccr_safety | Affects safety or reliability | boolean
+f ccr_interchange | Affects interchangeability | boolean
+f ccr_class | Classification | calc | {IF(COUNTIF(CELLS(ccr_form, ccr_fit, ccr_function, ccr_safety, ccr_interchange), TRUE) > 0, "Major", "Minor")}
+rule ccr_class | equals | Major | #FDE7E9 | bold
+section ccr_docs | Documents revised | 1
+table ccr_doc_rows | Documents | 1
+c cd_document | Document | record
+c cd_number | Number | text | *
+c cd_from | From revision | text | *
+c cd_to | To revision | text | *
+section ccr_effectivity | Effectivity | 2
+f ccr_effectivity_type | Effectivity by | choice | * [Serial number; Lot; Date; Contract; Next order]
+f ccr_effectivity | Effectivity | text | *
+f ccr_stock | Disposition of existing stock | choice | [Use as is; Rework; Scrap; Return to supplier; Not applicable]
+f ccr_wip | Disposition of work in progress | choice | [Use as is; Rework; Scrap; Not applicable]
+section ccr_board | Configuration control board | 2
+f ccr_board_date | Board date | date
+f ccr_board_decision | Decision | choice | [Approved; Approved with conditions; Rejected; Deferred]
+f ccr_customer_ref | Customer approval reference | text | reqwhen=cf_customer_approval=true
+f ccr_verified | Implementation verified | boolean
+rule ccr_board_decision | equals | Rejected | #FDE7E9 | bold
+sign ccr_prepared | Proposed by | prepared | I propose this change and the information in it is complete.
+sign ccr_reviewed | Configuration manager | reviewed | I classified and reviewed this change.
+sign ccr_approved | Board approval | approved | I approve this change for implementation. | changes.approve
+sign ccr_customer | Customer approval | customer | The customer approves this change. | | optional
+end
+
+template configuration-status-accounting | Configuration Status Accounting Report | CONFIGURATION
+packs aerospace
+tags configuration control, status accounting
+purpose Report the approved configuration of a product and the status of every proposed and approved change, so the as-designed and as-built configuration can be compared.
+scope One product or configuration item at a stated date.
+instructions List the changes with their status and incorporation. Changes approved but not yet incorporated in the serials reported are counted.
+workflow Compiled by the configuration manager, reviewed, issued.
+retention Keep for the life of the product plus the period required by contract.
+use config_header
+section csa_period | Report | 2
+f csa_as_of | As of | date | *
+f csa_serials | Serial numbers covered | text
+section csa_changes | Changes | 1
+table csa_rows | Changes | 1
+c cs_change | Change | record
+c cs_number | Change number | text | *
+c cs_class | Class | choice | [Major; Minor]
+c cs_status | Status | choice | * [Proposed; Approved; Rejected; Incorporated]
+c cs_effectivity | Effectivity | text
+c cs_incorporated | Incorporated in serials reported | boolean
+rule csa_rows.cs_status | equals | Approved | #FFF4D6
+f csa_pending | Approved, not incorporated | calc | {COUNTIF(csa_rows.cs_status, "Approved")}
+f csa_proposed | Proposed | calc | {COUNTIF(csa_rows.cs_status, "Proposed")}
+use config_signatures
+end
+
+template configuration-audit | Configuration Audit | CONFIGURATION
+packs aerospace
+tags configuration control, functional audit, physical audit
+purpose Verify that a configuration item meets its requirements (functional) and that the as-built item matches its approved documentation (physical).
+scope Configuration items at the baselines the contract or the organization requires.
+instructions Check each requirement or drawing feature against the evidence. Discrepancies become findings with actions.
+workflow Planned, performed, reported, findings closed, approved.
+retention Keep for the life of the product plus the period required by contract.
+use config_header
+section ca_scope | Audit | 3
+f ca_type | Audit type | choice | * [Functional configuration audit; Physical configuration audit; Combined]
+f ca_serial | Serial number audited | text
+f ca_date | Date | date | *
+section ca_checks | Checks | 1
+table ca_rows | Checks | 1
+c cak_item | Requirement or feature | text | *
+c cak_reference | Document and revision | text | *
+c cak_evidence | Evidence | text
+c cak_result | Result | passfail | *
+c cak_finding | Finding | text
+rule ca_rows.cak_result | equals | fail | #FDE7E9 | bold
+f ca_discrepancies | Discrepancies | calc | {COUNTIF(ca_rows.cak_result, "fail")}
+f ca_conclusion | Conclusion | choice | * [Configuration confirmed; Confirmed with findings; Not confirmed]
+use config_signatures
+end
+
+template process-verification-record | Process Verification Record | CONFIGURATION
+packs aerospace
+tags process verification, special process
+purpose Verify that a process run met its specification: the parameters actually used against their limits, the operator and equipment qualifications and the results of any test pieces.
+scope Processes whose results need verification against a process specification, including special processes.
+instructions Record each parameter as actually run. Values outside the limits are highlighted and counted. Confirm the operator and equipment qualifications before release.
+workflow Performed, verified, approved by quality.
+retention Keep with the product record for the period the contract or regulation requires.
+use pv_header
+section pvr_run | Run | 3
+f pvr_job | Job or lot | text | *
+f pvr_part | Part | part
+f pvr_quantity | Quantity | integer | min=0
+f pvr_date | Date | date | *
+f pvr_operator_qualified | Operator qualification current | boolean | *
+f pvr_equipment_qualified | Equipment qualification and calibration current | boolean | *
+section pvr_parameters | Parameters | 1
+table pvr_param_rows | Parameters as run | 1
+c pp_parameter | Parameter | text | *
+c pp_unit | Unit | text
+c pp_low | Lower limit | number | * dec=3
+c pp_high | Upper limit | number | * dec=3
+c pp_actual | Actual | number | * dec=3
+c pp_in_limits | In limits | calc | {IF(AND(pp_actual >= pp_low, pp_actual <= pp_high), "Yes", "No")}
+rule pvr_param_rows.pp_in_limits | equals | No | #FDE7E9 | bold
+f pvr_out | Parameters out of limits | calc | {COUNTIF(pvr_param_rows.pp_in_limits, "No")}
+section pvr_tests | Test pieces | 1
+table pvr_test_rows | Test pieces | 0
+c pt_test | Test | text | *
+c pt_requirement | Requirement | text
+c pt_result | Result | text
+c pt_outcome | Outcome | passfail | *
+rule pvr_test_rows.pt_outcome | equals | fail | #FDE7E9 | bold
+f pvr_tests_failed | Test pieces failed | calc | {COUNTIF(pvr_test_rows.pt_outcome, "fail")}
+section pvr_decision | Decision | 2
+f pvr_result | Result | choice | * [Verified; Not verified; Nonconformance raised]
+f pvr_ncr | Nonconformance | record | when=pvr_result=Nonconformance_raised reqwhen=pvr_result=Nonconformance_raised
+rule pvr_result | equals | Not verified | #FDE7E9 | bold
+use pv_signatures
+end
+
+template process-verification-plan | Process Verification Plan | CONFIGURATION
+packs aerospace
+tags process verification, special process, qualification
+purpose Plan how each process is verified or qualified: the specification, the method, the frequency, the qualified operators and equipment, and the evidence kept.
+scope Processes the organization or its customers require to be verified or qualified, including special processes.
+instructions List each process with its verification method and frequency. Requalification due dates in the past are highlighted.
+workflow Drafted, approved by quality, reviewed when processes, specifications or equipment change.
+retention Keep while current and for the retention period of the verification records.
+section pvp_scope | Plan | 3
+f pvp_site | Site | site | *
+f pvp_owner | Plan owner | user | *
+f pvp_as_of | As of | date | *
+section pvp_items | Processes | 1
+landscape-section
+table pvp_rows | Processes | 1
+c pq_process | Process | text | *
+c pq_spec | Specification | text | *
+c pq_method | Verification method | choice | * [Test pieces; Parameter monitoring; Destructive test; Non-destructive test; First article; Customer approval]
+c pq_frequency | Frequency | text | *
+c pq_customer_approved | Customer approval required | boolean
+c pq_requal_due | Requalification due | date
+c pq_status | Status | calc | {IF(ISNUMBER(DAYS(pq_requal_due, pvp_as_of)), IF(DAYS(pq_requal_due, pvp_as_of) < 0, "Overdue", "Current"), "")}
+rule pvp_rows.pq_status | equals | Overdue | #FDE7E9 | bold
+f pvp_overdue | Requalifications overdue | calc | {COUNTIF(pvp_rows.pq_status, "Overdue")}
+sign pvp_prepared | Prepared by | prepared | I prepared this process verification plan.
+sign pvp_approved | Quality approval | approved | I approve this process verification plan. | inspection.approve
+end

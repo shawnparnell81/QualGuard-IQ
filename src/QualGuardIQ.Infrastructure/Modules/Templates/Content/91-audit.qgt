@@ -57,7 +57,7 @@ sign au_approval | Approved by | approved | I approve this audit record. | audit
 end
 
 template annual-audit-program | Annual Audit Program | AUDIT
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags audit programme, schedule, annual plan
 purpose Plan the audits of a year so every process, requirement, site and shift is covered at a frequency based on importance, risk, changes and past results.
 scope Internal system, process and product audits and supplier audits for the year.
@@ -92,7 +92,7 @@ use approval_trio
 end
 
 template audit-plan | Audit Plan | AUDIT
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags audit plan
 purpose Plan an individual audit: objectives, scope, criteria, team, the processes and areas to be audited, the documents to review and the logistics.
 scope Every audit in the programme.
@@ -115,7 +115,7 @@ use audit_signatures
 end
 
 template audit-agenda | Audit Agenda | AUDIT
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags audit agenda, schedule
 purpose Set the timetable of an audit: opening and closing meetings, each process or area, the auditor and the people to interview.
 scope Every audit that lasts more than a short single-area review.
@@ -136,7 +136,7 @@ use audit_signatures
 end
 
 template audit-checklist | Audit Checklist | AUDIT
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags audit checklist, questions
 purpose Guide the auditor through the questions for the processes and requirements in scope, record the evidence seen and score conformance.
 scope Any audit; the organization keeps its own question sets for each process and requirement.
@@ -147,7 +147,7 @@ use audit_header, audit_checklist, audit_signatures
 end
 
 template audit-evidence-log | Audit Evidence Log | AUDIT
-packs manufacturing, aerospace, medical-device
+packs manufacturing
 tags audit evidence, sampling
 purpose Log the objective evidence sampled during an audit (records, documents, products and observations) so each finding and each conclusion can be traced to what was seen.
 scope Every audit.
@@ -168,7 +168,7 @@ use audit_signatures
 end
 
 template audit-interview-record | Audit Interview Record | AUDIT
-packs manufacturing, aerospace, medical-device
+packs manufacturing
 tags audit, interview
 purpose Record an audit interview: who was interviewed, the questions asked and the answers given, so findings based on interviews are supported.
 scope Interviews held during an audit.
@@ -191,7 +191,7 @@ use audit_signatures
 end
 
 template audit-finding-record | Audit Finding | AUDIT
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags audit finding, nonconformity
 purpose Record one audit finding with the requirement, the statement, the evidence and its classification, and track the response to closure.
 scope Every nonconformity and observation raised by an audit.
@@ -222,7 +222,7 @@ use audit_signatures
 end
 
 template audit-report | Audit Report | AUDIT
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags audit report
 purpose Report the results of an audit: scope, criteria, team, summary, findings and conclusion on the effectiveness of what was audited.
 scope Every audit.
@@ -244,7 +244,7 @@ use audit_signatures
 end
 
 template audit-corrective-follow-up | Corrective Action Follow-Up | AUDIT
-packs manufacturing, aerospace, medical-device
+packs manufacturing
 tags audit, follow-up, corrective action
 purpose Follow up each audit finding's corrective action to verify it was implemented and is effective, and record the evidence.
 scope Findings from internal, supplier and external audits.
@@ -270,7 +270,7 @@ use audit_signatures
 end
 
 template audit-closure | Audit Closure | AUDIT
-packs manufacturing, aerospace, medical-device
+packs manufacturing
 tags audit closure
 purpose Close an audit when every finding is resolved, the report is issued and the results are fed into the programme and management review.
 scope Every audit.
@@ -290,7 +290,7 @@ use audit_signatures
 end
 
 template supplier-audit-record | Supplier Audit | AUDIT
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags supplier audit, second party
 purpose Audit a supplier's ability to meet the organization's requirements: management system, process control, product conformity, change control and sub-tier control.
 scope Suppliers selected by risk, performance or the approval process.
@@ -311,7 +311,7 @@ use audit_signatures
 end
 
 template process-audit-record | Process Audit | AUDIT
-packs manufacturing, aerospace, electronics
+packs manufacturing
 tags process audit
 purpose Audit a manufacturing or business process against its documented method, inputs, outputs, controls, resources and performance indicators.
 scope Processes selected by the audit programme.
@@ -328,7 +328,7 @@ use audit_checklist, audit_findings_table, audit_signatures
 end
 
 template product-audit-record | Product Audit | AUDIT
-packs manufacturing, aerospace, electronics
+packs manufacturing
 tags product audit
 purpose Audit finished product, ready for shipment, against every requirement of its specification, packaging and labelling, independently of routine inspection.
 scope Products selected by the audit programme.
@@ -354,7 +354,7 @@ use audit_findings_table, audit_signatures
 end
 
 template system-audit-record | System Audit | AUDIT
-packs manufacturing, aerospace, medical-device, electronics
+packs manufacturing
 tags system audit, management system
 purpose Audit the management system as a whole, or a group of its requirements, for conformance to the organization's criteria and effectiveness.
 scope Management system requirements in the audit programme.
@@ -365,7 +365,7 @@ use audit_header, audit_checklist, audit_findings_table, audit_signatures
 end
 
 template layered-process-audit | Layered Process Audit | AUDIT
-packs manufacturing, electronics
+packs manufacturing
 tags layered process audit, LPA
 purpose Check frequently, at several management layers, that the critical process controls at a workstation are in place and followed.
 scope Workstations and processes in the layered audit plan.
@@ -395,7 +395,7 @@ sign lp_auditor_sign | Auditor | performed | I held this audit at the workstatio
 end
 
 template regulatory-audit-record | Regulatory Audit | AUDIT
-packs medical-device, aerospace
+packs manufacturing
 tags regulatory audit, inspection, authority
 purpose Record an audit or inspection by a regulatory authority or a notified body: the scope, the people involved, the requests made and the observations received.
 scope Visits by authorities, notified bodies and registrars.
@@ -425,7 +425,7 @@ use audit_signatures
 end
 
 template compliance-audit-record | Compliance Audit | AUDIT
-packs manufacturing, medical-device, aerospace, electronics
+packs manufacturing
 tags compliance audit, legal, statutory
 purpose Audit compliance with legal, statutory, regulatory and contractual obligations that apply to the organization and its products.
 scope Obligations in the organization's compliance register.
@@ -445,7 +445,7 @@ use audit_findings_table, audit_signatures
 end
 
 template compliance-assessment | Compliance Assessment | AUDIT
-packs manufacturing, medical-device, aerospace, electronics
+packs manufacturing
 tags compliance assessment, gap analysis
 purpose Assess the organization's position against a set of requirements (a standard, a regulation or a customer requirement) and plan the work to close the gaps.
 scope New or changed requirements, and periodic reassessment.

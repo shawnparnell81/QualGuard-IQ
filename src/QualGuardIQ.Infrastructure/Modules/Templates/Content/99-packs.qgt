@@ -1,0 +1,6 @@
+# Industry template packages (FI 5). A pack installs every library template in the categories it lists plus any extra template keys.
+pack automotive | Automotive | Advanced product quality planning, production part approval, process FMEA, control plan, run at rate and launch readiness templates. | APQP; PPAP
+pack aerospace | Aerospace | First article inspection, configuration control and process verification templates. | FAI; CONFIGURATION
+pack medical-device | Medical device | Design history file, device master record, device history record, validation and CAPA templates. | DESIGN_DEVICE; CAPA
+pack electronics | Electronics | Industry package for electronics manufacturers. The enterprise template tree and the requirements name no electronics-specific templates, so the package installs none until they are defined. | |
+pack manufacturing | Manufacturing | Nonconformance, CAPA, audit, calibration and supplier quality templates. | NONCONFORMANCE; CAPA; AUDIT; CALIBRATION; SUPPLIER
