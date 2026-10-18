@@ -42,7 +42,15 @@ public sealed class PdfFormConverter(PdfModel model, PdfAnalysis analysis, strin
         var sectionKeys = new Dictionary<string, string>();
         var root = new FormSection { Key = Key(docTitle, "form"), Title = docTitle.Length > 200 ? docTitle[..200] : docTitle };
         def.Sections.Add(root);
-        foreach (var s in dets.Where(d => d.Kind == "section"))
+        // a heading at the very top of the first page is the form's own title: it opens the first section instead of adding an empty one
+        var opening = dets.OrderBy(d => d.Page).ThenBy(d => d.Box[1]).FirstOrDefault();
+        if (opening is { Kind: "section", Page: 1 })
+        {
+            if (string.IsNullOrWhiteSpace(title)) root.Title = opening.Label.Length > 200 ? opening.Label[..200] : opening.Label;
+            sectionKeys[opening.Id] = root.Key;
+            report.Add("layout", "Page 1", "converted", $"Heading '{opening.Label}' became the form's first section.");
+        }
+        foreach (var s in dets.Where(d => d.Kind == "section" && d != opening))
         {
             var sec = new FormSection { Key = Key(s.Label, "section"), Title = s.Label };
             def.Sections.Add(sec); sectionKeys[s.Id] = sec.Key;

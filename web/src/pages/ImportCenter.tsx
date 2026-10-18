@@ -9,6 +9,7 @@ import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { fmtDate } from '../components/Status';
 import { mono } from '../theme';
 import { DocumentDifferences, DocumentInventory, OriginalDocumentPreview, WordSettingsPanel, type DocumentSummary, type WordSettings } from './ImportDocument';
+import { DetectionReview, OriginalPdfPreview, PdfPagesPanel, PdfSettingsPanel, type PdfDetection, type PdfSettings, type PdfSummary } from './ImportPdf';
 import { ConversionPreview, ExcelSettingsPanel, FidelityReportView, WorkbookGrid, WorkbookInventory, type Conversion, type WorkbookSummary } from './ImportWorkbook';
 
 export const IMPORT_STATUS = ['Uploaded', 'Security scan pending', 'Security scan failed', 'Inspecting', 'Parsing', 'Mapping required', 'Preview ready', 'Validation failed',
@@ -86,23 +87,25 @@ function UploadPanel({ onStarted }: { onStarted: (id: string) => void }) {
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
   const t = mode === 'records' ? targets.data?.find((x) => x.key === target) : undefined;
-  const isBook = !!file && /\.(xlsx|xlsm|xls|docx|doc)$/i.test(file.name);
+  const isBook = !!file && WHOLE_FILE.test(file.name);
   const isWord = !!file && /\.(docx|doc)$/i.test(file.name);
+  const isPdf = !!file && /\.(pdf|png|jpe?g|tiff?)$/i.test(file.name);
+  const isImage = !!file && /\.(png|jpe?g|tiff?)$/i.test(file.name);
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Typography variant="h6" gutterBottom>Import data</Typography>
       <Box onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={drop} aria-label="Drop a file here"
         sx={{ border: '2px dashed', borderColor: over ? 'primary.main' : 'divider', borderRadius: 1, p: 3, textAlign: 'center', bgcolor: over ? 'action.hover' : undefined, mb: 2 }}>
-        <Typography>{file ? `${file.name} (${(file.size / 1024).toFixed(1)} KB)` : 'Drop a CSV, Excel or Word file here, or choose one.'}</Typography>
-        <Button component="label" sx={{ mt: 1 }}>Choose file<input hidden type="file" data-testid="import-file" accept=".csv,.txt,.tsv,.xlsx,.xlsm,.xls,.docx,.doc" onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); if (f && !/\.(xlsx|xlsm|xls|docx|doc)$/i.test(f.name)) setMode('records'); }} /></Button>
+        <Typography>{file ? `${file.name} (${(file.size / 1024).toFixed(1)} KB)` : 'Drop a CSV, Excel, Word or PDF file or a scanned image here, or choose one.'}</Typography>
+        <Button component="label" sx={{ mt: 1 }}>Choose file<input hidden type="file" data-testid="import-file" accept=".csv,.txt,.tsv,.xlsx,.xlsm,.xls,.docx,.doc,.pdf,.png,.jpg,.jpeg,.tif,.tiff" onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); if (f && !WHOLE_FILE.test(f.name)) setMode('records'); }} /></Button>
       </Box>
       <Stack direction={{ xs: 'column', md: 'row' }} gap={2}>
         <TextField select size="small" label="Site" value={site} onChange={(e) => setSiteId(e.target.value)} sx={{ minWidth: 180 }}>
           {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}</TextField>
         <TextField select size="small" label="What to do" value={mode} onChange={(e) => setMode(e.target.value)} sx={{ minWidth: 260 }} SelectProps={{ SelectDisplayProps: { 'aria-label': 'Import mode' } as object }}>
-          <MenuItem value="records">{isWord ? 'Extract content controls or table rows as records' : 'Import rows as records'}</MenuItem>
+          <MenuItem value="records">{isWord ? 'Extract content controls or table rows as records' : isImage ? 'Extract table rows as records' : isPdf ? 'Extract fillable fields or table rows as records' : 'Import rows as records'}</MenuItem>
           <MenuItem value="template" disabled={!isBook}>Convert to an electronic form</MenuItem>
-          <MenuItem value="document" disabled={!isBook}>{isWord ? 'Keep the document as a controlled document' : 'Keep the workbook as a controlled document'}</MenuItem>
+          <MenuItem value="document" disabled={!isBook}>{isWord ? 'Keep the document as a controlled document' : isImage ? 'Keep the image as a controlled document' : isPdf ? 'Keep the PDF as a controlled document' : 'Keep the workbook as a controlled document'}</MenuItem>
         </TextField>
         {mode === 'records' && <TextField select size="small" label="Import into" value={target} onChange={(e) => setTarget(e.target.value)} sx={{ minWidth: 200 }}>
           {(targets.data ?? []).map((x) => <MenuItem key={x.key} value={x.key}>{x.name}</MenuItem>)}</TextField>}
@@ -120,11 +123,12 @@ interface Issue { id: string; sourceLocation: string; rowNumber: number | null; 
 interface Hist { eventDate: string; event: string; actorName: string; previousValue: string | null; newValue: string | null; message: string | null }
 interface Detail { id: string; number: string; originalFileName: string; fileType: string; importMode: string; fileSize: number; fileHash: string; targetModule: string | null; status: number; progress: number; totalRows: number; importedRows: number;
   warningCount: number; errorCount: number; submittedById: string; submittedBy: string; submittedAt: string; approvedAt: string | null; rowVersion: number; background: boolean;
-  settings: { word?: WordSettings; excel?: { sheet?: string | null; headerRow?: number | null; sheets?: string[] | null; title?: string | null }; csv?: { encoding: string; delimiter: string; hasHeader: boolean; headerRow: number; dateFormat: string | null; decimalSeparator: string; emptyValue: string }; duplicateKeys?: string[] };
-  analysis: { document?: DocumentSummary; workbook?: WorkbookSummary; conversion?: Conversion; sheet?: string; headerRow?: number; columns?: { location: string; name: string; inferredType: string; blank: number; samples: string[] }[]; sampleRows?: string[][] };
+  settings: { pdf?: PdfSettings; word?: WordSettings; excel?: { sheet?: string | null; headerRow?: number | null; sheets?: string[] | null; title?: string | null }; csv?: { encoding: string; delimiter: string; hasHeader: boolean; headerRow: number; dateFormat: string | null; decimalSeparator: string; emptyValue: string }; duplicateKeys?: string[] };
+  analysis: { pdf?: PdfSummary; detections?: PdfDetection[]; review?: { required: number; ocr: boolean }; document?: DocumentSummary; workbook?: WorkbookSummary; conversion?: Conversion; sheet?: string; headerRow?: number; columns?: { location: string; name: string; inferredType: string; blank: number; samples: string[] }[]; sampleRows?: string[][] };
   summary: { dryRun?: { rows: number; valid: number; invalid: number; duplicates: number; existingDuplicates: number; preview: { row: number; values: Record<string, string | null>; problems: string[]; duplicate: boolean }[] }; imported?: number; skippedInvalid?: number; skippedDuplicates?: number; documentId?: string; documentNumber?: string; kind?: string };
   mappings: Mapping[]; issues: Issue[]; history: Hist[]; targetFields: { key: string; label: string; type: string; required: boolean }[] }
 
+const WHOLE_FILE = /\.(xlsx|xlsm|xls|docx|doc|pdf|png|jpe?g|tiff?)$/i;
 const DATE_FORMATS = ['yyyy-MM-dd', 'MM/dd/yyyy', 'M/d/yyyy', 'dd/MM/yyyy', 'd/M/yyyy', 'dd.MM.yyyy', 'dd-MMM-yyyy', 'yyyy/MM/dd'];
 
 export function ImportJobDetail() {
@@ -145,6 +149,9 @@ export function ImportJobDetail() {
   const whole = j.importMode === 'template' || j.importMode === 'document';
   const book = ['xlsx', 'xlsm', 'xls'].includes(j.fileType);
   const word = ['docx', 'doc'].includes(j.fileType);
+  const pdf = ['pdf', 'image'].includes(j.fileType);
+  const fileWord = word ? 'document' : pdf ? (j.fileType === 'image' ? 'image' : 'PDF') : 'workbook';
+  const toConfirm = j.importMode === 'template' ? (j.analysis.review?.required ?? 0) : 0;
   const tab = tabSel ?? (j.analysis.conversion ? 'conversion' : whole ? 'preview' : 'mapping');
   const editable = [5, 6, 7].includes(j.status);
   const m = (x: Mapping) => ({ ...x, ...edits[x.sourceLocation] });
@@ -162,7 +169,7 @@ export function ImportJobDetail() {
       </Stack>}>
       <Stack direction="row" gap={2} alignItems="center" flexWrap="wrap" sx={{ mb: 2 }}>
         <Chip color={statusColor(j.status)} label={IMPORT_STATUS[j.status]} />
-        <Typography variant="body2">{j.fileType.toUpperCase()} · {(j.fileSize / 1024).toFixed(1)} KB · {j.analysis.conversion ? `${j.analysis.conversion.report.fields} fields, ${j.analysis.conversion.report.tables} tables` : j.importMode === 'document' ? (word ? `${j.analysis.document?.paragraphs ?? 0} paragraphs, ${j.analysis.document?.tables.length ?? 0} tables` : `${j.analysis.workbook?.sheets.length ?? 0} worksheets`) : `${j.totalRows} rows`} · uploaded by {j.submittedBy} {fmtDate(j.submittedAt)}</Typography>
+        <Typography variant="body2">{j.fileType.toUpperCase()} · {(j.fileSize / 1024).toFixed(1)} KB · {j.analysis.conversion ? `${j.analysis.conversion.report.fields} fields, ${j.analysis.conversion.report.tables} tables` : j.importMode === 'document' ? (word ? `${j.analysis.document?.paragraphs ?? 0} paragraphs, ${j.analysis.document?.tables.length ?? 0} tables` : pdf ? `${j.analysis.pdf?.pages.length ?? 0} page(s)` : `${j.analysis.workbook?.sheets.length ?? 0} worksheets`) : `${j.totalRows} rows`} · uploaded by {j.submittedBy} {fmtDate(j.submittedAt)}</Typography>
         <Typography variant="body2" sx={{ fontFamily: mono }} title="SHA-256 of the preserved original">{j.fileHash.slice(0, 16)}…</Typography>
         {j.background && [3, 4, 9].includes(j.status) && <Typography variant="body2">Large file: processing in the background.</Typography>}
       </Stack>
@@ -177,6 +184,8 @@ export function ImportJobDetail() {
         <Tab value="preview" label={whole ? 'Check and approve' : 'Preview and validation'} />
         {j.analysis.workbook && <Tab value="workbook" label="Workbook" />}
         {j.analysis.document && <Tab value="document" label="Document" />}
+        {pdf && j.importMode === 'template' && (j.analysis.detections?.length ?? 0) > 0 && <Tab value="detections" label={toConfirm ? `Detections (${toConfirm} to confirm)` : 'Detections'} />}
+        {j.analysis.pdf && <Tab value="pages" label="Pages" />}
         <Tab value="issues" label={`Issues (${j.issues.length})`} /><Tab value="history" label="History" />
       </Tabs>
 
@@ -188,9 +197,18 @@ export function ImportJobDetail() {
         <WordSettingsPanel key={JSON.stringify(j.settings.word ?? {})} jobId={j.id} mode={j.importMode} doc={j.analysis.document} editable={editable && can('imports.edit')}
           current={j.settings.word ?? {}} onDone={(e) => { if (e) setError(e); else refresh(); }} />
       </Box>}
-      {tab === 'conversion' && j.analysis.conversion && (word
+      {pdf && j.analysis.pdf && (tab === 'mapping' || tab === 'conversion' || tab === 'detections' || (whole && tab === 'preview')) && <Box sx={{ mb: 2 }}>
+        <PdfSettingsPanel key={JSON.stringify(j.settings.pdf ?? {})} jobId={j.id} mode={j.importMode} pdf={j.analysis.pdf} detections={j.analysis.detections ?? []} editable={editable && can('imports.edit')}
+          current={j.settings.pdf ?? {}} onDone={(e) => { if (e) setError(e); else refresh(); }} />
+      </Box>}
+      {tab === 'detections' && j.analysis.detections && <DetectionReview key={j.rowVersion} jobId={j.id} detections={j.analysis.detections} required={toConfirm} editable={[6, 7].includes(j.status) && can('imports.edit')}
+        onDone={(e) => { if (e) setError(e); else refresh(); }} />}
+      {tab === 'pages' && j.analysis.pdf && <PdfPagesPanel jobId={j.id} pdf={j.analysis.pdf} />}
+      {tab === 'conversion' && j.analysis.conversion && (word || pdf
         ? <Stack gap={2}>
-          <ConversionPreview jobId={j.id} conversion={j.analysis.conversion} originalTitle="Original document" original={<OriginalDocumentPreview jobId={j.id} doc={j.analysis.document} />}
+          {toConfirm > 0 && <Alert severity="warning" action={<Button color="inherit" size="small" onClick={() => setTab('detections')}>Review</Button>}>{toConfirm} detection(s) need confirmation before the conversion can be submitted.</Alert>}
+          <ConversionPreview jobId={j.id} conversion={j.analysis.conversion} originalTitle={pdf ? (j.fileType === 'image' ? 'Original image' : 'Original PDF') : 'Original document'}
+            original={pdf ? <OriginalPdfPreview jobId={j.id} /> : <OriginalDocumentPreview jobId={j.id} doc={j.analysis.document} />}
             note="Try values here; checkboxes, dropdowns, dates and calculated fields work as the converted form will. Nothing is saved." />
           <DocumentDifferences report={j.analysis.conversion.report} />
         </Stack>
@@ -243,8 +261,8 @@ export function ImportJobDetail() {
 
       {tab === 'preview' && <Stack gap={2}>
         {whole && j.status !== 10 && j.status !== 12 && <Alert severity="info">{j.importMode === 'template'
-          ? `After approval the converted form becomes a new draft form template, with the original ${word ? 'document' : 'workbook'} kept on its revision. Review the side-by-side preview and the fidelity report first; the approver must accept the fidelity report.`
-          : `After approval the ${word ? 'document' : 'workbook'} becomes a new controlled document (draft revision) with the file exactly as uploaded.`}</Alert>}
+          ? `After approval the converted form becomes a new draft form template, with the original ${fileWord} kept on its revision. Review the side-by-side preview and the fidelity report first; the approver must accept the fidelity report.`
+          : `After approval the ${fileWord} becomes a new controlled document (draft revision) with the file exactly as uploaded.`}</Alert>}
         {j.summary.documentId && <Alert severity="success">{j.importMode === 'template' ? 'Draft form template' : 'Controlled document'} <RouterLink to={`/${j.importMode === 'template' ? 'forms/templates' : 'documents'}/${j.summary.documentId}`}>{j.summary.documentNumber}</RouterLink> created.</Alert>}
         {whole && editable && can('imports.edit') && !dry && <Box><Button variant="outlined" onClick={() => run(() => post(`/api/imports/${id}/validate`))}>Check</Button></Box>}
         {whole ? null : dry ? <Alert severity={dry.invalid ? 'warning' : 'success'}>Dry run: {dry.valid} of {dry.rows} rows ready to import · {dry.invalid} with problems · {dry.duplicates} repeated in the file · {dry.existingDuplicates} already exist.</Alert>
@@ -260,7 +278,8 @@ export function ImportJobDetail() {
         </Paper>}
         {[6, 7].includes(j.status) && can('imports.edit') && <Stack direction="row" gap={2} alignItems="center">
           {j.status === 7 && <FormControlLabel control={<Checkbox checked={skipInvalid} onChange={(e) => setSkipInvalid(e.target.checked)} />} label="Import only the rows without problems" />}
-          <Button variant="contained" disabled={j.status === 7 && !skipInvalid} onClick={() => run(() => post(`/api/imports/${id}/submit`, { skipInvalidRows: skipInvalid }))}>Submit for approval</Button>
+          {toConfirm > 0 && <Typography variant="body2" color="warning.main">Confirm the {toConfirm} detection(s) first.</Typography>}
+          <Button variant="contained" disabled={(j.status === 7 && !skipInvalid) || toConfirm > 0} onClick={() => run(() => post(`/api/imports/${id}/submit`, { skipInvalidRows: skipInvalid }))}>Submit for approval</Button>
         </Stack>}
         {j.status === 8 && <Stack direction="row" gap={1} alignItems="center">
           {can('imports.approve') && me?.id !== j.submittedById ? <>

@@ -85,6 +85,8 @@ public sealed class PdfImportTests(TestApp app)
         Assert.DoesNotContain(a.Detections, d => d.Kind == "field" && d.Label == "Date");
 
         var def = new PdfFormConverter(m, a, null, "FIR.pdf").Convert().Definition;
+        // the heading at the top of the page opens the first section; no empty duplicate
+        Assert.Equal(["Final Inspection Report", "Measurements", "Approval"], def.Sections.Select(s => s.Title));
         var table = def.Tables.Single();
         Assert.DoesNotContain(table.Columns, c => c.Label == "No."); // the row number column is shown automatically
         Assert.Contains(table.Totals ?? [], tt => tt.Function == "sum");
