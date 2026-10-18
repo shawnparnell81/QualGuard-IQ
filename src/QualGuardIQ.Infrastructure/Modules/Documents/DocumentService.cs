@@ -100,15 +100,16 @@ public sealed class DocumentService(
     public async Task UpdateRevisionAsync(Guid revisionId, UpdateRevisionRequest req, CancellationToken ct, bool preAuthorized = false)
     {
         var rev = await db.DocumentRevisions.Include(r => r.Document).FirstOrDefaultAsync(r => r.Id == revisionId, ct) ?? throw new NotFoundException("Revision");
-        if (!preAuthorized) await records.RequireEditAsync(DocumentRecordTypes.ForDocument(rev.Document!.Kind), rev.DocumentId, ct);
+        var doc = rev.Document ?? throw new NotFoundException("Document");
+        if (!preAuthorized) await records.RequireEditAsync(DocumentRecordTypes.ForDocument(doc.Kind), rev.DocumentId, ct);
         if (rev.Status != RevisionStatus.Draft) throw new AppException("Only draft revisions can be edited.", 409);
         if (string.IsNullOrWhiteSpace(req.ChangeSummary)) throw new AppException("A change summary is required.");
-        if (req.EffectiveDate is { } e && e < await TodayAsync(rev.Document.SiteId, ct)) throw new AppException("The effective date cannot be in the past.");
+        if (req.EffectiveDate is { } e && e < await TodayAsync(doc.SiteId, ct)) throw new AppException("The effective date cannot be in the past.");
         db.Entry(rev).Property(x => x.RowVersion).OriginalValue = req.RowVersion;
         rev.ChangeSummary = req.ChangeSummary.Trim();
         rev.EffectiveDate = req.EffectiveDate;
         rev.TrainingRequired = req.TrainingRequired;
-        if (rev.Document.Kind == DocumentKind.FormTemplate && req.FieldSchema is not null)
+        if (doc.Kind == DocumentKind.FormTemplate && req.FieldSchema is not null)
         {
             Application.Forms.FormDefinitions.Parse(req.FieldSchema);
             rev.FieldSchema = req.FieldSchema;

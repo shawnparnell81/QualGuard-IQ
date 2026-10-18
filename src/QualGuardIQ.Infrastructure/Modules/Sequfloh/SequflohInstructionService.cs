@@ -27,7 +27,7 @@ public sealed record ImportCharacteristicsInput(Guid InspectionPlanId);
 /// copying library data (operation steps, parts lists, characteristics) into the instruction, and release rules driven by the designer schema.
 /// Every transition reloads and locks the row, so a stale or repeated click cannot apply twice.
 /// </summary>
-public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m, IAccessService access, INumberingService numbers, SequflohFoundationService f,
+public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m, INumberingService numbers, SequflohFoundationService f,
     SequflohNotifications notify, QualGuardIQ.Application.Records.ISearchIndexer search)
 {
     public const string EntityType = nameof(SequflohWorkInstruction);

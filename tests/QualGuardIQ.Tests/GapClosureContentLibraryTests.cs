@@ -32,7 +32,7 @@ public sealed class GapClosureContentLibraryTests(TestApp app)
         using (var scope = app.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await db.Database.ExecuteSqlRawAsync($$"""
+            var bulkSql = $$"""
                 INSERT INTO qms.attachments ("Id","OwnerType","OwnerId","SiteId","DepartmentId","ViewPermission","FileName","ContentType","SizeBytes","Sha256","StorageKey","Category","Description","Classification","LineageId","Version","IsLocked","ScanStatus","RetainUntil","IsArchived","CreatedAt","UpdatedAt")
                 SELECT u.id, 'Ncr', {0}, {1}, CASE WHEN u.g <= 60 THEN {2} ELSE NULL END, 'ncr.view',
                        '{{tag}}-' || lpad(g::text, 4, '0') || CASE WHEN g % 5 = 0 THEN '.mp4' ELSE '.pdf' END,
@@ -42,7 +42,8 @@ public sealed class GapClosureContentLibraryTests(TestApp app)
                        CASE WHEN g BETWEEN 301 AND 330 THEN CURRENT_DATE + 3650 ELSE NULL END, false,
                        TIMESTAMPTZ '2025-01-01 00:00:00+00' + g * INTERVAL '1 hour', now()
                 FROM (SELECT g, gen_random_uuid() AS id FROM generate_series(1, {{N}}) g) u
-                """, ncr, site, dept);
+                """;
+            await db.Database.ExecuteSqlRawAsync(bulkSql, ncr, site, dept);
         }
         async Task<JsonElement> Page(ApiClient c, string qs) => await c.GetElAsync($"/api/files/search?q={tag}&{qs}");
 
@@ -98,11 +99,12 @@ public sealed class GapClosureContentLibraryTests(TestApp app)
         var tag = "bf" + Guid.NewGuid().ToString("N")[..8];
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        await db.Database.ExecuteSqlRawAsync($$"""
+        var backfillSql = $$"""
             INSERT INTO qms.attachments ("Id","OwnerType","OwnerId","SiteId","FileName","ContentType","SizeBytes","Sha256","StorageKey","Classification","LineageId","Version","IsLocked","ScanStatus","IsArchived","CreatedAt","UpdatedAt")
             SELECT u.id, 'Ncr', {0}, NULL, '{{tag}}-' || g || '.pdf', 'application/pdf', 10, repeat('b', 64), 'test/{{tag}}/' || g, 0, u.id, 1, g = 1, 1, false, now(), now()
             FROM (SELECT g, gen_random_uuid() AS id FROM generate_series(1, 3) g) u
-            """, ncr);
+            """;
+        await db.Database.ExecuteSqlRawAsync(backfillSql, ncr);
         // before backfill the files are still visible (verified per item), after backfill they are scoped in the database
         Assert.Equal(3, (await viewer.GetElAsync($"/api/files/search?q={tag}")).GetProperty("total").GetInt32());
         Assert.True(await scope.ServiceProvider.GetRequiredService<AttachmentService>().BackfillScopeAsync(CancellationToken.None) >= 3);
