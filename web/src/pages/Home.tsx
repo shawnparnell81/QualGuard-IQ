@@ -112,21 +112,25 @@ export function Home() {
               </ResponsiveContainer>
             </Box>
           </Paper>
+        </Stack>
+      </Box>
 
-          {/* Module index: a compact ruled list instead of a grid of cards. */}
-          <Paper sx={{ overflow: 'hidden' }} component="nav" aria-label="Jump to a module">
-            <PanelHead title="Modules" />
-            {mods.map((m, i) => (
+      {/* Module index: a full-width ruled directory in columns instead of a grid of cards. */}
+      <Box sx={{ maxWidth: 1440, mx: 'auto', px: { xs: 2, md: 4 }, pb: 4 }}>
+        <Paper sx={{ overflow: 'hidden' }} component="nav" aria-label="Jump to a module">
+          <PanelHead title={`Modules · ${mods.length}`} />
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', xl: 'repeat(4, 1fr)' }, mt: '-1px', ml: '-1px' }}>
+            {mods.map((m) => (
               <Box key={m.key} component={RouterLink} to={m.basePath} title={m.description}
-                sx={{ display: 'flex', alignItems: 'center', gap: 1.25, px: 2, py: 0.9, borderTop: i ? 1 : 0, borderColor: 'divider', color: 'text.primary', textDecoration: 'none', '& svg': { fontSize: 18, color: 'text.secondary' },
+                sx={{ display: 'flex', alignItems: 'center', gap: 1.25, px: 2, py: 1, borderTop: 1, borderLeft: 1, borderColor: 'divider', color: 'text.primary', textDecoration: 'none', '& svg': { fontSize: 18, color: 'text.secondary' },
                   '&:hover': { bgcolor: 'action.hover', '& svg': { color: 'primary.main' }, '& .go': { opacity: 1 } } }}>
                 {m.icon}
-                <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }}>{m.label}</Typography>
+                <Typography variant="body2" fontWeight={600} sx={{ flex: 1 }} noWrap>{m.label}</Typography>
                 <ArrowForward className="go" sx={{ opacity: 0, transition: 'opacity 120ms' }} />
               </Box>
             ))}
-          </Paper>
-        </Stack>
+          </Box>
+        </Paper>
       </Box>
     </Box>
   );
