@@ -39,23 +39,25 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
         {!collapsed && <SideNav items={module.sidebar} />}
       </Box>
       <Box component="main" sx={{ flex: 1, minWidth: 0 }}>
-        <Box sx={{ px: { xs: 2, md: 4 }, pt: 2.5, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
-          <Breadcrumbs sx={{ fontSize: 12.5, mb: 1 }}>
-            <Link component={RouterLink} to="/" underline="hover" color="inherit">Home</Link>
-            <Link component={RouterLink} to={module.basePath} underline="hover" color="inherit">{module.label}</Link>
-            {crumbs.filter((c, i) => !(i === 0 && c.label === module.label)).map((c, i) => c.to ? <Link key={i} component={RouterLink} to={c.to} underline="hover" color="inherit">{c.label}</Link> : <Typography key={i} fontSize={12.5} color="text.primary">{c.label}</Typography>)}
+        {/* Page header: module tag and crumbs on one quiet line, then a large title beside a blue module badge. */}
+        <Box sx={{ px: { xs: 2, md: 4 }, pt: 2, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
+          <Breadcrumbs separator="/" sx={{ fontSize: 11.5, mb: 1.25, letterSpacing: '0.04em', '& .MuiBreadcrumbs-separator': { mx: 0.75, color: 'divider' } }}>
+            <Link component={RouterLink} to="/" underline="hover" color="text.secondary">Home</Link>
+            <Link component={RouterLink} to={module.basePath} underline="hover" color="text.secondary">{module.label}</Link>
+            {crumbs.filter((c, i) => !(i === 0 && c.label === module.label)).map((c, i) => c.to ? <Link key={i} component={RouterLink} to={c.to} underline="hover" color="text.secondary">{c.label}</Link> : <Typography key={i} fontSize={11.5} fontWeight={600} color="text.primary">{c.label}</Typography>)}
           </Breadcrumbs>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pb: tabs ? 0 : 2, flexWrap: 'wrap' }}>
-            <Typography variant="h1" sx={{ flex: 1 }}>{title}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: tabs ? 0.5 : 2, flexWrap: 'wrap' }}>
+            <Box aria-hidden sx={{ width: 34, height: 34, flexShrink: 0, display: { xs: 'none', sm: 'grid' }, placeItems: 'center', bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 0.75, '& svg': { fontSize: 20 } }}>{module.icon}</Box>
+            <Typography variant="h1" sx={{ flex: 1, minWidth: 0 }}>{title}</Typography>
             {actions}
           </Box>
           {tabs && (
-            <Tabs value={tab} onChange={(_, v) => onTab?.(v)} variant="scrollable" sx={{ mt: 1, minHeight: 40, '& .MuiTab-root': { minHeight: 40 } }}>
+            <Tabs value={tab} onChange={(_, v) => onTab?.(v)} variant="scrollable" sx={{ mt: 0.5, minHeight: 40, '& .MuiTab-root': { minHeight: 40 } }}>
               {tabs.map((t) => <Tab key={t.value} value={t.value} label={t.label} />)}
             </Tabs>
           )}
         </Box>
-        <Box sx={{ p: { xs: 1.5, sm: 2.5, md: 4 } }}>{children}</Box>
+        <Box sx={{ p: { xs: 1.5, sm: 2.5, md: 3.5 }, maxWidth: 1600 }}>{children}</Box>
       </Box>
     </Box>
   );
@@ -79,7 +81,7 @@ function SideItem({ item, depth, current }: { item: NavItem; depth: number; curr
     return (
       <>
         <ListItemButton onClick={() => setOpen(!open)} sx={{ pl: 2 + depth * 2 }}>
-          <ListItemText primary={item.label} slotProps={{ primary: { fontWeight: 600, fontSize: 13 } }} />
+          <ListItemText primary={item.label} slotProps={{ primary: { fontWeight: 700, fontSize: 10.5, letterSpacing: '0.12em', textTransform: 'uppercase', color: 'text.secondary' } }} />
           {open ? <ExpandLess fontSize="small" /> : <ExpandMore fontSize="small" />}
         </ListItemButton>
         <Collapse in={open}><SideNav items={item.children} depth={depth + 1} /></Collapse>
@@ -88,8 +90,8 @@ function SideItem({ item, depth, current }: { item: NavItem; depth: number; curr
   }
   return (
     <ListItemButton component={RouterLink} to={item.path} selected={selected}
-      sx={{ pl: 2 + depth * 2, borderLeft: '3px solid', borderColor: selected ? 'secondary.main' : 'transparent', '&.Mui-selected': { bgcolor: 'action.selected' } }}>
-      <ListItemText primary={item.label} slotProps={{ primary: { fontSize: 13 } }} />
+      sx={{ ml: 1, mr: 1, pl: 1 + depth * 2, borderRadius: 0.75, '&.Mui-selected': { bgcolor: 'primary.main', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.dark' } } }}>
+      <ListItemText primary={item.label} slotProps={{ primary: { fontSize: 13, fontWeight: selected ? 600 : 500 } }} />
     </ListItemButton>
   );
 }
