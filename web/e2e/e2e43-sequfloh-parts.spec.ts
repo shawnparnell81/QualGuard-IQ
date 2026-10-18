@@ -36,6 +36,7 @@ test.describe('SEQUFLOH parts and items', () => {
       await page.getByRole('button', { name: 'Add item' }).click();
       const i = page.getByRole('dialog');
       await i.getByLabel('Part number', { exact: true }).fill(num);
+      await i.getByLabel('Description').fill('Seal ' + num);
       await i.getByLabel('Quantity').fill(qty);
       await i.getByRole('button', { name: 'Save item' }).click();
       await expect(page.getByRole('cell', { name: num })).toBeVisible();
