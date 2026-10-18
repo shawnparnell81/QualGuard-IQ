@@ -25401,6 +25401,25 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/recalls/{id}/exercise':
+    get:
+      tags:
+        - Recalls
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/recalls/{id}/trace':
     post:
       tags:
@@ -33179,6 +33198,1923 @@ paths:
       responses:
         '200':
           description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/settings:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/QualityOpsSettingsDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QualityOpsSettingsDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/QualityOpsSettingsDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityOpsSettingsDto'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/QualityOpsSettingsDto'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/QualityOpsSettingsDto'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/settings/intake:
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/events:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/QualityEventStatus'
+        - name: severity
+          in: query
+          schema:
+            type: string
+        - name: source
+          in: query
+          schema:
+            $ref: '#/components/schemas/QualityEventSource'
+        - name: openOnly
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityEventInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/QualityEventInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/QualityEventInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/IntakeResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IntakeResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/IntakeResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/events/{id}':
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/events/{id}/triage':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/events/{id}/classify':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TriageInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TriageInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TriageInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/events/{id}/escalate':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EscalateInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/EscalateInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/EscalateInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/events/{id}/close':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotesRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/NotesRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/NotesRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/events/{id}/reject':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/deviations:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/QualityDeviationStatus'
+        - name: kind
+          in: query
+          schema:
+            $ref: '#/components/schemas/DeviationKind'
+        - name: inForce
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviationInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DeviationInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DeviationInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/deviations/{id}':
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviationInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DeviationInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DeviationInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/deviations/{id}/submit':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/deviations/{id}/use':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UseRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/UseRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/UseRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/deviations/{id}/close':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotesRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/NotesRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/NotesRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/deviations/{id}/cancel':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/investigations:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/InvestigationStatus'
+        - name: kind
+          in: query
+          schema:
+            $ref: '#/components/schemas/InvestigationKind'
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvestigationInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/InvestigationInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/InvestigationInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/investigations/{id}':
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/investigations/{id}/work':
+    put:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InvestigationWork'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/InvestigationWork'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/InvestigationWork'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/investigations/{id}/links':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LinkInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/LinkInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/LinkInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/investigations/{id}/escalate':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/investigations/{id}/conclude':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NotesRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/NotesRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/NotesRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/investigations/{id}/close':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/investigations/{id}/cancel':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/releases:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReleaseStatus'
+        - name: kind
+          in: query
+          schema:
+            $ref: '#/components/schemas/ReleaseKind'
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReleaseInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/releases/board:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/releases/{id}':
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/releases/{id}/decision':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseDecisionInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReleaseDecisionInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReleaseDecisionInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/releases/{id}/cancel':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/delegations:
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: all
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DelegationInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DelegationInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DelegationInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/delegations/{id}/revoke':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/registers:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/registers/{key}':
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: archived
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: expiring
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.edit` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/registers/entries/{id}':
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RegisterInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/registers/entries/{id}/status':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StatusRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/StatusRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/StatusRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/registers/entries/{id}/archive':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/calendars:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalendarInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CalendarInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CalendarInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/calendars/{id}':
+    put:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalendarInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CalendarInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CalendarInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    delete:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/service-levels:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceLevelInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ServiceLevelInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ServiceLevelInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/service-levels/{id}':
+    put:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ServiceLevelInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ServiceLevelInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ServiceLevelInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/service-levels/status:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ServiceLevelRow'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ServiceLevelRow'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ServiceLevelRow'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/skip-lot:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `inspection.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkipLotRuleInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SkipLotRuleInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SkipLotRuleInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/skip-lot/{id}':
+    put:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SkipLotRuleInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SkipLotRuleInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SkipLotRuleInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/skip-lot/decision:
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: siteId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: partId
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: supplierId
+          in: query
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SkipLotDecision'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SkipLotDecision'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SkipLotDecision'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/skip-lot/lots:
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LotRecordRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/LotRecordRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/LotRecordRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/skip-lot/{id}/history':
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/reviews:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.view` (site/department scoped).'
+      parameters:
+        - name: kind
+          in: query
+          schema:
+            $ref: '#/components/schemas/QualityReviewKind'
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/QualityReviewStatus'
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `qualityops.edit` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityReviewInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/QualityReviewInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/QualityReviewInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/reviews/{id}':
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/reviews/{id}/refresh':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/reviews/{id}/text':
+    put:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QualityReviewText'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/QualityReviewText'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/QualityReviewText'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/quality-ops/reviews/{id}/submit':
+    post:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/analytics/modules:
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/analytics/aging:
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: module
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgingBand'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgingBand'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AgingBand'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/analytics/bottlenecks:
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: module
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StatusDwell'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StatusDwell'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/StatusDwell'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/analytics/cycle-times:
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CycleTime'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CycleTime'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CycleTime'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/analytics/capa-effectiveness:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `capa.view` (site/department scoped).'
+      parameters:
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/analytics/recurrence:
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecurrenceGroup'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecurrenceGroup'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RecurrenceGroup'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/analytics/readiness:
+    get:
+      tags:
+        - QualityOps
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReadinessScore'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReadinessScore'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReadinessScore'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/quality-ops/analytics/supplier-risk:
+    get:
+      tags:
+        - QualityOps
+      description: 'Requires permission: `suppliers.view` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupplierRisk'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupplierRisk'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupplierRisk'
         '401':
           description: Not signed in
         '403':
@@ -41099,6 +43035,20 @@ components:
             $ref: '#/components/schemas/AssistRecord'
         method:
           type: string
+    AgingBand:
+      required:
+        - band
+        - count
+      type: object
+      properties:
+        band:
+          type: string
+        count:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     AlertEvent:
       type: object
       properties:
@@ -43566,6 +45516,51 @@ components:
         enabled:
           type: boolean
           default: true
+    CalendarInput:
+      required:
+        - name
+        - siteId
+        - workingDays
+        - workdayStart
+        - workdayEnd
+        - isDefault
+        - holidays
+      type: object
+      properties:
+        name:
+          type: string
+        siteId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        workingDays:
+          type: array
+          items:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+        workdayStart:
+          type: string
+          format: time
+        workdayEnd:
+          type: string
+          format: time
+        isDefault:
+          type: boolean
+        holidays:
+          type: array
+          items:
+            $ref: '#/components/schemas/HolidayInput'
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
     CalendarItem:
       required:
         - date
@@ -47465,6 +49460,41 @@ components:
             - integer
             - string
           format: uint32
+    CycleTime:
+      required:
+        - module
+        - closed
+        - averageDays
+        - medianDays
+        - p90Days
+      type: object
+      properties:
+        module:
+          type: string
+        closed:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        averageDays:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        medianDays:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        p90Days:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$'
+          type:
+            - number
+            - string
+          format: double
     Dashboard:
       type: object
       properties:
@@ -47802,6 +49832,36 @@ components:
         - Major
         - Minor
         - null
+    DelegationInput:
+      required:
+        - delegatorId
+        - delegateId
+        - startsAt
+        - endsAt
+        - recordType
+        - reason
+      type: object
+      properties:
+        delegatorId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        delegateId:
+          type: string
+          format: uuid
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        recordType:
+          type:
+            - 'null'
+            - string
+        reason:
+          type: string
     DeliverableInput:
       required:
         - phase
@@ -48303,6 +50363,8 @@ components:
           type:
             - 'null'
             - string
+    DeviationKind:
+      type: integer
     DeviceDto:
       required:
         - id
@@ -49664,6 +51726,35 @@ components:
       type: integer
     ErpValidationResult:
       type: integer
+    EscalateInput:
+      required:
+        - target
+        - recordType
+        - recordId
+        - title
+        - ownerId
+      type: object
+      properties:
+        target:
+          type: string
+        recordType:
+          type:
+            - 'null'
+            - string
+        recordId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        title:
+          type:
+            - 'null'
+            - string
+        ownerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
     EvaluationCode:
       enum:
         - Accepted
@@ -51999,6 +54090,17 @@ components:
           type: string
     HoldStatus:
       type: integer
+    HolidayInput:
+      required:
+        - date
+        - name
+      type: object
+      properties:
+        date:
+          type: string
+          format: date
+        name:
+          type: string
     IdentityProviderKind:
       enum:
         - Entra
@@ -52338,6 +54440,20 @@ components:
             - integer
             - string
           format: int32
+    IntakeResult:
+      required:
+        - id
+        - number
+        - duplicate
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        duplicate:
+          type: boolean
     InventoryCategory:
       type: integer
     InventoryHold:
@@ -52480,6 +54596,48 @@ components:
           type: string
         disclaimer:
           type: string
+    InvestigationInput:
+      required:
+        - siteId
+        - departmentId
+        - kind
+        - title
+        - scope
+        - leadId
+        - dueOn
+      type: object
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/InvestigationKind'
+        title:
+          type: string
+        scope:
+          type: string
+        leadId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        dueOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        qualityEventId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    InvestigationKind:
+      type: integer
     InvestigationRequest:
       required:
         - investigation
@@ -52493,6 +54651,89 @@ components:
           type: string
         correctiveAction:
           type: string
+    InvestigationStatus:
+      type: integer
+    InvestigationWork:
+      required:
+        - hypotheses
+        - findings
+        - rootCause
+        - sampleReference
+        - testMethod
+        - specification
+        - lowerLimit
+        - upperLimit
+        - result
+        - resultUnit
+        - laboratoryErrorFound
+        - dueOn
+      type: object
+      properties:
+        hypotheses:
+          type:
+            - 'null'
+            - string
+        findings:
+          type:
+            - 'null'
+            - string
+        rootCause:
+          type:
+            - 'null'
+            - string
+        sampleReference:
+          type:
+            - 'null'
+            - string
+        testMethod:
+          type:
+            - 'null'
+            - string
+        specification:
+          type:
+            - 'null'
+            - string
+        lowerLimit:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        upperLimit:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        result:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        resultUnit:
+          type:
+            - 'null'
+            - string
+        laboratoryErrorFound:
+          type:
+            - 'null'
+            - boolean
+        dueOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
     IssueDto:
       required:
         - id
@@ -54008,6 +56249,22 @@ components:
         - Complaint
         - Audit
         - Other
+    LinkInput:
+      required:
+        - recordType
+        - recordId
+        - linkType
+      type: object
+      properties:
+        recordType:
+          type: string
+        recordId:
+          type: string
+          format: uuid
+        linkType:
+          type:
+            - 'null'
+            - string
     LinkInspectionInput:
       required:
         - inspectionId
@@ -54458,6 +56715,37 @@ components:
           format: uuid
     LotKind:
       type: integer
+    LotRecordRequest:
+      required:
+        - siteId
+        - partId
+        - supplierId
+        - lot
+        - inspected
+        - accepted
+      type: object
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lot:
+          type:
+            - 'null'
+            - string
+        inspected:
+          type: boolean
+        accepted:
+          type:
+            - 'null'
+            - boolean
     LotResult:
       required:
         - lotId
@@ -59966,6 +62254,92 @@ components:
             - 'null'
             - string
           format: date
+    QualityDeviationStatus:
+      type: integer
+    QualityEventInput:
+      required:
+        - siteId
+        - departmentId
+        - title
+        - description
+        - category
+        - occurredAt
+        - location
+        - process
+        - partId
+        - productId
+        - supplierId
+        - customerId
+        - lotNumber
+      type: object
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type:
+            - 'null'
+            - string
+        occurredAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        location:
+          type:
+            - 'null'
+            - string
+        process:
+          type:
+            - 'null'
+            - string
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        productId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        source:
+          $ref: '#/components/schemas/QualityEventSource'
+        clientReference:
+          type:
+            - 'null'
+            - string
+        externalSystem:
+          type:
+            - 'null'
+            - string
+    QualityEventSource:
+      type: integer
+    QualityEventStatus:
+      type: integer
     QualityMetricFact:
       type: object
       properties:
@@ -60037,6 +62411,64 @@ components:
             - integer
             - string
           format: uint32
+    QualityOpsSettingsDto:
+      required:
+        - likelihood
+        - impact
+        - severities
+        - cells
+        - categories
+        - classifications
+        - recurrenceWindowDays
+        - systemicThreshold
+        - labSampleTracking
+      type: object
+      properties:
+        likelihood:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScaleLevel'
+        impact:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScaleLevel'
+        severities:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeverityLevel'
+        cells:
+          type: array
+          items:
+            $ref: '#/components/schemas/SeverityCell'
+        categories:
+          type: array
+          items:
+            type: string
+        classifications:
+          type: array
+          items:
+            type: string
+        recurrenceWindowDays:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        systemicThreshold:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        labSampleTracking:
+          type: boolean
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
     QualityProject:
       type: object
       properties:
@@ -60128,6 +62560,77 @@ components:
       type: integer
     QualityProjectStatus:
       type: integer
+    QualityReviewInput:
+      required:
+        - siteId
+        - departmentId
+        - kind
+        - title
+        - productId
+        - partId
+        - periodFrom
+        - periodTo
+        - ownerId
+      type: object
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/QualityReviewKind'
+        title:
+          type: string
+        productId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        periodFrom:
+          type: string
+          format: date
+        periodTo:
+          type: string
+          format: date
+        ownerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    QualityReviewKind:
+      type: integer
+    QualityReviewStatus:
+      type: integer
+    QualityReviewText:
+      required:
+        - conclusions
+        - actions
+      type: object
+      properties:
+        conclusions:
+          type:
+            - 'null'
+            - string
+        actions:
+          type:
+            - 'null'
+            - string
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
     RaiseNcrRequest:
       required:
         - title
@@ -60190,6 +62693,28 @@ components:
             - integer
             - string
           format: int32
+    ReadinessScore:
+      required:
+        - kind
+        - score
+        - band
+        - factors
+      type: object
+      properties:
+        kind:
+          type: string
+        score:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        band:
+          type: string
+        factors:
+          type: array
+          items:
+            $ref: '#/components/schemas/ScoreFactor'
     ReasonRequest:
       required:
         - reason
@@ -60233,6 +62758,18 @@ components:
             - string
           format: uuid
         closedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        isExercise:
+          type: boolean
+        exerciseStartedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        traceCompletedAt:
           type:
             - 'null'
             - string
@@ -60311,6 +62848,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/RecallItemInput'
+        isExercise:
+          type: boolean
+          default: false
     RecallItemInput:
       required:
         - productId
@@ -61446,6 +63986,118 @@ components:
             - integer
             - string
           format: uint32
+    RecurrenceGroup:
+      required:
+        - key
+        - part
+        - category
+        - count
+        - systemic
+        - records
+        - first
+        - last
+      type: object
+      properties:
+        key:
+          type: string
+        part:
+          type: string
+        category:
+          type: string
+        count:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        systemic:
+          type: boolean
+        records:
+          type: array
+          items:
+            type: string
+        first:
+          type: string
+          format: date-time
+        last:
+          type: string
+          format: date-time
+    RegisterInput:
+      required:
+        - siteId
+        - departmentId
+        - title
+        - summary
+        - supplierId
+        - customerId
+        - partId
+        - ownerId
+        - effectiveOn
+        - reviewDueOn
+        - expiresOn
+        - details
+      type: object
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        title:
+          type: string
+        summary:
+          type:
+            - 'null'
+            - string
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        customerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        ownerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        effectiveOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        reviewDueOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        expiresOn:
+          type:
+            - 'null'
+            - string
+          format: date
+        details:
+          type:
+            - 'null'
+            - object
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
     RejectRevisionInput:
       required:
         - reason
@@ -61492,6 +64144,81 @@ components:
           type: boolean
         message:
           type: string
+    ReleaseDecisionInput:
+      required:
+        - release
+        - password
+        - mfaCode
+        - comment
+      type: object
+      properties:
+        release:
+          type: boolean
+        password:
+          type: string
+        mfaCode:
+          type:
+            - 'null'
+            - string
+        comment:
+          type:
+            - 'null'
+            - string
+    ReleaseInput:
+      required:
+        - siteId
+        - departmentId
+        - kind
+        - partId
+        - productId
+        - lotId
+        - lotNumber
+        - quantity
+        - reviewNotes
+      type: object
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        kind:
+          $ref: '#/components/schemas/ReleaseKind'
+        partId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        productId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        lotNumber:
+          type:
+            - 'null'
+            - string
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - 'null'
+            - number
+            - string
+          format: double
+        reviewNotes:
+          type:
+            - 'null'
+            - string
+    ReleaseKind:
+      type: integer
     ReleaseRequest:
       required:
         - customerApprovalReference
@@ -61503,6 +64230,8 @@ components:
         customerApprovedOn:
           type: string
           format: date
+    ReleaseStatus:
+      type: integer
     RenditionRow:
       required:
         - id
@@ -64794,6 +67523,20 @@ components:
           type: string
         isDefault:
           type: boolean
+    ScaleLevel:
+      required:
+        - value
+        - label
+      type: object
+      properties:
+        value:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        label:
+          type: string
     ScanContext:
       required:
         - match
@@ -65038,6 +67781,44 @@ components:
         enabled:
           type: boolean
           default: true
+    ScoreFactor:
+      required:
+        - key
+        - label
+        - total
+        - late
+        - score
+        - weight
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        total:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        late:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        score:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        weight:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$'
+          type:
+            - number
+            - string
+          format: double
     ScoreWeightsInput:
       required:
         - quality
@@ -65586,6 +68367,101 @@ components:
           format: uuid
         serviceCode:
           type: string
+    ServiceLevelInput:
+      required:
+        - name
+        - module
+        - status
+        - targetHours
+        - warningPercent
+        - businessHoursOnly
+        - calendarId
+        - escalationPermission
+        - active
+      type: object
+      properties:
+        name:
+          type: string
+        module:
+          type: string
+        status:
+          type:
+            - 'null'
+            - string
+        targetHours:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        warningPercent:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        businessHoursOnly:
+          type: boolean
+        calendarId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        escalationPermission:
+          type:
+            - 'null'
+            - string
+        active:
+          type: boolean
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
+    ServiceLevelRow:
+      required:
+        - policyId
+        - policy
+        - module
+        - recordId
+        - number
+        - status
+        - since
+        - dueAt
+        - elapsedPercent
+        - state
+      type: object
+      properties:
+        policyId:
+          type: string
+          format: uuid
+        policy:
+          type: string
+        module:
+          type: string
+        recordId:
+          type: string
+          format: uuid
+        number:
+          type: string
+        status:
+          type: string
+        since:
+          type: string
+          format: date-time
+        dueAt:
+          type: string
+          format: date-time
+        elapsedPercent:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        state:
+          type: string
     SettingsDto:
       required:
         - applicationName
@@ -65616,11 +68492,59 @@ components:
           format: uint32
     Severity:
       type: integer
+    SeverityCell:
+      required:
+        - likelihood
+        - impact
+        - severity
+      type: object
+      properties:
+        likelihood:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        impact:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        severity:
+          type: string
     SeverityCode:
       enum:
         - Normal
         - Reduced
         - Tightened
+    SeverityLevel:
+      required:
+        - name
+        - color
+        - responseHours
+        - escalate
+        - order
+      type: object
+      properties:
+        name:
+          type: string
+        color:
+          type: string
+        responseHours:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        escalate:
+          type: boolean
+        order:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     ShipInput:
       required:
         - carrierId
@@ -66861,6 +69785,70 @@ components:
             items:
               type: string
               format: uuid
+    SkipLotDecision:
+      required:
+        - inspect
+        - state
+        - reason
+      type: object
+      properties:
+        inspect:
+          type: boolean
+        state:
+          $ref: '#/components/schemas/SkipLotState'
+        reason:
+          type: string
+    SkipLotRuleInput:
+      required:
+        - siteId
+        - partId
+        - supplierId
+        - qualifyAfterLots
+        - inspectEvery
+        - requalifyAfterLots
+        - active
+      type: object
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        partId:
+          type: string
+          format: uuid
+        supplierId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        qualifyAfterLots:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        inspectEvery:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        requalifyAfterLots:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        active:
+          type: boolean
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
+    SkipLotState:
+      type: integer
     SpcChart:
       type: object
       properties:
@@ -67548,6 +70536,53 @@ components:
         status:
           type: string
         error:
+          type:
+            - 'null'
+            - string
+    StatusDwell:
+      required:
+        - status
+        - transitions
+        - averageHours
+        - maxHours
+        - currentlyIn
+      type: object
+      properties:
+        status:
+          type: string
+        transitions:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        averageHours:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        maxHours:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        currentlyIn:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    StatusRequest:
+      required:
+        - status
+        - comment
+      type: object
+      properties:
+        status:
+          type: string
+        comment:
           type:
             - 'null'
             - string
@@ -69356,6 +72391,37 @@ components:
             - number
             - string
           format: double
+    TriageInput:
+      required:
+        - category
+        - classification
+        - likelihood
+        - impact
+        - notes
+      type: object
+      properties:
+        category:
+          type:
+            - 'null'
+            - string
+        classification:
+          type: string
+        likelihood:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        impact:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        notes:
+          type:
+            - 'null'
+            - string
     TwinProcessInput:
       required:
         - chartId
@@ -69746,6 +72812,22 @@ components:
             - 'null'
             - string
           format: date-time
+    UseRequest:
+      required:
+        - quantity
+        - lot
+      type: object
+      properties:
+        quantity:
+          pattern: '^-?(?:0|[1-9]\d*)(?:\.\d+)?$'
+          type:
+            - number
+            - string
+          format: double
+        lot:
+          type:
+            - 'null'
+            - string
     UserIdsRequest:
       required:
         - userIds
@@ -71304,6 +74386,7 @@ tags:
   - name: Audits
   - name: Training
   - name: Calibration
+  - name: QualityOps
   - name: Records
   - name: Files
   - name: RecordTypes
