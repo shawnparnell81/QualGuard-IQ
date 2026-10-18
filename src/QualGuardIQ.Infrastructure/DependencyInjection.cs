@@ -72,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<FormDefinitionProjector>();
         services.AddScoped<TemplateCatalogService>();
         services.AddScoped<Modules.Imports.ImportCenterService>();
+        services.AddScoped<Modules.Imports.ReferenceResolver>();
         services.AddSingleton<Modules.Imports.ILegacyOfficeConverter, Modules.Imports.HeadlessOfficeConverter>();
         services.AddSingleton<Modules.Imports.Pdf.IOcrEngine, Modules.Imports.Pdf.ConfiguredOcrEngine>();
         services.AddSingleton<Modules.Imports.Pdf.IPdfPageRenderer, Modules.Imports.Pdf.PopplerPageRenderer>();
