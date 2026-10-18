@@ -8,9 +8,8 @@ import { useUsers } from '../components/Kit';
 import { fmtDate, fmtDateTime } from '../components/Status';
 import { ErrorState, Filters, Grid, Loading, Mono, PagedTable, S, SqfPage, SqfStatus, nul, qs, words } from './common';
 import { InstructionsFolderPage } from './Instructions';
-import { trackingTypes } from './Tracking';
 
-const typeLabel: Record<string, string> = { ...trackingTypes, ValidationFai: 'Validation / FAI', RepairTest: 'Repair Test', RepairWork: 'Repair Work Instruction' };
+const typeLabel: Record<string, string> = { Validation: 'Validation', Fai: 'FAI', Repair: 'Repair', Production: 'Production', ValidationFai: 'Validation / FAI', RepairTest: 'Repair Test', RepairWork: 'Repair Work Instruction' };
 const qCrumbs = (label: string) => [{ label: 'SEQUFLOH', to: '/sequfloh' }, { label: 'Quality Personnel', to: '/sequfloh/quality' }, { label }];
 const eCrumbs = (label: string) => [{ label: 'SEQUFLOH', to: '/sequfloh' }, { label: 'Engineering Personnel', to: '/sequfloh/engineering' }, { label }];
 

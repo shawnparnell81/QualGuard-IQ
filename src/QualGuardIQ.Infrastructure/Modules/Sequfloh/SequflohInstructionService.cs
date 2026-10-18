@@ -27,7 +27,8 @@ public sealed record ImportCharacteristicsInput(Guid InspectionPlanId);
 /// copying library data (operation steps, parts lists, characteristics) into the instruction, and release rules driven by the designer schema.
 /// Every transition reloads and locks the row, so a stale or repeated click cannot apply twice.
 /// </summary>
-public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m, IAccessService access, INumberingService numbers, SequflohFoundationService f)
+public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m, IAccessService access, INumberingService numbers, SequflohFoundationService f,
+    SequflohNotifications notify, QualGuardIQ.Application.Records.ISearchIndexer search)
 {
     public const string EntityType = nameof(SequflohWorkInstruction);
     public static readonly WorkInstructionStatus[] Editable = [WorkInstructionStatus.Draft, WorkInstructionStatus.InDevelopment, WorkInstructionStatus.ChangesRequested];
@@ -104,6 +105,7 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         Transition(wi, "create", null, WorkInstructionStatus.Draft, null);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await IndexAsync(wi, ct);
         return wi;
     }
 
@@ -145,6 +147,7 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         wi.Characteristics = schema.HasCharacteristics ? CleanRows(r.Characteristics, schema.CharacteristicColumns, true, "characteristic") : "[]";
         wi.PartsRows = schema.HasPartsRows ? CleanRows(r.PartsRows, schema.PartsRowColumns, true, "parts row") : "[]";
         await db.SaveChangesAsync(ct);
+        await IndexAsync(wi, ct);
     }
 
     async Task RequireOptionsAsync(WorkInstructionType type, InstructionSaveInput r, CancellationToken ct)
@@ -285,6 +288,7 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         if (rule.CommentRequired && comment is null) throw new AppException($"Enter a comment to {rule.Label.ToLowerInvariant()}.");
         var from = wi.Status;
         var to = rule.To ?? wi.StatusBeforeArchive ?? WorkInstructionStatus.Draft;
+        var superseded = new List<SequflohWorkInstruction>();
         switch (action)
         {
             case "submit-review" or "submit-approval":
@@ -313,6 +317,7 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
                 wi.ReleasedAt = m.Now; wi.ReleasedById = m.UserId;
                 // the previously released revision of this instruction is superseded by this release
                 var prior = await db.SequflohWorkInstructions.Where(x => x.FamilyId == wi.FamilyId && x.Id != wi.Id && x.Status == WorkInstructionStatus.Released).ToListAsync(ct);
+                superseded.AddRange(prior);
                 foreach (var old in prior)
                 {
                     old.Status = WorkInstructionStatus.Superseded; old.SupersededAt = m.Now;
@@ -328,8 +333,15 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         Transition(wi, action, from, to, comment);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await IndexAsync(wi, ct);
+        await notify.InstructionChangedAsync(wi, action, superseded, ct);
+        foreach (var old in superseded) await IndexAsync(old, ct);
         return wi;
     }
+
+    /// <summary>Keeps the instruction in the shared application search (permission-filtered there by SEQUFLOH access and site).</summary>
+    Task IndexAsync(SequflohWorkInstruction wi, CancellationToken ct) =>
+        search.IndexAsync(SequflohNotifications.Info(wi), string.Join(" ", new[] { wi.PartNumber, wi.PartDescription, wi.Operation, wi.Process, wi.Project }.Where(x => !string.IsNullOrWhiteSpace(x))), ct);
 
     void Transition(SequflohWorkInstruction wi, string action, WorkInstructionStatus? from, WorkInstructionStatus to, string? comment)
     {
@@ -396,6 +408,7 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         Transition(wi, "create-revision", null, WorkInstructionStatus.Draft, wi.RevisionReason);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await IndexAsync(wi, ct);
         return wi;
     }
 
@@ -413,6 +426,7 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         Transition(wi, "duplicate", null, WorkInstructionStatus.Draft, $"Copied from {src.Number} rev {src.Revision}.");
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await IndexAsync(wi, ct);
         return wi;
     }
 

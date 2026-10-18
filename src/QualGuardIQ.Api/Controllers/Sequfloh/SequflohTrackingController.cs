@@ -13,7 +13,7 @@ namespace QualGuardIQ.Api.Controllers.Sequfloh;
 
 /// <summary>SEQUFLOH tracking records and tasks: folders, create from a released instruction, data entry, signoffs, task actions, task events, history.</summary>
 [ApiController, Authorize, RequirePermission(Permissions.SequflohAccess), SequflohEnabled, Route("api/sequfloh/tracking")]
-public sealed class SequflohTrackingController(AppDbContext db, ModuleSupport m, SequflohTrackingService tracking, SequflohPartsService parts, SequflohFoundationService f) : ControllerBase
+public sealed class SequflohTrackingController(AppDbContext db, ModuleSupport m, SequflohTrackingService tracking, SequflohPartsService parts, SequflohFoundationService f, SequflohPrintService print) : ControllerBase
 {
     /// <summary>Folder listing. folder: validation | fai | repair | production | open | completed | on-hold | rejected | all.</summary>
     [HttpGet]
@@ -83,4 +83,13 @@ public sealed class SequflohTrackingController(AppDbContext db, ModuleSupport m,
     public async Task<object> Sign(Guid id, SignoffInput r, CancellationToken ct) { var x = await tracking.SignAsync(id, r, ct); return new { x.Id, x.StateVersion }; }
     [HttpGet("{id:guid}/history")]
     public async Task<object> History(Guid id, CancellationToken ct) { await tracking.LoadAsync(id, false, ct); return await parts.HistoryAsync(SequflohTrackingService.EntityType, id, ct); }
+
+    /// <summary>Printable tracking record (PDF from the application's renderer), opened inline in the browser for printing. Audited.</summary>
+    [HttpGet("{id:guid}/print")]
+    public async Task<IActionResult> Print(Guid id, CancellationToken ct)
+    {
+        var (pdf, name) = await print.TrackingAsync(id, ct);
+        Response.Headers.ContentDisposition = $"inline; filename=\"{name}\"";
+        return File(pdf, "application/pdf");
+    }
 }
