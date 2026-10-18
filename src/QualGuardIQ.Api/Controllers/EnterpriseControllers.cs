@@ -147,6 +147,9 @@ public sealed class LaunchController(ProjectService svc) : ControllerBase
     [HttpPost("ppap")] [RequirePermission(Permissions.ApqpEdit)] public async Task<object> CreatePpap(PpapInput r, CancellationToken ct) { var p = await svc.CreatePpapAsync(r, ct); return new { p.Id, p.Number }; }
     [HttpGet("ppap/{id:guid}")] public Task<object> Ppap(Guid id, CancellationToken ct) => svc.PpapAsync(id, ct);
     [HttpPut("ppap/{id:guid}/elements/{code:int}")] public async Task<IActionResult> Element(Guid id, int code, PpapElementUpdate r, CancellationToken ct) { await svc.UpdateElementAsync(id, code, r, ct); return NoContent(); }
+    [HttpGet("ppap/{id:guid}/package-index")] public Task<ProjectService.PackageIndex> PackageIndex(Guid id, CancellationToken ct) => svc.PackageIndexAsync(id, ct);
+    [HttpPost("ppap/{id:guid}/review")] public async Task<IActionResult> RouteForReview(Guid id, CancellationToken ct) { await svc.RouteForReviewAsync(id, ct); return NoContent(); }
+    [HttpGet("ppap/{id:guid}/package")] public async Task<IActionResult> ExportPackage(Guid id, CancellationToken ct) { var f = await svc.ExportPackageAsync(id, ct); return File(f.Content, "application/zip", f.FileName); }
     [HttpPost("ppap/{id:guid}/submit")] public async Task<IActionResult> SubmitPpap(Guid id, CancellationToken ct) { await svc.SubmitPpapAsync(id, ct); return NoContent(); }
     [HttpPost("ppap/{id:guid}/customer-decision")] public async Task<IActionResult> CustomerDecision(Guid id, CustomerDecisionInput r, CancellationToken ct) { await svc.CustomerDecisionAsync(id, r, ct); return NoContent(); }
 

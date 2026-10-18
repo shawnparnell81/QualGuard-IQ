@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Box, Button, Chip, LinearProgress, Paper, Stack, Table, TableBody, TableCell, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, LinearProgress, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { get, post, put } from '../api';
@@ -15,7 +15,8 @@ import { Loading, Tile, mod, num, rag } from './Enterprise';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const projectKinds = ['New product launch', 'Product transfer', 'Supplier transfer', 'Manufacturing transfer'];
 const deliverableStatus = ['Open', 'Done', 'NotApplicable'];
-const ppapStatus = ['Draft', 'Submitted', 'Approved', 'InterimApproved', 'Rejected'];
+const ppapStatus = ['Draft', 'Submitted', 'Approved', 'InterimApproved', 'Rejected', 'InReview', 'ReviewApproved'];
+const exportable = ['ReviewApproved', 'Submitted', 'Approved', 'InterimApproved'];
 const ragColor: Record<string, string> = { Green: 'success.main', Yellow: 'warning.main', Red: 'error.main' };
 
 export function ProjectList() {
@@ -144,21 +145,54 @@ function PpapMatrixPanel({ matrix, legend, level, verification }: { matrix: any[
   );
 }
 
+function PackageIndexPanel({ id }: { id: string }) {
+  const q = useQuery({ queryKey: ['ppap-index', id], queryFn: () => get<any>(`/api/launch/ppap/${id}/package-index`) });
+  if (!q.data) return <LinearProgress sx={{ mb: 2 }} />;
+  const x = q.data;
+  return (
+    <Section title="Package index">
+      <Box data-testid="ppap-package-index">
+        <Facts items={[['Part', [x.partNumber, x.partName].filter(Boolean).join(' ') || '—'], ['Revision', x.partRevision ?? '—'], ['Customer', x.customer ?? '—'],
+          ['Elements', `${x.ready} ready, ${x.notApplicable} not applicable, ${x.missing} missing`], ['Internal review', x.review ? x.review.status : 'Not routed']]} />
+        <Table size="small" sx={{ mt: 1 }}>
+          <TableHead><TableRow><TableCell>Element</TableCell><TableCell>Code</TableCell><TableCell>Status</TableCell><TableCell>Evidence</TableCell></TableRow></TableHead>
+          <TableBody>
+            {x.elements.map((e: any) => (
+              <TableRow key={e.code} data-testid="ppap-index-row">
+                <TableCell>{e.code} {e.name}</TableCell><TableCell sx={{ fontFamily: mono }}>{e.requirementCode}</TableCell><TableCell>{e.status}</TableCell>
+                <TableCell>{e.linkedNumber ? `${e.linkedNumber} ${e.linkedTitle ?? ''}` : e.notes ?? '—'}</TableCell>
+              </TableRow>))}
+          </TableBody>
+        </Table>
+        {x.relationships.length > 0 && <Typography variant="caption" color="text.secondary" component="div" sx={{ mt: 1 }}>Related records: {x.relationships.map((l: any) => `${l.number ?? l.recordType} (${l.linkType})`).join(', ')}</Typography>}
+        {x.review?.signatures?.length > 0 && <Typography variant="caption" color="text.secondary" component="div">Signed: {x.review.signatures.map((g: any) => `${g.signer}, ${g.meaning}, ${fmtDate(g.signedAt)}`).join('; ')}</Typography>}
+      </Box>
+    </Section>
+  );
+}
+
 export function PpapDetail() {
   const { id } = useParams();
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['ppap', id], queryFn: () => get<any>(`/api/launch/ppap/${id}`) });
   const [el, setEl] = useState<any>(null);
   const [dec, setDec] = useState(false);
-  const r = useRunner(() => qc.invalidateQueries({ queryKey: ['ppap', id] }));
+  const [idx, setIdx] = useState(false);
+  const r = useRunner(() => { qc.invalidateQueries({ queryKey: ['ppap', id] }); qc.invalidateQueries({ queryKey: ['ppap-index', id] }); });
   if (!q.data) return <Loading m="launch" crumbs={[{ label: 'PPAP', to: '/launch/ppap' }]} q={q} />;
   const s = q.data.submission; const draft = q.data.status === 'Draft' || q.data.status === 'Rejected';
   const ready = q.data.elements.filter((e: any) => e.status !== 'Missing').length;
   return (
     <ModuleWorkspace module={mod('launch')} crumbs={[{ label: 'PPAP', to: '/launch/ppap' }, { label: s.number }]} title={`${s.number} — Level ${s.level}`}
-      actions={<Stack direction="row" gap={1} alignItems="center"><StatusChip status={q.data.status} />{draft && <Button variant="contained" onClick={() => r.run(() => post(`/api/launch/ppap/${id}/submit`))}>Submit to customer</Button>}
+      actions={<Stack direction="row" gap={1} alignItems="center"><StatusChip status={q.data.status} />
+        <Button onClick={() => setIdx(!idx)}>{idx ? 'Hide package index' : 'Package index'}</Button>
+        {draft && <Button onClick={() => r.run(() => post(`/api/launch/ppap/${id}/review`))}>Route for review</Button>}
+        {exportable.includes(q.data.status) && <Button href={`/api/launch/ppap/${id}/package`}>Export package</Button>}
+        {(draft || q.data.status === 'ReviewApproved') && <Button variant="contained" onClick={() => r.run(() => post(`/api/launch/ppap/${id}/submit`))}>Submit to customer</Button>}
         {q.data.status === 'Submitted' && <Button variant="contained" onClick={() => setDec(true)}>Record customer decision</Button>}</Stack>}>
       {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}
+      {q.data.status === 'InReview' && <Alert severity="info" sx={{ mb: 2 }}>The package is in internal review. Elements are locked until the review is decided.</Alert>}
+      {idx && <Box sx={{ mb: 2 }}><PackageIndexPanel id={id!} /></Box>}
       <LinearProgress variant="determinate" value={(100 * ready) / Math.max(1, q.data.elements.length)} sx={{ height: 8, borderRadius: 1, mb: 1 }} /><Typography variant="caption">{ready} of {q.data.elements.length} elements ready or not applicable</Typography>
       <Box sx={{ mt: 1.5 }}><PpapMatrixPanel matrix={q.data.matrix ?? []} legend={q.data.legend ?? []} level={s.level} verification={q.data.matrixVerification} /></Box>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(230px, 1fr))', gap: 1.25 }}>

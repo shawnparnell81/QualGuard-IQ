@@ -24,7 +24,8 @@ public sealed record CapabilityInput(string Title, string Characteristic, Guid S
     decimal? Lsl, decimal? Usl, int SubgroupSize, List<decimal> Values, decimal RequiredCpk = 1.33m);
 
 /// <summary>Project quality planning and APQP (phase gates, deliverables, readiness), PPAP submissions and capability studies.</summary>
-public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingService numbers, IRecordRegistry records, UserManager<ApplicationUser> users, INotifier notifier, ComplianceMappingService mappings)
+public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingService numbers, IRecordRegistry records, UserManager<ApplicationUser> users, INotifier notifier, ComplianceMappingService mappings,
+    WorkflowService workflow, ICurrentUser current)
 {
     public const string ProjectType = "QualityProject", PpapType = "Ppap", CapabilityType = "CapabilityStudy";
     public static readonly string[] PhaseNames = ["", "Plan and define program", "Product design and development", "Process design and development", "Product and process validation", "Launch", "Feedback, assessment and corrective action"];
@@ -245,11 +246,137 @@ public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingS
     {
         await m.EditAsync(PpapType, id, ct);
         var s = await db.PpapSubmissions.FirstAsync(x => x.Id == id, ct);
-        if (s.Status is not (PpapStatus.Draft or PpapStatus.Rejected)) throw new ConflictException($"The submission is {s.Status}.");
-        var missing = await db.PpapElements.Where(e => e.SubmissionId == id && e.Status == PpapElementStatus.Missing && (e.Code == 18 || e.Requirement == PpapRequirement.Submit || e.Requirement == PpapRequirement.SubmitOnRequest)).Select(e => e.Code + " " + e.Name).ToListAsync(ct);
-        if (missing.Count > 0) throw new AppException("Elements still missing: " + string.Join("; ", missing));
+        if (s.Status is not (PpapStatus.Draft or PpapStatus.Rejected or PpapStatus.ReviewApproved)) throw new ConflictException($"The submission is {s.Status}.");
+        await RequireCompleteAsync(id, ct);
         s.Status = PpapStatus.Submitted; s.SubmittedAt = m.Now;
         await db.SaveChangesAsync(ct);
+    }
+
+    private async Task RequireCompleteAsync(Guid id, CancellationToken ct)
+    {
+        var missing = await db.PpapElements.Where(e => e.SubmissionId == id && e.Status == PpapElementStatus.Missing && (e.Code == 18 || e.Requirement == PpapRequirement.Submit || e.Requirement == PpapRequirement.SubmitOnRequest)).Select(e => e.Code + " " + e.Name).ToListAsync(ct);
+        if (missing.Count > 0) throw new AppException("Elements still missing: " + string.Join("; ", missing));
+    }
+
+    // ---------- PPAP package: index, internal review, export ----------
+
+    /// <summary>Routes the complete package for internal review through the PPAP approval route set up by an administrator. Elements are locked while it is in review.</summary>
+    public async Task RouteForReviewAsync(Guid id, CancellationToken ct)
+    {
+        await m.EditAsync(PpapType, id, ct);
+        var s = await db.PpapSubmissions.FirstAsync(x => x.Id == id, ct);
+        if (s.Status is not (PpapStatus.Draft or PpapStatus.Rejected)) throw new ConflictException($"The submission is {s.Status}.");
+        await RequireCompleteAsync(id, ct);
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await workflow.SubmitAsync(PpapType, id, ct);
+        s.Status = PpapStatus.InReview;
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+    }
+
+    public async Task OnPackageReviewApprovedAsync(Guid id, CancellationToken ct)
+    {
+        var s = await db.PpapSubmissions.FirstAsync(x => x.Id == id, ct);
+        if (s.Status != PpapStatus.InReview) return;
+        s.Status = PpapStatus.ReviewApproved;
+        await db.SaveChangesAsync(ct);
+        await notifier.NotifyAsync([s.OwnerId], $"PPAP {s.Number}: package review approved", "The package can be exported and submitted to the customer.", await m.RecordAsync(PpapType, id, ct), ct: ct);
+    }
+
+    public async Task OnPackageReviewRejectedAsync(Guid id, string? comment, CancellationToken ct)
+    {
+        var s = await db.PpapSubmissions.FirstAsync(x => x.Id == id, ct);
+        if (s.Status != PpapStatus.InReview) return;
+        s.Status = PpapStatus.Draft;
+        await db.SaveChangesAsync(ct);
+    }
+
+    public sealed record PackageIndexEntry(int Code, string Name, string Requirement, string RequirementCode, string Status, string? LinkedType, Guid? LinkedId,
+        string? LinkedNumber, string? LinkedTitle, string? LinkedStatus, string? LinkedUrl, string? Notes);
+    public sealed record PackageRelationship(string Direction, string LinkType, string RecordType, Guid RecordId, string? Number, string? Title);
+    public sealed record PackageReview(string Status, DateTimeOffset SubmittedAt, DateTimeOffset? CompletedAt, List<PackageReviewSignature> Signatures);
+    public sealed record PackageReviewSignature(string Step, string Signer, string Meaning, bool Approved, DateTimeOffset SignedAt, string? Comment);
+    public sealed record PackageIndex(Guid Id, string Number, int Level, string Reason, string Status, string? PartNumber, string? PartName, string? PartRevision, string? Customer,
+        DateTimeOffset GeneratedAt, int Required, int Ready, int NotApplicable, int Missing, List<PackageIndexEntry> Elements, List<PackageRelationship> Relationships, PackageReview? Review);
+
+    /// <summary>Index of the package: every element with its submission code, status and the QMS record that evidences it, the record relationships and the internal review.</summary>
+    public async Task<PackageIndex> PackageIndexAsync(Guid id, CancellationToken ct)
+    {
+        await m.ViewAsync(PpapType, id, ct);
+        var s = await db.PpapSubmissions.AsNoTracking().FirstAsync(x => x.Id == id, ct);
+        var part = await db.Parts.AsNoTracking().Where(p => p.Id == s.PartId).Select(p => new { p.PartNumber, p.Name }).FirstOrDefaultAsync(ct);
+        var customer = s.CustomerId is { } cid ? await db.Customers.AsNoTracking().Where(c => c.Id == cid).Select(c => c.Name).FirstOrDefaultAsync(ct) : null;
+        var els = await db.PpapElements.AsNoTracking().Where(e => e.SubmissionId == id).OrderBy(e => e.Code).ToListAsync(ct);
+        var entries = new List<PackageIndexEntry>();
+        foreach (var e in els)
+        {
+            var info = e.LinkedType is { } lt && e.LinkedId is { } lid ? await TryRecordAsync(lt, lid, ct) : null;
+            entries.Add(new PackageIndexEntry(e.Code, e.Name, e.Requirement.ToString(), PpapMatrix.CodeOf(e.Requirement), e.Status.ToString(), e.LinkedType, e.LinkedId,
+                info?.Number, info?.Title, info?.Status, info?.Url, e.Notes));
+        }
+        var links = await db.RecordLinks.AsNoTracking().Where(l => (l.FromType == PpapType && l.FromId == id) || (l.ToType == PpapType && l.ToId == id)).OrderBy(l => l.CreatedAt).ToListAsync(ct);
+        var rels = new List<PackageRelationship>();
+        foreach (var l in links)
+        {
+            var outgoing = l.FromType == PpapType && l.FromId == id;
+            var (t, rid) = outgoing ? (l.ToType, l.ToId) : (l.FromType, l.FromId);
+            var info = await TryRecordAsync(t, rid, ct);
+            rels.Add(new PackageRelationship(outgoing ? "references" : "referenced by", l.LinkType, t, rid, info?.Number, info?.Title));
+        }
+        var req = await db.ApprovalRequests.AsNoTracking().Include(r => r.Decisions).Where(r => r.RecordType == PpapType && r.RecordId == id).OrderByDescending(r => r.CreatedAt).FirstOrDefaultAsync(ct);
+        var review = req is null ? null : new PackageReview(req.Status.ToString(), req.CreatedAt, req.CompletedAt,
+            req.Decisions.OrderBy(d => d.SignedAt).Select(d => new PackageReviewSignature(d.StepName, d.SignerName, d.Meaning, d.Approved, d.SignedAt, d.Comment)).ToList());
+        var required = els.Count(e => e.Code == 18 || e.Requirement is PpapRequirement.Submit or PpapRequirement.SubmitOnRequest);
+        return new PackageIndex(s.Id, s.Number, s.Level, s.Reason, s.Status.ToString(), part?.PartNumber, part?.Name, s.PartRevision, customer, m.Now, required,
+            els.Count(e => e.Status == PpapElementStatus.Ready), els.Count(e => e.Status == PpapElementStatus.NotApplicable), els.Count(e => e.Status == PpapElementStatus.Missing), entries, rels, review);
+    }
+
+    private async Task<RecordInfo?> TryRecordAsync(string type, Guid id, CancellationToken ct)
+    {
+        try { return await records.GetAsync(type, id, ct); }
+        catch (NotFoundException) { return null; }
+        catch (AppException) { return null; }
+    }
+
+    public sealed record PackageFile(string FileName, byte[] Content);
+
+    /// <summary>
+    /// Exports the reviewed package as a ZIP: the package index (JSON and spreadsheet-safe CSV) and the source relationships. Only the organization's own
+    /// records are referenced; no external or proprietary template content is embedded. Audited as "Exported".
+    /// </summary>
+    public async Task<PackageFile> ExportPackageAsync(Guid id, CancellationToken ct)
+    {
+        var index = await PackageIndexAsync(id, ct);
+        var status = Enum.Parse<PpapStatus>(index.Status);
+        if (status is not (PpapStatus.ReviewApproved or PpapStatus.Submitted or PpapStatus.Approved or PpapStatus.InterimApproved))
+            throw new ConflictException("Export the package after its internal review is approved.");
+        var json = System.Text.Json.JsonSerializer.Serialize(index, new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web) { WriteIndented = true });
+        static string Cell(string? v) => Imports.CsvParser.SafeCell(v ?? "");
+        var csv = new System.Text.StringBuilder("Element,Name,Requirement,Status,Linked record type,Linked record number,Linked record title,Linked record status,Notes\r\n");
+        foreach (var e in index.Elements)
+            csv.Append(string.Join(",", new[] { e.Code.ToString(), e.Name, e.RequirementCode, e.Status, e.LinkedType, e.LinkedNumber, e.LinkedTitle, e.LinkedStatus, e.Notes }.Select(Cell))).Append("\r\n");
+        var rel = new System.Text.StringBuilder("Direction,Link,Record type,Record number,Record title,Record id\r\n");
+        foreach (var r in index.Relationships)
+            rel.Append(string.Join(",", new[] { r.Direction, r.LinkType, r.RecordType, r.Number, r.Title, r.RecordId.ToString() }.Select(Cell))).Append("\r\n");
+        var ms = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(ms, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            void Add(string name, string text)
+            {
+                using var w = new StreamWriter(zip.CreateEntry(name, System.IO.Compression.CompressionLevel.Optimal).Open(), new System.Text.UTF8Encoding(true));
+                w.Write(text);
+            }
+            Add("package-index.json", json);
+            Add("package-index.csv", csv.ToString());
+            Add("relationships.csv", rel.ToString());
+        }
+        var bytes = ms.ToArray();
+        var sha = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(bytes)).ToLowerInvariant();
+        var info = await m.RecordAsync(PpapType, id, ct);
+        db.AuditEntries.Add(new Domain.Audit.AuditEntry { OccurredAt = m.Now, UserId = current.UserId, UserName = current.UserName, Action = "Exported", EntityType = nameof(PpapSubmission), EntityId = id,
+            SiteId = info.SiteId, Description = $"Exported PPAP package {index.Number} ({index.Elements.Count} elements, {index.Relationships.Count} relationships, SHA-256 {sha[..12]})", CorrelationId = current.CorrelationId });
+        await db.SaveChangesAsync(ct);
+        return new PackageFile($"{index.Number}-package.zip", bytes);
     }
 
     /// <summary>Records the customer's decision (approved, interim or rejected), e-signed by the person entering it. Approval completes the linked project's PPAP deliverable.</summary>
