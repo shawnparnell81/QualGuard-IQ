@@ -18,6 +18,8 @@ public static partial class DatabaseRoles
     {
         if (!RoleName().IsMatch(role)) throw new InvalidOperationException("Database:AppRole must be lowercase letters, digits or underscores.");
         if (string.IsNullOrEmpty(password) || password.Length < 12) throw new InvalidOperationException("Database:AppRolePassword must be at least 12 characters.");
+        var owner = new Npgsql.NpgsqlConnectionStringBuilder(db.Database.GetConnectionString());
+        if (owner.Password == password) throw new InvalidOperationException("Database:AppRolePassword must differ from the owner login's password.");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         // values travel as settings (bound parameters), never spliced into the SQL text
         await db.Database.ExecuteSqlInterpolatedAsync($"SELECT set_config('qg.app_role', {role}, true), set_config('qg.app_pw', {password}, true)", ct);
