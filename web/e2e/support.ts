@@ -78,13 +78,26 @@ export async function choose(page: Page, label: string | RegExp, option: string 
 
 export const dialog = (page: Page) => page.getByRole('dialog');
 
+/**
+ * Folder under E2E_SCREENSHOT_DIR for a capture, so a full run with the variable pointed at docs/screenshots
+ * files each image in the set it documents instead of the root.
+ */
+export function screenshotFolder(name: string): string {
+  if (name.includes('/')) return ''; // the name already carries its folder
+  if (name.startsWith('sign-in-')) return 'sign-in';
+  if (/^\d{3}-gap\d{2}-/.test(name)) return 'gap-closure';
+  if (/^b\d{1,2}-/.test(name)) return 'forms-import';
+  return 'other';
+}
+
 /** Saves a screenshot when E2E_SCREENSHOT_DIR is set (documentation captures); does nothing otherwise. */
 export async function shot(page: Page, name: string) {
-  const dir = process.env.E2E_SCREENSHOT_DIR;
-  if (!dir) return;
-  fs.mkdirSync(dir, { recursive: true });
+  const root = process.env.E2E_SCREENSHOT_DIR;
+  if (!root) return;
+  const file = path.join(root, screenshotFolder(name), `${name}.png`);
+  fs.mkdirSync(path.dirname(file), { recursive: true });
   await page.waitForLoadState('networkidle').catch(() => undefined);
   await page.evaluate(() => window.scrollTo(0, 0)); // the sticky top bar would otherwise sit mid-image
   const wide = (page.viewportSize()?.width ?? 1440) >= 900; // phone captures keep the screen size
-  await page.screenshot({ path: path.join(dir, `${name}.png`), fullPage: wide });
+  await page.screenshot({ path: file, fullPage: wide });
 }

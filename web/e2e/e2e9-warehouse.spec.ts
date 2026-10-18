@@ -103,7 +103,7 @@ test.describe('E2E 9: warehouse, scan station and shipping', () => {
     const stock = await api.get<{ locationCode: string; onHand: number }[]>(`/api/warehouse/stock?partId=${w.partId}`);
     expect(stock.find((s) => s.locationCode === w.b2.code)?.onHand).toBe(8);
     expect(stock.find((s) => s.locationCode === w.b1.code)?.onHand).toBe(12);
-    await shot(page, '16-offline-queue-banner');
+    await shot(page, '188-gap16-offline-queue-banner');
   });
 
   test('a shipment is picked, packed, scan-verified and shipped with a bill of lading', async ({ page }) => {

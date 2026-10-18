@@ -113,7 +113,7 @@ test.describe('E2E 18: offline shipping verification at the scan station', () =>
     await page.goto(`/shipping/shipments/${s1.id}`);
     await page.getByRole('tab', { name: 'Custody' }).click();
     await expect(page.getByText('Verification confirmed online')).toBeVisible();
-    await shot(page, '11-offline-verification');
+    await shot(page, '182-gap11-offline-verification');
   });
 
   test('a lead assigns the verifier at the desk; signing out wipes the downloaded verification work', async ({ page }) => {

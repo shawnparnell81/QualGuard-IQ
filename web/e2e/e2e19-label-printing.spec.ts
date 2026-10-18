@@ -115,6 +115,6 @@ test.describe('E2E 19: label printing', () => {
     await expect(page.getByTestId('queue-job').filter({ hasText: hold.number }).first()).toBeVisible();
     await supApi.dispose();
     await api.dispose();
-    await shot(page, '14-label-printing');
+    await shot(page, '186-gap14-label-printing');
   });
 });

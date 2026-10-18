@@ -93,7 +93,7 @@ test.describe('E2E 17: offline picking at the scan station', () => {
     await expect(log).toContainText('offline');
     await page.getByRole('tab', { name: 'Custody' }).click();
     await expect(page.getByText(/Picked 5 PK-.* \(offline\)/)).toBeVisible();
-    await shot(page, '10-offline-picking');
+    await shot(page, '181-gap10-offline-picking');
   });
 
   test('a lead assigns the pick list at the desk; signing out wipes the downloaded work from the device', async ({ page }) => {

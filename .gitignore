@@ -10,3 +10,4 @@ data/
 # License signing keys never belong in the repository
 *.private.pem
 *.DEVELOPMENT-ONLY.*
+docs/screenshots/other/

@@ -46,7 +46,7 @@ test.describe('E2E 24: generated content', () => {
       await expect(page.getByText(/Generated draft — not reviewed/)).toBeVisible();
       await expect(page.getByTestId('generated-text')).toContainText('[S1]');
       await expect(page.getByRole('link', { name: new RegExp(`\\[S1\\] .*Burr on bracket ${t}`) })).toBeVisible();
-      await shot(page, '28-generated-draft-on-ncr');
+      await shot(page, '200-gap28-generated-draft-on-ncr');
       await button(page, 'Mark as reviewed and used').click();
       await expect(page.getByText(/nothing was changed automatically/)).toBeVisible();
 
@@ -58,6 +58,6 @@ test.describe('E2E 24: generated content', () => {
     } finally {
       await admin.put('/api/generation/settings', settings(0));
     }
-    await shot(page, '28-generated-request-log');
+    await shot(page, '201-gap28-generated-request-log');
   });
 });

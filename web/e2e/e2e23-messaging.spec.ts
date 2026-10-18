@@ -50,6 +50,6 @@ test.describe('E2E 23: SMS and push', () => {
     await up.goto('/platform/messaging');
     await expect(up.getByText(/needs api.admin/)).toBeVisible();
     await ctx.close();
-    await shot(page, '27-sms-push-providers');
+    await shot(page, '199-gap27-sms-push-providers');
   });
 });
