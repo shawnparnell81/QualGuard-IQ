@@ -71,6 +71,8 @@ public static class DependencyInjection
         services.AddScoped<DocumentService>();
         services.AddScoped<FormDefinitionProjector>();
         services.AddScoped<TemplateCatalogService>();
+        services.AddScoped<Modules.Imports.ImportCenterService>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.Imports.FormRecordImportTarget>();
         services.AddScoped<QualGuardIQ.Infrastructure.Modules.Quality.FormValueIndexer>();
         services.AddScoped<DocumentTypeService>();
         foreach (var (kind, docType, revType) in new[]

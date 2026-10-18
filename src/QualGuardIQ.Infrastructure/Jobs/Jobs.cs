@@ -160,3 +160,14 @@ public sealed class CarrierTrackingJob(QualGuardIQ.Infrastructure.Modules.Logist
     [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 600)]
     public Task RunAsync(CancellationToken ct) => carriers.RefreshTrackingAsync(ct);
 }
+
+/// <summary>Every minute: parse and import large files outside of web requests (Import Center).</summary>
+public sealed class ImportProcessingJob(QualGuardIQ.Infrastructure.Modules.Imports.ImportCenterService imports, ILogger<ImportProcessingJob> log)
+{
+    [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 3600)]
+    public async Task RunAsync(CancellationToken ct)
+    {
+        var n = await imports.ProcessPendingAsync(ct);
+        if (n > 0) log.LogInformation("Import Center: advanced {Jobs} import jobs", n);
+    }
+}
