@@ -54,7 +54,7 @@ export function QualityOpsSettingsPage() {
   const [draft, setDraft] = useState<OpsSettings | null>(null);
   const { error, run } = useRunner(() => { setDraft(null); qc.invalidateQueries({ queryKey: ['qops-settings'] }); });
   const s = draft ?? q.data;
-  const crumbs = [{ label: 'Quality operations', to: base }, { label: 'Settings' }];
+  const crumbs = [{ label: 'Settings' }];
   if (!s) return <Loading crumbs={crumbs} error={q.error} />;
   const upd = (f: (c: OpsSettings) => void) => { const c = structuredClone(s); f(c); setDraft(c); };
   return (
@@ -126,7 +126,7 @@ export function EventList() {
     { header: 'Escalated to', accessorKey: 'escalatedToNumber', cell: num }, { header: 'Reported by', accessorKey: 'reportedBy' },
   ];
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Events' }]} title="Quality events"
+    <Page crumbs={[{ label: 'Events' }]} title="Quality events"
       tabs={[{ label: 'Open', value: 'open' }, { label: 'New', value: '0' }, { label: 'In triage', value: '1' }, { label: 'Classified', value: '2' }, { label: 'Escalated', value: '3' }, { label: 'Closed', value: '4' }, { label: 'All', value: 'all' }]}
       tab={view} onTab={(v) => setP(v === 'open' ? {} : { view: v })}
       actions={can('qualityops.edit') || can('qualityevents.report') ? <Button variant="contained" component={RouterLink} to={`${base}/events/new`}>Report event</Button> : undefined}>
@@ -139,7 +139,7 @@ export function EventList() {
 export function EventNew() {
   const nav = useNavigate();
   const intake = useQuery({ queryKey: ['qops-intake'], queryFn: () => get<{ categories: string[] }>(`${Q}/settings/intake`) });
-  const crumbs = [{ label: 'Quality operations', to: base }, { label: 'Events', to: `${base}/events` }, { label: 'Report' }];
+  const crumbs = [{ label: 'Events', to: `${base}/events` }, { label: 'Report' }];
   if (!intake.data) return <Loading crumbs={crumbs} error={intake.error} />;
   const schema = z.object({ title: z.string().trim().min(1, 'Required').max(300), description: z.string().trim().min(1, 'Required').max(10000), category: z.string().optional(), occurredAt: z.string().optional(),
     location: z.string().max(200).optional(), process: z.string().max(200).optional(), partId: z.string().optional(), supplierId: z.string().optional(), customerId: z.string().optional(), lotNumber: z.string().max(100).optional(),
@@ -174,7 +174,7 @@ export function EventDetail() {
   const [dlg, setDlg] = useState<string | null>(null);
   const q = useQuery({ queryKey: ['qevent', id], queryFn: () => get<EventDto>(`${Q}/events/${id}`) });
   const { error, run } = useRunner(() => qc.invalidateQueries({ queryKey: ['qevent', id] }));
-  const crumbs = [{ label: 'Quality operations', to: base }, { label: 'Events', to: `${base}/events` }];
+  const crumbs = [{ label: 'Events', to: `${base}/events` }];
   const d = q.data;
   if (!d) return <Loading crumbs={crumbs} error={q.error} />;
   const e = d.event; const s = d.settings; const a = d.actions;
@@ -269,7 +269,7 @@ export function DeviationList() {
     { header: 'Used / limit', accessorKey: 'quantityUsed', cell: (x) => x.row.original.quantityLimit != null ? `${x.getValue()} / ${x.row.original.quantityLimit}` : String(x.getValue()) }, { header: 'Owner', accessorKey: 'owner' },
   ];
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Deviations' }]} title="Deviations"
+    <Page crumbs={[{ label: 'Deviations' }]} title="Deviations"
       tabs={[{ label: 'In force', value: 'active' }, { label: 'Draft', value: '0' }, { label: 'Pending approval', value: '1' }, { label: 'Approved', value: '2' }, { label: 'Closed', value: '4' }, { label: 'All', value: 'all' }]}
       tab={view} onTab={(v) => setP(v === 'active' ? {} : { view: v })}
       actions={can('qualityops.edit') ? <Button variant="contained" component={RouterLink} to={`${base}/deviations/new`}>New deviation</Button> : undefined}>
@@ -300,7 +300,7 @@ const deviationBody = (v: DeviationForm) => ({ ...v, riskAssessment: nul(v.riskA
 export function DeviationNew() {
   const nav = useNavigate();
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Deviations', to: `${base}/deviations` }, { label: 'New' }]} title="New deviation">
+    <Page crumbs={[{ label: 'Deviations', to: `${base}/deviations` }, { label: 'New' }]} title="New deviation">
       <SchemaForm schema={deviationSchema} submitLabel="Create draft" onCancel={() => nav(`${base}/deviations`)} fields={deviationFields}
         defaults={{ kind: 0, title: '', requirement: '', deviationDescription: '', justification: '', riskAssessment: '', containmentActions: '', partId: '', productId: '', supplierId: '', customerId: '', affectedLots: '', quantityLimit: '',
           effectiveFrom: localDate(), effectiveTo: localDate(30), customerApprovalRequired: 0, customerApprovalReference: '', siteId: '', departmentId: '', ownerId: '' }}
@@ -322,7 +322,7 @@ export function DeviationDetail() {
   const q = useQuery({ queryKey: ['deviation', id], queryFn: () => get<DeviationDto>(`${Q}/deviations/${id}`) });
   const refresh = () => qc.invalidateQueries({ queryKey: ['deviation', id] });
   const { error, run } = useRunner(refresh);
-  const crumbs = [{ label: 'Quality operations', to: base }, { label: 'Deviations', to: `${base}/deviations` }];
+  const crumbs = [{ label: 'Deviations', to: `${base}/deviations` }];
   const d = q.data;
   if (!d) return <Loading crumbs={crumbs} error={q.error} />;
   const x = d.deviation; const a = d.actions;
@@ -387,7 +387,7 @@ export function InvestigationList() {
     { header: 'Due', accessorKey: 'dueOn', cell: (x) => <Box component="span" sx={{ color: x.getValue() && x.getValue() < today && x.row.original.status < 2 ? 'error.main' : undefined }}>{fmtDate(x.getValue())}</Box> }, { header: 'Lead', accessorKey: 'lead' },
   ];
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Investigations' }]} title="Investigations"
+    <Page crumbs={[{ label: 'Investigations' }]} title="Investigations"
       tabs={[{ label: 'All', value: 'all' }, { label: 'Open', value: '0' }, { label: 'In progress', value: '1' }, { label: 'Concluded', value: '2' }, { label: 'Closed', value: '3' }]} tab={view} onTab={(v) => setP(v === 'all' ? {} : { view: v })}
       actions={can('qualityops.edit') ? <Button variant="contained" component={RouterLink} to={`${base}/investigations/new`}>New investigation</Button> : undefined}>
       <Filter value={applied} onApply={setApplied} placeholder="Number, title, sample" />
@@ -401,7 +401,7 @@ export function InvestigationNew() {
   const schema = z.object({ kind: z.coerce.number().int(), title: z.string().trim().min(1, 'Required').max(300), scope: z.string().trim().min(1, 'Required').max(10000), leadId: z.string().optional(), dueOn: z.string().optional(),
     siteId: z.string().uuid('Choose a site'), departmentId: z.string().optional() });
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Investigations', to: `${base}/investigations` }, { label: 'New' }]} title="New investigation">
+    <Page crumbs={[{ label: 'Investigations', to: `${base}/investigations` }, { label: 'New' }]} title="New investigation">
       <SchemaForm schema={schema} submitLabel="Open investigation" onCancel={() => nav(`${base}/investigations`)} defaults={{ kind: 0, title: '', scope: '', leadId: '', dueOn: localDate(30), siteId: '', departmentId: '' }}
         fields={[{ name: 'kind', label: 'Type', type: 'select', options: investigationKind.map((k, i) => [i, k] as [number, string]) }, { name: 'title', label: 'Title', full: true }, { name: 'scope', label: 'Scope', type: 'multiline' },
           { name: 'leadId', label: 'Lead (defaults to you)', type: 'user' }, { name: 'dueOn', label: 'Due', type: 'date' }, { name: 'siteId', label: 'Site', type: 'site' }, { name: 'departmentId', label: 'Department (optional)', type: 'department' }]}
@@ -421,7 +421,7 @@ export function InvestigationDetail() {
   const [dlg, setDlg] = useState<string | null>(null);
   const q = useQuery({ queryKey: ['investigation', id], queryFn: () => get<InvDto>(`${Q}/investigations/${id}`) });
   const refresh = () => qc.invalidateQueries({ queryKey: ['investigation', id] });
-  const crumbs = [{ label: 'Quality operations', to: base }, { label: 'Investigations', to: `${base}/investigations` }];
+  const crumbs = [{ label: 'Investigations', to: `${base}/investigations` }];
   const d = q.data;
   if (!d) return <Loading crumbs={crumbs} error={q.error} />;
   const x = d.investigation; const a = d.actions; const lab = x.kind === 1;
@@ -496,7 +496,7 @@ export function ReleaseBoard() {
   const q = useQuery({ queryKey: ['release-board'], queryFn: () => get<{ holds: { id: string; number: string; reason: string; partNumber: string | null; lotNumber: string | null; createdAt: string }[];
     releases: { id: string; number: string; kind: number; lotNumber: string | null; quantity: number | null; partNumber: string | null; ready: boolean; blockers: string[] }[] }>(`${Q}/releases/board`) });
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Hold and release board' }]} title="Quality hold and release board"
+    <Page crumbs={[{ label: 'Hold and release board' }]} title="Quality hold and release board"
       actions={<Stack direction="row" gap={1}><Button variant="outlined" component={RouterLink} to={`${base}/releases/all`}>All decisions</Button>{can('qualityops.edit') && <Button variant="contained" component={RouterLink} to={`${base}/releases/new`}>Request release</Button>}</Stack>}>
       <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
         <Section title={`Waiting for release (${q.data?.releases.length ?? 0})`}>
@@ -524,7 +524,7 @@ export function ReleaseList() {
   const cols: ColumnDef<ReleaseRow, any>[] = [{ header: 'Number', accessorKey: 'number', cell: num }, { header: 'Type', accessorKey: 'kind', cell: (x) => releaseKind[x.getValue()] }, { header: 'Part', accessorKey: 'partNumber', cell: (x) => x.getValue() ?? '—' },
     { header: 'Lot', accessorKey: 'lotNumber', cell: (x) => x.getValue() ?? '—' }, { header: 'Quantity', accessorKey: 'quantity', cell: (x) => x.getValue() ?? '—' }, { header: 'Status', accessorKey: 'status', cell: (x) => <StatusChip status={releaseStatus[x.getValue()]} /> },
     { header: 'Decided by', accessorKey: 'decidedByName', cell: (x) => x.getValue() ?? '—' }, { header: 'Decided', accessorKey: 'decidedAt', cell: (x) => fmtDateTime(x.getValue()) }];
-  return <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Release', to: `${base}/releases` }, { label: 'All decisions' }]} title="Release decisions">
+  return <Page crumbs={[{ label: 'Release', to: `${base}/releases` }, { label: 'All decisions' }]} title="Release decisions">
     <DataTable data={list.data?.items ?? []} columns={cols} onRowClick={(r) => nav(`${base}/releases/${r.id}`)} empty="No release decisions yet." /></Page>;
 }
 
@@ -533,7 +533,7 @@ export function ReleaseNew() {
   const schema = z.object({ kind: z.coerce.number().int(), partId: z.string().optional(), productId: z.string().optional(), lotNumber: z.string().max(100).optional(), quantity: z.union([z.literal(''), z.coerce.number().positive()]).optional(),
     reviewNotes: z.string().max(4000).optional(), siteId: z.string().uuid('Choose a site'), departmentId: z.string().optional() });
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Release', to: `${base}/releases` }, { label: 'Request' }]} title="Request a release decision">
+    <Page crumbs={[{ label: 'Release', to: `${base}/releases` }, { label: 'Request' }]} title="Request a release decision">
       <SchemaForm schema={schema} submitLabel="Request release" onCancel={() => nav(`${base}/releases`)} defaults={{ kind: 1, partId: '', productId: '', lotNumber: '', quantity: '', reviewNotes: '', siteId: '', departmentId: '' }}
         fields={[{ name: 'kind', label: 'Type', type: 'select', options: releaseKind.map((k, i) => [i, k] as [number, string]) }, { name: 'partId', label: 'Part', type: 'lookup', lookup: 'part' }, { name: 'productId', label: 'Product', type: 'lookup', lookup: 'product' },
           { name: 'lotNumber', label: 'Lot or batch' }, { name: 'quantity', label: 'Quantity', type: 'number' }, { name: 'reviewNotes', label: 'Review notes', type: 'multiline' }, { name: 'siteId', label: 'Site', type: 'site' }, { name: 'departmentId', label: 'Department (optional)', type: 'department' }]}
@@ -550,7 +550,7 @@ export function ReleaseDetail() {
   const [dlg, setDlg] = useState<string | null>(null);
   const q = useQuery({ queryKey: ['release', id], queryFn: () => get<ReleaseDto>(`${Q}/releases/${id}`) });
   const refresh = () => { qc.invalidateQueries({ queryKey: ['release', id] }); qc.invalidateQueries({ queryKey: ['release-board'] }); };
-  const crumbs = [{ label: 'Quality operations', to: base }, { label: 'Release', to: `${base}/releases` }];
+  const crumbs = [{ label: 'Release', to: `${base}/releases` }];
   const d = q.data;
   if (!d) return <Loading crumbs={crumbs} error={q.error} />;
   const x = d.release; const a = d.actions;
@@ -595,7 +595,7 @@ export function DelegationsPage() {
   const admin = can('admin.users');
   const types: [string, string][] = [['', 'All approvals'], ['Deviation', 'Deviations'], ['QualityReview', 'Quality reviews'], ['Document', 'Documents'], ['Ncr', 'Nonconformances'], ['Capa', 'CAPAs'], ['ChangeRequest', 'Changes']];
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Approval delegation' }]} title="Approval delegation"
+    <Page crumbs={[{ label: 'Approval delegation' }]} title="Approval delegation"
       actions={<Stack direction="row" gap={1}>{admin && <FormControlLabel control={<Checkbox checked={all} onChange={(e) => setAll(e.target.checked)} />} label="Everyone" />}<Button variant="contained" onClick={() => setOpen(true)}>Delegate approvals</Button></Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Alert severity="info" sx={{ mb: 2 }}>While a delegation is active the delegate can sign the approval steps the delegator could sign. Each signature records that it was made on the delegator's behalf.</Alert>
@@ -626,7 +626,7 @@ const useRegisters = () => useQuery({ queryKey: ['registers'], queryFn: () => ge
 export function RegistersHome() {
   const r = useRegisters();
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Registers' }]} title="Quality registers">
+    <Page crumbs={[{ label: 'Registers' }]} title="Quality registers">
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 2 }}>
         {(r.data ?? []).map((d) => <Paper key={d.key} variant="outlined" component={RouterLink} to={`${base}/registers/${d.key}`} sx={{ p: 2, textDecoration: 'none', color: 'inherit', '&:hover': { borderColor: 'primary.main' } }}>
           <Stack direction="row" justifyContent="space-between"><Typography fontWeight={600}>{d.name}</Typography><Typography sx={{ fontFamily: mono }}>{d.count}</Typography></Stack>
@@ -648,7 +648,7 @@ export function RegisterList() {
   const def = defs.data?.find((d) => d.key === key);
   const filter = view === 'expiring' ? '&expiring=true' : view === 'archived' ? '&archived=true' : '';
   const list = useQuery({ queryKey: ['register', key, view, applied], queryFn: () => get<{ items: EntryRow[] }>(`${Q}/registers/${key}?pageSize=300${filter}${applied ? `&q=${encodeURIComponent(applied)}` : ''}`), enabled: !!def });
-  const crumbs = [{ label: 'Quality operations', to: base }, { label: 'Registers', to: `${base}/registers` }];
+  const crumbs = [{ label: 'Registers', to: `${base}/registers` }];
   if (!def) return <Loading crumbs={crumbs} error={defs.error ?? (defs.data ? new Error('This register is not available.') : null)} />;
   const today = localDate();
   const opt = (header: string, accessorKey: keyof EntryRow): ColumnDef<EntryRow, any> => ({ header, accessorKey, cell: (x) => x.getValue() ?? '—' });
@@ -715,7 +715,7 @@ export function RegisterEntryNew() {
   const { key } = useParams();
   const nav = useNavigate();
   const def = useRegisters().data?.find((d) => d.key === key);
-  const crumbs = [{ label: 'Quality operations', to: base }, { label: 'Registers', to: `${base}/registers` }];
+  const crumbs = [{ label: 'Registers', to: `${base}/registers` }];
   if (!def) return <Loading crumbs={crumbs} error={null} />;
   return (
     <Page crumbs={[...crumbs, { label: def.name, to: `${base}/registers/${key}` }, { label: 'New' }]} title={`Add to ${def.name.toLowerCase()}`}>
@@ -737,7 +737,7 @@ export function RegisterEntryDetail() {
   const q = useQuery({ queryKey: ['register-entry', id], queryFn: () => get<EntryDto>(`${Q}/registers/entries/${id}`) });
   const refresh = () => qc.invalidateQueries({ queryKey: ['register-entry', id] });
   const { error, run } = useRunner(refresh);
-  const crumbs = [{ label: 'Quality operations', to: base }, { label: 'Registers', to: `${base}/registers` }];
+  const crumbs = [{ label: 'Registers', to: `${base}/registers` }];
   const d = q.data;
   if (!d) return <Loading crumbs={crumbs} error={q.error} />;
   const x = d.entry; const r = d.register; const a = d.actions;
@@ -793,7 +793,7 @@ export function ServiceLevelsPage() {
     { header: 'In status since', accessorKey: 'since', cell: (x) => fmtDateTime(x.getValue()) }, { header: 'Due', accessorKey: 'dueAt', cell: (x) => fmtDateTime(x.getValue()) },
     { header: 'Elapsed', accessorKey: 'elapsedPercent', cell: (x) => `${Math.round(x.getValue())}%` }, { header: 'State', accessorKey: 'state', cell: (x) => <StatusChip status={x.getValue()} /> }];
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Service levels' }]} title="Service levels and business calendars"
+    <Page crumbs={[{ label: 'Service levels' }]} title="Service levels and business calendars"
       actions={admin ? <Stack direction="row" gap={1}><Button variant="outlined" onClick={() => setDlg('calendar')}>Add calendar</Button><Button variant="contained" onClick={() => setDlg('policy')}>Add service level</Button></Stack> : undefined}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Section title="Open records against their service levels"><DataTable data={[...(status.data ?? [])].sort((a, b) => rank(a.state) - rank(b.state) || b.elapsedPercent - a.elapsedPercent)} columns={cols} empty="No open records under a service level." /></Section>
@@ -847,7 +847,7 @@ export function SkipLotPage() {
   const edit = can('inspection.edit');
   const rule = rules.data?.find((r) => dlg === 'lot:' + r.id);
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Skip-lot inspection' }]} title="Skip-lot inspection" actions={edit ? <Button variant="contained" onClick={() => setDlg('new')}>Add rule</Button> : undefined}>
+    <Page crumbs={[{ label: 'Skip-lot inspection' }]} title="Skip-lot inspection" actions={edit ? <Button variant="contained" onClick={() => setDlg('new')}>Add rule</Button> : undefined}>
       <Alert severity="info" sx={{ mb: 2 }}>A part (and supplier) qualifies after the set number of consecutive accepted lots; then one lot in every N is inspected. A rejected lot while skipping disqualifies it until it requalifies.</Alert>
       <Table size="small"><TableHead><TableRow><TableCell>Part</TableCell><TableCell>Supplier</TableCell><TableCell>Rule</TableCell><TableCell>State</TableCell><TableCell>Accepted in a row</TableCell><TableCell>Lots since inspection</TableCell><TableCell /></TableRow></TableHead>
         <TableBody>{(rules.data ?? []).map((r) => <TableRow key={r.id} selected={hist === r.id}>
@@ -887,7 +887,7 @@ export function ReviewList() {
   const cols: ColumnDef<ReviewRow, any>[] = [{ header: 'Number', accessorKey: 'number', cell: num }, { header: 'Type', accessorKey: 'kind', cell: (x) => reviewKind[x.getValue()] }, { header: 'Title', accessorKey: 'title' },
     { header: 'Scope', accessorKey: 'product', cell: (x) => x.getValue() ?? x.row.original.partNumber ?? 'Site' }, { header: 'Period', accessorKey: 'periodFrom', cell: (x) => `${fmtDate(x.getValue())} – ${fmtDate(x.row.original.periodTo)}` },
     { header: 'Status', accessorKey: 'status', cell: (x) => <StatusChip status={reviewStatus[x.getValue()]} /> }];
-  return <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Quality reviews' }]} title="Product and annual quality reviews"
+  return <Page crumbs={[{ label: 'Quality reviews' }]} title="Product and annual quality reviews"
     actions={can('qualityops.edit') ? <Button variant="contained" component={RouterLink} to={`${base}/reviews/new`}>New review</Button> : undefined}>
     <DataTable data={list.data?.items ?? []} columns={cols} onRowClick={(r) => nav(`${base}/reviews/${r.id}`)} empty="No quality reviews yet." /></Page>;
 }
@@ -896,7 +896,7 @@ export function ReviewNew() {
   const schema = z.object({ kind: z.coerce.number().int(), title: z.string().trim().min(1, 'Required').max(300), productId: z.string().optional(), partId: z.string().optional(), periodFrom: z.string().min(1, 'Required'), periodTo: z.string().min(1, 'Required'),
     ownerId: z.string().optional(), siteId: z.string().uuid('Choose a site'), departmentId: z.string().optional() });
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Quality reviews', to: `${base}/reviews` }, { label: 'New' }]} title="New quality review">
+    <Page crumbs={[{ label: 'Quality reviews', to: `${base}/reviews` }, { label: 'New' }]} title="New quality review">
       <SchemaForm schema={schema} submitLabel="Create review" onCancel={() => nav(`${base}/reviews`)} defaults={{ kind: 0, title: '', productId: '', partId: '', periodFrom: localDate(-365), periodTo: localDate(), ownerId: '', siteId: '', departmentId: '' }}
         fields={[{ name: 'kind', label: 'Type', type: 'select', options: reviewKind.map((k, i) => [i, k] as [number, string]) }, { name: 'title', label: 'Title', full: true }, { name: 'productId', label: 'Product', type: 'lookup', lookup: 'product' }, { name: 'partId', label: 'Part', type: 'lookup', lookup: 'part' },
           { name: 'periodFrom', label: 'Period from', type: 'date' }, { name: 'periodTo', label: 'Period to', type: 'date' }, { name: 'ownerId', label: 'Owner (defaults to you)', type: 'user' }, { name: 'siteId', label: 'Site', type: 'site' }, { name: 'departmentId', label: 'Department (optional)', type: 'department' }]}
@@ -921,7 +921,7 @@ export function ReviewDetail() {
   const q = useQuery({ queryKey: ['qreview', id], queryFn: () => get<ReviewDto>(`${Q}/reviews/${id}`) });
   const refresh = () => qc.invalidateQueries({ queryKey: ['qreview', id] });
   const { error, run } = useRunner(refresh);
-  const crumbs = [{ label: 'Quality operations', to: base }, { label: 'Quality reviews', to: `${base}/reviews` }];
+  const crumbs = [{ label: 'Quality reviews', to: `${base}/reviews` }];
   const d = q.data;
   if (!d) return <Loading crumbs={crumbs} error={q.error} />;
   const x = d.review; const a = d.actions;
@@ -969,10 +969,10 @@ export function QualityAnalyticsPage() {
   const max = Math.max(1, ...(aging.data ?? []).map((b) => b.count));
   const h = (n: number) => (n < 48 ? `${n.toFixed(1)} h` : `${(n / 24).toFixed(1)} d`);
   return (
-    <Page crumbs={[{ label: 'Quality operations', to: base }, { label: 'Analytics' }]} title="Quality analytics"
+    <Page crumbs={[{ label: 'Analytics' }]} title="Quality analytics"
       actions={<Stack direction="row" gap={1}><TextField size="small" type="date" label="From" value={from} slotProps={{ inputLabel: { shrink: true } }} onChange={(e) => setFrom(e.target.value)} /><TextField size="small" type="date" label="To" value={to} slotProps={{ inputLabel: { shrink: true } }} onChange={(e) => setTo(e.target.value)} /></Stack>}>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
-        {(ready.data ?? []).map((r) => <Section key={r.kind} title={`${r.kind} readiness`}>
+        {(ready.data ?? []).map((r) => <Section key={r.kind} title={/readiness$/i.test(r.kind) ? r.kind : `${r.kind} readiness`}>
           <Stack direction="row" alignItems="baseline" gap={1}><Typography sx={{ fontSize: 36, fontWeight: 700, fontFamily: mono, color: r.score >= 85 ? 'success.main' : r.score >= 65 ? 'warning.main' : 'error.main' }}>{Math.round(r.score)}</Typography><Typography color="text.secondary">{r.band}</Typography></Stack>
           <Table size="small"><TableBody>{r.factors.map((f) => <TableRow key={f.key}><TableCell>{f.label}</TableCell><TableCell>{f.late} late of {f.total}</TableCell><TableCell sx={{ fontFamily: mono }}>{Math.round(f.score)}</TableCell></TableRow>)}</TableBody></Table>
         </Section>)}
@@ -1020,7 +1020,7 @@ export function QualityOpsHome() {
   const evCols: ColumnDef<EventRow, any>[] = [{ header: 'Number', accessorKey: 'number', cell: num }, { header: 'Title', accessorKey: 'title' }, { header: 'Severity', accessorKey: 'severity', cell: (x) => <SeverityChip settings={s} name={x.getValue()} /> },
     { header: 'Status', accessorKey: 'status', cell: (x) => <StatusChip status={eventStatus[x.getValue()]} /> }, { header: 'Occurred', accessorKey: 'occurredAt', cell: (x) => fmtDateTime(x.getValue()) }];
   return (
-    <Page crumbs={[{ label: 'Quality operations' }]} title="Quality operations"
+    <Page crumbs={[{ label: 'Overview' }]} title="Quality operations"
       actions={can('qualityops.edit') || can('qualityevents.report') ? <Button variant="contained" component={RouterLink} to={`${base}/events/new`}>Report event</Button> : undefined}>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 2, mb: 3 }}>
         {tiles.map(([t, n, to, bad]) => <Paper key={t} variant="outlined" component={RouterLink} to={to} sx={{ p: 2, textDecoration: 'none', color: 'inherit', '&:hover': { borderColor: 'primary.main' } }}>
