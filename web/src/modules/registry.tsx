@@ -28,6 +28,7 @@ import Inventory2Outlined from '@mui/icons-material/Inventory2Outlined';
 import DesignServicesOutlined from '@mui/icons-material/DesignServicesOutlined';
 import PublicOutlined from '@mui/icons-material/PublicOutlined';
 import MenuBookOutlined from '@mui/icons-material/MenuBookOutlined';
+import VerifiedOutlined from '@mui/icons-material/VerifiedOutlined';
 import PsychologyOutlined from '@mui/icons-material/PsychologyOutlined';
 
 export interface NavItem { label: string; path: string; permission?: string; children?: NavItem[] }
@@ -274,6 +275,32 @@ export const modules: ModuleDef[] = [
         { label: 'All reviews', path: '/reviews' },
         { label: 'Schedule review', path: '/reviews/new', permission: 'reviews.edit' },
       ] },
+    ],
+  },
+  {
+    key: 'qualityops',
+    label: 'Quality operations',
+    description: 'Quality events and triage, deviations, investigations, hold and release, registers, service levels, skip-lot, quality reviews and analytics',
+    icon: <VerifiedOutlined fontSize="small" />,
+    basePath: '/quality-ops',
+    permissions: ['qualityops.view', 'qualityevents.report'],
+    sidebar: [
+      { label: 'Overview', path: '/quality-ops', permission: 'qualityops.view' },
+      { label: 'Quality events', path: '/quality-ops/events', permission: 'qualityops.view', children: [
+        { label: 'Open', path: '/quality-ops/events' },
+        { label: 'All', path: '/quality-ops/events?view=all' },
+      ] },
+      { label: 'Report event', path: '/quality-ops/events/new' },
+      { label: 'Deviations', path: '/quality-ops/deviations', permission: 'qualityops.view' },
+      { label: 'Investigations', path: '/quality-ops/investigations', permission: 'qualityops.view' },
+      { label: 'Hold and release', path: '/quality-ops/releases', permission: 'qualityops.view' },
+      { label: 'Registers', path: '/quality-ops/registers', permission: 'qualityops.view' },
+      { label: 'Quality reviews', path: '/quality-ops/reviews', permission: 'qualityops.view' },
+      { label: 'Skip-lot inspection', path: '/quality-ops/skip-lot', permission: 'inspection.view' },
+      { label: 'Service levels', path: '/quality-ops/service-levels', permission: 'qualityops.view' },
+      { label: 'Analytics', path: '/quality-ops/analytics', permission: 'qualityops.view' },
+      { label: 'Approval delegation', path: '/quality-ops/delegations' },
+      { label: 'Settings', path: '/quality-ops/settings', permission: 'admin.organization' },
     ],
   },
   {
