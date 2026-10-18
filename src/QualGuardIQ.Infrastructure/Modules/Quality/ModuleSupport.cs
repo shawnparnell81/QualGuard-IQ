@@ -14,6 +14,7 @@ public sealed class ModuleSupport(AppDbContext db, IAccessService access, ICurre
     /// <summary>Today in the site's time zone (organization zone when no site is given).</summary>
     public Task<DateOnly> TodayAsync(Guid? siteId, CancellationToken ct) => calendar.TodayAsync(siteId, ct);
     public DateTimeOffset Now => clock.UtcNow;
+    public ICurrentUser Current => current;
     public Task<TimeZoneInfo> ZoneAsync(Guid? siteId, CancellationToken ct) => calendar.ZoneAsync(siteId, ct);
     /// <summary>Instant range covering business days <paramref name="from"/> to <paramref name="to"/> (inclusive) in the site's time zone.</summary>
     public async Task<(DateTimeOffset From, DateTimeOffset To)> DayRangeAsync(Guid? siteId, DateOnly from, DateOnly to, CancellationToken ct)

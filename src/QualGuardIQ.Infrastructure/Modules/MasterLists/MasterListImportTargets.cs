@@ -350,6 +350,15 @@ public abstract class DocumentListImportTarget(AppDbContext db, ModuleSupport m,
     protected override async Task<string?> CanRemoveAsync(ControlledDocument d, CancellationToken ct)
     {
         if (await Db.DocumentRevisions.AnyAsync(r => r.DocumentId == d.Id && r.Status != RevisionStatus.Draft, ct)) return $"{d.Number} has been sent for review.";
+        // a bulk delete skips the automatic audit, so the removed draft revisions are recorded here first
+        var revs = await Db.DocumentRevisions.AsNoTracking().Where(r => r.DocumentId == d.Id).OrderBy(r => r.Sequence)
+            .Select(r => new { r.Id, r.Revision, r.Status, r.ChangeSummary, r.EffectiveDate }).ToListAsync(ct);
+        if (revs.Count > 0)
+        {
+            AuditLog.Add(Db, M.Current, M.Now, "Deleted", nameof(ControlledDocument), d.Id, d.SiteId,
+                $"Removed draft revision{(revs.Count == 1 ? "" : "s")} {string.Join(", ", revs.Select(r => r.Revision))} of {d.Number} when the master list import was rolled back", new { revisions = revs });
+            await Db.SaveChangesAsync(ct);
+        }
         await Db.DocumentRevisions.Where(r => r.DocumentId == d.Id).ExecuteDeleteAsync(ct);
         return null;
     }

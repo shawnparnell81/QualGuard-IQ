@@ -229,8 +229,13 @@ public sealed class MsaService(AppDbContext db, ModuleSupport m, INumberingServi
             if (s.StudyType is MsaStudyType.VariableGrr or MsaStudyType.AttributeGrr && string.IsNullOrWhiteSpace(r.Operator)) throw new AppException("Gage R&R results need the operator.");
             if (s.StudyType == MsaStudyType.Linearity && r.Reference is null) throw new AppException("Linearity readings need the reference value of the part.");
         }
+        // the readings being replaced are kept in the audit entry, value by value (including readings a reviewer rejected)
+        var before = await db.MsaMeasurements.AsNoTracking().Where(x => x.StudyId == id).OrderBy(x => x.Operator).ThenBy(x => x.Part).ThenBy(x => x.Trial).ToListAsync(ct);
+        var after = rows.Select(r => new MsaMeasurement { StudyId = id, Operator = (r.Operator ?? "").Trim(), Part = r.Part, Trial = r.Trial, Value = r.Value, Attribute = r.Attribute?.Trim(), Reference = r.Reference, AttributeReference = r.AttributeReference?.Trim() }).ToList();
+        LineAudit.Write(db, m.Current, m.Now, RecordType, id, s.SiteId, s.Status == MsaStatus.Rejected ? "measurements (study was rejected)" : "measurements", s.AuditLabel, before, after,
+            nameof(MsaMeasurement.StudyId), x => $"{x.Operator.ToLowerInvariant()}|{x.Part}|{x.Trial}", x => $"{(x.Operator.Length > 0 ? x.Operator + " " : "")}part {x.Part} trial {x.Trial}");
         db.MsaMeasurements.RemoveRange(db.MsaMeasurements.Where(x => x.StudyId == id));
-        db.MsaMeasurements.AddRange(rows.Select(r => new MsaMeasurement { StudyId = id, Operator = (r.Operator ?? "").Trim(), Part = r.Part, Trial = r.Trial, Value = r.Value, Attribute = r.Attribute?.Trim(), Reference = r.Reference, AttributeReference = r.AttributeReference?.Trim() }));
+        db.MsaMeasurements.AddRange(after);
         s.Result = null; s.Verdict = null;
         await db.SaveChangesAsync(ct);
     }
