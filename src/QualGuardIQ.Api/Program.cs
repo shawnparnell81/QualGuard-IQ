@@ -216,7 +216,7 @@ static async Task MigrateAsync(WebApplication app)
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
     if (app.Configuration["Database:AppRole"] is { Length: > 0 } appRole)
-        await DatabaseRoles.ApplyAsync(db, appRole, app.Configuration["Database:AppRolePassword"]);
+        await DatabaseRoles.ApplyAsync(db, appRole, app.Configuration["Database:AppRolePassword"], app.Configuration.GetConnectionString("Default"));
     await scope.ServiceProvider.GetRequiredService<Seeder>().SeedAsync();
     await scope.ServiceProvider.GetRequiredService<QualGuardIQ.Infrastructure.Services.AttachmentService>().BackfillScopeAsync(CancellationToken.None);
 }
