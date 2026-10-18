@@ -46826,6 +46826,522 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/sequfloh/context:
+    get:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/access:
+    post:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AccessRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AccessRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AccessRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/settings:
+    get:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SettingsDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SettingsDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SettingsDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/settings/{section}':
+    put:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_settings` (site/department scoped).'
+      parameters:
+        - name: section
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SettingsSaveRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SettingsSaveRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SettingsSaveRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/numbering:
+    get:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SequenceDto'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SequenceDto'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SequenceDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_settings` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SequenceInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SequenceInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SequenceInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/reference:
+    get:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/reference/{key}':
+    get:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: active
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_dropdowns` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceValueInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceValueInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReferenceValueInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/reference/{key}/options':
+    get:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  type: string
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+            text/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/reference/values/{id}':
+    put:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_dropdowns` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceValueInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReferenceValueInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReferenceValueInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/reference/values/{id}/activate':
+    post:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_dropdowns` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/reference/values/{id}/deactivate':
+    post:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_dropdowns` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/reference/values/{id}/default':
+    post:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_dropdowns` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/reference/values/{id}/history':
+    get:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/reference/{key}/reorder':
+    post:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_dropdowns` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReorderInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/reference/{key}/reset':
+    post:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_dropdowns` (site/department scoped).'
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ResetRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ResetRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/seed:
+    post:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_settings` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/module-access:
+    get:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_module_access` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/module-access/roles/{roleId}':
+    put:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.manage_module_access` (site/department scoped).'
+      parameters:
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleAccessInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/RoleAccessInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/RoleAccessInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/my-items:
+    get:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserItemInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/UserItemInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/UserItemInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/my-items/favorites/{id}':
+    delete:
+      tags:
+        - SequflohFoundation
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
 components:
   schemas:
     AbsenceInput:
@@ -46885,6 +47401,15 @@ components:
           type: string
         timeZone:
           type: string
+    AccessRequest:
+      required:
+        - page
+      type: object
+      properties:
+        page:
+          type:
+            - 'null'
+            - string
     AccessReview:
       type: object
       properties:
@@ -69005,6 +69530,34 @@ components:
         last:
           type: string
           format: date-time
+    ReferenceValueInput:
+      required:
+        - code
+        - label
+        - description
+      type: object
+      properties:
+        code:
+          type: string
+        label:
+          type: string
+        description:
+          type:
+            - 'null'
+            - string
+        isActive:
+          type: boolean
+          default: true
+        isDefault:
+          type: boolean
+          default: false
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
     RegisterInput:
       required:
         - siteId
@@ -69309,6 +69862,16 @@ components:
           type: boolean
     RenditionStatus:
       type: integer
+    ReorderInput:
+      required:
+        - ids
+      type: object
+      properties:
+        ids:
+          type: array
+          items:
+            type: string
+            format: uuid
     RepeatRegion:
       type: object
       properties:
@@ -71565,6 +72128,23 @@ components:
           default: 0
     RiskStatus:
       type: integer
+    RoleAccessInput:
+      required:
+        - permissions
+        - rowVersion
+      type: object
+      properties:
+        permissions:
+          type: array
+          items:
+            type: string
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: uint32
     RoleDto:
       required:
         - id
@@ -73309,6 +73889,59 @@ components:
           type:
             - 'null'
             - string
+    SequenceDto:
+      required:
+        - recordType
+        - label
+        - prefix
+        - padding
+        - pattern
+        - nextValue
+        - example
+      type: object
+      properties:
+        recordType:
+          type: string
+        label:
+          type: string
+        prefix:
+          type: string
+        padding:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        pattern:
+          type: string
+        nextValue:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        example:
+          type: string
+    SequenceInput:
+      required:
+        - recordType
+        - prefix
+        - padding
+        - pattern
+      type: object
+      properties:
+        recordType:
+          type: string
+        prefix:
+          type: string
+        padding:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        pattern:
+          type: string
     SerialInput:
       required:
         - serialNumber
@@ -73588,6 +74221,20 @@ components:
           type: string
         loginHistoryEnabled:
           type: boolean
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+    SettingsSaveRequest:
+      required:
+        - value
+        - rowVersion
+      type: object
+      properties:
+        value:
+          $ref: '#/components/schemas/JsonElement'
         rowVersion:
           pattern: '^-?(?:0|[1-9]\d*)$'
           type:
@@ -78060,6 +78707,28 @@ components:
           items:
             type: string
             format: uuid
+    UserItemInput:
+      required:
+        - kind
+        - itemType
+        - recordId
+        - path
+        - label
+      type: object
+      properties:
+        kind:
+          type: string
+        itemType:
+          type: string
+        recordId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        path:
+          type: string
+        label:
+          type: string
     UtilizationRow:
       required:
         - warehouseId
@@ -79627,3 +80296,4 @@ tags:
   - name: Shipping
   - name: CarrierIntegration
   - name: ShippingDocument
+  - name: SequflohFoundation
