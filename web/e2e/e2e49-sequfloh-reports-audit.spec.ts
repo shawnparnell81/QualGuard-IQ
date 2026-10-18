@@ -44,7 +44,8 @@ test.describe('SEQUFLOH reports, export, audit and search', () => {
     await expect(dlg).toContainText('Production Tracking');
     await dlg.getByRole('button', { name: 'Close' }).click();
     await page.getByRole('tab', { name: 'Work Instruction History' }).click();
-    await page.getByLabel('Search').fill(wi.number);
+    await expect(page.getByRole('heading', { name: 'Work Instruction History' })).toBeVisible();
+    await page.getByRole('textbox', { name: 'Search', exact: true }).fill(wi.number);
     await page.getByRole('button', { name: 'Search', exact: true }).click();
     await expect(page.getByRole('row').filter({ hasText: 'Work Instruction Release' }).first()).toBeVisible();
     await expect(page.getByRole('link', { name: 'Print summary' })).toHaveAttribute('href', /\/api\/sequfloh\/audit\/instructions\/print/);
