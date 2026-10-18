@@ -91,7 +91,7 @@ public sealed class SequflohPartsTests(TestApp app)
         var (_, eng) = await app.CreateUserAsync([Permissions.SequflohAccess, Permissions.SequflohManageOperationSteps]);
         var (_, viewer) = await app.CreateUserAsync([Permissions.SequflohAccess]);
         var tag = Guid.NewGuid().ToString("N")[..6];
-        object Step(string title, decimal? min = 1, decimal? max = 5) => new { title, category = "Torque " + tag, detailedAction = "Torque bolts to spec", target = 3m, minimum = min, maximum = max, unit = "Nm", isActive = true };
+        object Step(string title, decimal? min = 1, decimal? max = 5) => new { title, category = "Adjustment", detailedAction = "Torque bolts to spec", target = 3m, minimum = min, maximum = max, unit = "Nm", isActive = true };
         Assert.Equal(HttpStatusCode.BadRequest, (await eng.PostAsync("/api/sequfloh/operation-steps", Step("Bad", 9, 2))).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsync("/api/sequfloh/operation-steps", Step("No"))).StatusCode);
         var a = await PostEl(eng, "/api/sequfloh/operation-steps", Step("Torque cover " + tag));
@@ -99,7 +99,7 @@ public sealed class SequflohPartsTests(TestApp app)
         var b = await PostEl(eng, $"/api/sequfloh/operation-steps/{a.Id()}/duplicate", new { });
         Assert.NotEqual(a.Str("number"), b.Str("number"));
         Assert.Equal(HttpStatusCode.NoContent, (await eng.PostAsync($"/api/sequfloh/operation-steps/{b.Id()}/deactivate", new { })).StatusCode);
-        var active = await viewer.GetElAsync($"/api/sequfloh/operation-steps?category=Torque {tag}&active=true");
+        var active = await viewer.GetElAsync($"/api/sequfloh/operation-steps?q={tag}&active=true");
         Assert.Equal(1, active.GetProperty("total").GetInt32());
         var all = (await viewer.GetElAsync("/api/sequfloh/operation-steps?pageSize=200")).GetProperty("items").EnumerateArray().Select(x => x.Id()).ToList();
         Assert.Equal(HttpStatusCode.BadRequest, (await eng.PostAsync("/api/sequfloh/operation-steps/reorder", new { ids = all.Take(1) })).StatusCode);
