@@ -33,7 +33,8 @@ public sealed record DryRunSummary(int Rows, int Valid, int Invalid, int Duplica
 /// </summary>
 public sealed partial class ImportCenterService(AppDbContext db, IAccessService access, ICurrentUser current, IFileStorage storage, IMalwareScanner scanner,
     INumberingService numbers, IEnumerable<IImportTarget> targets, IClock clock, IConfiguration config, Documents.DocumentService docs, ILegacyOfficeConverter legacy,
-    Pdf.IOcrEngine ocr, Pdf.IPdfPageRenderer pdfPages, ReferenceResolver refs, Services.AttachmentService attachments, Application.Records.IRecordRegistry records, ImportProgress live)
+    Pdf.IOcrEngine ocr, Pdf.IPdfPageRenderer pdfPages, ReferenceResolver refs, Services.AttachmentService attachments, Application.Records.IRecordRegistry records, ImportProgress live,
+    Security.ISecurityEventLogger security)
 {
     public const string RecordType = "ImportJob";
     public static readonly HashSet<string> Supported = [".csv", ".txt", ".tsv", ".xlsx", ".xlsm", ".xls", ".docx", ".doc", ".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff"];
@@ -106,7 +107,11 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
     {
         var job = await db.ImportJobs.FirstOrDefaultAsync(j => j.Id == id, ct) ?? throw new NotFoundException("Import");
         if (!await access.CanAccessAsync(Me, Permissions.ImportsView, job.SiteId, job.DepartmentId, ct)) throw new NotFoundException("Import");
-        if (perm != Permissions.ImportsView && !await access.CanAccessAsync(Me, perm, job.SiteId, job.DepartmentId, ct)) throw new ForbiddenException();
+        if (perm != Permissions.ImportsView && !await access.CanAccessAsync(Me, perm, job.SiteId, job.DepartmentId, ct))
+        {
+            await security.LogAsync("ImportAccessDenied", false, current.UserId, current.UserName, $"{job.Number}: {perm} refused", ct);
+            throw new ForbiddenException();
+        }
         return job;
     }
 
@@ -127,7 +132,11 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
     // ---------------------------------------------------------------- intake + security inspection
     public async Task<ImportJob> StartAsync(StartImportRequest req, CancellationToken ct)
     {
-        if (!await access.CanAccessAsync(Me, Permissions.ImportsEdit, req.SiteId, req.DepartmentId, ct)) throw new ForbiddenException();
+        if (!await access.CanAccessAsync(Me, Permissions.ImportsEdit, req.SiteId, req.DepartmentId, ct))
+        {
+            await security.LogAsync("ImportAccessDenied", false, current.UserId, current.UserName, $"Upload of {Path.GetFileName(req.FileName ?? "")} into site {req.SiteId} refused (imports.edit)", ct);
+            throw new ForbiddenException();
+        }
         if (!await db.Sites.AnyAsync(s => s.Id == req.SiteId && !s.IsArchived, ct)) throw new AppException("Select an active site.");
         if (req.DepartmentId is { } d && !await db.Departments.AnyAsync(x => x.Id == d && x.SiteId == req.SiteId, ct)) throw new AppException("The department does not belong to the site.");
         if (!Modes.Contains(req.Mode)) throw new AppException("Choose an import mode.");
@@ -193,6 +202,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         {
             AddIssue(job, "file", null, ImportIssueSeverity.Error, "SECURITY", problem, "Upload a clean copy of the file.");
             Transition(job, ImportJobStatus.SecurityScanFailed, problem);
+            await security.LogAsync("ImportFileRejected", false, current.UserId, current.UserName, $"{job.Number} {name}: {problem}", ct);
         }
         else
         {
@@ -258,6 +268,16 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             default:
                 return null;
         }
+    }
+
+    /// <summary>Active content found in a file (macros, external links, scripts) is written to the security log once per import.</summary>
+    async Task LogActiveContentAsync(ImportJob job, IReadOnlyCollection<string> findings, CancellationToken ct)
+    {
+        if (findings.Count == 0) return;
+        var prefix = job.Number + " ";
+        if (await db.SecurityEvents.AnyAsync(e => e.EventType == "ImportActiveContent" && e.Detail != null && e.Detail.StartsWith(prefix), ct)) return;
+        var detail = $"{job.Number} {job.OriginalFileName}: {string.Join(" ", findings.Take(5))}";
+        await security.LogAsync("ImportActiveContent", true, current.UserId, current.UserName, detail.Length > 2000 ? detail[..2000] : detail, ct);
     }
 
     void AddIssue(ImportJob job, string loc, int? row, ImportIssueSeverity sev, string code, string text, string? suggestion)

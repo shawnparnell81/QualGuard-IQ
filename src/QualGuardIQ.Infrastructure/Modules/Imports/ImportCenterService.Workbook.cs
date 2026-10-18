@@ -50,6 +50,7 @@ public sealed partial class ImportCenterService
         var es = ExcelSettings(job);
         await ClearIssuesAsync(job, "SHAPE", "EMPTY", "FIDELITY", "FORMULA", "WORKBOOK_SECURITY", "CONVERSION", "REVIEW", "PROFILE");
         foreach (var w in summary.Security.Take(100)) AddIssue(job, "workbook", null, ImportIssueSeverity.Warning, "WORKBOOK_SECURITY", w, "Nothing active is run; review the item in the original workbook.");
+        await LogActiveContentAsync(job, summary.Security, ct);
         foreach (var f in summary.Formulas.Where(f => f.Classes.Any(c => c is FormulaClass.External or FormulaClass.Macro or FormulaClass.Unsupported)).Take(200))
             AddIssue(job, f.Location, null, ImportIssueSeverity.Warning, "FORMULA", $"{f.Formula}: {f.Warning}", "The stored result is kept; the formula is not run.");
         var analysis = new JsonObject { ["workbook"] = JsonSerializer.SerializeToNode(summary, JsonOpts) };
