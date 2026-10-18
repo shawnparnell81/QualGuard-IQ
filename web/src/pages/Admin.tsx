@@ -21,6 +21,13 @@ interface Site { id: string; code: string; name: string; address?: string | null
 interface Role { id: string; name: string; description: string | null; isSystem: boolean; requiresMfa: boolean; permissions: string[]; rowVersion: number }
 interface User { id: string; email: string; displayName: string; isActive: boolean; isLockedOut: boolean; lastSignInAt: string | null; mfaEnabled: boolean; mustChangePassword: boolean; passwordChangedAt: string | null; roles: { id: string; roleId: string; roleName: string; siteId: string | null; departmentId: string | null }[] }
 
+/** Shown while uploads are not virus-scanned (MalwareScanning:Provider is None), so nobody assumes they are. */
+function UploadScanningNotice() {
+  const q = useQuery({ queryKey: ['upload-scanning'], queryFn: () => get<{ enabled: boolean; provider: string }>('/api/admin/upload-scanning'), retry: false });
+  if (!q.data || q.data.enabled) return null;
+  return <Alert severity="warning" sx={{ mb: 2 }} data-testid="scanning-off">Uploaded files are not virus-scanned on this installation. To turn scanning on, set MALWARE_SCANNER=ClamAV and add clamav to COMPOSE_PROFILES (Intel/AMD computers), or point MalwareScanning at a ClamAV server.</Alert>;
+}
+
 const useSites = () => useQuery({ queryKey: ['sites'], queryFn: () => get<Site[]>('/api/organization/sites') });
 const Err = ({ e }: { e: string | null }) => (e ? <Alert severity="error" sx={{ mb: 2 }}>{e}</Alert> : null);
 
@@ -77,6 +84,7 @@ export function UsersPage() {
   const selSite = sites.data?.find((s) => s.id === assign.siteId);
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Users' }]} title="Users" actions={<Button variant="contained" onClick={() => { reset({ mustChangePassword: true }); setAdding(true); }}>Add user</Button>}>
+      <UploadScanningNotice />
       <Err e={error} />
       {notice && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice(null)}>{notice}</Alert>}
       <DataTable data={users.data ?? []} columns={cols} />
@@ -324,6 +332,7 @@ export function OrganizationPage() {
   if (!cur) return null;
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Settings & branding' }]} title="Settings & branding">
+      <UploadScanningNotice />
       <Paper sx={{ p: 3, maxWidth: 640, display: 'grid', gap: 2 }}>
         {msg && <Alert severity={msg.ok ? 'success' : 'error'}>{msg.text}</Alert>}
         <TextField label="Application name" value={cur.applicationName} onChange={(e) => setV({ ...cur, applicationName: e.target.value })} />
