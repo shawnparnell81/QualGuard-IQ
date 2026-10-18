@@ -35,6 +35,7 @@ public static class DependencyInjection
         services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
         services.Configure<AuthOptions>(config.GetSection(AuthOptions.Section));
         services.AddScoped<SignInSecurityService>();
+        services.AddScoped<SessionRevocation>();
         services.AddMemoryCache();
         services.AddHttpClient("sso", c => c.Timeout = TimeSpan.FromSeconds(15));
         services.AddSingleton<OidcClient>();

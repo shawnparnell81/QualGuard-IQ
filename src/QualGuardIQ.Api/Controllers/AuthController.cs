@@ -289,9 +289,11 @@ public sealed class AuthController(
 
     [HttpPost("logout")]
     [Authorize]
-    public async Task<IActionResult> Logout()
+    public async Task<IActionResult> Logout([FromServices] SessionRevocation sessions)
     {
         var id = Guid.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier)!);
+        // ends this session on the server too, so a copied cookie or token stops working; the person's other sessions continue
+        await sessions.RevokeAsync(User, id);
         await signIn.SignOutAsync();
         await security.LogAsync("SignOut", true, id, User.Identity?.Name);
         return NoContent();
