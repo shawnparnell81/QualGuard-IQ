@@ -64,6 +64,7 @@ public sealed class Seeder(AppDbContext db, UserManager<ApplicationUser> users, 
         await new Modules.Fai.AqlService(db, null!).SeedAsync(ct);
         await new Modules.Documents.DocumentTypeService(db).EnsureSeededAsync(ct);
         await Modules.Enterprise.ComplianceMappingService.EnsureSeededAsync(db, DateOnly.FromDateTime(DateTime.UtcNow), ct);
+        await Modules.Sequfloh.SequflohFoundationService.SeedAsync(db, ct);
 
         var email = seed["AdminEmail"];
         var password = seed["AdminPassword"];

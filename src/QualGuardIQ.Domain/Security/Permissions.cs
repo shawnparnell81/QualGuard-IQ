@@ -206,6 +206,48 @@ public static class Permissions
     /// <summary>Report a quality event (shop floor, mobile and integration intake) without other quality operations access.</summary>
     public const string QualityEventsReport = "qualityevents.report";
 
+    // ---------- SEQUFLOH (Enterprise Execution Engine) module capabilities ----------
+    public const string SequflohAccess = "sequfloh.access";
+    public const string SequflohViewDashboard = "sequfloh.view_dashboard";
+    public const string SequflohViewLiveExecution = "sequfloh.view_live_execution";
+    public const string SequflohDispatchTask = "sequfloh.dispatch_task";
+    public const string SequflohStartTask = "sequfloh.start_task";
+    public const string SequflohPauseTask = "sequfloh.pause_task";
+    public const string SequflohResumeTask = "sequfloh.resume_task";
+    public const string SequflohHoldTask = "sequfloh.hold_task";
+    public const string SequflohCompleteTask = "sequfloh.complete_task";
+    public const string SequflohFailTask = "sequfloh.fail_task";
+    public const string SequflohRejectTask = "sequfloh.reject_task";
+    public const string SequflohReassignTask = "sequfloh.reassign_task";
+    public const string SequflohCancelTask = "sequfloh.cancel_task";
+    public const string SequflohCreateWorkInstruction = "sequfloh.create_work_instruction";
+    public const string SequflohEditDraftWorkInstruction = "sequfloh.edit_draft_work_instruction";
+    public const string SequflohSubmitWorkInstruction = "sequfloh.submit_work_instruction";
+    public const string SequflohReviewWorkInstruction = "sequfloh.review_work_instruction";
+    public const string SequflohApproveWorkInstruction = "sequfloh.approve_work_instruction";
+    public const string SequflohReleaseWorkInstruction = "sequfloh.release_work_instruction";
+    public const string SequflohReviseWorkInstruction = "sequfloh.revise_work_instruction";
+    public const string SequflohObsoleteWorkInstruction = "sequfloh.obsolete_work_instruction";
+    public const string SequflohArchiveWorkInstruction = "sequfloh.archive_work_instruction";
+    public const string SequflohRestoreWorkInstruction = "sequfloh.restore_work_instruction";
+    public const string SequflohCreateValidationRecord = "sequfloh.create_validation_record";
+    public const string SequflohCreateFaiRecord = "sequfloh.create_fai_record";
+    public const string SequflohCreateRepairRecord = "sequfloh.create_repair_record";
+    public const string SequflohCreateProductionTask = "sequfloh.create_production_task";
+    public const string SequflohEditParts = "sequfloh.edit_parts";
+    public const string SequflohManagePartsLists = "sequfloh.manage_parts_lists";
+    public const string SequflohManageOperationSteps = "sequfloh.manage_operation_steps";
+    public const string SequflohViewQualityFolder = "sequfloh.view_quality_folder";
+    public const string SequflohEditQualityFolder = "sequfloh.edit_quality_folder";
+    public const string SequflohViewEngineeringFolder = "sequfloh.view_engineering_folder";
+    public const string SequflohEditEngineeringFolder = "sequfloh.edit_engineering_folder";
+    public const string SequflohViewReports = "sequfloh.view_reports";
+    public const string SequflohExportRecords = "sequfloh.export_records";
+    public const string SequflohViewAuditTrail = "sequfloh.view_audit_trail";
+    public const string SequflohManageSettings = "sequfloh.manage_settings";
+    public const string SequflohManageDropdowns = "sequfloh.manage_dropdowns";
+    public const string SequflohManageModuleAccess = "sequfloh.manage_module_access";
+
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
         .Where(f => f.IsLiteral && f.FieldType == typeof(string))
