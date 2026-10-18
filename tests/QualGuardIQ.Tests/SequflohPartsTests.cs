@@ -14,8 +14,8 @@ public sealed class SequflohPartsTests(TestApp app)
 
     static object PartBody(string pn, Guid site, string family = "Pumps") => new
     {
-        part = new { partNumber = pn, name = "Pump housing " + pn, description = "", partType = "Component", revision = "A", unitOfMeasure = "EA", productId = (Guid?)null,
-            material = "AL6061", hasSpecialCharacteristics = false, siteId = site, departmentId = (Guid?)null, status = "Active" },
+        part = new { partNumber = pn, name = "Pump housing " + pn, description = "", partType = 0, revision = "A", unitOfMeasure = "EA", productId = (Guid?)null,
+            material = "AL6061", hasSpecialCharacteristics = false, siteId = site, departmentId = (Guid?)null, status = 0 },
         execution = new { productFamily = family, assemblyType = "Sub-assembly", isRepairable = true, isSerialized = true, isLotControlled = false, drawingNumber = "DWG-" + pn, specification = "SPEC-1" }
     };
 
@@ -45,7 +45,7 @@ public sealed class SequflohPartsTests(TestApp app)
         var detail = await viewer.GetElAsync($"/api/sequfloh/parts/{id}");
         Assert.False(detail.GetProperty("canEdit").GetBoolean());
         Assert.NotEmpty((await viewer.GetElAsync($"/api/sequfloh/parts/{id}/history")).EnumerateArray());
-        Assert.Equal(HttpStatusCode.NoContent, (await sqfOnly.PostAsync($"/api/sequfloh/parts/{id}/deactivate", new { })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await eng.PostAsync($"/api/sequfloh/parts/{id}/deactivate", new { })).StatusCode);
         Assert.Equal(0, (await viewer.GetElAsync($"/api/sequfloh/parts?q={pn}&view=active")).GetProperty("total").GetInt32());
     }
 

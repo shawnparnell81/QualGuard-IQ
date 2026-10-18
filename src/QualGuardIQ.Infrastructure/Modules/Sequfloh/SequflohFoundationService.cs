@@ -151,7 +151,8 @@ public sealed class SequflohFoundationService(AppDbContext db, ModuleSupport m, 
         if (r.Padding is < 1 or > 10) throw new AppException("Sequence padding must be between 1 and 10.");
         if (r.Pattern is not ("PREFIX-YEAR-SEQUENCE" or "PREFIX-SEQUENCE")) throw new AppException("The numbering pattern must be PREFIX-YEAR-SEQUENCE or PREFIX-SEQUENCE.");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var seq = await db.NumberSequences.FromSqlInterpolated($"SELECT * FROM qms.number_sequences WHERE \"RecordType\" = {r.RecordType} AND \"SiteId\" IS NULL FOR UPDATE").FirstOrDefaultAsync(ct);
+        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM qms.number_sequences WHERE \"RecordType\" = {r.RecordType} AND \"SiteId\" IS NULL FOR UPDATE", ct);
+        var seq = await db.NumberSequences.FirstOrDefaultAsync(x => x.RecordType == r.RecordType && x.SiteId == null, ct);
         if (seq is null) { seq = new NumberSequence { RecordType = r.RecordType }; db.NumberSequences.Add(seq); }
         var before = $"{seq.Prefix}|{seq.Padding}|{seq.ResetYearly}";
         var yearly = r.Pattern == "PREFIX-YEAR-SEQUENCE";

@@ -23,7 +23,7 @@ public sealed class SequflohPartsController(AppDbContext db, ModuleSupport m, Se
         var query = SequflohPartsService.SortParts(await parts.PartsQueryAsync(q, view, family, status, type, ct), sort);
         return await Paging.PageAsync(query.Select(p => new
         {
-            p.Id, p.PartNumber, p.Name, p.Description, p.Revision, p.ProductFamily, p.PartType, p.AssemblyType, p.UnitOfMeasure, p.Status, p.IsRepairable, p.IsSerialized, p.IsLotControlled,
+            p.Id, p.PartNumber, p.Name, p.Description, p.Revision, p.ProductFamily, PartType = p.PartType.ToString(), p.AssemblyType, p.UnitOfMeasure, Status = p.Status.ToString(), p.IsRepairable, p.IsSerialized, p.IsLotControlled,
             p.DrawingNumber, p.Specification, p.SiteId, p.UpdatedAt
         }), page, pageSize, ct);
     }
@@ -41,7 +41,7 @@ public sealed class SequflohPartsController(AppDbContext db, ModuleSupport m, Se
         {
             Part = new
             {
-                p.Id, p.PartNumber, p.Name, p.Description, p.PartType, p.Revision, p.UnitOfMeasure, p.ProductId, p.Material, p.HasSpecialCharacteristics, p.SiteId, p.DepartmentId, p.Status,
+                p.Id, p.PartNumber, p.Name, p.Description, PartType = p.PartType.ToString(), PartTypeValue = (int)p.PartType, p.Revision, p.UnitOfMeasure, p.ProductId, p.Material, p.HasSpecialCharacteristics, p.SiteId, p.DepartmentId, Status = p.Status.ToString(), StatusValue = (int)p.Status,
                 p.ProductFamily, p.AssemblyType, p.IsRepairable, p.IsSerialized, p.IsLotControlled, p.DrawingNumber, p.Specification, p.RowVersion, p.CreatedAt, p.UpdatedAt,
                 CreatedBy = Name(p.CreatedById), UpdatedBy = Name(p.UpdatedById)
             },
