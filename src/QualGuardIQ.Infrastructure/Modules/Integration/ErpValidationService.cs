@@ -92,7 +92,17 @@ public sealed class ErpValidationService(AppDbContext db, ModuleSupport m, ErpAd
 
     /// <summary>Hash of everything that changes what a test proves: system, edition, endpoints, identities, options, secrets and environment.</summary>
     public static string Fingerprint(ErpConnection c) => Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(string.Join("\u001f",
-        c.System, c.Edition, c.BaseUrl, c.Account, c.Company, c.ClientId, c.Username, Canonical(c.Options), c.EncryptedSecret, c.EncryptedSecondarySecret, c.Environment))));
+        c.System, c.Edition, c.BaseUrl, c.Account, c.Company, c.ClientId, c.Username, Canonical(c.Options), c.EncryptedSecret, c.EncryptedSecondarySecret, c.Environment)
+        + NamedSecrets(c))));
+
+    /// <summary>Named secrets in the fingerprint, except ones the vendor rotates on its own (a refresh token), so rotation does not reset validation.</summary>
+    static string NamedSecrets(ErpConnection c)
+    {
+        var bag = ErpSyncService.SecretBag(c);
+        if (bag.Count == 0) return "";
+        var rotating = Erp.ErpSetupProfiles.For(c.System, c.Edition)?.RotatingSecrets ?? [];
+        return "\u001f" + string.Join("\u001f", bag.Where(kv => !rotating.Contains(kv.Key)).OrderBy(kv => kv.Key, StringComparer.Ordinal).Select(kv => kv.Key + "=" + kv.Value));
+    }
 
     /// <summary>Options JSON with sorted keys and no whitespace, so the stored jsonb text and freshly serialized options hash the same.</summary>
     static string Canonical(string json)
