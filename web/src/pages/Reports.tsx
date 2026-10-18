@@ -1,5 +1,5 @@
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Box, Button, Card, CardActionArea, CardContent, Grid, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Grid, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -9,6 +9,7 @@ import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
 import { fmtDate, fmtDateTime } from '../components/Status';
+import { PanelHead, Readout } from '../components/Kit';
 
 interface Def { key: string; title: string; category: string; permission: string; description: string; usesDates: boolean }
 interface Col { key: string; label: string; type: string }
@@ -43,17 +44,15 @@ export function ReportCatalog() {
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Reports' }]} title="Report library">
       <Typography color="text.secondary" sx={{ mb: 2, maxWidth: 820 }}>Only reports on modules you can view are listed. Results include records from your sites and departments only.</Typography>
       {cats.map((c) => (
-        <Box key={c} sx={{ mb: 3 }}>
-          <Typography variant="overline" sx={{ letterSpacing: 1.2 }}>{c}</Typography>
-          <Grid container spacing={1.5}>
-            {list.data!.filter((d) => d.category === c).map((d) => (
-              <Grid key={d.key} size={{ xs: 12, md: 6, lg: 4 }}>
-                <Card variant="outlined"><CardActionArea onClick={() => nav(`/reports/r/${d.key}`)}><CardContent>
-                  <Typography fontWeight={600}>{d.title}</Typography><Typography variant="body2" color="text.secondary">{d.description}</Typography>
-                </CardContent></CardActionArea></Card>
-              </Grid>))}
-          </Grid>
-        </Box>))}
+        <Paper key={c} sx={{ mb: 2.5, overflow: 'hidden' }} component="section" aria-label={c}>
+          <PanelHead title={c} />
+          {list.data!.filter((d) => d.category === c).map((d, i) => (
+            <Box key={d.key} component="button" type="button" onClick={() => nav(`/reports/r/${d.key}`)}
+              sx={{ all: 'unset', boxSizing: 'border-box', width: '100%', cursor: 'pointer', display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(220px, 32%) 1fr' }, gap: { xs: 0.25, md: 2 }, px: 2, py: 1.1, borderTop: i ? 1 : 0, borderColor: 'divider',
+                '&:hover, &:focus-visible': { bgcolor: 'action.hover' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 } }}>
+              <Typography fontWeight={600} variant="body2">{d.title}</Typography><Typography variant="body2" color="text.secondary">{d.description}</Typography>
+            </Box>))}
+        </Paper>))}
       {list.data?.length === 0 && <Alert severity="info">No reports are available for your permissions.</Alert>}
     </ModuleWorkspace>
   );
@@ -95,10 +94,10 @@ const tiles: { key: string; title: string }[] = [
 function Tile({ k, title }: { k: string; title: string }) {
   const r = useQuery({ queryKey: ['report', k, ''], queryFn: () => get<Result>(`/api/reports/${k}`) });
   return (
-    <Card variant="outlined"><CardContent>
-      <Stack direction="row" justifyContent="space-between" alignItems="baseline"><Typography fontWeight={600}>{title}</Typography><Button size="small" component={RouterLink} to={`/reports/r/${k}`}>Open</Button></Stack>
-      {r.data && (r.data.rows.length ? <Chart r={r.data} height={200} /> : <Typography color="text.secondary" sx={{ py: 4 }}>No data in the last 12 months.</Typography>)}
-    </CardContent></Card>
+    <Paper sx={{ overflow: 'hidden', height: '100%' }}>
+      <PanelHead title={title} action={<Button size="small" component={RouterLink} to={`/reports/r/${k}`}>Open</Button>} />
+      <Box sx={{ p: 2 }}>{r.data && (r.data.rows.length ? <Chart r={r.data} height={200} /> : <Typography color="text.secondary" sx={{ py: 4 }}>No data in the last 12 months.</Typography>)}</Box>
+    </Paper>
   );
 }
 
@@ -109,17 +108,15 @@ export function ReportDashboard() {
   const aging = useQuery({ queryKey: ['report', 'ncr.aging', ''], queryFn: () => get<Result>('/api/reports/ncr.aging'), enabled: avail.has('ncr.aging') });
   const pending = useQuery({ queryKey: ['report', 'approvals.pending', ''], queryFn: () => get<Result>('/api/reports/approvals.pending'), enabled: avail.has('approvals.pending') });
   const kpi = (label: string, v: number | undefined, to: string) => (
-    <Card variant="outlined" sx={{ minWidth: 180 }}><CardActionArea component={RouterLink} to={to}><CardContent>
-      <Typography variant="body2" color="text.secondary">{label}</Typography><Typography variant="h4" fontWeight={600}>{v ?? '—'}</Typography>
-    </CardContent></CardActionArea></Card>);
+    <Readout key={label} label={label} value={v ?? '—'} to={to} color="primary.main" />);
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Dashboard' }]} title="Quality dashboard">
-      <Stack direction="row" spacing={1.5} sx={{ mb: 2, flexWrap: 'wrap' }} useFlexGap>
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 1.5, mb: 2 }}>
         {avail.has('actions.overdue') && kpi('Overdue actions', overdue.data?.rows.length, '/reports/r/actions.overdue')}
         {avail.has('ncr.aging') && kpi('Open NCRs', aging.data?.rows.length, '/reports/r/ncr.aging')}
         {avail.has('ncr.aging') && kpi('NCRs open > 30 days', aging.data?.rows.filter((r) => Number(r.days) > 30).length, '/reports/r/ncr.aging')}
         {avail.has('approvals.pending') && kpi('Pending approvals', pending.data?.rows.length, '/reports/r/approvals.pending')}
-      </Stack>
+      </Box>
       <Grid container spacing={2}>
         {tiles.filter((t) => avail.has(t.key)).map((t) => <Grid key={t.key} size={{ xs: 12, lg: 6 }}><Tile k={t.key} title={t.title} /></Grid>)}
       </Grid>

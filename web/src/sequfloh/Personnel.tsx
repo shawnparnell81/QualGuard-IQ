@@ -4,7 +4,7 @@ import { Alert, Box, Button, Checkbox, FormControlLabel, List, ListItemButton, L
 import { useQuery } from '@tanstack/react-query';
 import { get, put } from '../api';
 import { useAuth } from '../auth';
-import { useUsers } from '../components/Kit';
+import { PanelHead, Readout, useUsers } from '../components/Kit';
 import { fmtDate, fmtDateTime } from '../components/Status';
 import { ErrorState, Filters, Grid, Loading, Mono, PagedTable, S, SqfPage, SqfStatus, nul, qs, words } from './common';
 import { InstructionsFolderPage } from './Instructions';
@@ -18,16 +18,15 @@ interface Mini { id: string; number: string; revision?: string; title?: string; 
 
 /** A count card that opens the list behind it. */
 export function Stat({ label, value, to }: { label: string; value?: number; to?: string }) {
-  const body = <><Typography variant="caption" color="text.secondary" component="div">{label}</Typography><Typography variant="h2" component="div">{value ?? '—'}</Typography></>;
-  return <Paper variant="outlined" sx={{ p: 2 }} aria-label={label}>{to ? <Box component={RouterLink} to={to} sx={{ color: 'inherit', textDecoration: 'none', display: 'block' }}>{body}</Box> : body}</Paper>;
+  return <Readout label={label} value={value ?? '—'} to={to} color="primary.main" />;
 }
 export const Stats = ({ children }: { children: ReactNode }) =>
   <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, minmax(0, 1fr))' }, mb: 2 }}>{children}</Box>;
 export function MiniList({ title, rows, empty, kind }: { title: string; rows?: Mini[]; empty: string; kind: 'instruction' | 'record' }) {
   return (
-    <Paper variant="outlined" sx={{ p: 2 }} component="section" aria-label={title}>
-      <Typography variant="h3" sx={{ mb: 1 }}>{title}</Typography>
-      {(rows ?? []).length === 0 ? <Typography variant="body2" color="text.secondary">{empty}</Typography> :
+    <Paper variant="outlined" sx={{ overflow: 'hidden' }} component="section" aria-label={title}>
+      <PanelHead title={title} />
+      {(rows ?? []).length === 0 ? <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1.75 }}>{empty}</Typography> :
         <List dense disablePadding>{rows!.map((r) => <ListItemButton key={r.id} component={RouterLink} to={kind === 'instruction' ? `/sequfloh/instruction/${r.id}` : `/sequfloh/record/${r.id}`}>
           <ListItemText primary={<Stack direction="row" gap={1} alignItems="center"><Mono>{r.number}{r.revision ? ` rev ${r.revision}` : ''}</Mono><SqfStatus status={r.result === 'Fail' ? 'Fail' : r.status} /></Stack>}
             secondary={[typeLabel[r.type] ?? r.type, r.title ?? (r.workInstructionNumber ? `${r.workInstructionNumber} rev ${r.workInstructionRevision}` : ''), r.partNumber, fmtDateTime(r.releasedAt ?? r.updatedAt)].filter(Boolean).join(' · ')} />
