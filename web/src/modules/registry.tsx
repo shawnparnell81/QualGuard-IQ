@@ -61,6 +61,7 @@ export const modules: ModuleDef[] = [
         { label: 'Obsolete', path: '/documents?status=2' },
       ] },
       { label: 'Content library', path: '/documents/content' },
+      { label: 'Master lists', path: '/master-lists' },
       { label: 'Document types', path: '/documents/types', permission: 'admin.organization' },
       { label: 'Create document', path: '/documents/new', permission: 'documents.edit' },
       { label: 'Controlled forms', path: '/forms/records', permission: 'forms.view', children: [
