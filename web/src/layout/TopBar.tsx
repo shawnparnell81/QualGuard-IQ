@@ -101,6 +101,10 @@ function ModuleNav() {
   const measureRef = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(mods.length);
   const [moreEl, setMoreEl] = useState<HTMLElement | null>(null);
+  const isActive = (m: (typeof mods)[number]) => {
+    const roots = [m.basePath, ...m.sidebar.flatMap((i) => [i.path, ...(i.children ?? []).map((c) => c.path)])].map((x) => '/' + x.split(/[/?]/)[1]);
+    return roots.some((r) => loc.pathname === r || loc.pathname.startsWith(r + '/'));
+  };
   useLayoutEffect(() => {
     const nav = navRef.current, measure = measureRef.current;
     if (!nav || !measure) return;
@@ -109,19 +113,18 @@ function ModuleNav() {
       const avail = nav.clientWidth;
       const total = widths.reduce((a, b) => a + b, 0);
       if (total <= avail) { setFit(widths.length); return; }
-      let used = 96, n = 0;
-      while (n < widths.length && used + widths[n] <= avail) used += widths[n++];
+      const count = (reserve: number) => { let used = reserve, n = 0; while (n < widths.length && used + widths[n] <= avail) used += widths[n++]; return n; };
+      let n = count(96);
+      // the overflow button shows the active module's name, so it needs room for that label and its arrow
+      const activeIdx = mods.findIndex(isActive);
+      if (activeIdx >= n) n = count(Math.max(96, widths[activeIdx] + 24));
       setFit(n); // on a phone every module can move into the menu
     };
     calc();
     const ro = new ResizeObserver(calc);
     ro.observe(nav);
     return () => ro.disconnect();
-  }, [mods.length]);
-  const isActive = (m: (typeof mods)[number]) => {
-    const roots = [m.basePath, ...m.sidebar.flatMap((i) => [i.path, ...(i.children ?? []).map((c) => c.path)])].map((x) => '/' + x.split(/[/?]/)[1]);
-    return roots.some((r) => loc.pathname === r || loc.pathname.startsWith(r + '/'));
-  };
+  }, [mods.length, loc.pathname]);
   const btn = (m: (typeof mods)[number], active: boolean) => (
     <Button key={m.key} component={RouterLink} to={m.basePath} startIcon={m.icon} color="inherit" size="small" aria-current={active ? 'page' : undefined}
       sx={{ px: 1.25, minHeight: 56, whiteSpace: 'nowrap', flexShrink: 0, color: active ? 'primary.main' : 'text.secondary', fontWeight: active ? 600 : 500, borderBottom: '2px solid', borderColor: active ? 'primary.main' : 'transparent', borderRadius: 0, '&:hover': { color: 'primary.main', bgcolor: 'action.hover' } }}>

@@ -279,7 +279,7 @@ export const modules: ModuleDef[] = [
   },
   {
     key: 'qualityops',
-    label: 'Quality operations',
+    label: 'Quality Operations',
     description: 'Quality events and triage, deviations, investigations, hold and release, registers, service levels, skip-lot, quality reviews and analytics',
     icon: <VerifiedOutlined fontSize="small" />,
     basePath: '/quality-ops',
