@@ -14,11 +14,12 @@ public static partial class DatabaseRoles
     [GeneratedRegex("^[a-z_][a-z0-9_]{0,62}$")]
     private static partial Regex RoleName();
 
-    public static async Task ApplyAsync(AppDbContext db, string role, string? password, CancellationToken ct = default)
+    /// <param name="ownerConnectionString">The owner's connection string from configuration (an open connection no longer shows the password).</param>
+    public static async Task ApplyAsync(AppDbContext db, string role, string? password, string? ownerConnectionString, CancellationToken ct = default)
     {
         if (!RoleName().IsMatch(role)) throw new InvalidOperationException("Database:AppRole must be lowercase letters, digits or underscores.");
         if (string.IsNullOrEmpty(password) || password.Length < 12) throw new InvalidOperationException("Database:AppRolePassword must be at least 12 characters.");
-        var owner = new Npgsql.NpgsqlConnectionStringBuilder(db.Database.GetConnectionString());
+        var owner = new Npgsql.NpgsqlConnectionStringBuilder(ownerConnectionString ?? db.Database.GetConnectionString());
         if (owner.Password == password) throw new InvalidOperationException("Database:AppRolePassword must differ from the owner login's password.");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         // values travel as settings (bound parameters), never spliced into the SQL text
@@ -37,8 +38,11 @@ public static partial class DatabaseRoles
           IF r = current_user THEN RAISE EXCEPTION 'Database:AppRole must differ from the owner login %', current_user; END IF;
           IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = r) THEN
             EXECUTE format('CREATE ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L', r, pw);
-          ELSE
+          ELSIF (SELECT rolsuper FROM pg_roles WHERE rolname = current_user) THEN
             EXECUTE format('ALTER ROLE %I LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD %L', r, pw);
+          ELSE
+            -- an owner without superuser rights can't touch those attributes, and can't have granted them either
+            EXECUTE format('ALTER ROLE %I LOGIN NOCREATEDB NOCREATEROLE PASSWORD %L', r, pw);
           END IF;
           EXECUTE format('GRANT CONNECT, TEMPORARY, CREATE ON DATABASE %I TO %I', current_database(), r);
           EXECUTE format('GRANT USAGE ON SCHEMA qms TO %I', r);
@@ -50,6 +54,10 @@ public static partial class DatabaseRoles
           -- the audit trail and security log are add-only for the app
           EXECUTE format('REVOKE UPDATE, DELETE, TRUNCATE ON qms.audit_entries, qms.security_events FROM %I', r);
           EXECUTE format('REVOKE UPDATE, DELETE, TRUNCATE ON qms.__ef_migrations FROM %I', r);
+          -- the owner must be able to act as the app login to hand it the job tables (PostgreSQL 16+ asks for this explicitly)
+          IF NOT pg_has_role(current_user, r, CASE WHEN current_setting('server_version_num')::int >= 160000 THEN 'SET' ELSE 'MEMBER' END) THEN
+            EXECUTE format('GRANT %I TO %I', r, current_user);
+          END IF;
           -- background job tables
           IF NOT EXISTS (SELECT 1 FROM pg_namespace WHERE nspname = 'jobs') THEN
             EXECUTE format('CREATE SCHEMA jobs AUTHORIZATION %I', r);

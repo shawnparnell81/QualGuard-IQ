@@ -172,7 +172,7 @@ public sealed class QualityModuleTests(TestApp app)
         var assignment = mine[0];
         Assert.Equal("A", assignment.Str("documentRevision"));
         Assert.Equal(HttpStatusCode.Forbidden, (await author.PostAsync($"/api/training/assignments/{assignment.Id()}/complete", new { password = "long-enough-password", notes = (string?)null })).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await trainee.PostAsync($"/api/training/assignments/{assignment.Id()}/complete", new { password = "wrong-password-1", notes = (string?)null })).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await trainee.PostAsync($"/api/training/assignments/{assignment.Id()}/complete", new { password = "wrong-password-1", notes = (string?)null })).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await trainee.PostAsync($"/api/training/assignments/{assignment.Id()}/complete", new { password = "long-enough-password", notes = "Read" })).StatusCode);
         Assert.Equal(1, (await trainee.GetElAsync("/api/training/my"))[0].Int("status"));
 

@@ -65,7 +65,7 @@ public sealed class DocumentControlTests(TestApp app)
 
             // the approved revision is immutable and its file is locked
             Assert.Equal(HttpStatusCode.Conflict, (await author.PutAsync($"/api/documents/revisions/{revA.Id}", new { changeSummary = "tamper", effectiveDate = (DateOnly?)null, trainingRequired = false, rowVersion = revA.RowVersion })).StatusCode);
-            Assert.NotEqual(HttpStatusCode.OK, (await author.UploadAsync("DocumentRevision", revA.Id, "extra.pdf", "x")).StatusCode);
+            Assert.NotEqual(HttpStatusCode.OK, (await author.UploadAsync("DocumentRevision", revA.Id, "extra.pdf", "%PDF x")).StatusCode);
             var filesA = await author.GetJsonAsync<List<FileDto>>($"/api/records/DocumentRevision/{revA.Id}/files");
             Assert.True(Assert.Single(filesA).IsLocked);
 
@@ -136,7 +136,7 @@ public sealed class DocumentControlTests(TestApp app)
 
         var revB = await (await engineer.PostOkAsync($"/api/documents/{id}/revisions", new { changeSummary = "Hole moved 2 mm" })).Content.ReadFromJsonAsync<Guid>();
         // the original file cannot be replaced under revision A
-        Assert.Equal(HttpStatusCode.BadRequest, (await engineer.UploadAsync("DrawingRevision", revA.Id, "BR-1001-A.pdf", "changed", fileA.Id)).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await engineer.UploadAsync("DrawingRevision", revA.Id, "BR-1001-A.pdf", "%PDF changed", fileA.Id)).StatusCode);
         (await engineer.UploadAsync("DrawingRevision", revB, "BR-1001-B.pdf", "%PDF drawing B")).EnsureSuccessStatusCode();
         await engineer.PostOkAsync($"/api/documents/revisions/{revB}/submit");
         await checker.SignAsync(await checker.PendingApprovalIdAsync(dwg.Number));
@@ -157,7 +157,7 @@ public sealed class DocumentControlTests(TestApp app)
         var id = await both.CreateDocumentAsync(site);
         var doc = await both.GetDocumentAsync(id);
         var rev = doc.Revisions.Single();
-        (await both.UploadAsync("DocumentRevision", rev.Id, "p.pdf", "x")).EnsureSuccessStatusCode();
+        (await both.UploadAsync("DocumentRevision", rev.Id, "p.pdf", "%PDF x")).EnsureSuccessStatusCode();
         await both.PostOkAsync($"/api/documents/revisions/{rev.Id}/submit");
         Assert.Empty((await both.GetJsonAsync<MyWork>("/api/my/work")).Approvals);
     }
@@ -171,7 +171,7 @@ public sealed class DocumentControlTests(TestApp app)
         var id = await author.CreateDocumentAsync(site);
         var doc = await author.GetDocumentAsync(id);
         var rev = doc.Revisions.Single();
-        (await author.UploadAsync("DocumentRevision", rev.Id, "p.pdf", "x")).EnsureSuccessStatusCode();
+        (await author.UploadAsync("DocumentRevision", rev.Id, "p.pdf", "%PDF x")).EnsureSuccessStatusCode();
         await author.PostOkAsync($"/api/documents/revisions/{rev.Id}/submit");
         var aid = await approver.PendingApprovalIdAsync(doc.Number);
         Assert.Equal(HttpStatusCode.BadRequest, (await approver.SignAsync(aid, approve: false)).StatusCode);

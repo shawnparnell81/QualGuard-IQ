@@ -177,11 +177,11 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
     {
         var r = await records.RequireEditAsync(type, id, ct);
         var lower = name.Trim().ToLowerInvariant();
-        var rt = await (from x in db.RecordTags join t in db.Tags on x.TagId equals t.Id
-                        where x.OwnerType == r.Type && x.OwnerId == r.Id && t.Name.ToLower() == lower select x).FirstOrDefaultAsync(ct)
+        var found = await (from x in db.RecordTags join t in db.Tags on x.TagId equals t.Id
+                           where x.OwnerType == r.Type && x.OwnerId == r.Id && t.Name.ToLower() == lower select new { x, t.Name }).FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Tag");
-        db.RecordTags.Remove(rt);
-        AuditLog.Add(db, current, DateTimeOffset.UtcNow, "TagRemoved", r.Type, r.Id, r.SiteId, $"Removed tag \"{name.Trim()}\" from {r.Number}");
+        db.RecordTags.Remove(found.x);
+        AuditLog.Add(db, current, DateTimeOffset.UtcNow, "TagRemoved", r.Type, r.Id, r.SiteId, $"Removed tag \"{found.Name}\" from {r.Number}");
         await db.SaveChangesAsync(ct);
         return NoContent();
     }
