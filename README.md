@@ -91,11 +91,21 @@ User, administrator, deployment, recovery, API and architecture guides are in [`
 ## Security model
 
 - Cookie sessions (HttpOnly, SameSite=Strict), validated against the user record on every request:
-  disabling a user, changing their roles, or revoking sessions takes effect immediately.
+  disabling a user, changing their roles, or revoking sessions takes effect immediately. Signing out ends the session on
+  the server, and every session ends 12 hours after sign-in (`Auth:SessionAbsoluteHours`).
+- Electronic signatures (approvals, forms, training, project gates) ask for the password and, for accounts with
+  two-step verification, the authenticator code. Wrong signature passwords count toward the account lockout.
+- Sign-in answers don't reveal which email addresses have accounts.
 - Every state-changing request requires the `X-CSRF-TOKEN` header (`GET /api/auth/csrf`).
 - Accounts lock after 5 wrong passwords; administrators can unlock.
 - Roles are data. A role's permissions can be granted organization-wide, for one site, or for one
   department at a site. Checks run on the server.
-- The business audit trail (who, what, when, description, old and new values) is written in the same
-  transaction as the change and has no edit or delete endpoint. Security events are stored separately.
+- The business audit trail (who, what, when, and a plain-language description with old and new values) is written in
+  the same transaction as the change and has no edit or delete endpoint. The app's database login can only add to it,
+  and a database trigger refuses changes and deletions from any login. Security events are stored separately, with the
+  same protection.
+- Addresses administrators enter for outbound calls (webhooks, notifications, printers, carriers, ERP) can't reach
+  internal networks unless allowed in `Outbound:AllowedNetworks`.
+- Uploads must match their file extension (PDF, images, Office, ZIP and video are checked byte by byte) and are stored
+  with the type for that extension.
 - Security verification target: OWASP ASVS Level 2 (not a certification).

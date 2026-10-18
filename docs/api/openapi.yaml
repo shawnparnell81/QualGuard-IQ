@@ -42471,6 +42471,28 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+  /api/admin/upload-scanning:
+    get:
+      tags:
+        - UploadScanning
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/ScanningStatus'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScanningStatus'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/ScanningStatus'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/admin/users:
     get:
       tags:
@@ -56203,6 +56225,10 @@ components:
             - string
         password:
           type: string
+        mfaCode:
+          type:
+            - 'null'
+            - string
     CustomerResponseRequest:
       required:
         - response
@@ -60370,6 +60396,10 @@ components:
         password:
           type: string
         notes:
+          type:
+            - 'null'
+            - string
+        mfaCode:
           type:
             - 'null'
             - string
@@ -76038,6 +76068,16 @@ components:
           type:
             - 'null'
             - string
+    ScanningStatus:
+      required:
+        - enabled
+        - provider
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        provider:
+          type: string
     ScanRequest:
       required:
         - code
@@ -83354,6 +83394,7 @@ tags:
   - name: SsoAdmin
   - name: TemplateLibrary
   - name: Template Packages
+  - name: UploadScanning
   - name: Users
   - name: Warehouse
   - name: Receiving
