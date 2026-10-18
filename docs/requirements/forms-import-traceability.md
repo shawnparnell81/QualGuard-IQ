@@ -4,7 +4,7 @@ Sources: `forms-import.md` (8 phases, "FI") and `forms-import-technical.md` (22 
 the stricter requirement wins. Reference package (SQL, EF config, ERD, module tree incl. the Electronics pack) is used as a guide only:
 everything is rebuilt as EF Core code-first in the application schema (`qms`, where every other table lives), not a separate `qg_templates` schema, with real foreign keys to existing tables.
 
-Build phases (see CHECKPOINT.md `## Forms/Import`):
+Build phases:
 
 | Build phase | Content |
 | --- | --- |
@@ -26,7 +26,7 @@ Build phases (see CHECKPOINT.md `## Forms/Import`):
 | B14 | Synthetic fixtures, the six end-to-end tests, performance tests |
 | B15 | Guides, compatibility reports, known limitations, acceptance report |
 
-Status: Done (build phase; commits in CHECKPOINT.md). Updated at B15.
+Status: Done (build phase). Updated at B15.
 
 | Requirement | Source | Build phase | Service | Database entity | API endpoint | User interface | Permission | Background job | Audit event | Automated test | Status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |

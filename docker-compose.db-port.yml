@@ -1,0 +1,6 @@
+# Optional: publish the app's PostgreSQL on the host for a desktop database tool.
+# The default port 5433 avoids a PostgreSQL server already using 5432 on the same computer.
+#   docker compose -f docker-compose.yml -f docker-compose.db-port.yml up -d
+services:
+  postgres:
+    ports: ["127.0.0.1:${POSTGRES_HOST_PORT:-5433}:5432"]

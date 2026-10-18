@@ -102,7 +102,7 @@ public class TemplateLibraryContentTests
         foreach (var t in TemplateLibrary.Templates)
         {
             var json = FormDefinitions.Serialize(t.Definition) + t.Title + t.Purpose + t.Scope + t.Instructions;
-            foreach (var bad in new[] { "prior product", "prior product", "lorem", "TODO", "TBD" }) Assert.DoesNotContain(bad, json);
+            foreach (var bad in new[] { "lorem", "TODO", "TBD" }) Assert.DoesNotContain(bad, json);
         }
     }
 

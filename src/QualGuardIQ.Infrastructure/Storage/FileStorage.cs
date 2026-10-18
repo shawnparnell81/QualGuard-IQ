@@ -12,7 +12,7 @@ public interface IFileStorage
     Task EnsureReadyAsync(CancellationToken ct);
 }
 
-/// <summary>S3-compatible storage. MinIO by default for local and self-hosted use; Amazon S3 by changing ServiceUrl/credentials.</summary>
+/// <summary>S3-compatible storage. MinIO by default for local and self-hosted use; Amazon S3 or Cloudflare R2 by changing ServiceUrl, Region and credentials (R2: Region "auto").</summary>
 public sealed class S3FileStorage : IFileStorage, IDisposable
 {
     private readonly AmazonS3Client _client;
@@ -36,8 +36,18 @@ public sealed class S3FileStorage : IFileStorage, IDisposable
             : new AmazonS3Client(new BasicAWSCredentials(s["AccessKey"], s["SecretKey"]), cfg);
     }
 
+    /// <summary>
+    /// Confirms the bucket can be used and creates it when it does not exist yet. A bucket made in advance (for example
+    /// Cloudflare R2 with a token limited to object read and write on that bucket) is only listed, never created.
+    /// </summary>
     public async Task EnsureReadyAsync(CancellationToken ct)
     {
+        try
+        {
+            await _client.ListObjectsV2Async(new ListObjectsV2Request { BucketName = _bucket, MaxKeys = 1 }, ct);
+            return;
+        }
+        catch (AmazonS3Exception e) when (e.ErrorCode == "NoSuchBucket" || e.StatusCode == System.Net.HttpStatusCode.NotFound) { }
         try { await _client.PutBucketAsync(new PutBucketRequest { BucketName = _bucket }, ct); }
         catch (AmazonS3Exception e) when (e.ErrorCode is "BucketAlreadyOwnedByYou" or "BucketAlreadyExists") { }
     }

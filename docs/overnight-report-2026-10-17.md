@@ -1,8 +1,8 @@
 # QualGuard IQ: overnight report, Saturday 17 October 2026
 
-Good morning, Shawn. This is what got done overnight, prompt by prompt, in the run order we agreed. Everything is committed in the local git repository at `/workspace/mqms`. Nothing has been pushed to GitHub.
+This report covers the work completed overnight on 17 October 2026, prompt by prompt, in the agreed run order. Everything was committed to the local git repository; nothing was pushed to GitHub at that time.
 
-Screenshots are in `/workspace/mqms-screenshots`, numbered in build order. Number ranges for each prompt are listed below.
+Screenshots were numbered in build order. Number ranges for each prompt are listed below.
 
 ## Where things stand
 
@@ -18,7 +18,7 @@ Screenshots are in `/workspace/mqms-screenshots`, numbered in build order. Numbe
 
 Each prompt's tests were run on top of the previous ones, so the counts grow as you go down the table. The final full run this morning passed 167 of 167 backend tests and 42 of 42 browser tests. Tests run only against local test databases.
 
-QualGuard IQ keeps its own look throughout. There is a teal top module menu on the home page, and each module has its own side menu and tabs. No prior product layouts, colours, fonts or components are used. Every prompt's checkpoint entry has a note on how its screens differ from prior product.
+QualGuard IQ keeps its own look throughout. There is a teal top module menu on the home page, and each module has its own side menu and tabs.
 
 ---
 
