@@ -46,7 +46,7 @@ public sealed class TemplateCatalogService(AppDbContext db, IAccessService acces
             var pairs = scope.DepartmentPairs.Select(p => p.Site.ToString() + "|" + p.Dept.ToString()).ToList();
             q = q.Where(d => sites.Contains(d.SiteId) || (d.DepartmentId != null && pairs.Contains(d.SiteId.ToString() + "|" + d.DepartmentId.ToString())));
         }
-        return q;
+        return await q.VisibleToAsync(access, Me, ct);
     }
 
     public async Task<CatalogPage> ListAsync(CatalogQuery f, CancellationToken ct)

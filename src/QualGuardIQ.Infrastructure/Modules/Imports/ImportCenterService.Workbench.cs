@@ -100,6 +100,8 @@ public sealed partial class ImportCenterService
             if (rec.IsLocked) throw new AppException($"{rec.Number} is locked; files cannot be added.");
             attachType = rec.Type; attachId = rec.Id;
         }
+        if (req.ExistingRecords == "update" && !await access.CanAccessAsync(Me, Permissions.ImportsUpdateRecords, job.SiteId, job.DepartmentId, ct))
+            throw new ForbiddenException();
         var root = Obj(job.Settings);
         root["purpose"] = req.Purpose;
         root["existingRecords"] = req.ExistingRecords ?? "skip";

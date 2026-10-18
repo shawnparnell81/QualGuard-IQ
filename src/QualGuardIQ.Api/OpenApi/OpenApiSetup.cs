@@ -21,7 +21,9 @@ public static class OpenApiSetup
             {
                 Title = "QualGuard IQ API", Version = "1.0.0",
                 Description = "Manufacturing QMS API. Browser clients use the session cookie (plus the X-CSRF-TOKEN header on writes); API clients may send a bearer token from POST /api/auth/token. "
-                    + "AQL plans and values are organization-configured; no proprietary sampling tables are embedded."
+                    + "AQL plans and values are organization-configured; no proprietary sampling tables are embedded." + " "
+                    + "Writes may carry an Idempotency-Key header (retries with the same key and request replay the first response for 24 hours). "
+                    + "Every response carries X-Correlation-Id; send your own to tie calls together. Expensive processing (file inspection, conversion, rendering, migration) has its own per-caller rate limit."
             };
             var servers = config.GetSection("OpenApi:Servers").Get<string[]>() is { Length: > 0 } s ? s : ["http://localhost:5080"];
             doc.Servers = servers.Select(u => new OpenApiServer { Url = u }).ToList();
@@ -43,6 +45,10 @@ public static class OpenApiSetup
                     ["errors"] = new OpenApiSchema { Type = JsonSchemaType.Object, AdditionalProperties = new OpenApiSchema { Type = JsonSchemaType.Array, Items = new OpenApiSchema { Type = JsonSchemaType.String } } }
                 }
             };
+            // endpoints published under api/v1 are documented once, under their versioned path
+            if (doc.Paths is { } paths)
+                foreach (var path in paths.Keys.Where(k => k.StartsWith("/api/") && !k.StartsWith("/api/v1/") && paths.ContainsKey("/api/v1/" + k["/api/".Length..])).ToList())
+                    paths.Remove(path);
             doc.Security = [
                 new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference("bearerAuth", doc)] = [] },
                 new OpenApiSecurityRequirement { [new OpenApiSecuritySchemeReference("cookieAuth", doc)] = [] }];
@@ -65,6 +71,11 @@ public static class OpenApiSetup
                 foreach (var (code, text) in new[] { ("400", "Validation or business-rule error"), ("401", "Not signed in"), ("403", "Missing permission or outside site scope"), ("404", "Not found or outside site scope"),
                     ("409", "Conflict: state or version mismatch"), ("422", "Unprocessable request"), ("500", "Unexpected server error") })
                     op.Responses[code] = new OpenApiResponse { Description = text, Content = new Dictionary<string, OpenApiMediaType> { ["application/problem+json"] = new() { Schema = new OpenApiSchemaReference("ProblemDetails", ctx.Document) } } };
+            if (ctx.Description.RelativePath?.StartsWith("api/v1/", StringComparison.OrdinalIgnoreCase) == true && ctx.Description.HttpMethod is "POST" or "PUT" or "PATCH" or "DELETE")
+            {
+                op.Parameters ??= [];
+                op.Parameters.Add(new OpenApiParameter { Name = "Idempotency-Key", In = ParameterLocation.Header, Required = false, Description = "1–100 letters, digits, '-', '_', '.', ':'. A retry with the same key and request returns the stored response with Idempotent-Replayed: true; the same key with a different request returns 422; a retry while the first is still running returns 409.", Schema = new OpenApiSchema { Type = JsonSchemaType.String, MaxLength = 100 } });
+            }
             return Task.CompletedTask;
         });
     }

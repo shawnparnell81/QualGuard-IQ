@@ -110,18 +110,21 @@ public sealed partial class IdempotencyMiddleware(RequestDelegate next, ILogger<
         return id is null ? null : Truncate("user:" + id, 100);
     }
 
-    /// <summary>Method, path, query, content type and the body; multipart and large bodies contribute their length instead of their bytes.</summary>
+    /// <summary>Method, path, query, content type and the body (up to 1 MB of it); multipart and declared large bodies contribute their length instead of their bytes.</summary>
     private static async Task<string> FingerprintAsync(HttpRequest req)
     {
         using var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
         var mediaType = (req.ContentType ?? "").Split(';')[0].Trim().ToLowerInvariant();
         sha.AppendData(Encoding.UTF8.GetBytes($"{req.Method}\n{req.Path.Value}\n{req.QueryString.Value}\n{mediaType}\n{req.ContentLength}\n"));
-        if (!mediaType.StartsWith("multipart/") && req.ContentLength is > 0 and <= MaxFingerprintBody)
+        // chunked bodies have no Content-Length, so the body is read whenever it is not known to be large
+        if (!mediaType.StartsWith("multipart/") && req.ContentLength is null or (> 0 and <= MaxFingerprintBody))
         {
             req.EnableBuffering();
             var buf = new byte[81920];
+            long total = 0;
             int n;
-            while ((n = await req.Body.ReadAsync(buf)) > 0) sha.AppendData(buf, 0, n);
+            while (total <= MaxFingerprintBody && (n = await req.Body.ReadAsync(buf)) > 0) { sha.AppendData(buf, 0, n); total += n; }
+            sha.AppendData(Encoding.UTF8.GetBytes($"\n{total}"));
             req.Body.Position = 0;
         }
         return Convert.ToHexStringLower(sha.GetHashAndReset());
@@ -156,7 +159,8 @@ public static partial class CorrelationId
     public static IApplicationBuilder UseCorrelationId(this IApplicationBuilder app) => app.Use(async (ctx, next) =>
     {
         if (ctx.Request.Headers.TryGetValue(Header, out var v) && v.ToString().Trim() is var id && Rx().IsMatch(id)) ctx.TraceIdentifier = id;
-        ctx.Response.Headers[Header] = ctx.TraceIdentifier;
+        // set when the response starts: the exception handler clears headers set earlier
+        ctx.Response.OnStarting(() => { ctx.Response.Headers[Header] = ctx.TraceIdentifier; return Task.CompletedTask; });
         await next();
     });
 }

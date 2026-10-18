@@ -8,7 +8,7 @@ namespace QualGuardIQ.Api.Controllers;
 /// bulk import and bulk update go through the Import Center with the "master list" purpose.</summary>
 [ApiController]
 [Authorize]
-[Route("api/master-lists")]
+[Route("api/master-lists"), Route("api/v1/master-lists")]
 public sealed class MasterListsController(MasterListService lists) : ControllerBase
 {
     [HttpGet] public Task<IReadOnlyList<object>> Types(CancellationToken ct) => lists.TypesAsync(ct);

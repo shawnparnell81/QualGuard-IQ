@@ -239,7 +239,7 @@ test.describe('Forms B12: quality operations', () => {
     await page.getByRole('option').first().click();
     await p.getByLabel('Target (hours)').fill('8');
     await p.getByRole('button', { name: 'Add' }).click();
-    await expect(page.getByRole('cell', { name: `Event triage ${t}` })).toBeVisible();
+    await expect(page.getByRole('cell', { name: `Event triage ${t}` }).first()).toBeVisible(); // also listed once per open record it measures
     await page.getByRole('button', { name: 'Add calendar' }).click();
     const c = dialog(page);
     await c.getByLabel('Name', { exact: true }).fill(`Plant calendar ${t}`);

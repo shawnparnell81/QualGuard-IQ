@@ -46,8 +46,8 @@ public sealed class ImportWorkbenchTests(TestApp app)
     {
         var code = "W" + Guid.NewGuid().ToString("N")[..7].ToUpperInvariant();
         var site = await app.CreateSiteAsync(code);
-        var (_, author) = await app.CreateUserAsync([Permissions.FormsView, Permissions.FormsEdit, Permissions.DocumentsView, Permissions.DocumentsEdit, Permissions.ImportsView, Permissions.ImportsEdit], site);
-        var (_, approver) = await app.CreateUserAsync([Permissions.FormsView, Permissions.FormsEdit, Permissions.FormsApprove, Permissions.DocumentsApprove, Permissions.DocumentsView, Permissions.ImportsView, Permissions.ImportsApprove], site);
+        var (_, author) = await app.CreateUserAsync([Permissions.FormsView, Permissions.FormsEdit, Permissions.DocumentsView, Permissions.DocumentsEdit, Permissions.ImportsView, Permissions.ImportsEdit, Permissions.ImportsUpdateRecords], site);
+        var (_, approver) = await app.CreateUserAsync([Permissions.FormsView, Permissions.FormsEdit, Permissions.FormsApprove, Permissions.DocumentsApprove, Permissions.DocumentsView, Permissions.ImportsView, Permissions.ImportsApprove, Permissions.ImportsUpdateRecords], site);
         var tplId = await author.CreateDocumentAsync(site, kind: 2, title: "Torque log " + Guid.NewGuid().ToString("N")[..6]);
         var tpl = await author.GetDocumentAsync(tplId);
         var rev = tpl.Revisions.Single();

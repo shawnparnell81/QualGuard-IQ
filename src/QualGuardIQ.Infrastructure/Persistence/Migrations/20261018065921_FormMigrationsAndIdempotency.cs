@@ -156,8 +156,7 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 name: "IX_form_migrations_TargetRevisionId",
                 schema: "qms",
                 table: "form_migrations",
-                column: "TargetRevisionId",
-                unique: true);
+                column: "TargetRevisionId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_idempotency_records_Caller_Key",

@@ -4,6 +4,7 @@ import { Alert, Box, Button, Checkbox, Chip, FormControlLabel, MenuItem, Paper, 
 import { get, put } from '../api';
 import { mono } from '../theme';
 import { ConfidenceChip } from './ImportPdf';
+import { useAuth } from '../auth';
 
 /* ------------------------------------------------------------------ workbench */
 
@@ -97,6 +98,7 @@ function StepBody({ n, c, all, jobId, editable, onDone }: { n: number; c: Any; a
 
 function PurposeEditor({ jobId, purpose, target, editable, onDone }: { jobId: string; purpose: Any; target: Any; editable: boolean; onDone: (e?: string) => void }) {
   const targets = useQuery({ queryKey: ['import-targets'], queryFn: () => get<Target[]>('/api/imports/targets') });
+  const { can } = useAuth();
   const templates = useQuery({ queryKey: ['import-templates'], queryFn: () => get<{ items: { id: string; number: string; title: string }[] }>('/api/template-library?view=effective&pageSize=200') });
   const [p, setP] = useState<string>(purpose.purpose);
   const [module, setModule] = useState<string>(target.moduleKey ?? 'form-records');
@@ -130,7 +132,7 @@ function PurposeEditor({ jobId, purpose, target, editable, onDone }: { jobId: st
         {((records && t?.needsTemplate) || (p === 'controlled-form-template' && revision === 'new-revision')) && <TextField select size="small" label="Form template" value={templateId} onChange={(e) => setTemplateId(e.target.value)} sx={{ minWidth: 260 }} SelectProps={{ SelectDisplayProps: { 'aria-label': 'Target template' } as object }}>
           {(templates.data?.items ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.number} · {x.title}</MenuItem>)}</TextField>}
         {records && <TextField select size="small" label="Existing records" value={existing} onChange={(e) => setExisting(e.target.value)} sx={{ minWidth: 220 }} SelectProps={{ SelectDisplayProps: { 'aria-label': 'Existing records' } as object }}>
-          <MenuItem value="skip">Skip records that already exist</MenuItem><MenuItem value="update">Update records that already exist</MenuItem></TextField>}
+          <MenuItem value="skip">Skip records that already exist</MenuItem>{(can('imports.update_records') || existing === 'update') && <MenuItem value="update">Update records that already exist</MenuItem>}</TextField>}
         {p === 'controlled-form-template' && <TextField select size="small" label="Becomes" value={revision} onChange={(e) => setRevision(e.target.value)} sx={{ minWidth: 240 }}>
           <MenuItem value="new-template">A new form template</MenuItem><MenuItem value="new-revision">A new revision of an existing template</MenuItem></TextField>}
         {p === 'attachment-package' && <TextField size="small" label="Record number" value={number} onChange={(e) => setNumber(e.target.value)} helperText="The file is attached to this record" />}

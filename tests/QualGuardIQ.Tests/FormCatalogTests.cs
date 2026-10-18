@@ -124,7 +124,8 @@ public sealed class TemplateLibraryTests(TestApp app)
     {
         var site = await app.CreateSiteAsync();
         var (_, author) = await app.CreateUserAsync([Permissions.FormsView, Permissions.FormsEdit, Permissions.DocumentsView, Permissions.DocumentsEdit], site);
-        var (_, approver) = await app.CreateUserAsync([Permissions.FormsView, Permissions.FormsApprove, Permissions.DocumentsApprove, Permissions.DocumentsView], site);
+        // the template is marked Confidential below, so its approver also holds content.confidential
+        var (_, approver) = await app.CreateUserAsync([Permissions.FormsView, Permissions.FormsApprove, Permissions.DocumentsApprove, Permissions.DocumentsView, Permissions.ContentConfidential], site);
         var (_, outsider) = await app.CreateUserAsync([Permissions.DocumentsView], site);
         var title = "Catalog " + Guid.NewGuid().ToString("N")[..6];
         var tplId = await author.CreateDocumentAsync(site, kind: 2, title: title);

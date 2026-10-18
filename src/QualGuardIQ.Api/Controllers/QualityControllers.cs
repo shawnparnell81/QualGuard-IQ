@@ -40,7 +40,7 @@ internal static class Paging
     }
 }
 
-[ApiController, Authorize, Route("api/forms")]
+[ApiController, Authorize, Route("api/forms"), Route("api/v1/forms")]
 public sealed class FormsController(AppDbContext db, FormService forms, ModuleSupport m) : ControllerBase
 {
     public sealed record SaveValues(Dictionary<string, string?> Values, uint RowVersion);

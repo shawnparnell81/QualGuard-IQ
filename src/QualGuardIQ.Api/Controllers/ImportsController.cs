@@ -12,7 +12,7 @@ namespace QualGuardIQ.Api.Controllers;
 /// <summary>Import Center: upload, inspect, map, validate (dry run), approve, import, roll back; issues, history, originals and error rows.</summary>
 [ApiController]
 [Authorize]
-[Route("api/imports")]
+[Route("api/imports"), Route("api/v1/imports")]
 public sealed class ImportsController(ImportCenterService imports, AppDbContext db) : ControllerBase
 {
     public sealed record JobListItem(Guid Id, string Number, string OriginalFileName, string FileType, string ImportMode, string? TargetModule, ImportJobStatus Status, int Progress,
@@ -138,7 +138,7 @@ public sealed class ImportsController(ImportCenterService imports, AppDbContext 
     [HttpGet("{id:guid}/original")]
     public async Task<IActionResult> Original(Guid id, CancellationToken ct)
     {
-        var job = await imports.LoadAsync(id, Domain.Security.Permissions.ImportsView, ct);
+        var job = await imports.LoadAsync(id, Domain.Security.Permissions.ImportsDownloadOriginal, ct);
         return File(await imports.OpenOriginalAsync(job, ct), "application/octet-stream", job.OriginalFileName);
     }
 }

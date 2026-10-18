@@ -49,8 +49,8 @@ public sealed class MasterListTests(TestApp app)
     {
         var code = "ML" + Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
         var site = await app.CreateSiteAsync(code);
-        var (_, author) = await app.CreateUserAsync([Permissions.CalibrationView, Permissions.CalibrationEdit, Permissions.ImportsView, Permissions.ImportsEdit], site);
-        var (_, approver) = await app.CreateUserAsync([Permissions.CalibrationView, Permissions.ImportsView, Permissions.ImportsApprove], site);
+        var (_, author) = await app.CreateUserAsync([Permissions.CalibrationView, Permissions.CalibrationEdit, Permissions.ImportsView, Permissions.ImportsEdit, Permissions.ImportsUpdateRecords], site);
+        var (_, approver) = await app.CreateUserAsync([Permissions.CalibrationView, Permissions.ImportsView, Permissions.ImportsApprove, Permissions.ImportsUpdateRecords], site);
         var next = DateOnly.FromDateTime(DateTime.Today).AddDays(90).ToString("yyyy-MM-dd");
         var past = DateOnly.FromDateTime(DateTime.Today).AddDays(-10).ToString("yyyy-MM-dd");
         var csv = "Equipment ID,Asset ID,Equipment name,Type,Manufacturer,Serial number,Range,Resolution,Accuracy,Acceptance criteria,Frequency (days),Last calibration,Next due date,Provider,Status,Limited use,Limited-use restriction\n"
