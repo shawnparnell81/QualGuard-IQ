@@ -295,7 +295,7 @@ public sealed partial class WordFormConverter
     }
 
     /// <summary>Creates the fields, checkboxes and signature parts for the units of one paragraph or cell.</summary>
-    void Bind(List<Unit> units, string loc, string? context)
+    void Bind(List<Unit> units, string loc, string? context, string? strong = null)
     {
         var sec = EnsureSection(opt.Title ?? doc.Title ?? "Form");
         foreach (var u in units)
@@ -304,7 +304,7 @@ public sealed partial class WordFormConverter
             var label = Clean(u.Label ?? u.Text);
             if (u.Kind == "check")
             {
-                var cl = label.Length > 0 ? label : u.Source?.Control?.Alias ?? u.Source?.Control?.Tag ?? Clean(context ?? "") ;
+                var cl = label.Length > 0 ? label : strong ?? u.Source?.Control?.Alias ?? u.Source?.Control?.Tag ?? Clean(context ?? "");
                 if (cl.Length == 0) cl = $"Checkbox {def.Fields.Count + 1}";
                 var f = new FormField { Key = NewKey(u.Source?.Control?.Tag ?? cl, "check"), Label = cl, Type = "boolean", Section = sec.Key, SourceLocation = loc, Width = 4 };
                 def.Fields.Add(f);
@@ -315,7 +315,7 @@ public sealed partial class WordFormConverter
             }
             if (u.Kind == "formula") { u.Kind = "formula"; continue; }
             var c = u.Source?.Control;
-            if (label.Length == 0) label = Clean(c?.Alias ?? c?.Tag ?? (u.Source?.Kind == "input" && u.Source.Text.StartsWith('[') ? u.Source.Text.Trim('[', ']') : context ?? ""));
+            if (label.Length == 0) label = Clean(strong ?? c?.Alias ?? c?.Tag ?? (u.Source?.Kind == "input" && u.Source.Text.StartsWith('[') ? u.Source.Text.Trim('[', ']') : context ?? ""));
             if (label.Length == 0) label = $"Field {def.Fields.Count + 1}";
             if (SigRx.IsMatch(label) && !DateLabelRx.IsMatch(label) && c is null or { Type: "text" or "richtext" })
             {
@@ -456,7 +456,7 @@ public sealed partial class WordFormConverter
         report.Add("layout", "Document", "converted", $"{paras} paragraph(s) and {doc.Tables.Count()} table(s) kept on the original-look print layout with fonts, sizes, bold, italic, underline, colours, alignment and indentation.");
         var lists = doc.Blocks.Count(b => b.P?.ListLabel is not null);
         if (lists > 0) report.Add("layout", "Document", "approximated", $"{lists} bulleted or numbered paragraph(s): list numbers and bullets are printed as text (multilevel numbering included); they do not renumber automatically.");
-        if (doc.Blocks.Any(b => b.P?.Style?.Highlight is not null)) report.Add("layout", "Document", "approximated", "Highlighted text is printed with the highlight as a background colour for the whole paragraph or cell part.");
+        if (doc.Blocks.Any(b => b.P?.Segs.Any(x => x.Style?.Highlight is not null) == true || b.T?.Rows.Any(r => r.Cells.Any(c => c.Segs.Any(x => x.Style?.Highlight is not null))) == true)) report.Add("layout", "Document", "approximated", "Highlighted text is printed with the highlight as a background colour for the whole paragraph or cell part.");
         if (doc.Images > 0) report.Add("object", "Document", "not-converted", $"{doc.Images} picture(s) are not placed on the converted layout; they stay in the original document, which is kept as evidence.");
         if (doc.TextBoxes > 0) report.Add("object", "Document", "not-converted", $"{doc.TextBoxes} text box(es) or shape(s) with text are not converted.");
         if (doc.Hyperlinks > 0) report.Add("object", "Document", "approximated", $"{doc.Hyperlinks} hyperlink(s) are printed as text, not links.");
@@ -472,11 +472,9 @@ public sealed partial class WordFormConverter
         report.MissingFonts = doc.Fonts.Where(f => !standard.Contains(f, StringComparer.OrdinalIgnoreCase)).OrderBy(f => f).ToList();
         foreach (var f in report.MissingFonts) report.Add("font", f, "approximated", $"{f} is printed with the closest standard {WorkbookReader.Face(f)} face; line breaks can move (reflow).");
         report.Add("layout", "Document", "approximated", "Word reflows text when it prints; the converted layout keeps the paragraph and table order, widths and spacing, so line and page breaks can fall in slightly different places.");
-        var calcs = def.Fields.Count(f => f.Type == "calc") + def.Tables.Sum(t => t.Columns.Count(c => c.Type == "calc") + (t.Totals?.Count ?? 0));
         report.Formulas = new FormulaCounts(formulaTotal, formulaConverted, 0, formulaTotal - formulaConverted);
         report.Fields = def.Fields.Count; report.Tables = def.Tables.Count; report.Signatures = def.Signatures.Count; report.Rules = def.Rules.Count;
         report.Counts = report.Items.GroupBy(i => i.Status).ToDictionary(g => g.Key, g => g.Count());
-        _ = calcs;
     }
     int formulaTotal, formulaConverted;
 }

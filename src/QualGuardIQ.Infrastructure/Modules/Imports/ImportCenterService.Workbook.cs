@@ -121,6 +121,8 @@ public sealed partial class ImportCenterService
         return WorkbookIntake.Grid(await LoadWorkbookAsync(job, ct), sheet);
     }
 
+    static string? ConvertedTitle(ImportJob job) => Obj(job.Analysis)["document"]?["title"]?.GetValue<string?>() is { Length: > 0 } t ? t : null;
+
     public static FormDefinition? ConvertedDefinition(ImportJob job) =>
         Obj(job.Analysis)["conversion"]?["definition"] is JsonNode n ? FormDefinitions.Parse(n.ToJsonString()) : null;
 
@@ -141,12 +143,12 @@ public sealed partial class ImportCenterService
 
     async Task<Guid> CreateFromFileAsync(ImportJob job, CancellationToken ct)
     {
-        var es = ExcelSettings(job);
-        var title = (es.Title ?? Path.GetFileNameWithoutExtension(job.OriginalFileName)).Trim();
+        var es = ExcelSettings(job); var ws = WordSettings(job);
+        var title = (es.Title ?? ws.Title ?? (job.ImportMode == "template" ? ConvertedTitle(job) : null) ?? Path.GetFileNameWithoutExtension(job.OriginalFileName)).Trim();
         if (title.Length == 0) title = job.OriginalFileName;
         if (title.Length > 200) title = title[..200];
         var kind = job.ImportMode == "template" ? DocumentKind.FormTemplate : DocumentKind.Document;
-        var type = es.DocumentType ?? await db.DocumentTypes.Where(t => t.Kind == kind && t.IsActive).OrderBy(t => t.SortOrder).Select(t => t.Name).FirstOrDefaultAsync(ct)
+        var type = es.DocumentType ?? ws.DocumentType ?? await db.DocumentTypes.Where(t => t.Kind == kind && t.IsActive).OrderBy(t => t.SortOrder).Select(t => t.Name).FirstOrDefaultAsync(ct)
             ?? throw new AppException("No active document type exists for this kind of document.");
         var doc = await docs.CreateAsync(new CreateDocumentRequest(kind, title, type, job.SiteId, job.DepartmentId, job.SubmittedById, 12, null, null, null, null,
             $"Imported from {job.OriginalFileName} ({job.Number})"), ct, preAuthorized: true);
@@ -174,7 +176,7 @@ public sealed partial class ImportCenterService
         await using (var s = await OpenOriginalAsync(job, ct)) await storage.PutAsync(copy.StorageKey, s, copy.ContentType, ct);
         db.Attachments.Add(copy);
         rev.SourceType = full.Source; rev.SourceFileId = copy.Id;
-        if (job.FileType is "xlsx" or "xlsm" or "xls") rev.NativeFileId = copy.Id;
+        if (IsStructured(job)) rev.NativeFileId = copy.Id;
         db.ImportedItems.Add(new ImportedItem { ImportJobId = job.Id, RowNumber = 1, TargetType = DocumentRecordTypes.ForDocument(kind), TargetId = doc.Id });
         return doc.Id;
     }
@@ -191,7 +193,7 @@ public sealed partial class ImportCenterService
                 job.ImportedRows = 1; job.Progress = 100; job.CompletedAt = clock.UtcNow;
                 var report = Obj(job.Analysis)["conversion"]?["report"];
                 job.Summary = new JsonObject { ["imported"] = 1, ["documentId"] = id.ToString(), ["documentNumber"] = number, ["kind"] = job.ImportMode, ["report"] = report?.DeepClone(), ["at"] = clock.UtcNow.ToString("O") }.ToJsonString();
-                Transition(job, job.WarningCount > 0 ? ImportJobStatus.CompletedWithWarnings : ImportJobStatus.Imported, job.ImportMode == "template" ? $"Draft form template {number} created" : $"Controlled document {number} created with the workbook");
+                Transition(job, job.WarningCount > 0 ? ImportJobStatus.CompletedWithWarnings : ImportJobStatus.Imported, job.ImportMode == "template" ? $"Draft form template {number} created" : $"Controlled document {number} created with the {(IsDocument(job) ? "document" : "workbook")}");
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
             }

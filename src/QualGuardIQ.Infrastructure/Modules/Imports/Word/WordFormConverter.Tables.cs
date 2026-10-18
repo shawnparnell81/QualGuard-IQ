@@ -134,8 +134,7 @@ public sealed partial class WordFormConverter
                 }
                 if (c.Units.Any(u => u.Kind != "text"))
                 {
-                    var context = LeftLabel(rc, c) ?? AboveLabel(byRow, c) ?? lastText;
-                    Bind(c.Units, $"{loc} row {r + 1} cell {c.Index + 1}", context);
+                    Bind(c.Units, $"{loc} row {r + 1} cell {c.Index + 1}", lastText, LeftLabel(rc, c) ?? AboveLabel(byRow, c));
                     // a lone input cell whose label is in the next cell keeps that cell as text
                     foreach (var u in c.Units.Where(u => u.Kind == "input" && u.Text.Length > 0 && u.Label == u.Text && c.Cell.Text.Length == 0)) u.Text = "";
                 }
@@ -219,7 +218,14 @@ public sealed partial class WordFormConverter
     {
         formulaTotal++;
         var where = $"{loc} row {c.R + 1} cell {c.Index + 1}";
-        string? Key(NCell x) => x.Units.Select(u => u.Bind).FirstOrDefault(b => b is not null && b.StartsWith("field:")) is { } b && def.Fields.First(f => f.Key == b[6..]).Type is "number" or "integer" or "currency" or "percent" or "calc" ? b[6..] : null;
+        string? Key(NCell x)
+        {
+            if (x.Units.Select(u => u.Bind).FirstOrDefault(b => b is not null && b.StartsWith("field:")) is not { } b) return null;
+            var f = def.Fields.First(f => f.Key == b[6..]);
+            // a blank a formula reads is a number
+            if (f.Type is "text" && f.Placeholder is null) { f.Type = "number"; f.Width = null; report.Add("field", f.SourceLocation ?? where, "converted", $"Field '{f.Key}' is read by a table formula, so it is a number."); }
+            return f.Type is "number" or "integer" or "currency" or "percent" or "calc" ? f.Key : null;
+        }
         string? expr = null;
         var m = WordFormulaRx.Match(c.Formula!);
         if (m.Success)

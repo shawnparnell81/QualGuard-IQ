@@ -79,12 +79,22 @@ public sealed class ImportsController(ImportCenterService imports, AppDbContext 
 
     [HttpPut("{id:guid}/settings")] public async Task<IActionResult> Settings(Guid id, CsvSettingsRequest req, CancellationToken ct) { await imports.UpdateSettingsAsync(id, req, ct); return NoContent(); }
     [HttpPut("{id:guid}/excel-settings")] public async Task<IActionResult> ExcelSettings(Guid id, ExcelSettingsRequest req, CancellationToken ct) { await imports.UpdateExcelSettingsAsync(id, req, ct); return NoContent(); }
+    [HttpPut("{id:guid}/word-settings")] public async Task<IActionResult> WordSettings(Guid id, WordSettingsRequest req, CancellationToken ct) { await imports.UpdateWordSettingsAsync(id, req, ct); return NoContent(); }
+    /// <summary>The original rendered to PDF (Word and Excel through the office conversion adapter), for the side-by-side fidelity comparison.</summary>
+    [HttpGet("{id:guid}/original-preview")]
+    public async Task<IActionResult> OriginalPreview(Guid id, CancellationToken ct)
+    {
+        var (content, name) = await imports.OriginalPreviewAsync(id, ct);
+        return File(content, "application/pdf", name);
+    }
     /// <summary>Secured grid preview of one worksheet of the preserved original (values, formula, validation and named-range indicators; nothing is run).</summary>
     [HttpGet("{id:guid}/workbook")] public Task<QualGuardIQ.Infrastructure.Modules.Imports.Excel.GridPreview> Workbook(Guid id, [FromQuery] string? sheet, CancellationToken ct) => imports.WorkbookGridAsync(id, sheet, ct);
     [HttpPut("{id:guid}/mapping")] public async Task<IActionResult> Mapping(Guid id, MappingRequest req, CancellationToken ct) { await imports.UpdateMappingAsync(id, req, ct); return NoContent(); }
     [HttpPost("{id:guid}/validate")] public Task<DryRunSummary> Validate(Guid id, CancellationToken ct) => imports.ValidateAsync(id, ct);
     [HttpPost("{id:guid}/submit")] public async Task<IActionResult> Submit(Guid id, SubmitRequest req, CancellationToken ct) { await imports.SubmitAsync(id, req.SkipInvalidRows, ct); return NoContent(); }
-    [HttpPost("{id:guid}/approve")] public async Task<IActionResult> Approve(Guid id, CancellationToken ct) { await imports.ApproveAsync(id, ct); return NoContent(); }
+    [HttpPost("{id:guid}/approve")]
+    public async Task<IActionResult> Approve(Guid id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] ApproveImportRequest? req, CancellationToken ct)
+    { await imports.ApproveAsync(id, ct, req?.AcceptFidelityReport == true); return NoContent(); }
     [HttpPost("{id:guid}/return")] public async Task<IActionResult> Return(Guid id, ReasonRequest req, CancellationToken ct) { await imports.RejectAsync(id, req.Reason, ct); return NoContent(); }
     [HttpPost("{id:guid}/cancel")] public async Task<IActionResult> Cancel(Guid id, CancellationToken ct) { await imports.CancelAsync(id, ct); return NoContent(); }
     [HttpPost("{id:guid}/archive")] public async Task<IActionResult> Archive(Guid id, CancellationToken ct) { await imports.ArchiveAsync(id, ct); return NoContent(); }
@@ -105,3 +115,5 @@ public sealed class ImportsController(ImportCenterService imports, AppDbContext 
         return File(await imports.OpenOriginalAsync(job, ct), "application/octet-stream", job.OriginalFileName);
     }
 }
+
+public sealed record ApproveImportRequest(bool AcceptFidelityReport);
