@@ -270,6 +270,9 @@ public static class DependencyInjection
         s.AddScoped<Modules.Enterprise.AuditProgramService>();
         s.AddScoped<Modules.Enterprise.ValidationService>();
         s.AddScoped<Modules.Enterprise.ProjectService>();
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Enterprise.ProjectService.PpapType,
+            (id, ct) => sp.GetRequiredService<Modules.Enterprise.ProjectService>().OnPackageReviewApprovedAsync(id, ct),
+            (id, c, ct) => sp.GetRequiredService<Modules.Enterprise.ProjectService>().OnPackageReviewRejectedAsync(id, c, ct)));
         s.AddScoped<Modules.Enterprise.GovernanceService>();
         s.AddScoped<Modules.Enterprise.RetentionEngine>();
         s.AddScoped<Modules.Enterprise.ComplianceMappingService>();
@@ -285,7 +288,7 @@ public static class DependencyInjection
         P<Domain.Enterprise.ComplianceObligation>(Modules.Enterprise.ComplianceService.ObligationType, Permissions.ComplianceView, Permissions.ComplianceEdit, x => (x.Number, $"{x.Reference} {x.Title}", x.Applicable ? "Applicable" : "Not applicable", $"/compliance/obligations/{x.Id}", false));
         P<Domain.Enterprise.ValidationProject>(Modules.Enterprise.ValidationService.RecordType, Permissions.ValidationView, Permissions.ValidationEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/validation/{x.Id}", x.Status is Domain.Enterprise.ValidationStatus.Released or Domain.Enterprise.ValidationStatus.Cancelled));
         P<Domain.Enterprise.QualityProject>(Modules.Enterprise.ProjectService.ProjectType, Permissions.ApqpView, Permissions.ApqpEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/launch/projects/{x.Id}", x.Status is Domain.Enterprise.QualityProjectStatus.Completed or Domain.Enterprise.QualityProjectStatus.Cancelled));
-        P<Domain.Enterprise.PpapSubmission>(Modules.Enterprise.ProjectService.PpapType, Permissions.ApqpView, Permissions.ApqpEdit, x => (x.Number, "PPAP level " + x.Level + " " + x.Reason, x.Status.ToString(), $"/launch/ppap/{x.Id}", x.Status is Domain.Enterprise.PpapStatus.Approved));
+        P<Domain.Enterprise.PpapSubmission>(Modules.Enterprise.ProjectService.PpapType, Permissions.ApqpView, Permissions.ApqpEdit, x => (x.Number, "PPAP level " + x.Level + " " + x.Reason, x.Status.ToString(), $"/launch/ppap/{x.Id}", x.Status is Domain.Enterprise.PpapStatus.Approved or Domain.Enterprise.PpapStatus.InReview or Domain.Enterprise.PpapStatus.ReviewApproved));
         P<Domain.Enterprise.CapabilityStudy>(Modules.Enterprise.ProjectService.CapabilityType, Permissions.ApqpView, Permissions.ApqpEdit, x => (x.Number, x.Title, x.Cpk is { } k && k >= x.RequiredCpk ? "Capable" : "Not capable", $"/launch/capability/{x.Id}", true));
         P<Domain.Enterprise.ContinuityExercise>(Modules.Enterprise.GovernanceService.ContinuityType, Permissions.GovernanceView, Permissions.GovernanceEdit, x => (x.Number, x.Title, x.Result.ToString(), $"/governance/continuity/{x.Id}", x.Result != Domain.Enterprise.ContinuityResult.Planned));
         s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.Enterprise.ValidationService.RecordType,
