@@ -119,7 +119,8 @@ public partial class AppDbContext
             e.HasOne<SequflohPartsList>().WithMany().HasForeignKey(x => x.SourcePartsListId).OnDelete(DeleteBehavior.SetNull);
             e.HasOne<SequflohWorkInstruction>().WithMany().HasForeignKey(x => x.PreviousRevisionId).OnDelete(DeleteBehavior.Restrict);
             foreach (var u in new[] { nameof(SequflohWorkInstruction.OwnerId), nameof(SequflohWorkInstruction.AuthorId), nameof(SequflohWorkInstruction.ReviewerId), nameof(SequflohWorkInstruction.ApproverId),
-                         nameof(SequflohWorkInstruction.ReviewedById), nameof(SequflohWorkInstruction.ApprovedById), nameof(SequflohWorkInstruction.ReleasedById) })
+                         nameof(SequflohWorkInstruction.ReviewedById), nameof(SequflohWorkInstruction.ApprovedById), nameof(SequflohWorkInstruction.ReleasedById),
+                         nameof(SequflohWorkInstruction.AssignedEngineerId), nameof(SequflohWorkInstruction.ReleaseRecommendedById) })
                 e.HasOne<ApplicationUser>().WithMany().HasForeignKey(u).OnDelete(DeleteBehavior.Restrict);
             e.Property(x => x.Number).HasMaxLength(40);
             e.Property(x => x.Title).HasMaxLength(300);
@@ -133,6 +134,11 @@ public partial class AppDbContext
                 e.Property(p).HasMaxLength(300);
             e.Property(x => x.ResultStatus).HasMaxLength(50);
             e.Property(x => x.RevisionReason).HasMaxLength(2000);
+            e.Property(x => x.Project).HasMaxLength(100);
+            e.Property(x => x.DevelopmentStatus).HasMaxLength(100);
+            e.Property(x => x.EngineeringNotes).HasMaxLength(4000);
+            e.HasIndex(x => new { x.OwnerId, x.Status });
+            e.HasIndex(x => new { x.AssignedEngineerId, x.Status });
             foreach (var p in new[] { nameof(SequflohWorkInstruction.Content), nameof(SequflohWorkInstruction.Steps), nameof(SequflohWorkInstruction.Characteristics), nameof(SequflohWorkInstruction.PartsRows) })
                 e.Property(p).HasColumnType("jsonb");
         });

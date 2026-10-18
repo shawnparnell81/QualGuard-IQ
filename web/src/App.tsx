@@ -233,6 +233,14 @@ const SqfWiTemplates = lazy(() => import('./sequfloh/Instructions').then((m) => 
 const SqfTrFolder = lazy(() => import('./sequfloh/Tracking').then((m) => ({ default: m.TrackingFolderPage })));
 const SqfTrNew = lazy(() => import('./sequfloh/Tracking').then((m) => ({ default: m.NewTrackingPage })));
 const SqfTr = lazy(() => import('./sequfloh/Tracking').then((m) => ({ default: m.TrackingRecordPage })));
+const SqfQDash = lazy(() => import('./sequfloh/Personnel').then((m) => ({ default: m.QualityDashboardPage })));
+const SqfQVal = lazy(() => import('./sequfloh/Personnel').then((m) => ({ default: m.QualityValidationPage })));
+const SqfQRep = lazy(() => import('./sequfloh/Personnel').then((m) => ({ default: m.QualityRepairPage })));
+const SqfQQueue = lazy(() => import('./sequfloh/Personnel').then((m) => ({ default: () => <m.ReviewQueuePage area="quality" /> })));
+const SqfEDash = lazy(() => import('./sequfloh/Personnel').then((m) => ({ default: m.EngineeringDashboardPage })));
+const SqfEVal = lazy(() => import('./sequfloh/Personnel').then((m) => ({ default: m.EngineeringValidationPage })));
+const SqfEDev = lazy(() => import('./sequfloh/Personnel').then((m) => ({ default: m.DevelopmentPage })));
+const SqfEQueue = lazy(() => import('./sequfloh/Personnel').then((m) => ({ default: () => <m.ReviewQueuePage area="engineering" /> })));
 const SqfExQueue = lazy(() => import('./sequfloh/Execution').then((m) => ({ default: m.ExecutionQueuePage })));
 const SqfExStation = lazy(() => import('./sequfloh/Execution').then((m) => ({ default: m.ActiveStationPage })));
 const SqfExHistory = lazy(() => import('./sequfloh/Execution').then((m) => ({ default: m.WorkHistoryPage })));
@@ -421,6 +429,14 @@ export function App() {
               <Route path="/sequfloh/tracking/:folder" element={<SqfTrFolder />} />
               <Route path="/sequfloh/record/:id" element={<SqfTr />} />
               <Route path="/sequfloh/execution/active" element={<SqfExStation />} />
+              <Route path="/sequfloh/quality" element={<SqfQDash />} />
+              <Route path="/sequfloh/quality/validation" element={<SqfQVal />} />
+              <Route path="/sequfloh/quality/repair" element={<SqfQRep />} />
+              <Route path="/sequfloh/quality/review-queue" element={<SqfQQueue />} />
+              <Route path="/sequfloh/engineering" element={<SqfEDash />} />
+              <Route path="/sequfloh/engineering/validation" element={<SqfEVal />} />
+              <Route path="/sequfloh/engineering/development" element={<SqfEDev />} />
+              <Route path="/sequfloh/engineering/review-queue" element={<SqfEQueue />} />
               <Route path="/sequfloh/execution/history" element={<SqfExHistory />} />
               <Route path="/sequfloh/execution/:view" element={<SqfExQueue />} />
               <Route path="/risks" element={<RiskList />} />

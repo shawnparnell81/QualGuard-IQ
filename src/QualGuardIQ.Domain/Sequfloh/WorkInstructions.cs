@@ -58,6 +58,14 @@ public class SequflohWorkInstruction : Entity, IAudited, ISiteScoped
     public DateTimeOffset? ReleasedAt { get; set; }
     public Guid? ReleasedById { get; set; }
     public string? RevisionReason { get; set; }
+    // Engineering development record (Prompt 2 section 6)
+    public Guid? AssignedEngineerId { get; set; }
+    public DateOnly? TargetCompletionDate { get; set; }
+    public string? Project { get; set; }
+    public string? EngineeringNotes { get; set; }
+    public string? DevelopmentStatus { get; set; }
+    public DateTimeOffset? ReleaseRecommendedAt { get; set; }
+    public Guid? ReleaseRecommendedById { get; set; }
     /// <summary>Section key -> field key -> value.</summary>
     public string Content { get; set; } = "{}";
     /// <summary>Ordered steps (validation, test, repair or procedure steps) with explicit sequence numbers.</summary>
