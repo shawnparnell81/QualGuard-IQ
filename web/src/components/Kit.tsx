@@ -5,6 +5,8 @@ import { useForm, Controller, type FieldValues, type Path, type DefaultValues } 
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { get } from '../api';
+import { Link as RouterLink } from 'react-router-dom';
+import { mono } from '../theme';
 import { SitePicker } from './SitePicker';
 
 export interface Site { id: string; code: string; name: string; isArchived: boolean; departments: { id: string; code: string; name: string }[] }
@@ -50,6 +52,24 @@ export function PanelHead({ title, action }: { title: ReactNode; action?: ReactN
       <Typography variant="overline" component="h3" color="text.secondary" sx={{ flex: 1 }}>{title}</Typography>
       {action}
     </Stack>
+  );
+}
+
+/**
+ * Key figure readout: an uppercase label over a large monospaced number on a flat band with a coloured top rule.
+ * Used for dashboard counts in place of floating cards. Opens the list behind it when `to` or `onClick` is given.
+ */
+export function Readout({ label, value, hint, color, to, onClick, title, children }: { label: string; value: ReactNode; hint?: ReactNode; color?: string; to?: string; onClick?: () => void; title?: string; children?: ReactNode }) {
+  const link = to ? { component: RouterLink, to } : {};
+  return (
+    <Box {...link} onClick={onClick} title={title} aria-label={label}
+      sx={{ display: 'block', color: 'inherit', textDecoration: 'none', bgcolor: 'background.paper', borderTop: '3px solid', borderTopColor: color ?? 'text.secondary', borderBottom: 1, borderBottomColor: 'divider', px: 1.75, pt: 1.25, pb: 1.25, minWidth: 0,
+        cursor: to || onClick ? 'pointer' : 'default', '&:hover': to || onClick ? { bgcolor: 'action.hover' } : undefined }}>
+      <Typography component="div" sx={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'text.secondary', lineHeight: 1.4 }}>{label}</Typography>
+      <Typography component="div" sx={{ fontFamily: mono, fontSize: 26, lineHeight: 1.25, mt: 0.25 }}>{value}</Typography>
+      {hint && <Typography variant="caption" color="text.secondary" component="div">{hint}</Typography>}
+      {children}
+    </Box>
   );
 }
 
