@@ -14811,6 +14811,73 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/launch/ppap/{id}/package-index':
+    get:
+      tags:
+        - Launch
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PackageIndex'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackageIndex'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PackageIndex'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/launch/ppap/{id}/review':
+    post:
+      tags:
+        - Launch
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/launch/ppap/{id}/package':
+    get:
+      tags:
+        - Launch
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/launch/ppap/{id}/submit':
     post:
       tags:
@@ -25840,6 +25907,69 @@ paths:
               oneOf:
                 - type: 'null'
                 - $ref: '#/components/schemas/ApproveImportRequest'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Missing permission or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Validation or business-rule error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not found or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 'Conflict: state or version mismatch'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  '/api/v1/imports/{id}/retry':
+    post:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          description: '1–100 letters, digits, ''-'', ''_'', ''.'', '':''. A retry with the same key and request returns the stored response with Idempotent-Replayed: true; the same key with a different request returns 422; a retry while the first is still running returns 409.'
+          schema:
+            maxLength: 100
+            type: string
       responses:
         '200':
           description: OK
@@ -63714,6 +63844,230 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/PackageTemplate'
+    PackageIndex:
+      required:
+        - id
+        - number
+        - level
+        - reason
+        - status
+        - partNumber
+        - partName
+        - partRevision
+        - customer
+        - generatedAt
+        - required
+        - ready
+        - notApplicable
+        - missing
+        - elements
+        - relationships
+        - review
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        level:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        reason:
+          type: string
+        status:
+          type: string
+        partNumber:
+          type:
+            - 'null'
+            - string
+        partName:
+          type:
+            - 'null'
+            - string
+        partRevision:
+          type:
+            - 'null'
+            - string
+        customer:
+          type:
+            - 'null'
+            - string
+        generatedAt:
+          type: string
+          format: date-time
+        required:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        ready:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        notApplicable:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        missing:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        elements:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackageIndexEntry'
+        relationships:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackageRelationship'
+        review:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/PackageReview'
+    PackageIndexEntry:
+      required:
+        - code
+        - name
+        - requirement
+        - requirementCode
+        - status
+        - linkedType
+        - linkedId
+        - linkedNumber
+        - linkedTitle
+        - linkedStatus
+        - linkedUrl
+        - notes
+      type: object
+      properties:
+        code:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        name:
+          type: string
+        requirement:
+          type: string
+        requirementCode:
+          type: string
+        status:
+          type: string
+        linkedType:
+          type:
+            - 'null'
+            - string
+        linkedId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        linkedNumber:
+          type:
+            - 'null'
+            - string
+        linkedTitle:
+          type:
+            - 'null'
+            - string
+        linkedStatus:
+          type:
+            - 'null'
+            - string
+        linkedUrl:
+          type:
+            - 'null'
+            - string
+        notes:
+          type:
+            - 'null'
+            - string
+    PackageRelationship:
+      required:
+        - direction
+        - linkType
+        - recordType
+        - recordId
+        - number
+        - title
+      type: object
+      properties:
+        direction:
+          type: string
+        linkType:
+          type: string
+        recordType:
+          type: string
+        recordId:
+          type: string
+          format: uuid
+        number:
+          type:
+            - 'null'
+            - string
+        title:
+          type:
+            - 'null'
+            - string
+    PackageReview:
+      required:
+        - status
+        - submittedAt
+        - completedAt
+        - signatures
+      type: object
+      properties:
+        status:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        completedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        signatures:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackageReviewSignature'
+    PackageReviewSignature:
+      required:
+        - step
+        - signer
+        - meaning
+        - approved
+        - signedAt
+        - comment
+      type: object
+      properties:
+        step:
+          type: string
+        signer:
+          type: string
+        meaning:
+          type: string
+        approved:
+          type: boolean
+        signedAt:
+          type: string
+          format: date-time
+        comment:
+          type:
+            - 'null'
+            - string
     PackageSummary:
       required:
         - key
