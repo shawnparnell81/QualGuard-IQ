@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react';
-import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, FormControlLabel, List, ListItemButton, ListItemText, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { get, put } from '../api';
@@ -151,7 +151,7 @@ export function EngineeringValidationPage() {
       crumbsOverride={eCrumbs('Validation')} titleOverride="Validation" permission="sequfloh.view_engineering_folder"
       descriptionOverride={tab === 'plans' ? 'Validation plans being developed: draft, in development and returned instructions.' : tab === 'released' ? 'Released instructions available for validation execution.' : 'Validation and Validation / FAI work instructions.'} />;
   }
-  if (tab === 'revisions') { nav('/sequfloh/revision-history', { replace: true }); return null; }
+  if (tab === 'revisions') return <Navigate to="/sequfloh/revision-history" replace />;
   return (
     <SqfPage title="Validation" crumbs={eCrumbs('Validation')} permission="sequfloh.view_engineering_folder" tabs={tabs} tab={tab} onTab={(t) => setSp({ tab: t })}
       description="Validation activity and results from the validation tracking records you can see.">

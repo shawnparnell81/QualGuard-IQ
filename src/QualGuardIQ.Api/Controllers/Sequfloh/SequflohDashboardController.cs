@@ -29,9 +29,9 @@ public sealed class SequflohDashboardController(AppDbContext db, ModuleSupport m
     static IQueryable<SequflohTrackingRecord> AwaitingEngineering(IQueryable<SequflohTrackingRecord> q) =>
         q.Where(x => x.Status == TrackingStatus.PendingReview && x.EngineeringReviewRequired && x.EngineeringReviewedAt == null && (!x.QualityReviewRequired || x.QualityReviewedAt != null));
     static IQueryable<SequflohTrackingRecord> Failed(IQueryable<SequflohTrackingRecord> q, TrackingType t) => q.Where(x => x.Type == t && (x.Status == TrackingStatus.Failed || x.Result == "Fail"));
-    static object Rows(IQueryable<SequflohTrackingRecord> q) => q.OrderByDescending(x => x.UpdatedAt).Take(5)
-        .Select(x => new { x.Id, x.Number, x.Type, x.Status, x.Result, x.PartNumber, x.WorkInstructionNumber, x.WorkInstructionRevision, x.DueAt, x.UpdatedAt });
-    static object WiRows(IQueryable<SequflohWorkInstruction> q) => q.OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new { x.Id, x.Number, x.Revision, x.Title, x.Type, x.Status, x.UpdatedAt });
+    static async Task<object> Rows(IQueryable<SequflohTrackingRecord> q, CancellationToken ct) => await q.OrderByDescending(x => x.UpdatedAt).Take(5)
+        .Select(x => new { x.Id, x.Number, x.Type, x.Status, x.Result, x.PartNumber, x.WorkInstructionNumber, x.WorkInstructionRevision, x.DueAt, x.UpdatedAt }).ToListAsync(ct);
+    static async Task<object> WiRows(IQueryable<SequflohWorkInstruction> q, CancellationToken ct) => await q.OrderByDescending(x => x.UpdatedAt).Take(5).Select(x => new { x.Id, x.Number, x.Revision, x.Title, x.Type, x.Status, x.UpdatedAt }).ToListAsync(ct);
 
     /// <summary>SEQUFLOH Home dashboard (Prompt 2 section 4).</summary>
     [HttpGet("dashboard")] [RequirePermission(Permissions.SequflohViewDashboard)]
@@ -63,7 +63,7 @@ public sealed class SequflohDashboardController(AppDbContext db, ModuleSupport m
                 ProductionInProgress = await open.CountAsync(x => x.Type == TrackingType.Production, ct),
                 Failed = await tr.CountAsync(x => x.Status == TrackingStatus.Failed, ct),
                 AssignedToMe = await open.CountAsync(x => x.AssignedUserId == me, ct),
-                MyWork = Rows(open.Where(x => x.AssignedUserId == me)),
+                MyWork = await Rows(open.Where(x => x.AssignedUserId == me), ct),
             } : null,
             Instructions = new
             {
@@ -95,8 +95,8 @@ public sealed class SequflohDashboardController(AppDbContext db, ModuleSupport m
             FailedFai = await Failed(tr, TrackingType.Fai).CountAsync(ct),
             FailedRepairTests = await Failed(tr, TrackingType.Repair).CountAsync(ct),
             OverdueQualityActions = await overdue.CountAsync(ct),
-            FailedRecords = Rows(tr.Where(x => x.Status == TrackingStatus.Failed || x.Result == "Fail")),
-            OverdueRows = Rows(overdue),
+            FailedRecords = await Rows(tr.Where(x => x.Status == TrackingStatus.Failed || x.Result == "Fail"), ct),
+            OverdueRows = await Rows(overdue, ct),
             RecentlyReleased = await Recent(wis, false, ct),
             RecentlyRevised = await Recent(wis, true, ct),
         };
@@ -121,8 +121,8 @@ public sealed class SequflohDashboardController(AppDbContext db, ModuleSupport m
             FailedValidations = await Failed(tr, TrackingType.Validation).CountAsync(ct),
             AwaitingEngineeringReview = await AwaitingEngineering(tr).CountAsync(ct),
             ReleasedValidationInstructions = await wis.CountAsync(x => ValidationTypes.Contains(x.Type) && x.Status == WorkInstructionStatus.Released, ct),
-            MyDevelopment = WiRows(dev.Where(x => x.AssignedEngineerId == m.UserId || (x.AssignedEngineerId == null && x.AuthorId == m.UserId))),
-            AwaitingRows = Rows(AwaitingEngineering(tr)),
+            MyDevelopment = await WiRows(dev.Where(x => x.AssignedEngineerId == m.UserId || (x.AssignedEngineerId == null && x.AuthorId == m.UserId)), ct),
+            AwaitingRows = await Rows(AwaitingEngineering(tr), ct),
         };
     }
 
