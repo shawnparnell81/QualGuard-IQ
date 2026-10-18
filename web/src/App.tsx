@@ -74,6 +74,7 @@ const ImportCenter = lazy(() => import('./pages/ImportCenter').then((m) => ({ de
 const ImportJobDetail = lazy(() => import('./pages/ImportCenter').then((m) => ({ default: m.ImportJobDetail })));
 const MasterLists = lazy(() => import('./pages/MasterLists').then((m) => ({ default: m.MasterLists })));
 const TemplateLibrary = lazy(() => import('./pages/TemplateLibrary').then((m) => ({ default: m.TemplateLibrary })));
+const TemplateMarketplace = lazy(() => import('./pages/TemplateMarketplace').then((m) => ({ default: m.TemplateMarketplace })));
 const FormRecordDetail = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordDetail })));
 const FormRecordList = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordList })));
 const FormRecordNew = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordNew })));
@@ -258,6 +259,7 @@ export function App() {
               <Route path="/drawings/new" element={<DocumentNew kind={1} />} />
               <Route path="/drawings/:id" element={<DocumentDetail kind={1} />} />
               <Route path="/forms/library" element={<TemplateLibrary />} />
+              <Route path="/forms/marketplace" element={<TemplateMarketplace />} />
               <Route path="/master-lists" element={<MasterLists />} />
               <Route path="/master-lists/:type" element={<MasterLists />} />
               <Route path="/imports" element={<ImportCenter />} />
