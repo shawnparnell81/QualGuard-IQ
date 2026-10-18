@@ -10,6 +10,7 @@ import { fmtDate } from '../components/Status';
 import { mono } from '../theme';
 import { DocumentDifferences, DocumentInventory, OriginalDocumentPreview, WordSettingsPanel, type DocumentSummary, type WordSettings } from './ImportDocument';
 import { DetectionReview, OriginalPdfPreview, PdfPagesPanel, PdfSettingsPanel, type PdfDetection, type PdfSettings, type PdfSummary } from './ImportPdf';
+import { ConversionFamily, ConversionReview, PipelinePanel, WorkbenchPanel, type ProfileResult, type ReviewItem } from './ImportWorkbench';
 import { ConversionPreview, ExcelSettingsPanel, FidelityReportView, WorkbookGrid, WorkbookInventory, type Conversion, type WorkbookSummary } from './ImportWorkbook';
 
 export const IMPORT_STATUS = ['Uploaded', 'Security scan pending', 'Security scan failed', 'Inspecting', 'Parsing', 'Mapping required', 'Preview ready', 'Validation failed',
@@ -123,9 +124,9 @@ interface Issue { id: string; sourceLocation: string; rowNumber: number | null; 
 interface Hist { eventDate: string; event: string; actorName: string; previousValue: string | null; newValue: string | null; message: string | null }
 interface Detail { id: string; number: string; originalFileName: string; fileType: string; importMode: string; fileSize: number; fileHash: string; targetModule: string | null; status: number; progress: number; totalRows: number; importedRows: number;
   warningCount: number; errorCount: number; submittedById: string; submittedBy: string; submittedAt: string; approvedAt: string | null; rowVersion: number; background: boolean;
-  settings: { pdf?: PdfSettings; word?: WordSettings; excel?: { sheet?: string | null; headerRow?: number | null; sheets?: string[] | null; title?: string | null }; csv?: { encoding: string; delimiter: string; hasHeader: boolean; headerRow: number; dateFormat: string | null; decimalSeparator: string; emptyValue: string }; duplicateKeys?: string[] };
-  analysis: { pdf?: PdfSummary; detections?: PdfDetection[]; review?: { required: number; ocr: boolean }; document?: DocumentSummary; workbook?: WorkbookSummary; conversion?: Conversion; sheet?: string; headerRow?: number; columns?: { location: string; name: string; inferredType: string; blank: number; samples: string[] }[]; sampleRows?: string[][] };
-  summary: { dryRun?: { rows: number; valid: number; invalid: number; duplicates: number; existingDuplicates: number; preview: { row: number; values: Record<string, string | null>; problems: string[]; duplicate: boolean }[] }; imported?: number; skippedInvalid?: number; skippedDuplicates?: number; documentId?: string; documentNumber?: string; kind?: string };
+  settings: { pdf?: PdfSettings; word?: WordSettings; excel?: { sheet?: string | null; headerRow?: number | null; sheets?: string[] | null; title?: string | null }; csv?: { encoding: string; delimiter: string; hasHeader: boolean; headerRow: number; dateFormat: string | null; decimalSeparator: string; emptyValue: string }; duplicateKeys?: string[]; conversionTarget?: string | null; attachTo?: { number: string } | null };
+  analysis: { pdf?: PdfSummary; detections?: PdfDetection[]; review?: { required: number; ocr: boolean; suggestions?: number }; profile?: ProfileResult; document?: DocumentSummary; workbook?: WorkbookSummary; conversion?: Conversion; sheet?: string; headerRow?: number; columns?: { location: string; name: string; inferredType: string; blank: number; samples: string[] }[]; sampleRows?: string[][] };
+  summary: { dryRun?: { rows: number; valid: number; invalid: number; duplicates: number; existingDuplicates: number; toCreate?: number; toUpdate?: number; preview: { row: number; values: Record<string, string | null>; problems: string[]; duplicate: boolean; action?: string; before?: Record<string, string | null> | null }[] }; imported?: number; updated?: number; recordNumber?: string; skippedInvalid?: number; skippedDuplicates?: number; documentId?: string; documentNumber?: string; kind?: string };
   mappings: Mapping[]; issues: Issue[]; history: Hist[]; targetFields: { key: string; label: string; type: string; required: boolean }[] }
 
 const WHOLE_FILE = /\.(xlsx|xlsm|xls|docx|doc|pdf|png|jpe?g|tiff?)$/i;
@@ -146,7 +147,7 @@ export function ImportJobDetail() {
   const refresh = () => { qc.invalidateQueries({ queryKey: ['import', id] }); qc.invalidateQueries({ queryKey: ['imports'] }); };
   const run = async (f: () => Promise<unknown>) => { setError(null); try { await f(); setEdits({}); refresh(); } catch (e) { setError((e as Error).message); } };
   if (!j) return null;
-  const whole = j.importMode === 'template' || j.importMode === 'document';
+  const whole = j.importMode === 'template' || j.importMode === 'document' || j.importMode === 'attachment';
   const book = ['xlsx', 'xlsm', 'xls'].includes(j.fileType);
   const word = ['docx', 'doc'].includes(j.fileType);
   const pdf = ['pdf', 'image'].includes(j.fileType);
@@ -165,6 +166,7 @@ export function ImportJobDetail() {
       title={<span><span style={{ fontFamily: mono }}>{j.number}</span> · {j.originalFileName}</span>}
       actions={<Stack direction="row" gap={1}>
         <Button href={`/api/imports/${id}/original`}>Download original</Button>
+        {[10, 11, 12, 13, 15].includes(j.status) && <Button href={`/api/imports/${id}/result-package`}>Result package</Button>}
         {j.errorCount > 0 && <Button href={`/api/imports/${id}/error-rows`}>Export error rows</Button>}
       </Stack>}>
       <Stack direction="row" gap={2} alignItems="center" flexWrap="wrap" sx={{ mb: 2 }}>
@@ -184,8 +186,10 @@ export function ImportJobDetail() {
         <Tab value="preview" label={whole ? 'Check and approve' : 'Preview and validation'} />
         {j.analysis.workbook && <Tab value="workbook" label="Workbook" />}
         {j.analysis.document && <Tab value="document" label="Document" />}
-        {pdf && j.importMode === 'template' && (j.analysis.detections?.length ?? 0) > 0 && <Tab value="detections" label={toConfirm ? `Detections (${toConfirm} to confirm)` : 'Detections'} />}
+        {j.importMode === 'template' && (j.analysis.detections?.length ?? 0) > 0 && <Tab value="detections" label={toConfirm ? `Detections (${toConfirm} to confirm)` : 'Detections'} />}
+        {j.importMode === 'template' && j.analysis.conversion && <Tab value="pipeline" label="Pipeline" />}
         {j.analysis.pdf && <Tab value="pages" label="Pages" />}
+        <Tab value="workbench" label="Workbench" />
         <Tab value="issues" label={`Issues (${j.issues.length})`} /><Tab value="history" label="History" />
       </Tabs>
 
@@ -201,8 +205,15 @@ export function ImportJobDetail() {
         <PdfSettingsPanel key={JSON.stringify(j.settings.pdf ?? {})} jobId={j.id} mode={j.importMode} pdf={j.analysis.pdf} detections={j.analysis.detections ?? []} editable={editable && can('imports.edit')}
           current={j.settings.pdf ?? {}} onDone={(e) => { if (e) setError(e); else refresh(); }} />
       </Box>}
-      {tab === 'detections' && j.analysis.detections && <DetectionReview key={j.rowVersion} jobId={j.id} detections={j.analysis.detections} required={toConfirm} editable={[6, 7].includes(j.status) && can('imports.edit')}
-        onDone={(e) => { if (e) setError(e); else refresh(); }} />}
+      {tab === 'detections' && j.analysis.detections && <Stack gap={2}>
+        <ConversionFamily jobId={j.id} current={j.settings.conversionTarget ?? null} profile={j.analysis.profile} editable={[6, 7].includes(j.status) && can('imports.edit')} onDone={(e) => { if (e) setError(e); else refresh(); }} />
+        {pdf ? <DetectionReview key={j.rowVersion} jobId={j.id} detections={j.analysis.detections} required={toConfirm} editable={[6, 7].includes(j.status) && can('imports.edit')}
+          onDone={(e) => { if (e) setError(e); else refresh(); }} />
+          : <ConversionReview key={j.rowVersion} jobId={j.id} items={j.analysis.detections as unknown as ReviewItem[]} required={toConfirm} editable={[6, 7].includes(j.status) && can('imports.edit')}
+            onDone={(e) => { if (e) setError(e); else refresh(); }} />}
+      </Stack>}
+      {tab === 'pipeline' && <PipelinePanel key={j.rowVersion} jobId={j.id} />}
+      {tab === 'workbench' && <WorkbenchPanel key={j.rowVersion} jobId={j.id} editable={editable && can('imports.edit')} onDone={(e) => { if (e) setError(e); else refresh(); }} />}
       {tab === 'pages' && j.analysis.pdf && <PdfPagesPanel jobId={j.id} pdf={j.analysis.pdf} />}
       {tab === 'conversion' && j.analysis.conversion && (word || pdf
         ? <Stack gap={2}>
@@ -212,7 +223,10 @@ export function ImportJobDetail() {
             note="Try values here; checkboxes, dropdowns, dates and calculated fields work as the converted form will. Nothing is saved." />
           <DocumentDifferences report={j.analysis.conversion.report} />
         </Stack>
-        : <ConversionPreview jobId={j.id} conversion={j.analysis.conversion} />)}
+        : <Stack gap={2}>
+          {toConfirm > 0 && <Alert severity="warning" action={<Button color="inherit" size="small" onClick={() => setTab('detections')}>Review</Button>}>{toConfirm} item(s) need confirmation before the conversion can be submitted.</Alert>}
+          <ConversionPreview jobId={j.id} conversion={j.analysis.conversion} />
+        </Stack>)}
       {tab === 'document' && j.analysis.document && <DocumentInventory doc={j.analysis.document} />}
       {tab === 'fidelity' && j.analysis.conversion && <FidelityReportView report={j.analysis.conversion.report} map={j.analysis.conversion.map} />}
       {tab === 'workbook' && j.analysis.workbook && <Stack gap={2}><WorkbookInventory wb={j.analysis.workbook} />{!j.analysis.conversion && <Paper variant="outlined" sx={{ p: 1.5 }}><WorkbookGrid jobId={j.id} sheet={j.analysis.sheet} /></Paper>}</Stack>}
@@ -260,20 +274,23 @@ export function ImportJobDetail() {
       </Stack>}
 
       {tab === 'preview' && <Stack gap={2}>
-        {whole && j.status !== 10 && j.status !== 12 && <Alert severity="info">{j.importMode === 'template'
+        {whole && j.status !== 10 && j.status !== 12 && <Alert severity="info">{j.importMode === 'attachment'
+          ? `After approval the file, exactly as uploaded, is attached to ${j.settings.attachTo?.number ?? 'the chosen record'}. Choose the record in the workbench.`
+          : j.importMode === 'template'
           ? `After approval the converted form becomes a new draft form template, with the original ${fileWord} kept on its revision. Review the side-by-side preview and the fidelity report first; the approver must accept the fidelity report.`
           : `After approval the ${fileWord} becomes a new controlled document (draft revision) with the file exactly as uploaded.`}</Alert>}
+        {j.importMode === 'attachment' && j.summary.recordNumber && <Alert severity="success">File attached to {j.summary.recordNumber}.</Alert>}
         {j.summary.documentId && <Alert severity="success">{j.importMode === 'template' ? 'Draft form template' : 'Controlled document'} <RouterLink to={`/${j.importMode === 'template' ? 'forms/templates' : 'documents'}/${j.summary.documentId}`}>{j.summary.documentNumber}</RouterLink> created.</Alert>}
         {whole && editable && can('imports.edit') && !dry && <Box><Button variant="outlined" onClick={() => run(() => post(`/api/imports/${id}/validate`))}>Check</Button></Box>}
-        {whole ? null : dry ? <Alert severity={dry.invalid ? 'warning' : 'success'}>Dry run: {dry.valid} of {dry.rows} rows ready to import · {dry.invalid} with problems · {dry.duplicates} repeated in the file · {dry.existingDuplicates} already exist.</Alert>
+        {whole ? null : dry ? <Alert severity={dry.invalid ? 'warning' : 'success'}>Dry run: {dry.valid} of {dry.rows} rows ready to import · {dry.invalid} with problems · {dry.duplicates} repeated in the file · {dry.existingDuplicates} already exist{dry.toUpdate ? ` · ${dry.toUpdate} existing records will be updated` : ''}.</Alert>
           : <Alert severity="info">Validate the mapping to see a preview. Nothing is imported until someone approves it.</Alert>}
-        {j.summary.imported !== undefined && !whole && <Alert severity="success">{j.summary.imported} records created{j.summary.skippedInvalid ? `, ${j.summary.skippedInvalid} rows skipped` : ''}{j.summary.skippedDuplicates ? `, ${j.summary.skippedDuplicates} duplicates skipped` : ''}.</Alert>}
+        {j.summary.imported !== undefined && !whole && <Alert severity="success">{j.summary.imported} records created{j.summary.updated ? `, ${j.summary.updated} updated` : ''}{j.summary.skippedInvalid ? `, ${j.summary.skippedInvalid} rows skipped` : ''}{j.summary.skippedDuplicates ? `, ${j.summary.skippedDuplicates} duplicates skipped` : ''}.</Alert>}
         {dry && !whole && <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
           <Table size="small" aria-label="Preview">
             <TableHead><TableRow><TableCell>Row</TableCell>{j.targetFields.filter((f) => j.mappings.some((x) => x.targetField === f.key)).map((f) => <TableCell key={f.key}>{f.label}</TableCell>)}<TableCell>Result</TableCell></TableRow></TableHead>
             <TableBody>{dry.preview.map((r) => <TableRow key={r.row} sx={{ bgcolor: r.problems.length ? 'error.50' : undefined }}>
               <TableCell>{r.row}</TableCell>{j.targetFields.filter((f) => j.mappings.some((x) => x.targetField === f.key)).map((f) => <TableCell key={f.key}>{r.values[f.key] ?? ''}</TableCell>)}
-              <TableCell>{r.problems.length ? r.problems.join(' ') : r.duplicate ? 'Duplicate (skipped)' : 'Ready'}</TableCell></TableRow>)}</TableBody>
+              <TableCell>{r.problems.length ? r.problems.join(' ') : r.duplicate ? 'Duplicate (skipped)' : r.action === 'update' ? `Updates the existing record${r.before ? ` (now: ${Object.entries(r.before).filter(([k, v]) => v !== r.values[k]).map(([k, v]) => `${j.targetFields.find((f) => f.key === k)?.label ?? k} ${v ?? 'empty'}`).join(', ') || 'no change'})` : ''}` : 'Ready'}</TableCell></TableRow>)}</TableBody>
           </Table>
         </Paper>}
         {[6, 7].includes(j.status) && can('imports.edit') && <Stack direction="row" gap={2} alignItems="center">

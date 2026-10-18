@@ -198,7 +198,7 @@ public sealed partial class ImportCenterService
             recordType = target?.RecordType ?? (job.ImportMode switch { "template" => "Form template", "document" => "Controlled document", "attachment" => attach?["type"]?.GetValue<string>(), _ => null }),
             template = job.ImportMode == "template" ? (TemplateRevisionMode(job) == "new-revision" ? $"Existing template {templateNumber}" : "New template") : templateNumber is null ? null : $"Existing template {templateNumber}",
             revision = job.ImportMode == "template" ? (TemplateRevisionMode(job) == "new-revision" ? "New revision (draft)" : "New template, revision A (draft)") : job.TargetTemplateId is not null ? "Existing effective revision" : job.ImportMode == "document" ? "New document, first revision (draft)" : null,
-            existingRecords = whole ? null : ExistingRecordsMode(job), canUpdate = target?.CanUpdate ?? false, attachTo = attach?["number"]?.GetValue<string>(),
+            moduleKey = job.TargetModule, templateId = job.TargetTemplateId, templateRevisionMode = job.ImportMode == "template" ? TemplateRevisionMode(job) : null, existingRecords = whole ? null : ExistingRecordsMode(job), canUpdate = target?.CanUpdate ?? false, attachTo = attach?["number"]?.GetValue<string>(),
             targets = Targets,
         };
         // 4 structure
@@ -257,6 +257,7 @@ public sealed partial class ImportCenterService
             skip = dry?["toSkip"]?.GetValue<int>() ?? (dry?["duplicates"]?.GetValue<int>() ?? 0) + (dry?["existingDuplicates"]?.GetValue<int>() ?? 0),
             error = dry?["inError"]?.GetValue<int>() ?? dry?["invalid"]?.GetValue<int>() ?? 0,
             validated = dry is not null,
+            updates = (dry?["preview"] as JsonArray)?.Where(r => r?["action"]?.GetValue<string>() == "update").Select(r => new { row = r!["row"]?.GetValue<int>(), before = r["before"]?.DeepClone(), after = r["values"]?.DeepClone() }).ToList(),
         };
         // 9 approval
         var approverPerm = whole ? Documents.DocumentRecordTypes.Perms(job.ImportMode == "template" ? DocumentKind.FormTemplate : DocumentKind.Document).Approve : Permissions.ImportsApprove;
