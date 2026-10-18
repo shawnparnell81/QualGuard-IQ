@@ -130,8 +130,7 @@ public sealed class FormRecordImportTarget(AppDbContext db, INumberingService nu
             Status = FormRecordStatus.Draft, ValuesJson = JsonSerializer.Serialize(values),
         };
         db.FormRecords.Add(rec);
-        await db.SaveChangesAsync(ct);
-        await indexer.IndexAsync(rec, values, ct);
+        await indexer.IndexAsync(rec, values, ct, isNew: true);
         await db.SaveChangesAsync(ct);
         await m.IndexAsync(RecordType, rec.Id, $"{doc.Number} rev {rev.Revision}", ct);
         return rec.Id;
