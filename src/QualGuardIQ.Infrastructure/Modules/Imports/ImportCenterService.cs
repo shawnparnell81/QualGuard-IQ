@@ -655,6 +655,8 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             var t = Target(job.TargetModule);
             if (!await access.CanAccessAsync(job.SubmittedById, t.Info.EditPermission, job.SiteId, job.DepartmentId, ct))
                 throw new AppException($"The person who uploaded the file can no longer edit {t.Info.Name}.");
+            if (ExistingRecordsMode(job) == "update" && t.CanUpdate && !await access.CanAccessAsync(Me, Permissions.ImportsUpdateRecords, job.SiteId, job.DepartmentId, ct))
+                throw new ForbiddenException();
         }
         else if (job.ImportMode == "attachment")
         {

@@ -8,7 +8,7 @@ namespace QualGuardIQ.Api.Controllers;
 /// <summary>Enterprise Template Library: catalog views, list functions and template actions above the form designer.</summary>
 [ApiController]
 [Authorize]
-[Route("api/template-library")]
+[Route("api/template-library"), Route("api/v1/template-library")]
 public sealed class TemplateLibraryController(TemplateCatalogService catalog) : ControllerBase
 {
     public sealed record ReasonRequest(string Reason);

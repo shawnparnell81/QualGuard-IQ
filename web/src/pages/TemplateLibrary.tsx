@@ -58,6 +58,7 @@ export function TemplateLibrary() {
             {VIEWS.map(([k, label]) => <ListItemButton key={k} selected={view === k} onClick={() => set('view', k === 'library' ? null : k)}><ListItemText primary={label} /></ListItemButton>)}
             <ListItemButton component={RouterLink} to="/forms/records"><ListItemText primary="Template usage" secondary="Form records" /></ListItemButton>
             <ListItemButton component={RouterLink} to="/forms/marketplace"><ListItemText primary="Template marketplace" secondary="Industry packs and library templates" /></ListItemButton>
+            <ListItemButton component={RouterLink} to="/forms/migration"><ListItemText primary="Schema migration" secondary="Move templates to the current form schema" /></ListItemButton>
           </List>
           {!!views.data?.length && <>
             <Typography variant="overline" sx={{ px: 2 }}>Saved views</Typography>

@@ -171,7 +171,7 @@ export function ImportJobDetail() {
     <ModuleWorkspace module={docsModule()} crumbs={[{ label: 'Import Center', to: '/imports' }, { label: j.number }]}
       title={<span><span style={{ fontFamily: mono }}>{j.number}</span> · {j.originalFileName}</span>}
       actions={<Stack direction="row" gap={1}>
-        <Button href={`/api/imports/${id}/original`}>Download original</Button>
+        {can('imports.download_original') && <Button href={`/api/imports/${id}/original`}>Download original</Button>}
         {[10, 11, 12, 13, 15].includes(j.status) && <Button href={`/api/imports/${id}/result-package`}>Result package</Button>}
         {j.errorCount > 0 && <Button href={`/api/imports/${id}/error-rows`}>Export error rows</Button>}
       </Stack>}>

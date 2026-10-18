@@ -13,7 +13,7 @@ using QualGuardIQ.Infrastructure.Persistence;
 namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261018064731_FormMigrationsAndIdempotency")]
+    [Migration("20261018065921_FormMigrationsAndIdempotency")]
     partial class FormMigrationsAndIdempotency
     {
         /// <inheritdoc />
@@ -708,8 +708,7 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("SourceRevisionId");
 
-                    b.HasIndex("TargetRevisionId")
-                        .IsUnique();
+                    b.HasIndex("TargetRevisionId");
 
                     b.HasIndex("DocumentId", "CreatedAt");
 

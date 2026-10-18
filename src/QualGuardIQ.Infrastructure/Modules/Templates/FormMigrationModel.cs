@@ -25,7 +25,7 @@ public partial class AppDbContext
             e.Property(x => x.RollbackReason).HasMaxLength(2000);
             e.HasIndex(x => x.Number).IsUnique();
             e.HasIndex(x => new { x.DocumentId, x.CreatedAt });
-            e.HasIndex(x => x.TargetRevisionId).IsUnique();
+            e.HasIndex(x => x.TargetRevisionId);
             e.HasOne<ControlledDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<Site>().WithMany().HasForeignKey(x => x.SiteId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<DocumentRevision>().WithMany().HasForeignKey(x => x.SourceRevisionId).OnDelete(DeleteBehavior.Restrict);

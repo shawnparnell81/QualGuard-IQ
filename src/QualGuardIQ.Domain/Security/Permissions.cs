@@ -31,6 +31,12 @@ public static class Permissions
     public const string TemplatesInstall = "templates.install";
     /// <summary>Export form templates as a template package file, and import package files from other installations.</summary>
     public const string TemplatesExport = "templates.export";
+    /// <summary>Download the preserved original file of an import (viewing the rendered original needs only imports.view).</summary>
+    public const string ImportsDownloadOriginal = "imports.download_original";
+    /// <summary>Let an import update existing records that match a key instead of skipping them (needed by the uploader and the approver).</summary>
+    public const string ImportsUpdateRecords = "imports.update_records";
+    /// <summary>See form templates and their content marked Confidential or Restricted (owners always see their own).</summary>
+    public const string ContentConfidential = "content.confidential";
     public const string NcrView = "ncr.view";
     public const string NcrEdit = "ncr.edit";
     public const string NcrApprove = "ncr.approve";

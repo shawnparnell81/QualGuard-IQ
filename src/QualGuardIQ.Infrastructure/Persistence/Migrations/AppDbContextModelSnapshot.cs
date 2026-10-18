@@ -705,8 +705,7 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("SourceRevisionId");
 
-                    b.HasIndex("TargetRevisionId")
-                        .IsUnique();
+                    b.HasIndex("TargetRevisionId");
 
                     b.HasIndex("DocumentId", "CreatedAt");
 

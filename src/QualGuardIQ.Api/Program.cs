@@ -114,7 +114,8 @@ builder.Services.AddRateLimiter(o =>
 });
 
 builder.Services.AddControllers();
-builder.Services.AddProblemDetails();
+// traceId is the request's correlation id (X-Correlation-Id when the caller sent a valid one)
+builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = c => c.ProblemDetails.Extensions["traceId"] = c.HttpContext.TraceIdentifier);
 builder.Services.AddExceptionHandler<ErrorHandler>();
 builder.Services.AddOpenApi(o => QualGuardIQ.Api.OpenApi.OpenApiSetup.Configure(o, builder.Configuration));
 builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");

@@ -105,7 +105,7 @@ public sealed class ImportCenterTests(TestApp app)
     async Task<(Guid Site, ApiClient Author, ApiClient Approver, Guid Template)> SetupAsync()
     {
         var site = await app.CreateSiteAsync();
-        var (_, author) = await app.CreateUserAsync([Permissions.FormsView, Permissions.FormsEdit, Permissions.DocumentsView, Permissions.DocumentsEdit, Permissions.ImportsView, Permissions.ImportsEdit], site);
+        var (_, author) = await app.CreateUserAsync([Permissions.FormsView, Permissions.FormsEdit, Permissions.DocumentsView, Permissions.DocumentsEdit, Permissions.ImportsView, Permissions.ImportsEdit, Permissions.ImportsDownloadOriginal], site);
         var (_, approver) = await app.CreateUserAsync([Permissions.FormsView, Permissions.FormsEdit, Permissions.FormsApprove, Permissions.DocumentsApprove, Permissions.DocumentsView, Permissions.ImportsView, Permissions.ImportsApprove], site);
         var tplId = await author.CreateDocumentAsync(site, kind: 2, title: "Torque log " + Guid.NewGuid().ToString("N")[..6]);
         var tpl = await author.GetDocumentAsync(tplId);

@@ -41,6 +41,7 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
             var pairs = scope.DepartmentPairs.Select(p => p.Site.ToString() + "|" + p.Dept.ToString()).ToList();
             query = query.Where(d => sites.Contains(d.SiteId) || (d.DepartmentId != null && pairs.Contains(d.SiteId.ToString() + "|" + d.DepartmentId.ToString())));
         }
+        query = await query.VisibleToAsync(access, current.UserId!.Value, ct);
         if (status is not null) query = query.Where(d => d.Status == status);
         if (siteId is not null) query = query.Where(d => d.SiteId == siteId);
         if (!string.IsNullOrWhiteSpace(q))
@@ -65,7 +66,7 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
         var d = await db.Documents.AsNoTracking().Include(x => x.Revisions).FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("Document");
         var (view, edit, approve) = DocumentRecordTypes.Perms(d.Kind);
         var uid = current.UserId!.Value;
-        if (!await access.CanAccessAsync(uid, view, d.SiteId, d.DepartmentId, ct)) throw new NotFoundException("Document");
+        if (!await access.CanAccessAsync(uid, view, d.SiteId, d.DepartmentId, ct) || !await ConfidentialContent.CanSeeAsync(access, uid, d, ct)) throw new NotFoundException("Document");
         var owner = await db.Users.Where(u => u.Id == d.OwnerId).Select(u => u.DisplayName).FirstAsync(ct);
         var revType = DocumentRecordTypes.ForRevision(d.Kind);
         var revIds = d.Revisions.Select(r => r.Id).ToList();
@@ -100,6 +101,8 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
     [HttpGet("{id:guid}/effective")]
     public async Task<IActionResult> Effective(Guid id, [FromQuery] DateOnly? on, CancellationToken ct)
     {
+        var doc = await db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.Id == id, ct) ?? throw new NotFoundException("Document");
+        if (!await ConfidentialContent.CanSeeAsync(access, current.UserId!.Value, doc, ct)) throw new NotFoundException("Document");
         var r = await docs.EffectiveOnAsync(id, on ?? await HttpContext.RequestServices.GetRequiredService<QualGuardIQ.Infrastructure.Services.ISiteCalendar>().TodayAsync(await db.Documents.Where(d => d.Id == id).Select(d => (Guid?)d.SiteId).FirstOrDefaultAsync(ct), ct), ct);
         return r is null ? NotFound(new { title = "No revision was effective on that date." })
             : Ok(new RevisionDto(r.Id, r.Revision, r.Sequence, r.Status, r.ChangeSummary, r.EffectiveDate, r.SupersededOn, r.ApprovedAt, r.TrainingRequired, r.ObsoleteReason, r.RowVersion, r.FieldSchema));

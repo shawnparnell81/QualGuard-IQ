@@ -1,10 +1,13 @@
 using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Application.Records;
 using QualGuardIQ.Application.Security;
+using Microsoft.EntityFrameworkCore;
+using QualGuardIQ.Infrastructure.Modules.Documents;
+using QualGuardIQ.Infrastructure.Persistence;
 
 namespace QualGuardIQ.Infrastructure.Records;
 
-public sealed class RecordRegistry(IEnumerable<IRecordTypeProvider> providers, IAccessService access, ICurrentUser user) : IRecordRegistry
+public sealed class RecordRegistry(IEnumerable<IRecordTypeProvider> providers, IAccessService access, ICurrentUser user, AppDbContext db) : IRecordRegistry
 {
     private readonly Dictionary<string, IRecordTypeProvider> _providers = providers.ToDictionary(p => p.Type, StringComparer.OrdinalIgnoreCase);
 
@@ -22,6 +25,13 @@ public sealed class RecordRegistry(IEnumerable<IRecordTypeProvider> providers, I
         var r = await GetAsync(type, id, ct);
         if (user.UserId is not { } uid || !await access.CanAccessAsync(uid, r.ViewPermission, r.SiteId, r.DepartmentId, ct))
             throw new NotFoundException("Record");
+        // form templates marked Confidential or Restricted are also limited to content.confidential holders and their owner
+        if (type is DocumentRecordTypes.FormTemplate or DocumentRecordTypes.FormTemplateRevision)
+        {
+            var docId = type == DocumentRecordTypes.FormTemplate ? id : await db.DocumentRevisions.Where(x => x.Id == id).Select(x => x.DocumentId).FirstAsync(ct);
+            var doc = await db.Documents.AsNoTracking().FirstAsync(d => d.Id == docId, ct);
+            if (!await ConfidentialContent.CanSeeAsync(access, uid, doc, ct)) throw new NotFoundException("Record");
+        }
         return r;
     }
 

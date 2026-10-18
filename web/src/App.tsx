@@ -75,6 +75,8 @@ const ImportJobDetail = lazy(() => import('./pages/ImportCenter').then((m) => ({
 const MasterLists = lazy(() => import('./pages/MasterLists').then((m) => ({ default: m.MasterLists })));
 const TemplateLibrary = lazy(() => import('./pages/TemplateLibrary').then((m) => ({ default: m.TemplateLibrary })));
 const TemplateMarketplace = lazy(() => import('./pages/TemplateMarketplace').then((m) => ({ default: m.TemplateMarketplace })));
+const FormMigrationList = lazy(() => import('./pages/FormMigration').then((m) => ({ default: m.FormMigrationList })));
+const FormMigrationDetail = lazy(() => import('./pages/FormMigration').then((m) => ({ default: m.FormMigrationDetail })));
 const FormRecordDetail = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordDetail })));
 const FormRecordList = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordList })));
 const FormRecordNew = lazy(() => import('./pages/Forms').then((m) => ({ default: m.FormRecordNew })));
@@ -286,6 +288,8 @@ export function App() {
               <Route path="/drawings/:id" element={<DocumentDetail kind={1} />} />
               <Route path="/forms/library" element={<TemplateLibrary />} />
               <Route path="/forms/marketplace" element={<TemplateMarketplace />} />
+              <Route path="/forms/migration" element={<FormMigrationList />} />
+              <Route path="/forms/migration/:id" element={<FormMigrationDetail />} />
               <Route path="/master-lists" element={<MasterLists />} />
               <Route path="/master-lists/:type" element={<MasterLists />} />
               <Route path="/imports" element={<ImportCenter />} />
