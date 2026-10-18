@@ -1,0 +1,390 @@
+# Nonconformance templates (TECH 4, FI 1)
+
+template ncr-internal | Internal Nonconformance Report | NONCONFORMANCE
+packs manufacturing
+tags NCR, internal, production
+purpose Record a product or process condition found inside the organization that does not meet a specified requirement, and control it through containment, disposition, verification and closure.
+scope Any material, part, assembly or product owned by the organization and found nonconforming at receiving, in process, at final inspection, in stores or during an internal audit.
+instructions Raise the report as soon as the condition is found. Identify and segregate the product, complete detection, requirement and actual condition, attach evidence, then route for containment review. Disposition is entered only by the authorized function. Close the report after verification.
+workflow Raised, containment review, investigation, disposition, verification, closure approval. A CAPA is linked when the cause is systemic or the condition repeats.
+retention Keep for ten years after closure, or longer where a customer or regulatory requirement applies.
+status Draft; Open; Contained; Under investigation; Awaiting disposition; Awaiting verification; Closed; Cancelled
+landscape
+use ncr_detection, ncr_requirement, ncr_actual, ncr_evidence, ncr_quantity, ncr_traceability, ncr_containment, ncr_investigation, ncr_risk, ncr_disposition, ncr_verification, ncr_closure, ncr_cost, ncr_signatures
+end
+
+template ncr-supplier | Supplier Nonconformance Report | NONCONFORMANCE
+packs manufacturing
+tags NCR, supplier, receiving
+purpose Record purchased material or a supplier-performed service that does not meet the purchase order or its referenced requirements, notify the supplier and control the disposition and cost recovery.
+scope Purchased raw material, components, assemblies and outsourced processes found nonconforming at receiving, in production or at the customer.
+instructions Identify the purchase order and supplier lot, contain all stock from the same lot, notify the supplier with the evidence, and agree the disposition. Request a supplier corrective action when the severity, risk or repeat history requires it. Record the supplier response and the recoverable cost.
+workflow Raised, supplier notified, supplier response, disposition, verification, cost recovery, closure approval.
+retention Keep for ten years after closure and for as long as the supplier remains on the approved supplier list.
+status Draft; Open; Supplier notified; Awaiting supplier response; Awaiting disposition; Awaiting verification; Closed; Cancelled
+landscape
+use ncr_detection, ncr_requirement, ncr_actual, ncr_evidence, ncr_quantity, ncr_traceability, ncr_containment, ncr_risk, ncr_disposition, ncr_verification, ncr_closure, ncr_cost, ncr_signatures
+section supplier_response | Supplier notification and response | 2 | The supplier is asked to confirm containment of its own stock and in-transit material and to propose a disposition.
+f supplier_contact | Supplier contact | text | *
+f supplier_notified_on | Supplier notified on | date | *
+f supplier_response_due | Response due | date
+f supplier_response_on | Response received | date
+f supplier_containment | Supplier containment confirmed | boolean
+f supplier_response | Supplier response | longtext
+f scar_required | Supplier corrective action requested | boolean
+f scar_reference | Supplier corrective action reference | record | when=scar_required=true
+f debit_note | Debit note or claim number | text
+check supplier_response_due | greaterOrEqual | supplier_notified_on | The response due date cannot be before the notification date.
+end
+
+template ncr-customer | Customer Nonconformance Report | NONCONFORMANCE
+packs manufacturing
+tags NCR, customer, complaint
+purpose Record a nonconformance reported by a customer against delivered product, contain suspect product across the supply chain, and provide the customer with a controlled response.
+scope Delivered product reported as nonconforming by a customer, distributor or end user, including product returned for evaluation.
+instructions Record the customer's report exactly as received with its reference. Contain all suspect stock at the customer, in transit and at the organization within 24 hours. Agree the disposition with the customer and link the customer response and CAPA.
+workflow Received, containment, customer acknowledgement, investigation, disposition, customer response, verification, closure approval.
+retention Keep for ten years after closure, or for the product's service life where longer.
+status Draft; Open; Acknowledged; Contained; Under investigation; Response sent; Awaiting verification; Closed; Cancelled
+landscape
+use ncr_detection, ncr_requirement, ncr_actual, ncr_evidence, ncr_quantity, ncr_traceability, ncr_containment, ncr_investigation, ncr_risk, ncr_disposition, ncr_verification, ncr_closure, ncr_cost, ncr_signatures
+section customer_info | Customer report | 3
+f customer_reference | Customer reference number | text | *
+f customer_contact | Customer contact | text
+f customer_reported_on | Reported on | date | *
+f customer_plant | Customer plant or location | text
+f acknowledgement_due | Acknowledgement due | date
+f response_due | Response due | date
+f customer_requirement | Customer-specific requirement invoked | text
+f customer_response_ref | Customer response record | record
+end
+
+template ncr-material | Material Nonconformance | NONCONFORMANCE
+packs manufacturing
+tags NCR, material, raw material
+purpose Record raw material, consumables or purchased stock that do not meet the material specification, certificate of conformance or receiving criteria.
+scope Raw material, bar stock, sheet, resin, chemicals, consumables and purchased components held in receiving or stores.
+instructions Record the heat, batch or lot and the certificate reference. Compare the certificate and test results with the specification limits in the material results table. Quarantine all stock of the same lot and check for issued material.
+workflow Raised, quarantine, material review, disposition, verification, closure approval.
+retention Keep for ten years after closure or for the life of the product in which the material was used, whichever is longer.
+landscape
+use ncr_detection, ncr_requirement, ncr_actual, ncr_evidence, ncr_quantity, ncr_traceability, ncr_containment, ncr_risk, ncr_disposition, ncr_verification, ncr_closure, ncr_cost, ncr_signatures
+section material_results | Material results | 2
+f material_spec | Material specification | text | *
+f heat_lot | Heat, batch or lot | text | *
+f cert_reference | Certificate of conformance or test report | text
+f cert_matches | Certificate matches the specification | passfail
+table material_tests | Material test results | 1
+c test_property | Property | text | *
+c test_min | Minimum | number | dec=4
+c test_max | Maximum | number | dec=4
+c test_result | Result | number | * dec=4
+c test_unit | Unit | text
+c test_verdict | Verdict | calc | {WITHIN(test_result, test_min, test_max)} labels=PASS/FAIL
+rule material_tests.test_verdict | equals | FAIL | #FDE7E9 | bold
+end
+
+template ncr-production | Production Nonconformance | NONCONFORMANCE
+packs manufacturing
+tags NCR, production, in-process
+purpose Record nonconforming product made in production, contain the affected work in process, and decide its disposition with the process owner.
+scope Parts and assemblies found nonconforming at an operation, by an operator check, in-process inspection or end-of-line test.
+instructions Stop the operation when the condition can continue. Identify the machine, shift, operator and time window, contain all product made since the last good check, and record the process parameters at the time of detection.
+workflow Raised, line containment, process review, disposition, verification, closure approval.
+retention Keep for ten years after closure.
+landscape
+use ncr_detection, ncr_requirement, ncr_actual, ncr_evidence, ncr_quantity, ncr_traceability, ncr_containment, ncr_investigation, ncr_risk, ncr_disposition, ncr_verification, ncr_closure, ncr_cost, ncr_signatures
+section production_context | Production context | 3
+f machine | Machine or line | equipment
+f shift | Shift | choice | [First; Second; Third; Weekend]
+f operator | Operator | user
+f last_good_check | Last good check | datetime
+f process_stopped | Process stopped | boolean
+f restart_authorized_by | Restart authorized by | user | when=process_stopped=true
+table process_parameters | Process parameters at detection | 0
+c param_name | Parameter | text | *
+c param_setpoint | Set point | number | dec=3
+c param_actual | Actual | number | dec=3
+c param_unit | Unit | text
+c param_within | Within window | boolean
+end
+
+template ncr-process | Process Nonconformance | NONCONFORMANCE
+packs manufacturing
+tags NCR, process
+purpose Record a departure from a defined process, procedure or control plan, whether or not product was affected, and assess the impact on product made under it.
+scope Missed controls, process parameter excursions, out-of-sequence operations, unqualified operators or equipment, and procedure deviations.
+instructions Describe which step of which procedure or control plan was not followed. Determine the time window affected and whether product needs to be contained. Record the impact assessment before disposition.
+workflow Raised, impact assessment, containment where product is affected, investigation, correction, verification, closure approval.
+retention Keep for ten years after closure.
+use ncr_detection, ncr_requirement, ncr_actual, ncr_evidence, ncr_containment, ncr_investigation, ncr_risk, ncr_verification, ncr_closure, ncr_cost, ncr_signatures
+section process_impact | Process impact | 2
+f process_document | Procedure or control plan | record
+f process_step | Step not followed | text | *
+f window_start | Affected from | datetime
+f window_end | Affected to | datetime
+f product_affected | Product affected | choice | * [Yes; No; Under assessment]
+f impact_assessment | Impact assessment | longtext | *
+f correction_taken | Correction taken | longtext
+check window_end | greaterOrEqual | window_start | The end of the affected window cannot be before its start.
+end
+
+template ncr-documentation | Documentation Nonconformance | NONCONFORMANCE
+packs manufacturing
+tags NCR, documentation, records
+purpose Record a document or record that is missing, incomplete, incorrect, uncontrolled or out of date, and correct it without losing the original entry.
+scope Controlled documents, travellers, inspection records, certificates, labels and quality records.
+instructions Identify the document and revision, describe the error, and decide whether product released on the basis of the document is affected. Corrections to records are made by single line strike-through or a new revision with a reason, never by erasing the original.
+workflow Raised, document owner review, correction, product impact check, verification, closure approval.
+retention Keep for ten years after closure.
+use ncr_detection, ncr_requirement, ncr_actual, ncr_evidence, ncr_investigation, ncr_risk, ncr_verification, ncr_closure, ncr_signatures
+section documentation_error | Document details | 2
+f document_affected | Document or record | record | *
+f document_revision | Revision | text
+f error_type | Error type | choice | * [Missing; Incomplete; Incorrect; Illegible; Uncontrolled copy; Obsolete revision in use; Unauthorized change; Missing signature]
+f product_released | Product released using this document | boolean
+f product_impact | Product impact | longtext | when=product_released=true
+f correction_method | Correction method | choice | [Corrected entry with reason; New revision; Replacement record; Not correctable]
+f document_owner | Document owner | user
+end
+
+template ncr-engineering | Engineering Nonconformance | NONCONFORMANCE
+packs manufacturing
+tags NCR, engineering, design
+purpose Record a nonconformance originating in the design record, such as a drawing error, specification conflict or tolerance that cannot be produced, and route it to engineering for disposition and change.
+scope Drawings, models, specifications, bills of material and engineering instructions released to production or suppliers.
+instructions Identify the design record and revision, describe the conflict or error, and record the engineering assessment. Product already built is dispositioned through this report; the design correction is raised as a change request and linked.
+workflow Raised, engineering assessment, disposition, change request, verification, closure approval.
+retention Keep for the life of the product plus ten years.
+use ncr_detection, ncr_requirement, ncr_actual, ncr_evidence, ncr_quantity, ncr_risk, ncr_disposition, ncr_verification, ncr_closure, ncr_signatures
+section engineering_assessment | Engineering assessment | 2
+f design_record | Design record | record | *
+f design_revision | Revision | text | *
+f design_error | Nature of the error | choice | * [Drawing error; Specification conflict; Tolerance not producible; Bill of material error; Model and drawing mismatch; Missing requirement]
+f engineering_owner | Responsible engineer | user | *
+f form_fit_function | Form, fit or function affected | boolean
+f engineering_assessment_text | Engineering assessment | longtext | *
+f change_request | Change request | record
+end
+
+template audit-finding-ncr | Audit Finding | NONCONFORMANCE
+packs manufacturing
+tags audit, finding, nonconformity
+purpose Record a nonconformity found during an internal, supplier, customer or certification audit against the audit criteria, with the objective evidence and the response.
+scope Findings classified as major or minor nonconformities, and observations or opportunities for improvement recorded for follow-up.
+instructions State the requirement clause, the objective evidence observed and why it does not meet the requirement. The auditee proposes the correction and corrective action with dates; the auditor accepts the response and verifies it.
+workflow Raised by the auditor, auditee response, response accepted, action implementation, verification, closure approval.
+retention Keep for at least two audit cycles and not less than six years.
+use ncr_requirement, ncr_evidence, ncr_risk, ncr_verification, ncr_closure, action_plan
+section finding | Finding | 2
+f audit_reference | Audit | record | *
+f finding_class | Classification | choice | * [Major nonconformity; Minor nonconformity; Observation; Opportunity for improvement]
+f clause | Requirement clause | text | *
+f area_audited | Area or process | text
+f auditee | Auditee | user | *
+f objective_evidence | Objective evidence | longtext | *
+f statement | Statement of nonconformity | longtext | *
+f response_due_on | Response due | date
+f correction_text | Correction | longtext
+f corrective_action_text | Corrective action | longtext
+sign auditor_sign | Auditor | prepared | I raised this finding on the objective evidence recorded.
+sign auditee_sign | Auditee | performed | I accept this finding and the response recorded.
+sign response_accepted | Response accepted by | reviewed | I accept the proposed correction and corrective action. | audits.edit
+sign finding_closed | Finding closed by | approved | I verified the action and close this finding. | audits.approve
+end
+
+template containment-record | Containment Record | NONCONFORMANCE
+packs manufacturing
+tags containment, quarantine
+purpose Record the immediate actions taken to protect the customer and the operation from a suspected or confirmed nonconformance, by location and quantity.
+scope Any containment raised from a nonconformance, complaint, supplier notification, audit finding or process alarm.
+instructions Start containment within 24 hours. Record every location checked, the quantity checked and rejected, and how cleared product is identified. Keep containment active until the corrective action is verified.
+workflow Started, all locations checked, cleared product identified, containment lifted with approval.
+retention Keep with the related nonconformance for ten years after closure.
+status Draft; Active; Verification; Lifted; Cancelled
+use ncr_traceability, ncr_containment, ncr_quantity
+section clean_point | Clean point and exit criteria | 2
+f clean_point_marking | Marking for cleared product | text | | For example a coloured dot or label on the box and the traveller.
+f first_clean_lot | First clean lot or serial | text
+f first_clean_date | First clean shipment date | date
+f exit_criteria | Exit criteria | longtext | *
+f containment_lifted_on | Containment lifted on | date
+sign containment_started | Containment started by | prepared | I started containment at the locations recorded.
+sign containment_reviewed | Containment reviewed by | reviewed | I confirm containment covers all suspect locations. | ncr.edit
+sign containment_lifted | Containment lifted by | approved | I confirm the exit criteria are met and lift containment. | ncr.approve
+end
+
+template material-segregation | Material Segregation Record | NONCONFORMANCE
+packs manufacturing
+tags quarantine, hold, segregation
+purpose Record nonconforming or suspect material placed in a controlled hold area, its identification, and every movement until release or disposition.
+scope Material on hold in the quarantine area, hold cages, marked shelf locations or in the system on quality hold.
+instructions Tag each item with the hold label and the report number. Log every movement into or out of the hold area with the person, date and reason. Material leaves the hold area only on an approved disposition.
+workflow Placed on hold, movements logged, released or dispositioned with approval.
+retention Keep with the related nonconformance for ten years after closure.
+status Draft; On hold; Partially released; Released; Dispositioned; Cancelled
+use ncr_traceability
+section hold_details | Hold details | 3
+f hold_location | Hold location | text | *
+f hold_reason | Reason for hold | longtext | *
+f hold_tag | Hold tag number | text
+f hold_placed_by | Placed on hold by | user | *
+f hold_placed_on | Placed on hold | datetime | *
+f system_hold | System quality hold applied | boolean
+table hold_movements | Movements | 0
+c move_date | Date and time | datetime | *
+c move_type | Movement | choice | * [Into hold; Out for inspection; Returned to hold; Released; To rework; To scrap; To supplier]
+c move_qty | Quantity | integer | * min=0
+c move_by | Moved by | user | *
+c move_authority | Authority (disposition or report) | text
+running move_qty
+sign hold_placed | Placed on hold by | prepared | I placed this material on hold and identified it.
+sign hold_released | Released by | approved | I authorize release of this material from hold. | ncr.approve
+end
+
+template disposition-authorization | Disposition Authorization | NONCONFORMANCE
+packs manufacturing
+tags MRB, disposition
+purpose Authorize the disposition of nonconforming product by the material review authority, with technical justification and the approvals the disposition requires.
+scope Every disposition decided for product recorded on a nonconformance report.
+instructions Summarize the nonconformance, select the disposition by quantity, give the technical rationale and, for use-as-is and repair, the engineering and customer approvals. A disposition takes effect only when all required signatures are applied.
+workflow Proposed, engineering review, customer approval where required, authorized, carried out, verified.
+retention Keep for the life of the product plus ten years.
+use ncr_requirement, ncr_quantity, ncr_risk, ncr_disposition, ncr_verification
+section mrb | Material review | 2
+f nonconformance_ref | Nonconformance report | record | *
+f mrb_meeting_on | Review date | date
+f mrb_members | Review members | longtext
+f permanent_change | Permanent design or process change needed | boolean
+f change_reference | Change request | record | when=permanent_change=true
+sign proposed_by | Proposed by | prepared | I propose this disposition based on the technical rationale recorded.
+sign engineering_approval | Engineering approval | reviewed | I confirm form, fit and function are acceptable for this disposition. | engineering.approve
+sign quality_approval | Quality approval | approved | I authorize this disposition. | mrb.approve
+sign customer_approval | Customer approval | customer | The customer approves this disposition. | | optional
+end
+
+template rework-authorization | Rework Authorization | NONCONFORMANCE
+packs manufacturing
+tags rework, MRB
+purpose Authorize and control rework that brings nonconforming product back into full conformance with the original requirement, using approved instructions and re-inspection.
+scope Rework of parts, assemblies and lots under an approved nonconformance disposition.
+instructions Reference the nonconformance and the approved rework instruction. Record each operation performed, the operator and the result. Reworked product is re-inspected to the original requirement before release.
+workflow Requested, instruction approved, rework performed, re-inspection, release approval.
+retention Keep for ten years after closure.
+status Draft; Authorized; In rework; Awaiting re-inspection; Released; Cancelled
+use ncr_quantity, ncr_traceability, ncr_verification
+section rework_plan | Rework plan | 2
+f nonconformance_ref | Nonconformance report | record | *
+f rework_instruction | Rework instruction | record | *
+f rework_reason | Reason for rework | longtext | *
+f rework_risk | Risk introduced by rework | longtext
+f special_process | Rework involves a special process | boolean
+table rework_operations | Rework operations | 1
+c op_number | Operation | text | *
+c op_description | Description | text | *
+c op_operator | Performed by | user
+c op_date | Date | date
+c op_minutes | Time | number | min=0 unit=min
+c op_result | Result | passfail
+total op_minutes | sum | Total time
+sign rework_requested | Requested by | prepared | I request this rework under the referenced disposition.
+sign rework_authorized | Authorized by | approved | I authorize this rework to the instruction referenced. | rework.approve
+sign reinspection | Re-inspected by | verified | I re-inspected the reworked product to the original requirement.
+end
+
+template repair-authorization | Repair Authorization | NONCONFORMANCE
+packs manufacturing
+tags repair, MRB, concession
+purpose Authorize a repair that makes nonconforming product acceptable for its intended use although it will not fully meet the original requirement.
+scope Repairs that leave a permanent departure from the drawing or specification, such as weld repair, inserts, oversize fasteners or blend-outs.
+instructions Repairs need an engineering-approved repair instruction and, where the contract requires it, customer approval before work begins. Record the repaired condition and identify the product as repaired.
+workflow Requested, engineering approval, customer approval where required, repaired, inspected, released.
+retention Keep for the life of the product plus ten years.
+use ncr_requirement, ncr_quantity, ncr_traceability, ncr_risk, ncr_verification
+section repair_plan | Repair plan | 2
+f nonconformance_ref | Nonconformance report | record | *
+f repair_instruction | Repair instruction | record | *
+f repair_description | Repair description | longtext | *
+f repaired_condition | Condition after repair | longtext
+f repair_identification | How repaired product is identified | text
+f customer_approval_required | Customer approval required | boolean | *
+f customer_approval_reference | Customer approval reference | text | reqwhen=customer_approval_required=true when=customer_approval_required=true
+sign repair_requested | Requested by | prepared | I request this repair.
+sign repair_engineering | Engineering approval | reviewed | I approve the repair method and confirm the repaired product is fit for use. | engineering.approve
+sign repair_quality | Quality authorization | approved | I authorize this repair. | mrb.approve
+sign repair_customer | Customer approval | customer | The customer approves this repair. | | optional
+sign repair_inspected | Inspected after repair | verified | I inspected the repaired product to the repair instruction.
+end
+
+template concession-request | Use-As-Is or Concession Request | NONCONFORMANCE
+packs manufacturing
+tags concession, use as is, waiver
+purpose Request permission to use or release nonconforming product as it is, for a defined quantity or period, with the justification and the approvals required.
+scope Product that departs from its requirement and is proposed for use without rework or repair.
+instructions State exactly what departs from which requirement and why the product remains fit for its intended use. Limit the concession by quantity, serial numbers or dates. Customer approval is obtained before release whenever the contract requires it.
+workflow Requested, engineering review, quality approval, customer approval where required, released within the stated limits, expired or closed.
+retention Keep for the life of the product plus ten years.
+status Draft; Requested; Approved; Rejected; Expired; Closed
+use ncr_requirement, ncr_actual, ncr_quantity, ncr_traceability, ncr_risk
+section concession_terms | Concession terms | 2
+f concession_type | Request type | choice | * [Use as is; Concession; Production permit before manufacture]
+f justification | Justification for fitness for use | longtext | *
+f limit_quantity | Limited to quantity | integer | min=0
+f valid_from | Valid from | date
+f valid_to | Valid to | date
+f concession_marking | Product marking | text
+f customer_approval_required | Customer approval required | boolean | *
+f customer_concession_ref | Customer concession reference | text | when=customer_approval_required=true
+check valid_to | greaterOrEqual | valid_from | The end date cannot be before the start date.
+sign concession_requested | Requested by | prepared | I request this concession on the justification recorded.
+sign concession_engineering | Engineering review | reviewed | I confirm the product is fit for its intended use. | engineering.approve
+sign concession_quality | Quality approval | approved | I approve this concession within the stated limits. | mrb.approve
+sign concession_customer | Customer approval | customer | The customer approves this concession. | | optional
+end
+
+template scrap-authorization | Scrap Authorization | NONCONFORMANCE
+packs manufacturing
+tags scrap, disposal
+purpose Authorize the scrapping of nonconforming product, record its value and confirm it was made unusable and removed from inventory.
+scope Product dispositioned as scrap, including expired, damaged or obsolete stock.
+instructions Record the quantities and value, the reason for scrap and the disposal method. Product is mutilated or otherwise made unusable before disposal, and controlled or customer-owned material is disposed of as the owner requires.
+workflow Requested, authorized, made unusable, disposed of, inventory adjusted, closed.
+retention Keep for seven years after disposal.
+status Draft; Requested; Authorized; Disposed; Closed; Cancelled
+use ncr_quantity, ncr_traceability, ncr_cost
+section scrap_details | Scrap details | 2
+f nonconformance_ref | Nonconformance report | record
+f scrap_reason | Reason for scrap | choice | * [Nonconforming; Damaged; Expired; Obsolete; Customer instruction; Other]
+f scrap_explanation | Explanation | longtext | *
+f disposal_method | Disposal method | choice | * [Mutilate and recycle; Hazardous waste contractor; Return to owner; Destroy under witness]
+f made_unusable | Made unusable before disposal | boolean | *
+f customer_owned | Customer-owned material | boolean
+f disposal_certificate | Disposal certificate | attachment
+f inventory_adjusted | Inventory adjusted | boolean
+sign scrap_requested | Requested by | prepared | I request scrap of the material recorded.
+sign scrap_authorized | Authorized by | approved | I authorize scrap of this material. | mrb.approve
+sign scrap_witnessed | Disposal witnessed by | witness | I witnessed the material being made unusable and disposed of.
+end
+
+template return-to-supplier | Return-to-Supplier Authorization | NONCONFORMANCE
+packs manufacturing
+tags return, supplier, RTV
+purpose Authorize the return of nonconforming purchased material to the supplier with a return reference, shipping record and agreed credit or replacement.
+scope Purchased material dispositioned as return to supplier from a supplier nonconformance report.
+instructions Obtain the supplier's return authorization before shipping. Identify the returned items, the shipment and the expected credit or replacement, and record the receipt of replacement material.
+workflow Requested, supplier return authorization received, shipped, credit or replacement received, closed.
+retention Keep for seven years after closure.
+status Draft; Awaiting supplier authorization; Authorized; Shipped; Credited or replaced; Closed; Cancelled
+use ncr_quantity, ncr_traceability, ncr_cost
+section return_details | Return details | 3
+f supplier_ncr | Supplier nonconformance report | record | *
+f supplier_rma | Supplier return authorization number | text | *
+f return_reason | Reason | longtext | *
+f ship_date | Ship date | date
+f carrier | Carrier and tracking | text
+f remedy | Remedy | choice | * [Credit; Replacement; Repair and return; Rework at supplier]
+f remedy_received_on | Remedy received | date
+f replacement_inspected | Replacement inspected and accepted | passfail
+sign return_requested | Requested by | prepared | I request the return of this material to the supplier.
+sign return_authorized | Authorized by | approved | I authorize the return. | suppliers.approve
+end

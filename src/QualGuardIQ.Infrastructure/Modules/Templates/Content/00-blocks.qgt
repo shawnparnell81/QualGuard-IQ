@@ -1,0 +1,340 @@
+# Shared building blocks. A template includes a block with "use <name>"; each block may be used once per template.
+# Line format:
+#   section key | Title | columns | instructions
+#   f key | Label | type | options | help        options: * required, [A; B] choices, {formula}, unit= min= max= dec= w= len= labels=A/B when=key=value reqwhen=key=value
+#   table key | Title | minimum rows | instructions, then c lines for its columns, rows/groups/total/running lines
+#   sign key | Label | role | meaning | permission | optional
+#   rule target | operator | value | fill | bold
+
+# ---------------------------------------------------------------- nonconformance
+block ncr_detection
+section detection | Detection | 3 | Record where, when and how the condition was found, before anything is moved or reworked.
+f detected_by | Detected by | user | *
+f detected_on | Date and time detected | datetime | *
+f detection_point | Detection point | choice | * [Receiving inspection; In-process inspection; Final inspection; Production operator; Internal audit; Customer; Supplier; Field or service; Engineering review; Other]
+f detection_area | Area, line or work centre | text
+f detection_operation | Operation or process step | text
+f detection_method | Detection method | choice | [Visual; Dimensional measurement; Functional test; Laboratory test; Document review; Audit; Customer report; Other]
+f inspection_ref | Inspection or test reference | text
+f escaped | Did the condition escape a control point? | boolean | | Tick when the condition passed an inspection or test that should have detected it.
+end
+
+block ncr_requirement
+section requirement | Requirement | 2 | State the requirement that was not met, with its source, so the gap can be verified objectively.
+f requirement_source | Requirement source | choice | * [Drawing; Specification; Purchase order; Customer requirement; Procedure or work instruction; Standard; Contract; Regulatory requirement; Other]
+f requirement_ref | Document number and revision | text | *
+f requirement_text | Requirement as stated | longtext | *
+f characteristic | Characteristic | text
+f nominal_value | Nominal | number | dec=4
+f lower_limit | Lower limit | number | dec=4
+f upper_limit | Upper limit | number | dec=4
+f limit_unit | Unit | text
+end
+
+block ncr_actual
+section actual_condition | Actual condition | 2 | Describe what was found as facts: what, where, how many and how far from the requirement.
+f actual_description | Description of the condition | longtext | *
+f measured_value | Measured or observed value | number | dec=4
+f deviation_value | Deviation from nominal | calc | {IF(ISNUMBER(measured_value), measured_value - nominal_value, "")} dec=4
+f within_limits | Within limits | calc | {IF(AND(ISNUMBER(measured_value), ISNUMBER(lower_limit), ISNUMBER(upper_limit)), WITHIN(measured_value, lower_limit, upper_limit), "")} labels=Within/Outside
+f defect_code | Defect code | text
+f defect_category | Defect category | choice | [Dimensional; Material; Cosmetic; Functional; Documentation; Labelling or packaging; Contamination; Missing or wrong part; Other]
+f severity | Severity | choice | * [Critical; Major; Minor]
+f repeat_occurrence | Repeat occurrence | boolean | | Tick when the same condition was recorded in the last twelve months.
+rule severity | equals | Critical | #FDE7E9 | bold
+rule within_limits | equals | Outside | #FDE7E9
+end
+
+block ncr_evidence
+section evidence | Evidence | 2 | Attach objective evidence. Do not alter the nonconforming item before evidence is captured.
+f evidence_files | Evidence files | attachment
+f evidence_photos | Photos of the condition | photo
+f evidence_summary | Evidence summary | longtext
+f evidence_retained | Physical sample retained | boolean
+f sample_location | Sample location | text | when=evidence_retained=true
+end
+
+block ncr_quantity
+section quantity | Quantity affected | 3
+f lot_quantity | Lot or batch quantity | integer | min=0
+f qty_inspected | Quantity inspected | integer | min=0
+f qty_nonconforming | Quantity nonconforming | integer | * min=0
+f qty_suspect | Quantity suspect (not yet inspected) | integer | min=0
+f percent_defective | Percent nonconforming | calc | {IF(qty_inspected > 0, qty_nonconforming / qty_inspected * 100, 0)} dec=2 unit=%
+f unit_of_measure | Unit of measure | choice | [Each; Kilogram; Metre; Litre; Set; Lot]
+check qty_nonconforming | lessOrEqual | lot_quantity | The nonconforming quantity cannot exceed the lot quantity.
+end
+
+block ncr_traceability
+section traceability | Traceability | 3 | Identify every lot, serial number and order affected so containment can reach all of it.
+f lot_number | Lot or batch number | text
+f work_order | Work or production order | text
+f purchase_order | Purchase order | text
+f date_code | Date code | text
+f drawing_revision | Drawing revision | text
+f equipment_used | Equipment used | equipment
+table affected_items | Affected lots and serial numbers | 0
+c item_lot | Lot or batch | text | *
+c item_serial | Serial number | text
+c item_qty | Quantity | integer | min=0
+c item_location | Current location | text
+c item_status | Status | choice | [Suspect; Nonconforming; Conforming after inspection; Shipped]
+total item_qty | sum | Total quantity
+end
+
+block ncr_containment
+section containment | Containment | 2 | Contain within 24 hours: stop, segregate and protect. Extend containment to stock, work in process, transit and the customer when needed.
+f containment_required | Containment required | boolean | *
+f containment_actions | Containment actions taken | longtext | reqwhen=containment_required=true
+f quarantine_location | Quarantine location | text | when=containment_required=true
+f containment_by | Containment carried out by | user | when=containment_required=true
+f containment_on | Containment completed | datetime | when=containment_required=true
+f customer_notified | Customer notified | boolean
+f customer_notified_on | Customer notified on | date | when=customer_notified=true
+table containment_scope | Containment scope | 0
+c scope_location | Location | choice | * [Supplier; Receiving; Stores; Work in process; Finished goods; In transit; Customer; Field]
+c scope_checked | Quantity checked | integer | min=0
+c scope_rejected | Quantity rejected | integer | min=0
+c scope_by | Checked by | user
+c scope_date | Date | date
+total scope_checked | sum | Checked
+total scope_rejected | sum | Rejected
+end
+
+block ncr_investigation
+section investigation | Investigation | 2 | Investigate why the condition occurred and why it was not detected. Use a CAPA when the cause is systemic.
+f investigation_required | Investigation required | boolean
+f investigator | Investigator | user | when=investigation_required=true
+f occurrence_cause | Occurrence cause | longtext | when=investigation_required=true
+f escape_cause | Detection or escape cause | longtext | when=investigation_required=true
+f cause_category | Cause category | choice | [Method; Machine; Material; Measurement; People; Environment; Design; Supplier; Unknown]
+f capa_required | CAPA required | boolean | | A CAPA is required for critical, repeat or systemic nonconformances.
+f capa_reference | CAPA reference | record | when=capa_required=true
+end
+
+block ncr_risk
+section risk | Risk | 3 | Assess the risk to product, customer, safety and compliance before disposition.
+f risk_severity | Severity (1 to 10) | integer | * min=1 max=10
+f risk_occurrence | Likelihood (1 to 10) | integer | * min=1 max=10
+f risk_detection | Detectability (1 to 10) | integer | * min=1 max=10
+f risk_score | Risk score | calc | {risk_severity * risk_occurrence * risk_detection}
+f risk_level | Risk level | calc | {IF(risk_score >= 200, "High", IF(risk_score >= 80, "Medium", "Low"))}
+f safety_impact | Safety or regulatory impact | boolean
+f risk_rationale | Rationale | longtext
+rule risk_level | equals | High | #FDE7E9 | bold
+rule risk_level | equals | Medium | #FFF4D6
+end
+
+block ncr_disposition
+section disposition | Disposition | 2 | Disposition is decided by the authorized function. Use-as-is and repair need engineering and, where contracted, customer approval.
+f disposition | Disposition | choice | * [Use as is; Rework; Repair; Regrade; Return to supplier; Scrap; Sort and screen]
+f disposition_rationale | Technical rationale | longtext | *
+f engineering_approval_needed | Engineering approval needed | calc | {IF(OR(disposition = "Use as is", disposition = "Repair"), "Yes", "No")}
+f customer_approval_needed | Customer approval needed | boolean | | Required where the contract or customer requirements call for it.
+f customer_approval_ref | Customer approval or concession reference | text | when=customer_approval_needed=true
+f disposition_instructions | Disposition instructions | longtext
+f disposition_qty | Quantity dispositioned | integer | min=0
+table disposition_lines | Disposition by quantity | 0
+c disp_action | Disposition | choice | * [Use as is; Rework; Repair; Regrade; Return to supplier; Scrap; Sort and screen]
+c disp_qty | Quantity | integer | * min=0
+c disp_reference | Work order or return reference | text
+c disp_done_by | Completed by | user
+c disp_done_on | Completed | date
+total disp_qty | sum | Total dispositioned
+end
+
+block ncr_verification
+section verification | Verification | 2 | Verify that the disposition was carried out as instructed and the product now meets its requirement.
+f verification_method | Verification method | choice | [Re-inspection; Re-test; Document review; Witnessed rework; Not applicable]
+f verification_result | Verification result | passfail
+f verification_notes | Verification notes | longtext
+f verified_on | Verified on | date
+end
+
+block ncr_closure
+section closure | Closure | 2
+f closure_summary | Closure summary | longtext
+f actions_complete | All dispositions and actions complete | boolean | *
+f records_updated | Inventory and system records updated | boolean
+f lessons_learned | Lessons learned | longtext
+end
+
+block ncr_cost
+section cost | Cost of poor quality | 3 | Record the cost so nonconformance cost can be reported by part, supplier and cause.
+f cost_material | Material | currency | min=0
+f cost_labour | Labour | currency | min=0
+f cost_rework | Rework or repair | currency | min=0
+f cost_sorting | Sorting and inspection | currency | min=0
+f cost_freight | Freight and handling | currency | min=0
+f cost_other | Other | currency | min=0
+f cost_total | Total cost | calc | {cost_material + cost_labour + cost_rework + cost_sorting + cost_freight + cost_other} dec=2
+f cost_recoverable | Recoverable from supplier | currency | min=0
+f cost_net | Net cost | calc | {cost_total - cost_recoverable} dec=2
+end
+
+block ncr_signatures
+sign raised_by | Raised by | prepared | I confirm the condition described is accurate and the evidence is attached.
+sign quality_review | Quality review | reviewed | I reviewed the nonconformance and the containment taken. | ncr.edit
+sign disposition_approval | Disposition approved by | approved | I approve this disposition. | ncr.approve
+sign verification_signoff | Verification | verified | I verified the disposition was completed and the product meets its requirement.
+sign closure_approval | Closure approved by | approved | I approve closure of this nonconformance. | ncr.approve
+end
+
+# ---------------------------------------------------------------- shared action planning
+block action_plan
+section actions | Action plan | 1
+table action_items | Actions | 1
+c action_text | Action | longtext | *
+c action_type | Type | choice | * [Correction; Containment; Corrective; Preventive; Verification; Communication]
+c action_owner | Owner | user | *
+c action_due | Due | date | *
+c action_done | Completed | date
+c action_status | Status | choice | [Open; In progress; Complete; Overdue; Cancelled]
+c action_evidence | Evidence of completion | text
+end
+
+block team
+section team_section | Team | 1
+table team_members | Team members | 1
+c member | Member | user | *
+c member_role | Role | choice | * [Leader; Champion; Quality; Engineering; Production; Supplier quality; Customer representative; Subject matter expert; Other]
+c member_function | Function or department | text
+c member_contact | Contact | text
+end
+
+block approval_trio
+sign prepared_by | Prepared by | prepared | I prepared this record and the information in it is complete and accurate.
+sign reviewed_by | Reviewed by | reviewed | I reviewed this record and agree with its content.
+sign approved_by | Approved by | approved | I approve this record.
+end
+
+block register_signatures
+sign maintained_by | Maintained by | prepared | I confirm this register is complete and current as of the date signed.
+sign reviewed_by | Reviewed by | reviewed | I reviewed this register for completeness and accuracy.
+end
+
+# ---------------------------------------------------------------- CAPA
+block capa_problem
+section problem | Problem description | 2 | Describe the problem in measurable terms: what, where, when, how big and how detected.
+f problem_statement | Problem statement | longtext | *
+f problem_source | Source | choice | * [Nonconformance; Customer complaint; Internal audit; External audit; Supplier; Process monitoring; Management review; Risk assessment; Field data; Other]
+f source_record | Source record | record
+f problem_what | What is affected | text
+f problem_where | Where it occurs | text
+f problem_when | When it occurs or was first seen | text
+f problem_extent | How big (quantity, frequency, trend) | text
+f capa_priority | Priority | choice | * [High; Medium; Low]
+f regulatory_reportable | Regulatory or customer reportable | boolean
+rule capa_priority | equals | High | #FDE7E9 | bold
+end
+
+block capa_correction
+section correction | Correction and containment | 2 | Corrections remove the detected nonconformity; containment protects the customer while the cause is investigated.
+f correction_required | Correction required | boolean
+f correction_taken_text | Correction taken | longtext | when=correction_required=true
+f containment_needed | Containment needed | boolean
+f containment_summary | Containment summary | longtext | when=containment_needed=true
+f containment_record | Containment record | record | when=containment_needed=true
+f containment_effective | Containment effective | passfail
+end
+
+block capa_root_cause
+section root_cause | Root cause | 2 | Identify the root cause of occurrence and of escape. Attach the analysis used and verify the cause by turning it on and off where possible.
+f analysis_method | Analysis method | multichoice | * [Five whys; Fishbone; Is and is not; Fault tree; Cause and effect matrix; Barrier analysis; Escape point analysis; Data analysis; Other]
+f analysis_record | Analysis record | record
+f root_cause_occurrence | Root cause of occurrence | longtext | *
+f root_cause_escape | Root cause of escape | longtext
+f systemic_cause | Systemic cause (why the system allowed it) | longtext
+f cause_verified | Cause verified | boolean
+f cause_verification_method | How the cause was verified | longtext | when=cause_verified=true
+end
+
+block capa_effectiveness
+section effectiveness | Effectiveness | 2 | Effectiveness is judged on data collected after implementation against the criteria set when the action was planned.
+f effectiveness_criteria | Effectiveness criteria | longtext | *
+f effectiveness_period | Monitoring period | choice | [30 days; 60 days; 90 days; 6 months; 12 months; Other]
+f effectiveness_due | Effectiveness review due | date
+f baseline_value | Baseline | number | dec=3
+f target_value | Target | number | dec=3
+f observed_value | Observed after implementation | number | dec=3
+f improvement_pct | Improvement | calc | {IF(AND(ISNUMBER(baseline_value), baseline_value <> 0, ISNUMBER(observed_value)), (baseline_value - observed_value) / baseline_value * 100, "")} dec=1 unit=%
+f effective_result | Action effective | choice | [Effective; Partially effective; Not effective]
+f effectiveness_evidence | Evidence | longtext
+rule effective_result | equals | Not effective | #FDE7E9 | bold
+end
+
+block capa_signatures
+sign capa_initiator | Initiated by | prepared | I initiated this CAPA and the problem statement is accurate.
+sign capa_owner_sign | CAPA owner | performed | I accept ownership of this CAPA and its actions.
+sign capa_review | Quality review | reviewed | I reviewed the investigation and the planned actions. | capa.edit
+sign capa_approval | Approved by | approved | I approve this CAPA. | capa.approve
+end
+
+# ---------------------------------------------------------------- APQP and PPAP
+block program_header
+section program | Program | 3
+f program_name | Program or project | text | *
+f program_number | Program number | text
+f customer_program | Customer program or platform | text
+f program_manager | Program manager | user | *
+f sop_date | Start of production | date
+f phase | Phase | choice | [Plan and define; Product design and development; Process design and development; Product and process validation; Launch, feedback and corrective action]
+end
+
+block review_checklist
+section review_items | Review checklist | 1 | Answer every question; the organization may add, remove or reword questions when it adopts the template. A No needs an action with an owner and a date before the review can be approved.
+table checklist | Questions | 1
+c answer | Answer | choice | * [Yes; No; Not applicable]
+c comment | Comment or evidence | text
+c action_needed | Action | text
+c action_owner_c | Owner | user
+c action_due_c | Due | date
+rule checklist.answer | equals | No | #FDE7E9 | bold
+end
+
+block review_outcome
+section outcome | Review outcome | 2
+f questions_no | Questions answered No | calc | {COUNTIF(checklist.answer, "No")}
+f outcome_decision | Decision | choice | * [Approved; Approved with actions; Not approved]
+f outcome_notes | Notes | longtext
+f next_review | Next review | date
+end
+
+block deliverables
+section deliverables_section | Deliverables | 1
+table deliverable_items | Deliverables | 1
+c deliv_owner | Owner | user
+c deliv_due | Due | date
+c deliv_status | Status | choice | * [Not started; In progress; Complete; At risk; Late; Not applicable]
+c deliv_record | Record | record
+c deliv_note | Note | text
+rule deliverable_items.deliv_status | in | At risk,Late | #FDE7E9 | bold
+f deliverables_total | Deliverables | calc | {COUNTA(deliverable_items.deliv_status)}
+f deliverables_complete | Complete | calc | {COUNTIF(deliverable_items.deliv_status, "Complete")}
+f deliverables_pct | Percent complete | calc | {IF(deliverables_total > 0, deliverables_complete / deliverables_total * 100, 0)} dec=0 unit=%
+end
+
+block apqp_signatures
+sign apqp_prepared | Prepared by | prepared | I prepared this record and the information in it is complete.
+sign apqp_reviewed | Reviewed by | reviewed | I reviewed this record with the cross-functional team.
+sign apqp_approved | Approved by | approved | I approve this record. | apqp.approve
+end
+
+block ppap_header
+section ppap_part | Part and submission | 3
+f part_name | Part name | text | *
+f customer_part_number | Customer part number | text | *
+f org_part_number | Organization part number | text
+f engineering_level | Engineering change level | text | *
+f engineering_level_date | Engineering change level date | date
+f drawing_number | Drawing number | text
+f submission_reason | Reason for submission | choice | * [Initial submission; Engineering change; Tooling transfer or replacement; Correction of discrepancy; Tooling inactive more than one year; Change to optional construction or material; Supplier or material source change; Change in part processing; Parts produced at additional location; Other]
+f submission_level | Submission level | choice | * [Level 1; Level 2; Level 3; Level 4; Level 5]
+f submission_date | Submission date | date
+end
+
+block ppap_signatures
+sign ppap_prepared | Prepared by | prepared | I prepared this element and the results recorded are from production parts and processes.
+sign ppap_reviewed | Reviewed by | reviewed | I reviewed this element for completeness and accuracy.
+sign ppap_customer | Customer disposition | customer | The customer records its disposition of this element. | | optional
+end
