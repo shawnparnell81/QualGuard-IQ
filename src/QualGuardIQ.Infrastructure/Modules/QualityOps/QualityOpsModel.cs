@@ -11,7 +11,7 @@ public partial class AppDbContext
     public DbSet<QualityEvent> QualityEvents => Set<QualityEvent>();
     public DbSet<QualityOpsSettings> QualityOpsSettings => Set<QualityOpsSettings>();
     public DbSet<Deviation> Deviations => Set<Deviation>();
-    public DbSet<Investigation> Investigations => Set<Investigation>();
+    public DbSet<QualityInvestigation> Investigations => Set<QualityInvestigation>();
     public DbSet<ReleaseDecision> ReleaseDecisions => Set<ReleaseDecision>();
     public DbSet<ApprovalDelegation> ApprovalDelegations => Set<ApprovalDelegation>();
     public DbSet<RegisterEntry> RegisterEntries => Set<RegisterEntry>();
@@ -86,7 +86,7 @@ public partial class AppDbContext
             e.HasOne<QualityEvent>().WithMany().HasForeignKey(x => x.QualityEventId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         });
-        b.Entity<Investigation>(e =>
+        b.Entity<QualityInvestigation>(e =>
         {
             e.ToTable("investigations", t => t.HasCheckConstraint("ck_investigations_level", "\"EscalationLevel\" >= 0 AND \"EscalationLevel\" <= 5"));
             e.HasIndex(x => x.Number).IsUnique();
@@ -94,7 +94,7 @@ public partial class AppDbContext
             e.Property(x => x.Number).HasMaxLength(40);
             e.Property(x => x.Title).HasMaxLength(300);
             e.Property(x => x.Scope).HasMaxLength(4000);
-            foreach (var p in new[] { nameof(Investigation.Hypotheses), nameof(Investigation.Findings), nameof(Investigation.RootCause), nameof(Investigation.Conclusion) })
+            foreach (var p in new[] { nameof(QualityInvestigation.Hypotheses), nameof(QualityInvestigation.Findings), nameof(QualityInvestigation.RootCause), nameof(QualityInvestigation.Conclusion) })
                 e.Property(p).HasMaxLength(10000);
             e.Property(x => x.SampleReference).HasMaxLength(120);
             e.Property(x => x.TestMethod).HasMaxLength(200);

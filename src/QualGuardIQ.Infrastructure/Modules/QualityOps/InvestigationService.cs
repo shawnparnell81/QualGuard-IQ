@@ -23,9 +23,9 @@ public sealed record LinkInput(string RecordType, Guid RecordId, string? LinkTyp
 /// </summary>
 public sealed class InvestigationService(AppDbContext db, ModuleSupport m, INumberingService numbers, INotifier notifier, IRecordRegistry registry)
 {
-    public const string RecordType = "Investigation";
+    public const string RecordType = nameof(QualityInvestigation);
 
-    public async Task<Investigation> CreateAsync(InvestigationInput r, CancellationToken ct)
+    public async Task<QualityInvestigation> CreateAsync(InvestigationInput r, CancellationToken ct)
     {
         await m.RequireAsync(Permissions.QualityOpsEdit, r.SiteId, r.DepartmentId, ct);
         await m.ValidateLocationAsync(r.SiteId, r.DepartmentId, ct);
@@ -35,7 +35,7 @@ public sealed class InvestigationService(AppDbContext db, ModuleSupport m, INumb
         await m.RequireActiveUserAsync(lead, "lead", ct);
         var own = db.Database.CurrentTransaction is null;
         await using var tx = own ? await db.Database.BeginTransactionAsync(ct) : null;
-        var x = new Investigation
+        var x = new QualityInvestigation
         {
             Number = await numbers.NextAsync(RecordType, r.SiteId, ct), Kind = r.Kind, Status = InvestigationStatus.Open, Title = r.Title.Trim(), Scope = r.Scope.Trim(),
             LeadId = lead, DueOn = r.DueOn, QualityEventId = r.QualityEventId, SiteId = r.SiteId, DepartmentId = r.DepartmentId
@@ -123,7 +123,7 @@ public sealed class InvestigationService(AppDbContext db, ModuleSupport m, INumb
         await db.SaveChangesAsync(ct);
     }
 
-    private async Task<Investigation> LoadEditAsync(Guid id, CancellationToken ct)
+    private async Task<QualityInvestigation> LoadEditAsync(Guid id, CancellationToken ct)
     {
         await m.EditAsync(RecordType, id, ct);
         return await db.Investigations.FirstAsync(x => x.Id == id, ct);
