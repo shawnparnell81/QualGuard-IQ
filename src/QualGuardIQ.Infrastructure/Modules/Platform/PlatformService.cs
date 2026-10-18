@@ -36,6 +36,14 @@ public sealed class PlatformService(AppDbContext db, ModuleSupport m, IAccessSer
 
     async Task RequireAdminAsync(CancellationToken ct) { if (!await m.CanAnyAsync(Permissions.PlatformAdmin, ct)) throw new ForbiddenException(); }
 
+    /// <summary>A webhook receives events from every site, so managing webhooks needs platform administration for all sites, not one.</summary>
+    async Task RequireWebhookAdminAsync(CancellationToken ct)
+    {
+        await RequireAdminAsync(ct);
+        if (!(await access.GetScopeAsync(m.UserId, Permissions.PlatformAdmin, ct)).AllSites)
+            throw new ForbiddenException("Webhooks send events from every site, so they need platform administration for all sites.");
+    }
+
     // ---------- event bus ----------
     async Task<PlatformCursor> CursorAsync(string key, CancellationToken ct)
     {
@@ -143,7 +151,7 @@ public sealed class PlatformService(AppDbContext db, ModuleSupport m, IAccessSer
     // ---------- webhooks ----------
     public async Task<List<object>> WebhooksAsync(CancellationToken ct)
     {
-        await RequireAdminAsync(ct);
+        await RequireWebhookAdminAsync(ct);
         var subs = await db.WebhookSubscriptions.AsNoTracking().OrderBy(s => s.Name).ToListAsync(ct);
         var ids = subs.Select(s => s.Id).ToList();
         var stats = await db.WebhookDeliveries.AsNoTracking().Where(d => ids.Contains(d.SubscriptionId)).GroupBy(d => new { d.SubscriptionId, d.Status }).Select(g => new { g.Key.SubscriptionId, g.Key.Status, N = g.Count() }).ToListAsync(ct);
@@ -163,7 +171,7 @@ public sealed class PlatformService(AppDbContext db, ModuleSupport m, IAccessSer
 
     public async Task<(WebhookSubscription Sub, string Secret)> CreateWebhookAsync(WebhookInput r, CancellationToken ct)
     {
-        await RequireAdminAsync(ct); Check(r);
+        await RequireWebhookAdminAsync(ct); Check(r);
         foreach (var t in r.RecordTypes ?? []) if (!records.IsKnownType(t)) throw new AppException($"Unknown record type {t}.");
         var secret = Convert.ToBase64String(RandomNumberGenerator.GetBytes(32));
         var s = new WebhookSubscription { Name = r.Name.Trim(), Url = r.Url.Trim(), Events = r.Events.Distinct().ToList(), RecordTypes = r.RecordTypes ?? [], EncryptedSecret = secrets.Protect(secret) };
@@ -174,7 +182,7 @@ public sealed class PlatformService(AppDbContext db, ModuleSupport m, IAccessSer
 
     public async Task SetWebhookEnabledAsync(Guid id, bool enabled, CancellationToken ct)
     {
-        await RequireAdminAsync(ct);
+        await RequireWebhookAdminAsync(ct);
         var s = await db.WebhookSubscriptions.FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("Webhook");
         s.Enabled = enabled; if (enabled) s.ConsecutiveFailures = 0;
         await db.SaveChangesAsync(ct);
@@ -182,7 +190,7 @@ public sealed class PlatformService(AppDbContext db, ModuleSupport m, IAccessSer
 
     public async Task<List<WebhookDelivery>> DeliveriesAsync(Guid id, CancellationToken ct)
     {
-        await RequireAdminAsync(ct);
+        await RequireWebhookAdminAsync(ct);
         return await db.WebhookDeliveries.AsNoTracking().Where(d => d.SubscriptionId == id).OrderByDescending(d => d.Id).Take(200).ToListAsync(ct);
     }
 

@@ -40,6 +40,8 @@ x-seed: &seed
   Seed__AdminEmail: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
   Seed__AdminPassword: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
   Seed__AdminName: ${ADMIN_NAME:-Administrator}
+  # New installations only: administrators set up an authenticator app at their first sign-in.
+  Seed__AdministratorRequiresMfa: ${ADMIN_REQUIRES_MFA:-true}
 
 services:
   postgres:

@@ -6,6 +6,9 @@
 # Usage: scripts/backup.sh <output-dir>
 # Env:   PGHOST PGPORT PGUSER PGPASSWORD PGDATABASE   database connection (required)
 #        QGIQ_S3_ALIAS QGIQ_S3_BUCKET                 optional: MinIO client alias + bucket to mirror (needs `mc`)
+#        QGIQ_KEYS_CONTAINER or QGIQ_KEYS_DIR         the Data Protection key ring: a container that mounts it at /keys (for
+#                                                     docker compose, e.g. qualguard-iq-api-1) or a folder. Without the keys,
+#                                                     a restored database can't read two-step verification or saved secrets.
 #        QGIQ_API_URL QGIQ_TOKEN                      optional: register the backup (token of a user with platform.admin)
 set -euo pipefail
 latest_migration() {
@@ -44,8 +47,22 @@ if [[ -n "${QGIQ_S3_ALIAS:-}" && -n "${QGIQ_S3_BUCKET:-}" ]] && command -v mc >/
   files_entry=", \"files\": {\"startedAt\": \"$fstart\", \"completedAt\": \"$fdone\", \"sizeBytes\": $fsize, \"source\": \"$QGIQ_S3_ALIAS/$QGIQ_S3_BUCKET\"}"
 fi
 
+keys_entry=""
+if [[ -n "${QGIQ_KEYS_CONTAINER:-}" || -n "${QGIQ_KEYS_DIR:-}" ]]; then
+  KTMP=$(mktemp -d)
+  if [[ -n "${QGIQ_KEYS_CONTAINER:-}" ]]; then docker cp "$QGIQ_KEYS_CONTAINER:/keys/." "$KTMP/"; else cp -a "$QGIQ_KEYS_DIR/." "$KTMP/"; fi
+  ls "$KTMP"/*.xml >/dev/null 2>&1 || { echo "No key files found in the Data Protection key ring." >&2; rm -rf "$KTMP"; exit 1; }
+  tar -czf "$DIR/keys.tar.gz" -C "$KTMP" .
+  chmod 600 "$DIR/keys.tar.gz"
+  rm -rf "$KTMP"
+  ksha=$(sha256sum "$DIR/keys.tar.gz" | cut -d' ' -f1)
+  keys_entry=", \"keys\": {\"file\": \"keys.tar.gz\", \"sha256\": \"$ksha\"}"
+else
+  echo "Warning: the Data Protection keys were not backed up (set QGIQ_KEYS_CONTAINER or QGIQ_KEYS_DIR)." >&2
+fi
+
 cat > "$DIR/manifest.json" <<JSON
-{"label": "qgiq-$STAMP", "database": {"file": "database.dump", "startedAt": "$started", "completedAt": "$completed", "sizeBytes": $size, "sha256": "$sha"}, "fingerprint": $fingerprint$files_entry}
+{"label": "qgiq-$STAMP", "database": {"file": "database.dump", "startedAt": "$started", "completedAt": "$completed", "sizeBytes": $size, "sha256": "$sha"}, "fingerprint": $fingerprint$files_entry$keys_entry}
 JSON
 echo "Backup written to $DIR (database $size bytes, sha256 $sha)"
 
