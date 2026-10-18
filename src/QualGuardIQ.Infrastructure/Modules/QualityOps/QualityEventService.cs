@@ -5,6 +5,7 @@ using QualGuardIQ.Application.Records;
 using QualGuardIQ.Domain.Quality;
 using QualGuardIQ.Domain.Security;
 using QualGuardIQ.Domain.Shared;
+using QualGuardIQ.Infrastructure.Modules.Complaints;
 using QualGuardIQ.Infrastructure.Modules.Quality;
 using QualGuardIQ.Infrastructure.Persistence;
 using QualGuardIQ.Infrastructure.Services;
@@ -185,10 +186,10 @@ public sealed class QualityEventService(AppDbContext db, ModuleSupport m, INumbe
     }
 
     /// <summary>
-    /// Escalates a classified event: "deviation" and "investigation" create the record here; "record" links an existing module record
+    /// Escalates a classified event: "deviation", "investigation" and "complaint" create the record; "record" links an existing module record
     /// (nonconformance, corrective action, complaint or any other registered type) the user may view.
     /// </summary>
-    public async Task<(string Type, Guid Id, string Number)> EscalateAsync(Guid id, EscalateInput r, DeviationService deviations, InvestigationService investigations, CancellationToken ct)
+    public async Task<(string Type, Guid Id, string Number)> EscalateAsync(Guid id, EscalateInput r, DeviationService deviations, InvestigationService investigations, ComplaintService complaints, CancellationToken ct)
     {
         var x = await LoadEditAsync(id, ct);
         if (x.Status != QualityEventStatus.Classified) throw new ConflictException("Classify the event before escalating it.");
@@ -205,13 +206,28 @@ public sealed class QualityEventService(AppDbContext db, ModuleSupport m, INumbe
                     x.Classification == "Laboratory result" ? InvestigationKind.Laboratory : InvestigationKind.CrossModule, T(r.Title) ?? x.Title, x.Description, r.OwnerId, null, x.Id), ct);
                 target = (InvestigationService.RecordType, i.Id, i.Number);
                 break;
+            case "complaint":
+                // complaint intake automation: an event from a customer becomes a customer complaint with the event's facts
+                if (x.CustomerId is not { } customerId) throw new AppException("A complaint needs the customer; record the customer on the event first.");
+                var today = await m.TodayAsync(x.SiteId, ct);
+                var settings = await GetSettingsAsync(ct);
+                var order = settings.Severities.OrderBy(v => v.Order).Select(v => v.Name).ToList();
+                var rank = x.Severity is null ? -1 : order.IndexOf(x.Severity);
+                var sev = rank < 0 ? Severity.Minor : rank == order.Count - 1 ? Severity.Critical : rank == order.Count - 2 ? Severity.Major : Severity.Minor;
+                var dueDays = x.RespondBy is { } rb ? Math.Max(0, (int)Math.Ceiling((rb - m.Now).TotalDays)) : 0;
+                var occurred = DateOnly.FromDateTime(x.OccurredAt.UtcDateTime);
+                var c = await complaints.CreateAsync(new ComplaintRequest(T(r.Title) ?? x.Title, x.Description, customerId, null, x.ClientReference, occurred > today ? today : occurred, today,
+                    x.ProductId, x.PartId, null, null, x.LotNumber, null, null, null, x.Classification, sev, sev, WarrantyStatus.Unknown, x.SupplierId, x.SiteId, x.DepartmentId, r.OwnerId,
+                    today.AddDays(dueDays)), ct);
+                target = (ComplaintService.RecordType, c.Id, c.Number);
+                break;
             case "record":
                 if (string.IsNullOrWhiteSpace(r.RecordType) || r.RecordId is null) throw new AppException("Choose the record to escalate to.");
                 if (!registry.IsKnownType(r.RecordType)) throw new AppException("Unknown record type.");
                 var info = await registry.RequireViewAsync(r.RecordType, r.RecordId.Value, ct);
                 target = (info.Type, info.Id, info.Number);
                 break;
-            default: throw new AppException("Escalate to a deviation, an investigation or an existing record.");
+            default: throw new AppException("Escalate to a deviation, an investigation, a complaint or an existing record.");
         }
         x = await db.QualityEvents.FirstAsync(e => e.Id == id, ct);
         x.Status = QualityEventStatus.Escalated; x.EscalatedToType = target.Type; x.EscalatedToId = target.Id; x.EscalatedToNumber = target.Number;

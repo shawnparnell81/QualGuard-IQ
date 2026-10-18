@@ -54,12 +54,12 @@ Status: **Existing** = already covered by a working module (location given); **E
 | Lab sample tracking where configured | Built | Registers, kind Laboratory sample (enabled per organization) |
 | Environmental monitoring integration boundary | Built | Quality event intake with source Environmental monitoring (API client) |
 | Safety and EHS integration boundary | Built | Quality event intake with source Safety and EHS (API client) |
-| Complaint intake automation boundary | Built | Quality event intake with source Complaint automation, convertible to a complaint |
+| Complaint intake automation boundary | Built | Quality event intake through an API client; a classified event with a customer escalates to a new customer complaint carrying its facts (title, description, lot, part, product, supplier, client reference, severity) |
 | Quality agreement management | Built | Registers, kind Quality agreement |
 | Contract manufacturer collaboration | Built | Registers, kind Contract manufacturer, plus the portal |
 | Approved laboratory management | Built | Registers, kind Approved laboratory |
 | Stability-program configuration | Built | Registers, kind Stability program |
-| Recall simulation or mock-recall exercises | Extended | Recalls gain an exercise flag and trace-completeness timing |
+| Recall simulation or mock-recall exercises | Extended | Recalls gain an exercise flag and trace-completeness timing; the recall pages offer the exercise option and show the exercise result (trace time, parties, quantity, containment) |
 | Business continuity quality exercises | Existing | Continuity exercises (governance) |
 | Inspection skip-lot transitions | Built | Skip-lot rules and states per supplier and part |
 | Dynamic supplier-risk monitoring | Built | Supplier risk monitor computed from performance, nonconformances, corrective actions and certificates |
