@@ -221,6 +221,7 @@ public static class DependencyInjection
         s.AddScoped<Modules.Sequfloh.SequflohPartsService>();
         s.AddScoped<Modules.Sequfloh.SequflohInstructionService>();
         s.AddScoped<Modules.Sequfloh.SequflohPrintService>();
+        s.AddScoped<Modules.Sequfloh.SequflohTrackingService>();
         P<QualityEvent>(Modules.QualityOps.QualityEventService.RecordType, Permissions.QualityOpsView, Permissions.QualityOpsEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/quality-ops/events/{x.Id}", x.Status is QualityEventStatus.Closed or QualityEventStatus.Rejected));
         P<Deviation>(Modules.QualityOps.DeviationService.RecordType, Permissions.QualityOpsView, Permissions.QualityOpsEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/quality-ops/deviations/{x.Id}", x.Status is not (QualityDeviationStatus.Draft or QualityDeviationStatus.Rejected or QualityDeviationStatus.Approved)));
         P<QualityInvestigation>(Modules.QualityOps.InvestigationService.RecordType, Permissions.QualityOpsView, Permissions.QualityOpsEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/quality-ops/investigations/{x.Id}", x.Status is InvestigationStatus.Closed or InvestigationStatus.Cancelled));
