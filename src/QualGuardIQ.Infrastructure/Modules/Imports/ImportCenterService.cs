@@ -33,7 +33,7 @@ public sealed record DryRunSummary(int Rows, int Valid, int Invalid, int Duplica
 /// </summary>
 public sealed partial class ImportCenterService(AppDbContext db, IAccessService access, ICurrentUser current, IFileStorage storage, IMalwareScanner scanner,
     INumberingService numbers, IEnumerable<IImportTarget> targets, IClock clock, IConfiguration config, Documents.DocumentService docs, ILegacyOfficeConverter legacy,
-    Pdf.IOcrEngine ocr, Pdf.IPdfPageRenderer pdfPages, ReferenceResolver refs, Services.AttachmentService attachments, Application.Records.IRecordRegistry records)
+    Pdf.IOcrEngine ocr, Pdf.IPdfPageRenderer pdfPages, ReferenceResolver refs, Services.AttachmentService attachments, Application.Records.IRecordRegistry records, ImportProgress live)
 {
     public const string RecordType = "ImportJob";
     public static readonly HashSet<string> Supported = [".csv", ".txt", ".tsv", ".xlsx", ".xlsm", ".xls", ".docx", ".doc", ".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff"];
@@ -41,6 +41,12 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
     private long MaxBytes => config.GetValue("Imports:MaxFileBytes", 200L * 1024 * 1024);
     /// <summary>Files up to this size are inspected and imported inside the request; larger ones go to the background worker.</summary>
     public long InlineBytes => config.GetValue("Imports:InlineBytes", 5L * 1024 * 1024);
+    /// <summary>Most data rows one CSV import may carry; larger files are refused with a request to split them.</summary>
+    public long MaxRows => config.GetValue("Imports:MaxRows", 250_000L);
+    /// <summary>Imports with more rows than this are written by the background worker instead of inside the approval request.</summary>
+    public int InlineRows => config.GetValue("Imports:InlineRows", 5_000);
+    /// <summary>Longest time reading one file may take before the job fails (it can then be retried).</summary>
+    public double ProcessingTimeoutSeconds => config.GetValue("Imports:ProcessingTimeoutSeconds", 600d);
 
     private Guid Me => current.UserId ?? throw new ForbiddenException();
     public IReadOnlyList<TargetInfo> Targets => targets.Select(t => t.Info).ToList();
@@ -65,11 +71,11 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         [ImportJobStatus.PreviewReady] = [ImportJobStatus.MappingRequired, ImportJobStatus.Parsing, ImportJobStatus.PreviewReady, ImportJobStatus.ValidationFailed, ImportJobStatus.AwaitingApproval, ImportJobStatus.Canceled],
         [ImportJobStatus.ValidationFailed] = [ImportJobStatus.MappingRequired, ImportJobStatus.Parsing, ImportJobStatus.PreviewReady, ImportJobStatus.ValidationFailed, ImportJobStatus.AwaitingApproval, ImportJobStatus.Canceled],
         [ImportJobStatus.AwaitingApproval] = [ImportJobStatus.Importing, ImportJobStatus.MappingRequired, ImportJobStatus.Canceled],
-        [ImportJobStatus.Importing] = [ImportJobStatus.Imported, ImportJobStatus.PartiallyImported, ImportJobStatus.CompletedWithWarnings, ImportJobStatus.Failed],
+        [ImportJobStatus.Importing] = [ImportJobStatus.Imported, ImportJobStatus.PartiallyImported, ImportJobStatus.CompletedWithWarnings, ImportJobStatus.Failed, ImportJobStatus.Canceled],
         [ImportJobStatus.Imported] = [ImportJobStatus.RolledBack, ImportJobStatus.Archived],
         [ImportJobStatus.PartiallyImported] = [ImportJobStatus.RolledBack, ImportJobStatus.Archived],
         [ImportJobStatus.CompletedWithWarnings] = [ImportJobStatus.RolledBack, ImportJobStatus.Archived],
-        [ImportJobStatus.Failed] = [ImportJobStatus.Archived],
+        [ImportJobStatus.Failed] = [ImportJobStatus.Parsing, ImportJobStatus.Archived], // retry reads the preserved original again
         [ImportJobStatus.Canceled] = [ImportJobStatus.Archived],
         [ImportJobStatus.RolledBack] = [ImportJobStatus.Archived],
         [ImportJobStatus.Archived] = [],
@@ -319,9 +325,15 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         }
         if (job.Status != ImportJobStatus.Parsing) return;
         if (job.ImportMode == "attachment") { await ParseAttachmentAsync(job); await db.SaveChangesAsync(ct); return; }
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        limit.CancelAfter(TimeSpan.FromSeconds(Math.Max(0.001, ProcessingTimeoutSeconds)));
         if (IsStructured(job))
         {
-            try { if (IsWorkbook(job)) await ParseWorkbookAsync(job, ct); else if (IsDocument(job)) await ParseDocumentAsync(job, ct); else await ParsePdfAsync(job, ct); }
+            try { if (IsWorkbook(job)) await ParseWorkbookAsync(job, limit.Token); else if (IsDocument(job)) await ParseDocumentAsync(job, limit.Token); else await ParsePdfAsync(job, limit.Token); }
+            catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+            {
+                TimedOut(job);
+            }
             catch (Exception e) when (e is not OperationCanceledException and not DbUpdateException)
             {
                 AddIssue(job, "file", null, ImportIssueSeverity.Error, "PARSE", e.Message, "Check the file and its settings.");
@@ -332,8 +344,9 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         }
         try
         {
-            await using var s = await OpenOriginalAsync(job, ct);
-            var a = CsvParser.Analyze(s, Options(job));
+            await using var s = await OpenOriginalAsync(job, limit.Token);
+            var a = CsvParser.Analyze(s, Options(job), ct: limit.Token);
+            limit.Token.ThrowIfCancellationRequested();
             job.Settings = WithOptions(job.Settings, new CsvOptions(a.Encoding, a.Delimiter, a.HasHeader, a.HeaderRow, a.DateFormat, a.DecimalSeparator, Options(job)?.EmptyValue ?? "null"), null);
             job.Analysis = JsonSerializer.Serialize(a, JsonOpts);
             job.TotalRows = a.TotalRows;
@@ -341,8 +354,19 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             await ClearIssuesAsync(job, "SHAPE", "EMPTY");
             foreach (var w in a.Warnings) AddIssue(job, "file", null, ImportIssueSeverity.Warning, "SHAPE", w, "Check the delimiter and header settings.");
             if (a.TotalRows == 0) AddIssue(job, "file", null, ImportIssueSeverity.Error, "EMPTY", "The file has no data rows.", null);
+            if (a.TotalRows > MaxRows)
+            {
+                AddIssue(job, "file", null, ImportIssueSeverity.Error, "LIMIT", $"The file has {a.TotalRows:N0} data rows; one import may carry at most {MaxRows:N0}.", "Split the file and import the parts separately.");
+                Transition(job, ImportJobStatus.Failed, $"More than {MaxRows:N0} rows");
+                await db.SaveChangesAsync(ct);
+                return;
+            }
             await SuggestMappingsAsync(job, a.Columns, ct);
             Transition(job, ImportJobStatus.MappingRequired, $"{a.TotalRows} rows, {a.Columns.Count} columns, {a.Encoding}, delimiter '{(a.Delimiter == '\t' ? "tab" : a.Delimiter.ToString())}'");
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            TimedOut(job);
         }
         catch (Exception e) when (e is not OperationCanceledException)
         {
@@ -350,6 +374,30 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             Transition(job, ImportJobStatus.Failed, "The file could not be read.");
         }
         await db.SaveChangesAsync(ct);
+    }
+
+    void TimedOut(ImportJob job)
+    {
+        AddIssue(job, "file", null, ImportIssueSeverity.Error, "TIMEOUT", $"Reading the file took longer than {ProcessingTimeoutSeconds} seconds.", "Retry the import, or split the file.");
+        Transition(job, ImportJobStatus.Failed, "Processing timed out");
+    }
+
+    /// <summary>
+    /// Retries a failed import: the preserved original is read again with the job's settings (nothing was imported by a failed job).
+    /// Small files are read at once; larger ones are picked up by the background worker.
+    /// </summary>
+    public async Task RetryAsync(Guid id, CancellationToken ct)
+    {
+        var job = await LoadAsync(id, Permissions.ImportsEdit, ct);
+        if (job.Status != ImportJobStatus.Failed) throw new ConflictException("Only a failed import can be retried.");
+        await ClearIssuesAsync(job, "PARSE", "TIMEOUT", "LIMIT", "SHAPE", "EMPTY");
+        var attempt = await db.ImportHistory.CountAsync(e => e.ImportJobId == job.Id && e.Event == "Retried", ct) + 2;
+        job.Progress = 0;
+        job.LeasedUntil = null;
+        Event(job, "Retried", $"Attempt {attempt}");
+        Transition(job, ImportJobStatus.Parsing, $"Retry, attempt {attempt}");
+        await db.SaveChangesAsync(ct);
+        if (job.FileSize <= InlineBytes) await AdvanceAsync(job, ct);
     }
 
     public static readonly JsonSerializerOptions JsonOpts = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
@@ -509,6 +557,13 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
     {
         if (IsWorkbook(job))
         {
+            var an = Obj(job.Analysis);
+            if (an["streamed"]?.GetValue<bool>() == true && an["sheet"]?.GetValue<string>() is { } sheetName && an["columns"] is System.Text.Json.Nodes.JsonArray streamedCols)
+            {
+                await using var raw = await OpenOriginalAsync(job, ct);
+                foreach (var r in Excel.WorkbookRowStream.Rows(raw, sheetName, an["headerRow"]!.GetValue<int>(), streamedCols.Count)) { ct.ThrowIfCancellationRequested(); yield return r; }
+                yield break;
+            }
             var es = ExcelSettings(job);
             var t = WorkbookIntake.Table(await LoadWorkbookAsync(job, ct), es.Sheet, es.HeaderRow);
             foreach (var r in t.Rows) { ct.ThrowIfCancellationRequested(); yield return r; }
@@ -680,9 +735,10 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             var counts = Obj(job.Analysis)["conversion"]?["report"]?["counts"]?.ToJsonString() ?? "{}";
             Event(job, "FidelityAccepted", $"Fidelity report accepted by the approver ({counts}).");
         }
-        Transition(job, ImportJobStatus.Importing, "Approved");
+        var inline = job.FileSize <= InlineBytes && job.TotalRows <= InlineRows;
+        Transition(job, ImportJobStatus.Importing, inline ? "Approved" : $"Approved; {job.TotalRows:N0} rows are written in the background");
         await db.SaveChangesAsync(ct);
-        if (job.FileSize <= InlineBytes) await RunImportAsync(job, ct);
+        if (inline) await RunImportAsync(job, ct);
     }
 
     /// <summary>All valid rows are created in one transaction. If any row fails, nothing is kept and the job fails.</summary>
@@ -698,10 +754,13 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         var update = ExistingRecordsMode(job) == "update" && target.CanUpdate;
         int created = 0, skipped = 0, dupSkipped = 0, updated = 0;
         string? failure = null;
+        var canceled = false;
+        live.Set(job.Id, job.Progress, 0);
         await using (var tx = await db.Database.BeginTransactionAsync(ct))
         {
             try
             {
+                if (await CancelRequestedAsync(job, ct)) throw new ImportCanceled();
                 var seen = new HashSet<string>();
                 var byKey = (await target.FieldsAsync(job, ct)).ToDictionary(f => f.Key);
                 await foreach (var (line, cells) in RowsAsync(job, ct))
@@ -733,7 +792,15 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
                     await KeepCompletedPdfAsync(job, target.RecordType, newId, ct);
                     db.ImportedItems.Add(new ImportedItem { ImportJobId = job.Id, RowNumber = line, TargetType = target.RecordType, TargetId = newId });
                     created++;
-                    if (created % 200 == 0) { job.Progress = Math.Min(99, 60 + (int)(40.0 * created / Math.Max(1, job.TotalRows))); await db.SaveChangesAsync(ct); }
+                    if (created % 200 == 0)
+                    {
+                        job.Progress = Math.Min(99, 60 + (int)(40.0 * created / Math.Max(1, job.TotalRows)));
+                        await db.SaveChangesAsync(ct);
+                        // rows already written are not needed again; letting go of them keeps each save as quick as the first
+                        foreach (var entry in db.ChangeTracker.Entries().Where(e => e.State == EntityState.Unchanged && !ReferenceEquals(e.Entity, job)).ToList()) entry.State = EntityState.Detached;
+                        live.Set(job.Id, job.Progress, created + updated);
+                        if (await CancelRequestedAsync(job, ct)) throw new ImportCanceled();
+                    }
                 }
                 job.ImportedRows = created + updated;
                 job.Progress = 100;
@@ -744,11 +811,25 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
             }
+            catch (ImportCanceled)
+            {
+                await tx.RollbackAsync(ct);
+                canceled = true;
+            }
             catch (Exception e) when (e is AppException or DbUpdateException)
             {
                 await tx.RollbackAsync(ct);
                 failure = e.Message;
             }
+            finally { live.Clear(job.Id); }
+        }
+        if (canceled)
+        {
+            db.ChangeTracker.Clear();
+            var fresh = await db.ImportJobs.FirstAsync(j => j.Id == job.Id, ct);
+            fresh.CompletedAt = clock.UtcNow;
+            Transition(fresh, ImportJobStatus.Canceled, $"Canceled while importing after {created + updated} row(s); every row written was rolled back and nothing was imported");
+            await db.SaveChangesAsync(ct);
         }
         if (failure is not null)
         {
@@ -761,11 +842,29 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         }
     }
 
+    /// <summary>
+    /// Cancels an import. While rows are being written the request is recorded and the running import stops at its next checkpoint,
+    /// rolling back everything it wrote; the job row itself is left to the import so the two never overwrite each other.
+    /// </summary>
     public async Task CancelAsync(Guid id, CancellationToken ct)
     {
         var job = await LoadAsync(id, Permissions.ImportsEdit, ct);
+        if (job.Status == ImportJobStatus.Importing)
+        {
+            Event(job, "CancelRequested", "Cancel requested while importing; rows written so far will be rolled back.");
+            await db.SaveChangesAsync(ct);
+            return;
+        }
         Transition(job, ImportJobStatus.Canceled);
         await db.SaveChangesAsync(ct);
+    }
+
+    sealed class ImportCanceled : Exception;
+
+    Task<bool> CancelRequestedAsync(ImportJob job, CancellationToken ct)
+    {
+        var since = job.ApprovedAt ?? DateTimeOffset.MinValue;
+        return db.ImportHistory.AsNoTracking().AnyAsync(e => e.ImportJobId == job.Id && e.Event == "CancelRequested" && e.EventDate >= since, ct);
     }
 
     public async Task ArchiveAsync(Guid id, CancellationToken ct)
@@ -839,7 +938,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         var now = clock.UtcNow;
         var stale = now.AddMinutes(-5);
         var ids = await db.ImportJobs.Where(j => (j.Status == ImportJobStatus.Inspecting || j.Status == ImportJobStatus.Parsing || j.Status == ImportJobStatus.Importing)
-                && (j.LeasedUntil == null || j.LeasedUntil < now) && (j.FileSize > InlineBytes || j.UpdatedAt < stale))
+                && (j.LeasedUntil == null || j.LeasedUntil < now) && (j.FileSize > InlineBytes || j.UpdatedAt < stale || j.Status == ImportJobStatus.Importing && j.TotalRows > InlineRows))
             .OrderBy(j => j.SubmittedAt).Select(j => j.Id).Take(5).ToListAsync(ct);
         var done = 0;
         foreach (var id in ids)

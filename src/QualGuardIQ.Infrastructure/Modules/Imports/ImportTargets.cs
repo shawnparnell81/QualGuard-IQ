@@ -53,9 +53,20 @@ public sealed class FormRecordImportTarget(AppDbContext db, INumberingService nu
     public TargetInfo Info { get; } = new("form-records", "Form records", Permissions.FormsEdit, true);
     public string RecordType => FormService.RecordType;
 
+    (Guid Template, DocumentRevision Rev, FormDefinition Def, ControlledDocument Doc)? template;
+
     private async Task<(DocumentRevision Rev, FormDefinition Def, ControlledDocument Doc)> TemplateAsync(ImportJob job, CancellationToken ct)
     {
         if (job.TargetTemplateId is not { } t) throw new AppException("Choose the form template to import into.");
+        // one import reads its template once; a template only changes by a new effective revision, which a running import does not pick up
+        if (template is { } c && c.Template == t) return (c.Rev, c.Def, c.Doc);
+        var loaded = await LoadTemplateAsync(t, ct);
+        template = (t, loaded.Rev, loaded.Def, loaded.Doc);
+        return loaded;
+    }
+
+    private async Task<(DocumentRevision Rev, FormDefinition Def, ControlledDocument Doc)> LoadTemplateAsync(Guid t, CancellationToken ct)
+    {
         var doc = await db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.Id == t && d.Kind == DocumentKind.FormTemplate, ct) ?? throw new AppException("The form template does not exist.");
         var rev = await db.DocumentRevisions.AsNoTracking().FirstOrDefaultAsync(r => r.DocumentId == t && r.Status == RevisionStatus.Effective, ct)
             ?? throw new AppException("The form template has no effective revision.");
@@ -84,16 +95,27 @@ public sealed class FormRecordImportTarget(AppDbContext db, INumberingService nu
         return Task.FromResult<IReadOnlyList<string>>(keys);
     }
 
+    // existing keys are read once per import and key set, not once per row
+    readonly Dictionary<string, HashSet<string>> existingKeys = [];
+
     public async Task<bool> ExistsAsync(ImportJob job, IReadOnlyDictionary<string, string?> key, CancellationToken ct)
     {
         if (key.Count == 0) return false;
-        var q = db.FormRecords.AsNoTracking().Where(r => r.TemplateId == job.TargetTemplateId);
-        var candidates = await q.Select(r => r.ValuesJson).ToListAsync(ct);
-        return candidates.Any(json =>
+        var names = key.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
+        static string Join(IEnumerable<string?> parts) => string.Join("\u001f", parts.Select(p => p?.Trim().ToLowerInvariant() ?? ""));
+        var cacheKey = $"{job.Id}|{string.Join(",", names)}";
+        if (!existingKeys.TryGetValue(cacheKey, out var set))
         {
-            var v = JsonSerializer.Deserialize<Dictionary<string, string?>>(json) ?? [];
-            return key.All(k => string.Equals(v.GetValueOrDefault(k.Key)?.Trim(), k.Value?.Trim(), StringComparison.OrdinalIgnoreCase));
-        });
+            set = [];
+            var q = db.FormRecords.AsNoTracking().Where(r => r.TemplateId == job.TargetTemplateId).Select(r => r.ValuesJson).AsAsyncEnumerable();
+            await foreach (var json in q.WithCancellation(ct))
+            {
+                var v = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json) ?? [];
+                set.Add(Join(names.Select(n => v.TryGetValue(n, out var e) ? e.ValueKind == JsonValueKind.String ? e.GetString() : e.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined ? null : e.ToString() : null)));
+            }
+            existingKeys[cacheKey] = set;
+        }
+        return set.Contains(Join(names.Select(n => key[n])));
     }
 
     public async Task<Guid> CreateAsync(ImportJob job, IReadOnlyDictionary<string, string?> row, CancellationToken ct)

@@ -41,6 +41,8 @@ public sealed class PdfDetection
     public bool Repeating { get; set; }
     public string? SectionId { get; set; }
     public bool Include { get; set; } = true;
+    /// <summary>For a table that carries on over page breaks: the later pages its rows were read from.</summary>
+    public List<int>? ContinuedPages { get; set; }
     public bool Confirmed { get; set; }
     /// <summary>Signature role guessed from the label (prepared, performed, reviewed, verified, approved, witness, customer, supplier).</summary>
     public string? Role { get; set; }
@@ -147,6 +149,7 @@ public static class PdfLayoutAnalyzer
             var date = dets.FirstOrDefault(d => d.Kind == "field" && d.Type == "date" && d.Page == s.Page && Math.Abs(d.Box[1] - s.Box[1]) < 4 && d.Box[0] > s.Box[0] && Regex.IsMatch(d.Label, @"^date$", RegexOptions.IgnoreCase));
             if (date is not null) dets.Remove(date);
         }
+        MergeContinuedTables(dets);
         foreach (var d in dets.Where(d => d.Kind != "section" && d.SectionId is null)) d.SectionId = dets.Where(x => x.Kind == "section" && (x.Page < d.Page || x.Page == d.Page && x.Box[1] <= d.Box[1])).Select(x => x.Id).LastOrDefault();
         return new PdfAnalysis(dets, lines);
     }
@@ -313,6 +316,55 @@ public static class PdfLayoutAnalyzer
             i = j - 1;
         }
     }
+
+    static readonly Regex ContinuedRx = new(@"[\s,(–-]*(\(?\s*(continued|cont\.?)\s*\)?|page\s+\d+(\s+of\s+\d+)?)\s*\)?$", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+    static string BaseTitle(string t) => ContinuedRx.Replace(t, "").Trim();
+
+    /// <summary>
+    /// A table that carries on over a page break repeats its column headings at the top of the next page. When the first table on a page has the
+    /// same headings as the last table on the page before, it is one table: its rows join the first part, and a page heading that only repeats the
+    /// table's title ("Incoming log, page 2 of 3") is dropped so the template does not get an empty section per page.
+    /// </summary>
+    static void MergeContinuedTables(List<PdfDetection> dets)
+    {
+        var tables = dets.Where(d => d.Kind == "table" && d.Source != "form-field" && d.Columns is { Count: > 0 }).OrderBy(d => d.Page).ThenBy(d => d.Box[1]).ToList();
+        PdfDetection? open = null;
+        var lastPage = 0;
+        foreach (var t in tables)
+        {
+            var firstOnPage = t.Page != lastPage;
+            if (open is not null && firstOnPage && t.Page == LastPageOf(open) + 1
+                && t.Columns!.Select(c => c.Label.ToLowerInvariant()).SequenceEqual(open.Columns!.Select(c => c.Label.ToLowerInvariant()))
+                && !dets.Any(d => d.Page == t.Page && d.Kind is not "section" and not "table" && d.Box[1] < t.Box[1]))
+            {
+                open.Rows = [.. open.Rows ?? [], .. t.Rows ?? []];
+                open.Repeating = open.Repeating || t.Repeating;
+                for (var k = 0; k < open.Columns!.Count; k++)
+                {
+                    var a = open.Columns[k]; var b = t.Columns![k];
+                    if (a.Type != b.Type) a.Type = a.Type is "integer" && b.Type is "number" || a.Type is "number" && b.Type is "integer" ? "number" : "text";
+                    a.Total = a.Total || b.Total;
+                }
+                open.Confidence = Math.Min(open.Confidence, t.Confidence);
+                open.ContinuedPages = [.. open.ContinuedPages ?? [], t.Page];
+                var baseTitle = BaseTitle(open.Label);
+                if (baseTitle.Length > 0) open.Label = baseTitle;
+                open.Reason = $"{open.Reason}; continues on page{(open.ContinuedPages.Count > 1 ? "s" : "")} {string.Join(", ", open.ContinuedPages)} with the same column headings";
+                dets.Remove(t);
+                foreach (var h in dets.Where(d => d.Kind == "section" && d.Page == t.Page && d.Box[1] < t.Box[1] && string.Equals(BaseTitle(d.Label), baseTitle, StringComparison.OrdinalIgnoreCase)).ToList())
+                {
+                    dets.Remove(h);
+                    foreach (var d in dets.Where(d => d.SectionId == h.Id)) d.SectionId = open.SectionId;
+                }
+                var firstHead = dets.FirstOrDefault(d => d.Kind == "section" && d.Page == open.Page && d.Box[1] < open.Box[1] && string.Equals(BaseTitle(d.Label), baseTitle, StringComparison.OrdinalIgnoreCase));
+                if (firstHead is not null) firstHead.Label = baseTitle;
+            }
+            else open = t;
+            lastPage = t.Page;
+        }
+    }
+
+    static int LastPageOf(PdfDetection d) => d.ContinuedPages is { Count: > 0 } p ? p[^1] : d.Page;
 
     static int Col(List<double> xs, double x)
     {

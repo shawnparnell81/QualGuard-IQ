@@ -74,8 +74,10 @@ public sealed class ImportsController(ImportCenterService imports, AppDbContext 
             try { fields = await HttpContext.RequestServices.GetServices<IImportTarget>().First(t => t.Info.Key == j.TargetModule).FieldsAsync(j, ct); } catch (Exception e) when (e is QualGuardIQ.Application.Abstractions.AppException) { }
         var by = await db.Users.Where(u => u.Id == j.SubmittedById).Select(u => u.DisplayName).FirstAsync(ct);
         static JsonElement J(string s) => JsonDocument.Parse(s).RootElement.Clone();
-        return new JobDetail(j.Id, j.Number, j.SiteId, j.DepartmentId, j.OriginalFileName, j.FileType, j.FileSize, j.FileHash, j.ImportMode, j.TargetModule, j.TargetTemplateId, j.Status, j.Progress,
-            j.TotalRows, j.ImportedRows, j.WarningCount, j.ErrorCount, j.SubmittedById, by, j.SubmittedAt, j.StartedAt, j.CompletedAt, j.ApprovedById, j.ApprovedAt, J(j.Settings), J(j.Analysis), J(j.Summary),
+        // rows of a running import are written in one transaction; its live figures come from the import itself
+        var live = j.Status == ImportJobStatus.Importing ? HttpContext.RequestServices.GetRequiredService<QualGuardIQ.Infrastructure.Modules.Imports.ImportProgress>().Get(j.Id) : null;
+        return new JobDetail(j.Id, j.Number, j.SiteId, j.DepartmentId, j.OriginalFileName, j.FileType, j.FileSize, j.FileHash, j.ImportMode, j.TargetModule, j.TargetTemplateId, j.Status, live?.Percent ?? j.Progress,
+            j.TotalRows, live?.Rows ?? j.ImportedRows, j.WarningCount, j.ErrorCount, j.SubmittedById, by, j.SubmittedAt, j.StartedAt, j.CompletedAt, j.ApprovedById, j.ApprovedAt, J(j.Settings), J(j.Analysis), J(j.Summary),
             j.RowVersion, maps, issues, hist, fields, j.FileSize > imports.InlineBytes);
     }
 
@@ -122,6 +124,9 @@ public sealed class ImportsController(ImportCenterService imports, AppDbContext 
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] ApproveImportRequest? req, CancellationToken ct)
     { await imports.ApproveAsync(id, ct, req?.AcceptFidelityReport == true); return NoContent(); }
+    /// <summary>Retry a failed import: the preserved original is read again with the job's settings.</summary>
+    [EnableRateLimiting("processing")]
+    [HttpPost("{id:guid}/retry")] public async Task<IActionResult> Retry(Guid id, CancellationToken ct) { await imports.RetryAsync(id, ct); return NoContent(); }
     [HttpPost("{id:guid}/return")] public async Task<IActionResult> Return(Guid id, ReasonRequest req, CancellationToken ct) { await imports.RejectAsync(id, req.Reason, ct); return NoContent(); }
     [HttpPost("{id:guid}/cancel")] public async Task<IActionResult> Cancel(Guid id, CancellationToken ct) { await imports.CancelAsync(id, ct); return NoContent(); }
     [HttpPost("{id:guid}/archive")] public async Task<IActionResult> Archive(Guid id, CancellationToken ct) { await imports.ArchiveAsync(id, ct); return NoContent(); }

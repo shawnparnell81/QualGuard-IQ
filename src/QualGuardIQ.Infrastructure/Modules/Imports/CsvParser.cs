@@ -53,6 +53,8 @@ public static class CsvParser
         var row = new List<string>();
         bool quoted = false, any = false;
         int c;
+        // a byte-order mark survives when the reader is rewound after its first read; it is never part of the data
+        if (r.Peek() == '\uFEFF') r.Read();
         while ((c = r.Read()) != -1)
         {
             var ch = (char)c;
@@ -155,7 +157,7 @@ public static class CsvParser
     }
 
     /// <summary>Analyzes the file with detected options, or with the options given (user overrides).</summary>
-    public static CsvAnalysis Analyze(Stream s, CsvOptions? given, int sampleRows = 20)
+    public static CsvAnalysis Analyze(Stream s, CsvOptions? given, int sampleRows = 20, CancellationToken ct = default)
     {
         var warnings = new List<string>();
         var encName = given?.Encoding ?? DetectEncoding(s);
@@ -180,6 +182,7 @@ public static class CsvParser
         foreach (var row in Read(reader, delim))
         {
             rowsSeen++;
+            if ((rowsSeen & 0x3FF) == 0) ct.ThrowIfCancellationRequested();
             if (rowsSeen < headerRow) continue;
             if (first.Count < 1001) first.Add(row);
             widths[row.Length] = widths.GetValueOrDefault(row.Length) + 1;
