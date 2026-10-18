@@ -4038,6 +4038,393 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("validation_tests", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Imports.ImportHistoryEvent", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActorName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CorrelationId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Event")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<DateTimeOffset>("EventDate")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ImportJobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("NewValue")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("PreviousValue")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportJobId", "EventDate");
+
+                    b.ToTable("import_history", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Imports.ImportIssue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("ImportJobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("IssueCode")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<DateTimeOffset?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ResolvedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int?>("RowNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("Severity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SourceLocation")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SuggestedResolution")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("UserResolution")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ResolvedById");
+
+                    b.HasIndex("ImportJobId", "Severity");
+
+                    b.ToTable("import_issues", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Imports.ImportJob", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Analysis")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("ApprovedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BackgroundJobId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ErrorCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("FileHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("FileType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("ImportMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int>("ImportedRows")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("LeasedUntil")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<int>("Progress")
+                        .HasColumnType("integer");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("Settings")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SourceFileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("SubmittedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("TargetModule")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<Guid?>("TargetTemplateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("TotalRows")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("WarningCount")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedById");
+
+                    b.HasIndex("FileHash");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("SiteId");
+
+                    b.HasIndex("SourceFileId");
+
+                    b.HasIndex("SubmittedById");
+
+                    b.HasIndex("TargetTemplateId");
+
+                    b.HasIndex("Status", "LeasedUntil");
+
+                    b.ToTable("import_jobs", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_import_jobs_counts", "\"WarningCount\" >= 0 AND \"ErrorCount\" >= 0 AND \"TotalRows\" >= 0 AND \"ImportedRows\" >= 0");
+
+                            t.HasCheckConstraint("ck_import_jobs_mode", "\"ImportMode\" IN ('records', 'template', 'document', 'master-list')");
+
+                            t.HasCheckConstraint("ck_import_jobs_progress", "\"Progress\" BETWEEN 0 AND 100");
+                        });
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Imports.ImportMapping", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DefaultValue")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("ImportJobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("MappingConfidence")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("RequiredValue")
+                        .HasColumnType("boolean");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("Sequence")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SourceLocation")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("SourceName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("SourceType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("TargetField")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("TargetType")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<string>("TransformationRule")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("UserConfirmed")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("ValidationStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportJobId", "SourceLocation")
+                        .IsUnique();
+
+                    b.ToTable("import_mappings", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Imports.ImportedItem", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<Guid>("ImportJobId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("RolledBack")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("RowNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ImportJobId", "RowNumber");
+
+                    b.HasIndex("TargetType", "TargetId");
+
+                    b.ToTable("imported_items", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Integration.ErpChange", b =>
                 {
                     b.Property<Guid>("Id")
@@ -21355,6 +21742,78 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("ProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Imports.ImportHistoryEvent", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Imports.ImportJob", null)
+                        .WithMany()
+                        .HasForeignKey("ImportJobId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Imports.ImportIssue", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Imports.ImportJob", null)
+                        .WithMany()
+                        .HasForeignKey("ImportJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ResolvedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Imports.ImportJob", b =>
+                {
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Organization.Site", null)
+                        .WithMany()
+                        .HasForeignKey("SiteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Shared.Attachment", null)
+                        .WithMany()
+                        .HasForeignKey("SourceFileId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("SubmittedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("QualGuardIQ.Domain.Documents.ControlledDocument", null)
+                        .WithMany()
+                        .HasForeignKey("TargetTemplateId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Imports.ImportMapping", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Imports.ImportJob", null)
+                        .WithMany()
+                        .HasForeignKey("ImportJobId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Imports.ImportedItem", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Imports.ImportJob", null)
+                        .WithMany()
+                        .HasForeignKey("ImportJobId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

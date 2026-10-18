@@ -21,6 +21,12 @@ public static class Permissions
     public const string FormsView = "forms.view";
     public const string FormsEdit = "forms.edit";
     public const string FormsApprove = "forms.approve";
+    /// <summary>See import jobs, their issues, history and preserved originals.</summary>
+    public const string ImportsView = "imports.view";
+    /// <summary>Upload files, map, validate, submit, cancel and archive imports (the target module's edit permission is also needed).</summary>
+    public const string ImportsEdit = "imports.edit";
+    /// <summary>Approve (run) and roll back imports submitted by someone else.</summary>
+    public const string ImportsApprove = "imports.approve";
     public const string NcrView = "ncr.view";
     public const string NcrEdit = "ncr.edit";
     public const string NcrApprove = "ncr.approve";

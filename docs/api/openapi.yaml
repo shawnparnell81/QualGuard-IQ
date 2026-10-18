@@ -22759,6 +22759,491 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+  /api/imports/targets:
+    get:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TargetInfo'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TargetInfo'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TargetInfo'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/imports:
+    get:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/ImportJobStatus'
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: warnings
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PageOfJobListItem'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PageOfJobListItem'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PageOfJobListItem'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              allOf:
+                - type: object
+                  properties:
+                    file:
+                      $ref: '#/components/schemas/IFormFile'
+                - type: object
+                  properties:
+                    siteId:
+                      type: string
+                      format: uuid
+                - type: object
+                  properties:
+                    departmentId:
+                      type: string
+                      format: uuid
+                - type: object
+                  properties:
+                    mode:
+                      type: string
+                - type: object
+                  properties:
+                    targetModule:
+                      type: string
+                - type: object
+                  properties:
+                    targetTemplateId:
+                      type: string
+                      format: uuid
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: uuid
+            application/json:
+              schema:
+                type: string
+                format: uuid
+            text/json:
+              schema:
+                type: string
+                format: uuid
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}':
+    get:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/JobDetail'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/JobDetail'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/JobDetail'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/settings':
+    put:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CsvSettingsRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CsvSettingsRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CsvSettingsRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/mapping':
+    put:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MappingRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/MappingRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/MappingRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/validate':
+    post:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/DryRunSummary'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DryRunSummary'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/DryRunSummary'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/submit':
+    post:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SubmitRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SubmitRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/approve':
+    post:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/return':
+    post:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/cancel':
+    post:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/archive':
+    post:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/rollback':
+    post:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/issues/{issueId}':
+    put:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: issueId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveIssueRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ResolveIssueRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ResolveIssueRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/error-rows':
+    get:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/original':
+    get:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/inspection/plans:
     get:
       tags:
@@ -45179,6 +45664,55 @@ components:
       properties:
         content:
           type: string
+    CsvSettingsRequest:
+      required:
+        - encoding
+        - delimiter
+        - hasHeader
+        - headerRow
+        - dateFormat
+        - decimalSeparator
+        - emptyValue
+        - duplicateKeys
+      type: object
+      properties:
+        encoding:
+          type:
+            - 'null'
+            - string
+        delimiter:
+          type:
+            - 'null'
+            - string
+        hasHeader:
+          type:
+            - 'null'
+            - boolean
+        headerRow:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        dateFormat:
+          type:
+            - 'null'
+            - string
+        decimalSeparator:
+          type:
+            - 'null'
+            - string
+        emptyValue:
+          type:
+            - 'null'
+            - string
+        duplicateKeys:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
     CurriculumInput:
       required:
         - title
@@ -47088,6 +47622,50 @@ components:
             - integer
             - string
           format: uint32
+    DryRunSummary:
+      required:
+        - rows
+        - valid
+        - invalid
+        - duplicates
+        - existingDuplicates
+        - preview
+      type: object
+      properties:
+        rows:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        valid:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        invalid:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        duplicates:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        existingDuplicates:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        preview:
+          type: array
+          items:
+            $ref: '#/components/schemas/ImportRow'
     EditionDecision:
       required:
         - notes
@@ -49589,23 +50167,30 @@ components:
           format: int32
     HistoryDto:
       required:
-        - at
-        - user
-        - action
-        - description
-        - reason
+        - eventDate
+        - event
+        - actorName
+        - previousValue
+        - newValue
+        - message
       type: object
       properties:
-        at:
+        eventDate:
           type: string
           format: date-time
-        user:
+        event:
           type: string
-        action:
+        actorName:
           type: string
-        description:
-          type: string
-        reason:
+        previousValue:
+          type:
+            - 'null'
+            - string
+        newValue:
+          type:
+            - 'null'
+            - string
+        message:
           type:
             - 'null'
             - string
@@ -49818,6 +50403,34 @@ components:
       properties:
         csv:
           type: string
+    ImportIssueSeverity:
+      type: integer
+    ImportJobStatus:
+      type: integer
+    ImportRow:
+      required:
+        - row
+        - values
+        - problems
+        - duplicate
+      type: object
+      properties:
+        row:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        values:
+          type: object
+          additionalProperties:
+            type: string
+        problems:
+          type: array
+          items:
+            type: string
+        duplicate:
+          type: boolean
     ImportRowResult:
       required:
         - row
@@ -50095,6 +50708,50 @@ components:
           type: string
         correctiveAction:
           type: string
+    IssueDto:
+      required:
+        - id
+        - sourceLocation
+        - rowNumber
+        - severity
+        - issueCode
+        - description
+        - suggestedResolution
+        - userResolution
+        - resolvedAt
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceLocation:
+          type: string
+        rowNumber:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        severity:
+          $ref: '#/components/schemas/ImportIssueSeverity'
+        issueCode:
+          type: string
+        description:
+          type: string
+        suggestedResolution:
+          type:
+            - 'null'
+            - string
+        userResolution:
+          type:
+            - 'null'
+            - string
+        resolvedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
     IssueInput:
       required:
         - workOrderId
@@ -50188,6 +50845,242 @@ components:
             - 'null'
             - string
           format: uuid
+    JobDetail:
+      required:
+        - id
+        - number
+        - siteId
+        - departmentId
+        - originalFileName
+        - fileType
+        - fileSize
+        - fileHash
+        - importMode
+        - targetModule
+        - targetTemplateId
+        - status
+        - progress
+        - totalRows
+        - importedRows
+        - warningCount
+        - errorCount
+        - submittedById
+        - submittedBy
+        - submittedAt
+        - startedAt
+        - completedAt
+        - approvedById
+        - approvedAt
+        - settings
+        - analysis
+        - summary
+        - rowVersion
+        - mappings
+        - issues
+        - history
+        - targetFields
+        - background
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        originalFileName:
+          type: string
+        fileType:
+          type: string
+        fileSize:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        fileHash:
+          type: string
+        importMode:
+          type: string
+        targetModule:
+          type:
+            - 'null'
+            - string
+        targetTemplateId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/ImportJobStatus'
+        progress:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        totalRows:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        importedRows:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        warningCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        errorCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        submittedById:
+          type: string
+          format: uuid
+        submittedBy:
+          type: string
+        submittedAt:
+          type: string
+          format: date-time
+        startedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        completedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        approvedById:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        approvedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        settings:
+          $ref: '#/components/schemas/JsonElement'
+        analysis:
+          $ref: '#/components/schemas/JsonElement'
+        summary:
+          $ref: '#/components/schemas/JsonElement'
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+        mappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/MappingDto'
+        issues:
+          type: array
+          items:
+            $ref: '#/components/schemas/IssueDto'
+        history:
+          type: array
+          items:
+            $ref: '#/components/schemas/HistoryDto'
+        targetFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/TargetField'
+        background:
+          type: boolean
+    JobListItem:
+      required:
+        - id
+        - number
+        - originalFileName
+        - fileType
+        - importMode
+        - targetModule
+        - status
+        - progress
+        - totalRows
+        - importedRows
+        - warningCount
+        - errorCount
+        - submittedAt
+        - submittedBy
+        - siteCode
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        originalFileName:
+          type: string
+        fileType:
+          type: string
+        importMode:
+          type: string
+        targetModule:
+          type:
+            - 'null'
+            - string
+        status:
+          $ref: '#/components/schemas/ImportJobStatus'
+        progress:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        totalRows:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        importedRows:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        warningCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        errorCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        submittedAt:
+          type: string
+          format: date-time
+        submittedBy:
+          type: string
+        siteCode:
+          type: string
     JobPage:
       required:
         - items
@@ -52116,6 +53009,56 @@ components:
             - 'null'
             - string
           format: date
+    MappingDto:
+      required:
+        - id
+        - sourceLocation
+        - sourceName
+        - sourceType
+        - targetField
+        - targetType
+        - transformationRule
+        - mappingConfidence
+        - userConfirmed
+        - defaultValue
+        - requiredValue
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        sourceLocation:
+          type: string
+        sourceName:
+          type: string
+        sourceType:
+          type: string
+        targetField:
+          type:
+            - 'null'
+            - string
+        targetType:
+          type:
+            - 'null'
+            - string
+        transformationRule:
+          type:
+            - 'null'
+            - string
+        mappingConfidence:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        userConfirmed:
+          type: boolean
+        defaultValue:
+          type:
+            - 'null'
+            - string
+        requiredValue:
+          type: boolean
     MappingInput:
       required:
         - targetType
@@ -52132,6 +53075,33 @@ components:
           type:
             - 'null'
             - string
+    MappingRequest:
+      required:
+        - targetModule
+        - targetTemplateId
+        - mappings
+        - rowVersion
+      type: object
+      properties:
+        targetModule:
+          type:
+            - 'null'
+            - string
+        targetTemplateId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        mappings:
+          type: array
+          items:
+            $ref: '#/components/schemas/MappingInput'
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
     MappingSubmitInput:
       required:
         - sourceTitle
@@ -54174,6 +55144,36 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/DocumentListItem'
+        total:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        pageNumber:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        pageSize:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    PageOfJobListItem:
+      required:
+        - items
+        - total
+        - pageNumber
+        - pageSize
+      type: object
+      properties:
+        items:
+          type: array
+          items:
+            $ref: '#/components/schemas/JobListItem'
         total:
           pattern: '^-?(?:0|[1-9]\d*)$'
           type:
@@ -59032,6 +60032,13 @@ components:
             - string
           format: int32
         acceptanceCriteria:
+          type: string
+    ResolveIssueRequest:
+      required:
+        - resolution
+      type: object
+      properties:
+        resolution:
           type: string
     ResolveRequest:
       required:
@@ -64697,6 +65704,13 @@ components:
             - string
         hasValue:
           type: boolean
+    SubmitRequest:
+      required:
+        - skipInvalidRows
+      type: object
+      properties:
+        skipInvalidRows:
+          type: boolean
     SubscriptionInput:
       required:
         - channel
@@ -65421,6 +66435,44 @@ components:
             - string
     SyncRunStatus:
       type: integer
+    TargetField:
+      required:
+        - key
+        - label
+        - type
+        - required
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
+        required:
+          type: boolean
+        options:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+    TargetInfo:
+      required:
+        - key
+        - name
+        - editPermission
+        - needsTemplate
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        editPermission:
+          type: string
+        needsTemplate:
+          type: boolean
     TemplateChoice:
       required:
         - kind
@@ -67957,6 +69009,7 @@ tags:
   - name: FAI
   - name: FAI Workflow
   - name: FAI Characteristics
+  - name: Imports
   - name: Inspection
   - name: Mes
   - name: Production
