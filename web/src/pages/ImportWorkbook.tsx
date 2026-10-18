@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Tooltip, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { get, post, postBlob, put } from '../api';
@@ -74,7 +74,7 @@ export function WorkbookGrid({ jobId, sheet, onSheet }: { jobId: string; sheet?:
 }
 
 /** Side-by-side: the original worksheet and the converted form (interactive, or as it prints in the original look). */
-export function ConversionPreview({ jobId, conversion }: { jobId: string; conversion: Conversion }) {
+export function ConversionPreview({ jobId, conversion, original, originalTitle = 'Original workbook', note = 'Try values here; calculated fields work as they did in the workbook. Nothing is saved.' }: { jobId: string; conversion: Conversion; original?: ReactNode; originalTitle?: string; note?: string }) {
   const def = parseDefinition(conversion.definition as object);
   const [sheet, setSheet] = useState<string | undefined>();
   const [values, setValues] = useState<Record<string, string | null>>({});
@@ -94,8 +94,8 @@ export function ConversionPreview({ jobId, conversion }: { jobId: string; conver
   return (
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2 }}>
       <Paper variant="outlined" sx={{ p: 1.5, minWidth: 0 }}>
-        <Typography variant="subtitle1" gutterBottom>Original workbook</Typography>
-        <WorkbookGrid jobId={jobId} sheet={sheet} onSheet={setSheet} />
+        <Typography variant="subtitle1" gutterBottom>{originalTitle}</Typography>
+        {original ?? <WorkbookGrid jobId={jobId} sheet={sheet} onSheet={setSheet} />}
       </Paper>
       <Paper variant="outlined" sx={{ p: 1.5, minWidth: 0 }}>
         <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}>
@@ -106,7 +106,7 @@ export function ConversionPreview({ jobId, conversion }: { jobId: string; conver
         </Stack>
         {error && <Alert severity="error" sx={{ mb: 1 }}>{error}</Alert>}
         {view === 'form' && <>
-          <Alert severity="info" sx={{ mb: 1 }}>Try values here; calculated fields work as they did in the workbook. Nothing is saved.</Alert>
+          <Alert severity="info" sx={{ mb: 1 }}>{note}</Alert>
           <Box sx={{ maxHeight: 640, overflow: 'auto', pr: 1 }}><FormView def={def} values={{ ...values, ...(computed ?? {}) }} onChange={(v) => { setValues(v); setComputed(null); }} readOnly={false} /></Box>
           <Button variant="outlined" size="small" sx={{ mt: 1 }} onClick={calc}>Calculate</Button>
         </>}
