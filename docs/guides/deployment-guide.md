@@ -5,7 +5,7 @@
 | Component | Purpose | Image / project |
 |---|---|---|
 | PostgreSQL 18 | All application data (schema `qms`) and the job queue | `postgres:18` |
-| Object storage | Attachments and document files (MinIO, Amazon S3, Cloudflare R2 or Azure Blob) | `minio/minio` (compose profile `minio`) |
+| Object storage | Attachments and document files (MinIO, Amazon S3, Cloudflare R2 or Azure Blob) | `pgsty/silo`, a MinIO-compatible build (compose profile `minio`) |
 | ClamAV | Malware scanning of uploads | `clamav/clamav:stable` |
 | API | REST API and authentication | `deploy/Dockerfile.api` |
 | Worker | Scheduled and background jobs (Hangfire) | `deploy/Dockerfile.worker` |

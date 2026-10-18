@@ -50,8 +50,8 @@ services:
       start_period: 180s
 
   minio:
-    # Last published MinIO community image (the project now ships source only).
-    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # Maintained MinIO-compatible community build (MinIO images are no longer published on Docker Hub).
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
     profiles: [minio]
     restart: unless-stopped
     command: server /data --console-address :9001
@@ -60,7 +60,7 @@ services:
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
     volumes: [miniodata:/data]
     healthcheck:
-      # the image has no curl; mc ships with it
+      # mc ships with the image
       test: ["CMD", "mc", "ready", "local"]
       interval: 10s
       retries: 10
