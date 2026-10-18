@@ -378,15 +378,15 @@ function ControlFields({ doc, upd, ro }: { doc: WiDoc; upd: (p: Partial<WiDoc>) 
   const sites = useSites();
   const users = useUsers();
   const site = sites.data?.find((s) => s.id === doc.siteId);
-  const userSel = (k: 'ownerId' | 'reviewerId' | 'approverId', label: string) => <TextField select size="small" label={label} value={doc[k] ?? ''} disabled={ro} onChange={(e) => upd({ [k]: e.target.value || null })}>
+  const userSel = (k: 'ownerId' | 'reviewerId' | 'approverId', label: string) => <TextField select size="small" label={label} value={users.data ? (doc[k] ?? '') : ''} disabled={ro} onChange={(e) => upd({ [k]: e.target.value || null })}>
     <MenuItem value=""><em>None</em></MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>;
   return (
     <Grid cols={3}>
       <TextField size="small" label="Title" value={doc.title} disabled={ro} onChange={(e) => upd({ title: e.target.value })} sx={{ gridColumn: { md: 'span 2' } }} />
       <TextField size="small" type="date" label="Effective date" value={doc.effectiveDate ?? ''} disabled={ro} InputLabelProps={{ shrink: true }} onChange={(e) => upd({ effectiveDate: e.target.value || null })} />
-      <TextField select size="small" label="Site" value={doc.siteId} disabled={ro} onChange={(e) => upd({ siteId: e.target.value, departmentId: null })}>
+      <TextField select size="small" label="Site" value={sites.data ? doc.siteId : ''} disabled={ro} onChange={(e) => upd({ siteId: e.target.value, departmentId: null })}>
         {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}</TextField>
-      <TextField select size="small" label="Department" value={doc.departmentId ?? ''} disabled={ro} onChange={(e) => upd({ departmentId: e.target.value || null })}>
+      <TextField select size="small" label="Department" value={site ? (doc.departmentId ?? '') : ''} disabled={ro} onChange={(e) => upd({ departmentId: e.target.value || null })}>
         <MenuItem value=""><em>None</em></MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}</TextField>
       {userSel('ownerId', 'Owner')}{userSel('reviewerId', 'Reviewer')}{userSel('approverId', 'Approver')}
     </Grid>

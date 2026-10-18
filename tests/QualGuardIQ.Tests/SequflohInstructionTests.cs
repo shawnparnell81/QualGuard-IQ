@@ -195,4 +195,30 @@ public sealed class SequflohInstructionTests(TestApp app)
         Assert.Equal(4, again.Count);
         Assert.Equal(again.Count, again.Distinct().Count());
     }
+
+    [Fact]
+    public async Task Each_instruction_type_prints_a_controlled_pdf_and_printing_is_audited()
+    {
+        var site = await app.CreateSiteAsync();
+        var (_, author) = await app.CreateUserAsync(AuthorPerms, site);
+        var (_, outsider) = await app.CreateUserAsync([Permissions.SequflohAccess], await app.CreateSiteAsync());
+        foreach (var type in new[] { "Validation", "ValidationFai", "Fai", "RepairTest", "RepairWork" })
+        {
+            var c = await PostEl(author, "/api/sequfloh/instructions", new { type, title = $"Print {type}", siteId = site });
+            var url = $"/api/sequfloh/instructions/{c.Str("id")}";
+            var wi = await author.GetElAsync(url);
+            await PutOk(author, url, Save(wi, site, content: new { purpose = new { purpose = "Line one\nLine two" } }, steps: [new { sequence = 10, title = "First step" }],
+                chars: type is "Fai" or "ValidationFai" ? [new { sequence = 10, characteristicNumber = "1", requirement = "Length 10 mm" }] : null,
+                parts: type == "RepairWork" ? [new { sequence = 10, replacementPartNumber = "P-1", quantity = 2 }] : null));
+            var r = await author.GetAsync($"{url}/print");
+            Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+            Assert.Equal("application/pdf", r.Content.Headers.ContentType?.MediaType);
+            var bytes = await r.Content.ReadAsByteArrayAsync();
+            Assert.Equal("%PDF-", System.Text.Encoding.ASCII.GetString(bytes, 0, 5));
+            Assert.Equal(HttpStatusCode.Forbidden, (await outsider.GetAsync($"{url}/print")).StatusCode);
+            using var scope = app.Services.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            Assert.True(await db.AuditEntries.AnyAsync(a => a.EntityId == Guid.Parse(c.Str("id")) && a.Action == "WorkInstructionPrinted"));
+        }
+    }
 }

@@ -141,6 +141,8 @@ test.describe('SEQUFLOH work instructions', () => {
     await page.getByRole('button', { name: 'Edit step 1' }).click();
     await page.getByRole('dialog').getByLabel('Torque value').fill('5 N·m');
     await page.getByRole('dialog').getByRole('button', { name: 'Save step' }).click();
+    await page.getByRole('tab', { name: 'Document control' }).click();
+    await page.getByLabel('Effective date').fill(localDate(7));
     await page.getByRole('button', { name: 'Save draft' }).click();
     await expect(page.getByText('Draft saved.')).toBeVisible();
     await page.getByRole('tab', { name: 'Repair parts' }).click();
