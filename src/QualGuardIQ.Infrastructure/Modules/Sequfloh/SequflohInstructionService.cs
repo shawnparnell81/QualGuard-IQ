@@ -19,6 +19,7 @@ public sealed record InstructionActionInput(string? Comment, DateOnly? Effective
 public sealed record CopyStepsInput(List<Guid> OperationStepIds);
 public sealed record CopyPartsListInput(Guid? PartsListId, List<Guid>? PartIds, bool Replace = false);
 public sealed record CopyCharacteristicsInput(Guid FromInstructionId);
+public sealed record ImportCharacteristicsInput(Guid InspectionPlanId);
 
 /// <summary>
 /// SEQUFLOH work instruction engine: create, save, lifecycle transitions with append-only transition records, controlled revisions, duplication,
@@ -490,6 +491,58 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return n;
+    }
+
+    /// <summary>Inspection plans (effective revision) the user may read, for the instruction's part when one is chosen: the existing application data characteristics are imported from.</summary>
+    public async Task<List<object>> CharacteristicSourcesAsync(Guid id, CancellationToken ct)
+    {
+        var wi = await LoadAsync(id, false, ct);
+        var plans = await m.TryScopeAsync(db.InspectionPlans.AsNoTracking(), Permissions.InspectionView, ct);
+        if (plans is null) return [];
+        var q = plans.Where(p => !p.IsObsolete && p.EffectiveRevisionId != null);
+        if (wi.PartId is not null) q = q.Where(p => p.PartId == wi.PartId);
+        return await q.OrderBy(p => p.Number).Take(100)
+            .Select(p => (object)new { p.Id, p.Number, p.Title, Revision = db.InspectionPlanRevisions.Where(r => r.Id == p.EffectiveRevisionId).Select(r => r.Revision).FirstOrDefault(),
+                Count = db.InspectionCharacteristics.Count(c => c.PlanRevisionId == p.EffectiveRevisionId) }).ToListAsync(ct);
+    }
+
+    /// <summary>Imports the characteristics of an inspection plan's effective revision as instruction-specific FAI characteristics.</summary>
+    public async Task<int> ImportCharacteristicsAsync(Guid id, ImportCharacteristicsInput r, CancellationToken ct)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var wi = await EditableAsync(id, ct);
+        if (!SequflohDesigner.Schemas[wi.Type].HasCharacteristics) throw new AppException("This instruction type has no characteristics.");
+        var plan = await db.InspectionPlans.AsNoTracking().FirstOrDefaultAsync(p => p.Id == r.InspectionPlanId, ct) ?? throw new NotFoundException("Inspection plan");
+        await m.RequireAsync(Permissions.InspectionView, plan.SiteId, plan.DepartmentId, ct);
+        if (plan.EffectiveRevisionId is null) throw new AppException($"Inspection plan {plan.Number} has no effective revision.");
+        var rev = await db.InspectionPlanRevisions.AsNoTracking().FirstAsync(x => x.Id == plan.EffectiveRevisionId, ct);
+        var chars = await db.InspectionCharacteristics.AsNoTracking().Where(c => c.PlanRevisionId == rev.Id).OrderBy(c => c.Sequence).ToListAsync(ct);
+        if (chars.Count == 0) throw new AppException($"Inspection plan {plan.Number} rev {rev.Revision} has no characteristics.");
+        var mine = JsonNode.Parse(wi.Characteristics)!.AsArray();
+        var used = mine.Select(c => c?["characteristicNumber"]?.ToString()).Where(x => x is not null).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var next = mine.Select(c => c?["sequence"]?.GetValue<int>() ?? 0).DefaultIfEmpty(0).Max();
+        foreach (var c in chars)
+        {
+            next = (next / 10 + 1) * 10;
+            var num = c.Sequence.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            if (used.Contains(num)) num = $"{plan.Number}-{num}";
+            used.Add(num);
+            var o = new JsonObject { ["id"] = Guid.NewGuid().ToString(), ["sequence"] = next, ["characteristicNumber"] = num, ["requirement"] = c.Name };
+            if (!string.IsNullOrWhiteSpace(c.Specification)) o["specification"] = c.Specification;
+            if (c.Target is { } t) o["target"] = t;
+            if (c.LowerLimit is { } lo) o["lowerLimit"] = lo;
+            if (c.UpperLimit is { } hi) o["upperLimit"] = hi;
+            if (!string.IsNullOrWhiteSpace(c.Unit)) o["unit"] = c.Unit;
+            if (!string.IsNullOrWhiteSpace(c.Method)) o["inspectionMethod"] = c.Method;
+            if (c.SampleSize is { } ss) o["sampleQuantity"] = ss;
+            o["notes"] = $"Imported from inspection plan {plan.Number} rev {rev.Revision}{(c.IsCritical ? " (critical)" : "")}";
+            mine.Add(o);
+        }
+        wi.Characteristics = mine.ToJsonString();
+        f.Audit("CharacteristicsImported", EntityType, wi.Id, $"{chars.Count} characteristic(s) imported into {wi.Number} rev {wi.Revision} from inspection plan {plan.Number} rev {rev.Revision}", wi.SiteId);
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return chars.Count;
     }
 
     public static string Words(WorkInstructionStatus s) => Words(s.ToString());

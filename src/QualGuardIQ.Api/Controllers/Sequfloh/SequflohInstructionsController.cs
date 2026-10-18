@@ -119,6 +119,10 @@ public sealed class SequflohInstructionsController(AppDbContext db, ModuleSuppor
     public async Task<object> CopyParts(Guid id, CopyPartsListInput r, CancellationToken ct) => new { Copied = await wi.CopyPartsAsync(id, r, ct) };
     [HttpPost("{id:guid}/copy-characteristics")] [RequirePermission(Permissions.SequflohEditDraftWorkInstruction)]
     public async Task<object> CopyCharacteristics(Guid id, CopyCharacteristicsInput r, CancellationToken ct) => new { Copied = await wi.CopyCharacteristicsAsync(id, r, ct) };
+    [HttpGet("{id:guid}/characteristic-sources")]
+    public Task<List<object>> CharacteristicSources(Guid id, CancellationToken ct) => wi.CharacteristicSourcesAsync(id, ct);
+    [HttpPost("{id:guid}/import-characteristics")] [RequirePermission(Permissions.SequflohEditDraftWorkInstruction)]
+    public async Task<object> ImportCharacteristics(Guid id, ImportCharacteristicsInput r, CancellationToken ct) => new { Copied = await wi.ImportCharacteristicsAsync(id, r, ct) };
     [HttpGet("{id:guid}/history")]
     public async Task<object> History(Guid id, CancellationToken ct) { await wi.LoadAsync(id, false, ct); return await parts.HistoryAsync(SequflohInstructionService.EntityType, id, ct); }
 }

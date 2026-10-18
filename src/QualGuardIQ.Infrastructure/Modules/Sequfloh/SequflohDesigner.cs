@@ -74,7 +74,7 @@ public static class SequflohDesigner
         S("faiDisposition", "Disposition and approval", "Final disposition:s:inspection-results", "Quality approval", "Engineering approval required:b", "Engineering approval"),
     ];
     static readonly List<DesignerField> Characteristic = Cols("Characteristic number", "Drawing zone", "Requirement", "Specification", "Target:n", "Lower limit:n", "Upper limit:n", "Unit", "Inspection method", "Gauge or equipment",
-        "Equipment ID", "Sample quantity:n", "Evidence reference", "Notes", "Nonconformance reference");
+        "Equipment ID", "Sample quantity:n", "Actual result", "Result:s:characteristic-results", "Evidence reference", "Notes", "Nonconformance reference");
 
     // ---------------------------------------------------------------- repair test (section 20)
     static readonly DesignerSection[] RepairTest =
