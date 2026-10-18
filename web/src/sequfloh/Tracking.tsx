@@ -253,6 +253,7 @@ export function TrackingRecordPage() {
         <SqfStatus status={rec.status} />
         {(q.data.canEnter || q.data.canPlan || q.data.canQualityComment || q.data.canEngineeringComment) && <Button variant="contained" disabled={!dirty || busy} onClick={() => save()}>Save</Button>}
         {q.data.actions.map((a) => <Button key={a.action} variant="outlined" disabled={busy} color={['fail', 'reject', 'cancel'].includes(a.action) ? 'error' : 'primary'} onClick={() => setAct(a)}>{a.label}</Button>)}
+        <Button variant="outlined" href={`${S}/tracking/${rec.id}/print`} target="_blank" rel="noopener" disabled={dirty}>Print</Button>
       </Stack>}>
       {msg && <Alert severity={msg.sev} sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
       {dirty && <Alert severity="info" sx={{ mb: 2 }}>You have unsaved changes.</Alert>}
