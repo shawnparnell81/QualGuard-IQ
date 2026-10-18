@@ -196,11 +196,11 @@ public sealed class FormMigrationService(AppDbContext db, IAccessService access,
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var target = await db.DocumentRevisions.AsNoTracking().FirstAsync(r => r.Id == m.TargetRevisionId, ct);
         if (target.Status == RevisionStatus.Draft)
-            await docs.UpdateRevisionAsync(target.Id, new UpdateRevisionRequest(summary, target.EffectiveDate, target.TrainingRequired, target.RowVersion, originalSchema), ct);
+            await docs.UpdateRevisionAsync(target.Id, new UpdateRevisionRequest(summary, target.EffectiveDate, target.TrainingRequired, target.RowVersion, originalSchema), ct, preAuthorized: true);
         else
         {
-            var restore = await docs.ReviseAsync(m.DocumentId, null, summary, ct);
-            await docs.UpdateRevisionAsync(restore.Id, new UpdateRevisionRequest(summary, null, restore.TrainingRequired, restore.RowVersion, originalSchema), ct);
+            var restore = await docs.ReviseAsync(m.DocumentId, null, summary, ct, preAuthorized: true);
+            await docs.UpdateRevisionAsync(restore.Id, new UpdateRevisionRequest(summary, null, restore.TrainingRequired, restore.RowVersion, originalSchema), ct, preAuthorized: true);
             m.RollbackRevisionId = restore.Id;
         }
         m.Status = FormMigrationStatus.RolledBack;

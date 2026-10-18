@@ -179,7 +179,7 @@ public sealed class ImportPerformanceTests(TestApp app, ITestOutputHelper output
         Assert.Equal(rows, await RecordsAsync(tpl));
         using (var scope = app.Services.CreateScope())
         {
-            var last = await scope.ServiceProvider.GetRequiredService<AppDbContext>().FormRecords.Where(r => r.TemplateId == tpl && r.ValuesJson.Contains($"W{rows:D6}")).Select(r => r.ValuesJson).SingleAsync();
+            var last = (await scope.ServiceProvider.GetRequiredService<AppDbContext>().FormRecords.Where(r => r.TemplateId == tpl).Select(r => r.ValuesJson).ToListAsync()).Single(v => v.Contains($"W{rows:D6}"));
             Assert.Contains($"\"received_on\":\"{new DateTime(2026, 1, 1).AddDays(rows % 280):yyyy-MM-dd}\"", last.Replace(" ", ""));
         }
         output.WriteLine($"Workbook {rows:N0} rows ({bytes.Length / 1024:N0} KB): inspect {inspect.TotalSeconds:F1}s, import {import.TotalSeconds:F1}s");
