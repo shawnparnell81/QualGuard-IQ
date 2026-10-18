@@ -207,7 +207,13 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("OccurredAt");
 
+                    b.HasIndex("Action", "OccurredAt");
+
                     b.HasIndex("EntityType", "EntityId");
+
+                    b.HasIndex("EntityType", "OccurredAt");
+
+                    b.HasIndex("UserId", "OccurredAt");
 
                     b.ToTable("audit_entries", "qms");
                 });
@@ -22367,6 +22373,8 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasIndex("OwnerId", "Status");
 
                     b.HasIndex("SiteId", "Status");
+
+                    b.HasIndex("Status", "ReviewerId");
 
                     b.HasIndex("Type", "Status");
 

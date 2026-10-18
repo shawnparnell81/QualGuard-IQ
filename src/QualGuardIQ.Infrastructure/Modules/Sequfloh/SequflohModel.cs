@@ -139,6 +139,7 @@ public partial class AppDbContext
             e.Property(x => x.EngineeringNotes).HasMaxLength(4000);
             e.HasIndex(x => new { x.OwnerId, x.Status });
             e.HasIndex(x => new { x.AssignedEngineerId, x.Status });
+            e.HasIndex(x => new { x.Status, x.ReviewerId });
             foreach (var p in new[] { nameof(SequflohWorkInstruction.Content), nameof(SequflohWorkInstruction.Steps), nameof(SequflohWorkInstruction.Characteristics), nameof(SequflohWorkInstruction.PartsRows) })
                 e.Property(p).HasColumnType("jsonb");
         });

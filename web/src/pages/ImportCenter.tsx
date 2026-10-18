@@ -151,7 +151,9 @@ export function ImportJobDetail() {
   const job = useQuery({ queryKey: ['import', id], queryFn: () => get<Detail>(`/api/imports/${id}`), refetchInterval: (q) => [3, 4, 9].includes(q.state.data?.status ?? -1) ? 2000 : false });
   const j = job.data;
   const refresh = () => { qc.invalidateQueries({ queryKey: ['import', id] }); qc.invalidateQueries({ queryKey: ['imports'] }); };
-  const run = async (f: () => Promise<unknown>) => { setError(null); try { await f(); setEdits({}); refresh(); } catch (e) { setError((e as Error).message); } };
+  // one action at a time: a second click while the first is still saving would update a stale copy of the import
+  const [working, setWorking] = useState(false);
+  const run = async (f: () => Promise<unknown>) => { setError(null); setWorking(true); try { await f(); setEdits({}); refresh(); } catch (e) { setError((e as Error).message); } finally { setWorking(false); } };
   if (!j) return null;
   const whole = j.importMode === 'template' || j.importMode === 'document' || j.importMode === 'attachment';
   const book = ['xlsx', 'xlsm', 'xls'].includes(j.fileType);
@@ -287,7 +289,7 @@ export function ImportJobDetail() {
           : `After approval the ${fileWord} becomes a new controlled document (draft revision) with the file exactly as uploaded.`}</Alert>}
         {j.importMode === 'attachment' && j.summary.recordNumber && <Alert severity="success">File attached to {j.summary.recordNumber}.</Alert>}
         {j.summary.documentId && <Alert severity="success">{j.importMode === 'template' ? 'Draft form template' : 'Controlled document'} <RouterLink to={`/${j.importMode === 'template' ? 'forms/templates' : 'documents'}/${j.summary.documentId}`}>{j.summary.documentNumber}</RouterLink> created.</Alert>}
-        {whole && editable && can('imports.edit') && !dry && <Box><Button variant="outlined" onClick={() => run(() => post(`/api/imports/${id}/validate`))}>Check</Button></Box>}
+        {whole && editable && can('imports.edit') && !dry && <Box><Button variant="outlined" disabled={working} onClick={() => run(() => post(`/api/imports/${id}/validate`))}>Check</Button></Box>}
         {whole ? null : dry ? <Alert severity={dry.invalid ? 'warning' : 'success'}>Dry run: {dry.valid} of {dry.rows} rows ready to import · {dry.invalid} with problems · {dry.duplicates} repeated in the file · {dry.existingDuplicates} already exist{dry.toUpdate ? ` · ${dry.toUpdate} existing records will be updated` : ''}.</Alert>
           : <Alert severity="info">Validate the mapping to see a preview. Nothing is imported until someone approves it.</Alert>}
         {j.summary.imported !== undefined && !whole && <Alert severity="success">{j.summary.imported} records created{j.summary.updated ? `, ${j.summary.updated} updated` : ''}{j.summary.skippedInvalid ? `, ${j.summary.skippedInvalid} rows skipped` : ''}{j.summary.skippedDuplicates ? `, ${j.summary.skippedDuplicates} duplicates skipped` : ''}.</Alert>}
@@ -302,7 +304,7 @@ export function ImportJobDetail() {
         {[6, 7].includes(j.status) && can('imports.edit') && <Stack direction="row" gap={2} alignItems="center">
           {j.status === 7 && <FormControlLabel control={<Checkbox checked={skipInvalid} onChange={(e) => setSkipInvalid(e.target.checked)} />} label="Import only the rows without problems" />}
           {toConfirm > 0 && <Typography variant="body2" color="warning.main">Confirm the {toConfirm} detection(s) first.</Typography>}
-          <Button variant="contained" disabled={(j.status === 7 && !skipInvalid) || toConfirm > 0} onClick={() => run(() => post(`/api/imports/${id}/submit`, { skipInvalidRows: skipInvalid }))}>Submit for approval</Button>
+          <Button variant="contained" disabled={working || (j.status === 7 && !skipInvalid) || toConfirm > 0} onClick={() => run(() => post(`/api/imports/${id}/submit`, { skipInvalidRows: skipInvalid }))}>Submit for approval</Button>
         </Stack>}
         {j.status === 8 && <Stack direction="row" gap={1} alignItems="center">
           {can('imports.approve') && me?.id !== j.submittedById ? <>

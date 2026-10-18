@@ -1,7 +1,7 @@
 # SEQUFLOH – requirements traceability
 
 Sources: `sequfloh-prompt-1.md` (27 sections, "P1") and `sequfloh-prompt-2.md` (32 sections, "P2"), both verbatim.
-Phases S1–S9 (see CHECKPOINT.md `## Sequfloh`). Status is updated at each phase boundary.
+Phases S1–S9. Status is updated at each phase boundary.
 
 | Requirement | Source | Phase | Implementation | Test | Status |
 | --- | --- | --- | --- | --- | --- |
@@ -9,8 +9,8 @@ Phases S1–S9 (see CHECKPOINT.md `## Sequfloh`). Status is updated at each phas
 | Preservation rule: no rebuild, no renames, no moved files | P1 §2 | S1 | Additive files only; one migration per phase | Full backend + e2e suites green at each phase | Done (S1) |
 | Stack restriction: only technologies already present | P1 §3 | S1 | ASP.NET Core 10/EF Core 10/PostgreSQL/MinIO/Hangfire/React/TS/Vite/MUI (see integration findings mapping) | Review | Done (S1) |
 | Module identity: SEQUFLOH / Enterprise Execution Engine, id 'sequfloh', description | P1 §4 | S1 | Module registry entry, page header subtitle | e2e42 | Done (S1) |
-| Source inspection and repair | P1 §5 | S1 | Integration findings doc (no prototype code supplied) | Review | Planned |
-| Module entry and navigation hierarchy (10 groups) | P1 §6 | S1-S8 | Sequfloh side navigation inside AppShell; shared parent modules linked, not duplicated | e2e42+ | Planned |
+| Source inspection and repair | P1 §5 | S1 | Integration findings doc (no prototype code supplied) | Review | Done (S9) — docs/guides/sequfloh/integration-findings.md |
+| Module entry and navigation hierarchy (10 groups) | P1 §6 | S1-S8 | Sequfloh side navigation inside AppShell; shared parent modules linked, not duplicated | e2e42+ | Done (S9) — docs/guides/sequfloh/structure-and-data-model.md |
 | Application workspace: title, description, breadcrumbs, module indicator, org/site, search, recent, pinned, states, dialogs, unsaved warnings | P1 §7 | S1 | SequflohLayout using Kit components | e2e42 | Done (S1) |
 | User and permission integration: 39 capabilities, mapped to roles, server-checked | P1 §8 | S1 | Permissions.cs sequfloh.* constants, catalog, role suggestions; [HasPermission] on endpoints | SequflohFoundationTests | Done (S1) |
 | Settings (general, numbering, WI, tracking, validation, FAI, repair, display, export) audited | P1 §9 | S1 | SequflohSetting (jsonb per section) + settings pages | SequflohFoundationTests, e2e42 | Done (S1) |
@@ -28,13 +28,13 @@ Phases S1–S9 (see CHECKPOINT.md `## Sequfloh`). Status is updated at each phas
 | Repair work instruction designer (4 controlled dropdowns, copies, parts rows, steps, release rules) | P1 §21 | S3 | Repair Work Instruction designer: four controlled dropdowns (Part Master part, repair description, operation steps copied, parts list / kit / BOM / repair parts / individual parts / blank), parts rows incl. issued, used, returned, scrap quantities | SequflohInstructionTests, e2e44 | Done (S3) |
 | Separate validation and repair folders (columns, filters, actions, states) | P1 §22 | S4 | Validation and repair folders with the section 22 columns and filters; search, sort, paging, clear filters, row actions (open, edit, duplicate, create revision, print, history, archive), loading/empty/error states; export in S8 | e2e45 | Done (S4, export S8) |
 | Printable work instructions (4 layouts) via existing renderer | P1 §23 | S4 | SequflohPdfRenderer + SequflohPrintService on the existing PdfCanvas (no PDF library added): organization heading, SEQUFLOH identification, identity, applicability, all designer sections, numbered steps, characteristics, repair parts, approvals, revision history, controlled-copy footer, status watermark; audited | SequflohInstructionTests, e2e45 | Done (S4) |
-| Data model: sequfloh-scoped tables, shared records reused, metadata, server timestamps, attachments via existing capability | P1 §24 | S1-S6 | EF entities in schema qms, real FKs | MigrationTests | Planned |
-| Audit integration (events listed, context fields) | P1 §25 | S1-S8 | Existing AuditService | Each phase's tests | Planned |
+| Data model: sequfloh-scoped tables, shared records reused, metadata, server timestamps, attachments via existing capability | P1 §24 | S1-S6 | EF entities in schema qms, real FKs | MigrationTests | Done (S9) — docs/guides/sequfloh/structure-and-data-model.md |
+| Audit integration (events listed, context fields) | P1 §25 | S1-S8 | Existing AuditService | Each phase's tests | Done (S9) — audit entries in every phase; Audit Trail views (S8) |
 | Reusable utilities (only missing helpers) | P1 §26 | S1 | web/src/sequfloh/ helpers | e2e | Done (S1) |
-| Output requirements (findings, matrices, instructions, checklists) | P1 §27 | S9 | docs/sequfloh/* | Review | Planned |
+| Output requirements (findings, matrices, instructions, checklists) | P1 §27 | S9 | docs/guides/sequfloh/* | Review | Done (S9) |
 | Login and user requirement: consume QualGuard IQ user context | P2 §1 | S1 | Current user from auth context | SequflohFoundationTests | Done (S1) |
-| Preserve current application | P2 §2 | all | Additive | Suites green | Planned |
-| Primary objective list | P2 §3 | S5-S9 | See rows below | Acceptance checklist | Planned |
+| Preserve current application | P2 §2 | all | Additive | Suites green | Done (S9) — full suites green |
+| Primary objective list | P2 §3 | S5-S9 | See rows below | Acceptance checklist | Done (S9) — docs/guides/sequfloh/acceptance-checklist.md |
 | SEQUFLOH Home dashboard (permission-aware) | P2 §4 | S7 | GET api/sequfloh/dashboard (live execution section only with view_live_execution); web/src/sequfloh/Dashboard.tsx | SequflohDashboardTests, e2e48 | Done (S7) |
 | Quality personnel area (dashboard, folders, review queue, actions) | P2 §5 | S7 | Quality Dashboard, Validation and Repair folders, Quality Review Queue (instructions pending review/approval, records pending inspection or Quality review); actions on the opened record (web/src/sequfloh/Personnel.tsx, SequflohDashboardController) | SequflohDashboardTests, e2e48 | Done (S7) |
 | Engineering personnel area (dashboard, validation, development, review queue) | P2 §6 | S7 | Engineering Dashboard, Validation tabs, Development list and development record (assigned engineer, target date, project, notes, development status, release recommendation; migration SequflohDevelopment), Engineering Review Queue | SequflohDashboardTests, e2e48 | Done (S7) |
@@ -55,12 +55,12 @@ Phases S1–S9 (see CHECKPOINT.md `## Sequfloh`). Status is updated at each phas
 | Audit trail views (5) on existing audit | P2 §21 | S8 | api/sequfloh/audit/{system,instructions,access,changes,exports} over the shared append-only audit trail; search, filters, sorting, paging, detail dialog, printable summary | SequflohReportTests, e2e49 | Done (S8) |
 | Notifications via existing system | P2 §22 | S8 | SequflohNotifications on the shared INotifier (assigned, pending review/approval, changes requested, failed, rejected, released, superseded) and SEQUFLOH overdue / approaching-due reminders in the shared ReminderJob; each kind follows the notification settings and the recipient's SEQUFLOH access | SequflohReportTests | Done (S8) |
 | Search, recent items, favorites via existing services | P2 §23 | S8 | Instructions and tracking records indexed in the shared search (filtered by SEQUFLOH access and site) plus SEQUFLOH search page (instructions, parts, parts lists, records, tasks, users for administrators); recent items and favorites on the SEQUFLOH user items (S1, no shared service exists) | SequflohReportTests, e2e49 | Done (S8) |
-| Security integration (server-side authorization, row checks) | P2 §24 | all | [HasPermission] + service checks | RbacTests, phase tests | Planned |
-| Database indexes (17) | P2 §25 | S1-S6 | EF HasIndex | Migration review | Planned |
-| Safe initial seeding (idempotent, no overwrite, reset with confirmation) | P2 §26 | S1/S9 | SequflohSeeder | SequflohFoundationTests | Planned |
-| Error handling and data integrity | P2 §27 | all | ProblemDetails, validation | Phase tests | Planned |
-| Responsive and accessible design (existing design) | P2 §28 | all | MUI Kit | e2e screenshots | Planned |
-| Complete integration testing | P2 §29 | S9 | Backend + e2e | Suites | Planned |
-| Final acceptance criteria | P2 §30 | S9 | docs/sequfloh/acceptance-checklist.md | Review | Planned |
-| Compliance wording | P2 §31 | S9 | Docs + module About | Review | Planned |
-| Final output requirements | P2 §32 | S9 | docs/sequfloh/* | Review | Planned |
+| Security integration (server-side authorization, row checks) | P2 §24 | all | [HasPermission] + service checks | RbacTests, phase tests | Done (S9) — docs/guides/sequfloh/structure-and-data-model.md#security-rules |
+| Database indexes (17) | P2 §25 | S1-S6 | EF HasIndex | Migration review | Done (S9) — migration SequflohIndexes; index table in docs/guides/sequfloh/structure-and-data-model.md |
+| Safe initial seeding (idempotent, no overwrite, reset with confirmation) | P2 §26 | S1/S9 | SequflohSeeder | SequflohFoundationTests | Done (S9) — seed verified idempotent; docs/guides/sequfloh/setup-and-administration.md |
+| Error handling and data integrity | P2 §27 | all | ProblemDetails, validation | Phase tests | Done (S9) — docs/guides/sequfloh/acceptance-checklist.md |
+| Responsive and accessible design (existing design) | P2 §28 | all | MUI Kit | e2e screenshots | Done (S9) — docs/guides/sequfloh/acceptance-checklist.md |
+| Complete integration testing | P2 §29 | S9 | Backend + e2e | Suites | Done (S9) — docs/guides/sequfloh/testing-checklist.md |
+| Final acceptance criteria | P2 §30 | S9 | docs/guides/sequfloh/acceptance-checklist.md | Review | Done (S9) |
+| Compliance wording | P2 §31 | S9 | Docs + module About | Review | Done (S9) — docs/guides/sequfloh/README.md and SEQUFLOH Home |
+| Final output requirements | P2 §32 | S9 | docs/guides/sequfloh/* | Review | Done (S9) |
