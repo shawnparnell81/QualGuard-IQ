@@ -49435,6 +49435,10 @@ components:
           type:
             - 'null'
             - string
+        sourceFormula:
+          type:
+            - 'null'
+            - string
     FormPreviewInput:
       required:
         - fieldsJson

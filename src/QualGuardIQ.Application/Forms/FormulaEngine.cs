@@ -74,6 +74,10 @@ public static class FormulaEngine
         ["TEXT"] = (2, 2), ["VALUE"] = (1, 1), ["EXACT"] = (2, 2),
         ["TODAY"] = (0, 0), ["DAYS"] = (2, 2), ["EDATE"] = (2, 2), ["DATEADD"] = (2, 2), ["YEAR"] = (1, 1), ["MONTH"] = (1, 1), ["DAY"] = (1, 1),
         ["WITHIN"] = (3, 3), ["CP"] = (3, 3), ["CPK"] = (3, 3),
+        // spreadsheet conversion: CELLS(a, b, ...) is a list of individual values (a converted cell range); multi-criteria and lookup functions
+        ["CELLS"] = (1, -1), ["COUNTIFS"] = (2, -1), ["SUMIFS"] = (3, -1), ["AVERAGEIFS"] = (3, -1), ["MAXIFS"] = (3, -1), ["MINIFS"] = (3, -1),
+        ["INDEX"] = (2, 2), ["MATCH"] = (2, 3), ["ISERROR"] = (1, 1), ["ISTEXT"] = (1, 1), ["DATE"] = (3, 3), ["LARGE"] = (2, 2), ["SMALL"] = (2, 2),
+        ["MID"] = (3, 3), ["SUBSTITUTE"] = (3, 3), ["NA"] = (0, 0),
     };
 
     public static Node Parse(string source)
@@ -349,6 +353,59 @@ public static class FormulaEngine
                         return i < c.Args.Count ? Arg(i) : new FValue(FormulaError.NA);
                     }
                 case "CHOOSE": { var k = (int)(NumArg(0) ?? 0); return k >= 1 && k < c.Args.Count ? Arg(k) : new FValue(FormulaError.Value); }
+                case "CELLS": return FValue.List(Flat(c.Args, depth));
+                case "ISERROR": return FValue.Bool(Arg(0).IsError);
+                case "NA": return new FValue(FormulaError.NA);
+                case "COUNTIFS": case "SUMIFS": case "AVERAGEIFS": case "MAXIFS": case "MINIFS":
+                    {
+                        var counting = c.Name == "COUNTIFS";
+                        var first = counting ? 0 : 1;
+                        if ((c.Args.Count - first) % 2 != 0) throw new AppException($"{c.Name} needs range and criteria pairs.");
+                        var target = counting ? null : Eval(c.Args[0], depth + 1).Items;
+                        var pairs = new List<(IReadOnlyList<FValue> Range, string Crit)>();
+                        for (var i = first; i < c.Args.Count; i += 2) pairs.Add((Eval(c.Args[i], depth + 1).Items, Eval(c.Args[i + 1], depth + 1).AsText()));
+                        var n = target?.Count ?? pairs[0].Range.Count;
+                        var picked = new List<decimal>(); var count = 0;
+                        for (var ri = 0; ri < n; ri++)
+                        {
+                            if (!pairs.All(p => ri < p.Range.Count && Criteria(p.Range[ri], p.Crit))) continue;
+                            count++;
+                            if (target is not null && target[ri].AsNumber() is { } x && !target[ri].IsEmpty) picked.Add(x);
+                        }
+                        return c.Name switch
+                        {
+                            "COUNTIFS" => FValue.Num(count),
+                            "SUMIFS" => FValue.Num(picked.Sum()),
+                            "AVERAGEIFS" => picked.Count == 0 ? new FValue(FormulaError.Div0) : FValue.Num(picked.Average()),
+                            "MAXIFS" => FValue.Num(picked.Count == 0 ? 0 : picked.Max()),
+                            _ => FValue.Num(picked.Count == 0 ? 0 : picked.Min()),
+                        };
+                    }
+                case "INDEX":
+                    {
+                        var list = Eval(c.Args[0], depth + 1).Items; var k = (int)(NumArg(1) ?? 0);
+                        return k >= 1 && k <= list.Count ? list[k - 1] : new FValue(FormulaError.Value);
+                    }
+                case "MATCH":
+                    {
+                        var key = Arg(0); var list = Eval(c.Args[1], depth + 1).Items;
+                        var mode = c.Args.Count > 2 ? (int)(NumArg(2) ?? 1) : 1;
+                        if (mode == 0)
+                        {
+                            for (var i = 0; i < list.Count; i++)
+                            {
+                                var kn = key.AsNumber(); var ln = list[i].AsNumber();
+                                if (kn is not null && ln is not null && !key.IsEmpty && !list[i].IsEmpty ? kn == ln : string.Equals(list[i].AsText(), key.AsText(), StringComparison.OrdinalIgnoreCase)) return FValue.Num(i + 1);
+                            }
+                            return new FValue(FormulaError.NA);
+                        }
+                        // approximate match on a sorted list: largest value <= key (mode 1) or smallest value >= key (mode -1)
+                        var kv = key.AsNumber(); if (kv is null) return new FValue(FormulaError.NA);
+                        var best = -1;
+                        for (var i = 0; i < list.Count; i++)
+                            if (list[i].AsNumber() is { } v && !list[i].IsEmpty && (mode > 0 ? v <= kv : v >= kv)) best = i;
+                        return best < 0 ? new FValue(FormulaError.NA) : FValue.Num(best + 1);
+                    }
             }
             var vals = Flat(c.Args, depth);
             var err = vals.FirstOrDefault(v => v.IsError);
@@ -400,6 +457,31 @@ public static class FormulaEngine
                 case "XOR": return FValue.Bool(vals.Count(v => v.AsBool()) % 2 == 1);
                 case "NOT": return FValue.Bool(!vals.FirstOrDefault().AsBool());
                 case "ISBLANK": return FValue.Bool(vals.Count == 0 || vals.All(v => v.IsEmpty));
+                case "ISTEXT": return FValue.Bool(vals.Count == 1 && vals[0].Raw is string { Length: > 0 } t && decimal.TryParse(t, NumberStyles.Number, CultureInfo.InvariantCulture, out _) == false);
+                case "DATE":
+                    {
+                        if (NumArg(0) is not { } y || NumArg(1) is not { } mo || NumArg(2) is not { } dd) return new FValue(FormulaError.Value);
+                        try { return FValue.Text(new DateOnly((int)y, 1, 1).AddMonths((int)mo - 1).AddDays((int)dd - 1).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)); }
+                        catch (ArgumentOutOfRangeException) { return new FValue(FormulaError.Num); }
+                    }
+                case "LARGE": case "SMALL":
+                    {
+                        var data = Numbers(Eval(c.Args[0], depth + 1).Items.ToList()); var k = (int)(NumArg(1) ?? 0);
+                        if (k < 1 || k > data.Count) return new FValue(FormulaError.Num);
+                        var sorted = c.Name == "LARGE" ? data.OrderByDescending(x => x).ToList() : data.OrderBy(x => x).ToList();
+                        return FValue.Num(sorted[k - 1]);
+                    }
+                case "MID":
+                    {
+                        var s = Arg(0).AsText(); var st = (int)(NumArg(1) ?? 1); var len = (int)(NumArg(2) ?? 0);
+                        if (st < 1 || len < 0) return new FValue(FormulaError.Value);
+                        return st > s.Length ? FValue.Text("") : FValue.Text(s.Substring(st - 1, Math.Min(len, s.Length - st + 1)));
+                    }
+                case "SUBSTITUTE":
+                    {
+                        var s = Arg(0).AsText(); var from = Arg(1).AsText();
+                        return from.Length == 0 ? FValue.Text(s) : FValue.Text(s.Replace(from, Arg(2).AsText(), StringComparison.Ordinal));
+                    }
                 case "ISNUMBER": return FValue.Bool(vals.Count == 1 && !vals[0].IsEmpty && vals[0].AsNumber() is not null && vals[0].Raw is not bool);
                 case "ROUND": case "ROUNDUP": case "ROUNDDOWN": case "TRUNC":
                     {

@@ -117,7 +117,8 @@ public sealed class FormsController(AppDbContext db, FormService forms, ModuleSu
         if (string.IsNullOrWhiteSpace(req.FieldSchema) || req.FieldSchema.Length > 4_000_000) throw new AppException("The form definition is missing or too large.");
         var def = FormDefinitions.Parse(req.FieldSchema);
         FormDefinitions.Validate(def);
-        return new { Values = FormDefinitions.Apply(def, req.Values ?? [], requireComplete: false), Fields = def.Fields.Count, Tables = def.Tables.Count, Sections = def.Sections.Count, Signatures = def.Signatures.Count };
+        var values = FormDefinitions.Apply(def, req.Values ?? [], requireComplete: false);
+        return new { Values = values, RuleHits = FormDefinitions.RuleHits(def, values), Fields = def.Fields.Count, Tables = def.Tables.Count, Sections = def.Sections.Count, Signatures = def.Signatures.Count };
     }
 
     [HttpPost("records/{id:guid}/signatures/{key}")]
