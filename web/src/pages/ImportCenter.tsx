@@ -318,6 +318,7 @@ export function ImportJobDetail() {
         </Stack>}
         <Stack direction="row" gap={1}>
           {[0, 1, 3, 4, 5, 6, 7, 8].includes(j.status) && can('imports.edit') && <Button onClick={() => run(() => post(`/api/imports/${id}/cancel`))}>Cancel import</Button>}
+          {j.status === 13 && can('imports.edit') && <Button variant="outlined" onClick={() => run(() => post(`/api/imports/${id}/retry`))}>Retry import</Button>}
           {[2, 10, 11, 12, 13, 14, 15].includes(j.status) && can('imports.edit') && <Button onClick={() => run(() => post(`/api/imports/${id}/archive`))}>Archive</Button>}
         </Stack>
       </Stack>}

@@ -26,6 +26,8 @@ public sealed class XlSheet
     public int FirstCol { get; set; } = 1;
     public int LastRow { get; set; }
     public int LastCol { get; set; }
+    /// <summary>The worksheet has more rows than inspection reads; record imports read its rows with <see cref="WorkbookRowStream"/>.</summary>
+    public bool Truncated { get; set; }
     public Dictionary<(int R, int C), XlCell> Cells { get; } = [];
     public List<(int R1, int C1, int R2, int C2)> Merges { get; } = [];
     /// <summary>Column widths and row heights in points (hidden ones are 0).</summary>
@@ -153,7 +155,7 @@ public static class WorkbookReader
             sh.Merges.Add((a.FirstAddress.RowNumber, a.FirstAddress.ColumnNumber, a.LastAddress.RowNumber, a.LastAddress.ColumnNumber));
             sh.LastRow = Math.Max(sh.LastRow, a.LastAddress.RowNumber); sh.LastCol = Math.Max(sh.LastCol, a.LastAddress.ColumnNumber);
         }
-        if (sh.LastRow - sh.FirstRow + 1 > MaxRows) { data.Warnings.Add($"{ws.Name}: only the first {MaxRows} rows are read."); sh.LastRow = sh.FirstRow + MaxRows - 1; }
+        if (sh.LastRow - sh.FirstRow + 1 > MaxRows) { data.Warnings.Add($"{ws.Name}: only the first {MaxRows} rows are inspected; a record import reads every row."); sh.LastRow = sh.FirstRow + MaxRows - 1; sh.Truncated = true; }
         if (sh.LastCol - sh.FirstCol + 1 > MaxCols) { data.Warnings.Add($"{ws.Name}: only the first {MaxCols} columns are read."); sh.LastCol = sh.FirstCol + MaxCols - 1; }
         for (var c = sh.FirstCol; c <= sh.LastCol; c++)
         {

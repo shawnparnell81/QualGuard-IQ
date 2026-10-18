@@ -87,12 +87,21 @@ public sealed partial class ImportCenterService
                 analysis["sheet"] = t.Sheet; analysis["headerRow"] = t.HeaderRow;
                 analysis["columns"] = JsonSerializer.SerializeToNode(t.Columns, JsonOpts);
                 analysis["sampleRows"] = JsonSerializer.SerializeToNode(t.Rows.Take(20).Select(r => r.Cells), JsonOpts);
-                analysis["totalRows"] = t.Rows.Count;
-                job.TotalRows = t.Rows.Count;
+                var total = t.Rows.Count;
+                if (wb.Sheet(t.Sheet) is { Truncated: true } && job.FileType is "xlsx" or "xlsm")
+                {
+                    // longer than inspection reads: count (and later import) every row straight from the package
+                    await using var raw = await OpenOriginalAsync(job, ct);
+                    total = 0;
+                    foreach (var _ in Excel.WorkbookRowStream.Rows(raw, t.Sheet, t.HeaderRow, t.Columns.Count)) { if (++total % 5000 == 0) ct.ThrowIfCancellationRequested(); }
+                    analysis["streamed"] = true;
+                }
+                analysis["totalRows"] = total;
+                job.TotalRows = total;
                 job.Analysis = analysis.ToJsonString();
-                if (t.Rows.Count == 0) AddIssue(job, t.Sheet, null, ImportIssueSeverity.Error, "EMPTY", "The worksheet has no data rows below the header row.", "Choose another worksheet or header row.");
+                if (total == 0) AddIssue(job, t.Sheet, null, ImportIssueSeverity.Error, "EMPTY", "The worksheet has no data rows below the header row.", "Choose another worksheet or header row.");
                 await SuggestMappingsAsync(job, t.Columns, ct);
-                Transition(job, ImportJobStatus.MappingRequired, $"Worksheet {t.Sheet}: {t.Rows.Count} rows, {t.Columns.Count} columns, header row {t.HeaderRow}");
+                Transition(job, ImportJobStatus.MappingRequired, $"Worksheet {t.Sheet}: {total} rows, {t.Columns.Count} columns, header row {t.HeaderRow}");
                 break;
             }
         }
