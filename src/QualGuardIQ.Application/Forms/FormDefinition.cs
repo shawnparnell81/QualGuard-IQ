@@ -23,7 +23,28 @@ public sealed class FormDefinition
     public List<SignatureBlock> Signatures { get; set; } = [];
     /// <summary>Source-faithful print layout captured at conversion (worksheet grids, document paragraphs and tables). Drives the original-look output.</summary>
     public SourceLayout? Layout { get; set; }
+    /// <summary>Formatting rules (from spreadsheet conditional formatting or added in the designer): a style applied to a field or table column when its condition holds.</summary>
+    public List<FormatRule> Rules { get; set; } = [];
 }
+
+/// <summary>
+/// A formatting rule. <see cref="Target"/> is a field key or "table.column". Operators: the condition operators, "between", "notBetween",
+/// or "formula" (a true/false formula over form values; for table targets the row's own column keys can be used).
+/// </summary>
+public sealed class FormatRule
+{
+    public string Target { get; set; } = "";
+    public string Operator { get; set; } = "equals";
+    public string? Value { get; set; }
+    public string? Value2 { get; set; }
+    public string? Formula { get; set; }
+    public CellStyle Style { get; set; } = new();
+    public bool StopIfTrue { get; set; }
+    /// <summary>Where the rule came from, e.g. "Inspection!E5:E30".</summary>
+    public string? Source { get; set; }
+}
+
+public sealed record RuleHit(int Rule, string Target, int? Row);
 
 /// <summary>
 /// The arrangement of the converted source: an ordered list of blocks. A grid block is a worksheet range or a document table
@@ -63,6 +84,8 @@ public sealed class LayoutGrid
     public int RepeatRows { get; set; }
     /// <summary>A template row range that repeats once per row of a dynamic table when printed and filled.</summary>
     public RepeatRegion? Repeat { get; set; }
+    /// <summary>Spreadsheet behaviour: text that does not fit runs on into the empty cells to its right.</summary>
+    public bool Overflow { get; set; }
 }
 
 public sealed class RepeatRegion
@@ -320,8 +343,8 @@ public static class FormDefinitions
                 var ok = kind switch
                 {
                     "field" or "check" => fields.Contains(target),
-                    "col" => parts.Length == 2 && tables.TryGetValue(parts[0], out var t1) && t1.Columns.Any(x => x.Key == parts[1] || parts[1] == "_row"),
-                    "cell" => parts.Length == 3 && tables.TryGetValue(parts[0], out var t2) && t2.Columns.Any(x => x.Key == parts[1]) && int.TryParse(parts[2], out var ri) && ri >= 0,
+                    "col" => parts.Length == 2 && tables.TryGetValue(parts[0], out var t1) && (t1.Columns.Any(x => x.Key == parts[1] || parts[1] == "_row") || IsRunning(t1, parts[1])),
+                    "cell" => parts.Length == 3 && tables.TryGetValue(parts[0], out var t2) && (t2.Columns.Any(x => x.Key == parts[1]) || IsRunning(t2, parts[1])) && int.TryParse(parts[2], out var ri) && ri >= 0,
                     "total" => parts.Length == 2 && tables.TryGetValue(parts[0], out var t3) && (t3.Totals ?? []).Any(x => $"{x.Function}_{x.Column}" == parts[1]),
                     "sig" => parts.Length == 2 && sigs.Contains(parts[0]) && parts[1] is "name" or "date" or "meaning",
                     _ => false
@@ -330,6 +353,8 @@ public static class FormDefinitions
             }
         }
     }
+
+    static bool IsRunning(FormTable t, string key) => key.EndsWith("_running") && (t.RunningTotals ?? []).Contains(key[..^8]);
 
     static void CheckStyle(CellStyle? s)
     {
@@ -449,6 +474,22 @@ public static class FormDefinitions
             if (s.Section is { } sec && !sections.ContainsKey(sec)) throw new AppException($"Signature '{s.Key}' is in unknown section '{sec}'.");
             if (s.Section is { } rs && repeatable.Contains(rs)) throw new AppException($"Signature '{s.Key}' cannot sit in a repeatable section.");
         }
+        if (d.Rules.Count > 500) throw new AppException("A form can have at most 500 formatting rules.");
+        foreach (var r in d.Rules)
+        {
+            var (fieldTarget, table, column) = RuleTarget(d, r.Target);
+            if (fieldTarget is null && column is null) throw new AppException($"Formatting rule target '{r.Target}' is not a field or table column of this form.");
+            if (r.Operator == "formula")
+            {
+                if (string.IsNullOrWhiteSpace(r.Formula)) throw new AppException($"Formatting rule on '{r.Target}' needs a formula.");
+                var problem = FormulaEngine.Problem(r.Formula);
+                if (problem is not null) throw new AppException($"Formatting rule on '{r.Target}': {problem}");
+            }
+            else if (!(Conditions.Operators.Contains(r.Operator) || r.Operator is "between" or "notBetween")) throw new AppException($"Formatting rule on '{r.Target}' has unknown operator '{r.Operator}'.");
+            if (r.Operator is "between" or "notBetween" && (r.Value is null || r.Value2 is null)) throw new AppException($"Formatting rule on '{r.Target}' needs two values.");
+            CheckStyle(r.Style);
+        }
+
         foreach (var s in d.Signatures)
             foreach (var other in s.DistinctFrom ?? [])
                 if (other == s.Key || d.Signatures.All(x => x.Key != other)) throw new AppException($"Signature '{s.Key}' must be distinct from unknown signature '{other}'.");
@@ -482,6 +523,87 @@ public static class FormDefinitions
                 if (d.SchemaVersion == 1 && !d.Fields.Any(o => o.Key == r && NumericTypes.Contains(o.Type))) throw new AppException($"Formula of '{f.Key}' uses '{r}', which is not a number field.");
             }
         }
+    }
+
+    static (FormField? Field, FormTable? Table, FormField? Column) RuleTarget(FormDefinition d, string target)
+    {
+        var i = target.IndexOf('.');
+        if (i < 0) return (d.Fields.FirstOrDefault(f => f.Key == target), null, null);
+        var t = d.Tables.FirstOrDefault(x => x.Key == target[..i]);
+        return (null, t, t?.Columns.FirstOrDefault(c => c.Key == target[(i + 1)..]));
+    }
+
+    /// <summary>Which formatting rules apply to the computed values (fields, and table cells by row). A rule with StopIfTrue hides later rules on the same target.</summary>
+    public static List<RuleHit> RuleHits(FormDefinition d, IReadOnlyDictionary<string, string?> output, DateOnly? today = null)
+    {
+        var hits = new List<RuleHit>();
+        if (d.Rules.Count == 0) return hits;
+        var top = new Dictionary<string, FValue>(StringComparer.Ordinal);
+        foreach (var f in d.Fields) top[f.Key] = Loose(output.GetValueOrDefault(f.Key));
+        var tableRows = new Dictionary<string, List<Dictionary<string, string?>>>();
+        foreach (var t in d.Tables)
+        {
+            var rows = new List<Dictionary<string, string?>>();
+            var json = output.GetValueOrDefault(t.Key);
+            if (!string.IsNullOrWhiteSpace(json))
+                try
+                {
+                    var node = JsonNode.Parse(json);
+                    var arr = node is JsonObject o && o["rows"] is JsonArray ra ? ra : node as JsonArray;
+                    foreach (var item in arr ?? [])
+                        if (item is JsonObject row) rows.Add(row.ToDictionary(k => k.Key, k => k.Value is JsonValue jv && jv.TryGetValue<string>(out var sv) ? sv : k.Value?.ToJsonString()));
+                    if (node is JsonObject tot && tot["totals"] is JsonObject totals)
+                        foreach (var (k, v) in totals) top[$"{t.Key}.{k}"] = Loose(v?.GetValue<string>());
+                }
+                catch (JsonException) { }
+            tableRows[t.Key] = rows;
+            foreach (var c in t.Columns) top[$"{t.Key}.{c.Key}"] = FValue.List(rows.Select(r => Loose(r.GetValueOrDefault(c.Key))).ToList());
+        }
+        var stopped = new HashSet<string>();
+        for (var i = 0; i < d.Rules.Count; i++)
+        {
+            var r = d.Rules[i];
+            var (field, table, column) = RuleTarget(d, r.Target);
+            if (field is not null)
+            {
+                if (stopped.Contains(r.Target)) continue;
+                if (Holds(r, output.GetValueOrDefault(field.Key), n => top.TryGetValue(n, out var v) ? v : FValue.Empty, today)) { hits.Add(new RuleHit(i, r.Target, null)); if (r.StopIfTrue) stopped.Add(r.Target); }
+            }
+            else if (table is not null && column is not null)
+            {
+                var rows = tableRows.GetValueOrDefault(table.Key) ?? [];
+                for (var ri = 0; ri < rows.Count; ri++)
+                {
+                    var cellKey = $"{r.Target}#{ri}";
+                    if (stopped.Contains(cellKey)) continue;
+                    var row = rows[ri];
+                    if (Holds(r, row.GetValueOrDefault(column.Key), n => row.ContainsKey(n) || table.Columns.Any(c => c.Key == n) ? Loose(row.GetValueOrDefault(n)) : top.TryGetValue(n, out var v) ? v : FValue.Empty, today))
+                    { hits.Add(new RuleHit(i, r.Target, ri)); if (r.StopIfTrue) stopped.Add(cellKey); }
+                }
+            }
+        }
+        return hits;
+    }
+
+    static FValue Loose(string? v) => v is null ? FValue.Empty : decimal.TryParse(v, NumberStyles.Number, CultureInfo.InvariantCulture, out var n) ? FValue.Num(n) : FValue.Text(v);
+
+    static bool Holds(FormatRule r, string? value, Func<string, FValue> resolve, DateOnly? today)
+    {
+        if (r.Operator == "formula")
+        {
+            var v = FormulaEngine.Evaluate(r.Formula!, n => resolve(n), today);
+            return !v.IsError && !v.IsEmpty && v.AsBool();
+        }
+        if (r.Operator is "between" or "notBetween")
+        {
+            if (!decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var x)
+                || !decimal.TryParse(r.Value, NumberStyles.Number, CultureInfo.InvariantCulture, out var a)
+                || !decimal.TryParse(r.Value2, NumberStyles.Number, CultureInfo.InvariantCulture, out var b)) return false;
+            var inside = x >= Math.Min(a, b) && x <= Math.Max(a, b);
+            return r.Operator == "between" ? inside : !inside;
+        }
+        object? typed = decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var num) ? num : value;
+        return Conditions.Matches(new Condition("v", r.Operator, r.Value), new Dictionary<string, object?> { ["v"] = typed });
     }
 
     private static IEnumerable<string> Ancestors(Dictionary<string, FormSection> sections, string key)

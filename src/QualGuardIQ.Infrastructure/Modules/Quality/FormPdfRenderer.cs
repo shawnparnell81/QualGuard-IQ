@@ -480,6 +480,10 @@ public sealed class FormPdfRenderer
         }
         var byStart = g.Cells.GroupBy(c => c.R).ToDictionary(x => x.Key, x => x.ToList());
         double RowH(int src) => Math.Max(4, g.RowHeights[src] * fsScale);
+        // cells holding content or a binding; spreadsheet text overflows to the right into cells that hold neither
+        var occupied = new HashSet<(int, int)>();
+        foreach (var c in g.Cells.Where(c => c.Bind is not null || !string.IsNullOrEmpty(c.Text) || c.RowSpan > 1 || c.ColSpan > 1))
+            for (var r = c.R; r < c.R + c.RowSpan; r++) for (var k = c.C; k < c.C + c.ColSpan; k++) occupied.Add((r, k));
 
         void DrawRow(int src, int inst, double y)
         {
@@ -487,7 +491,14 @@ public sealed class FormPdfRenderer
             {
                 var x = _margin + colX[c.C]; var w = colX[Math.Min(colX.Count - 1, c.C + c.ColSpan)] - colX[c.C];
                 var h = 0.0; for (var k = 0; k < c.RowSpan && src + k < g.RowHeights.Count; k++) h += RowH(src + k);
-                Cell(c, x, y, w, h, inst, fsScale, tables);
+                var textW = w;
+                if (g.Overflow && (c.Bind is null || c.Bind.StartsWith("check:")) && !string.IsNullOrEmpty(c.Text) && c.RowSpan == 1 && c.Style is not { Wrap: true } && c.Style?.Align is null or "left" && !c.Text.Contains('\n'))
+                {
+                    var end = c.C + c.ColSpan;
+                    while (end < g.ColumnWidths.Count && !occupied.Contains((c.R, end))) end++;
+                    textW = colX[end] - colX[c.C];
+                }
+                Cell(c, x, y, w, h, inst, fsScale, tables, textW);
             }
         }
 
@@ -510,7 +521,7 @@ public sealed class FormPdfRenderer
         _y += 6;
     }
 
-    void Cell(LayoutCell c, double x, double y, double w, double h, int inst, double fsScale, Dictionary<string, FormTable> tables)
+    void Cell(LayoutCell c, double x, double y, double w, double h, int inst, double fsScale, Dictionary<string, FormTable> tables, double? textWidth = null)
     {
         var st = c.Style ?? new CellStyle();
         if (st.Fill is { } fill && !fill.Equals("#FFFFFF", StringComparison.OrdinalIgnoreCase)) _pdf!.Fill(x, y, w, h, fill);
@@ -531,17 +542,18 @@ public sealed class FormPdfRenderer
             var on = _v.GetValueOrDefault(bind[6..]) == "true";
             var bx = st.Align switch { "center" => x + (w - size) / 2, "right" => x + w - size - 2, _ => x + 2 };
             CheckBox(bx, y + Math.Max(1, (h - size) / 2), size * 0.9, on);
-            if (!string.IsNullOrEmpty(c.Text)) _pdf!.TextAligned(bx + size + 3, y + Math.Max(1, (h - size) / 2), size, w - size - 6, c.Text, ts, "left");
+            if (!string.IsNullOrEmpty(c.Text)) _pdf!.TextAligned(bx + size + 3, y + Math.Max(1, (h - size) / 2), size, (textWidth ?? w) - size - 6, c.Text, ts, "left");
             return;
         }
         var (text, valueTs) = CellText(c, inst, tables, ts);
         if (string.IsNullOrEmpty(text)) return;
+        var tw = textWidth ?? w;
         var lines = st.Wrap || text.Contains('\n') ? PdfCanvas.Wrap(text, size, w - 4, st.Font).ToList() : [text];
         var maxLines = Math.Max(1, (int)((h - 2) / (size * 1.2)));
         if (lines.Count > maxLines) lines = lines.Take(maxLines).ToList();
         var blockH = lines.Count * size * 1.2;
         var ty = st.VAlign switch { "top" => y + 1.5, "middle" => y + (h - blockH) / 2, _ => y + h - blockH - 1 };
-        foreach (var l in lines) { _pdf!.TextAligned(x + 2, ty, size, w - 4, l, valueTs, st.Align ?? (c.Bind is not null && double.TryParse(l, NumberStyles.Float, CultureInfo.InvariantCulture, out _) ? "right" : "left")); ty += size * 1.2; }
+        foreach (var l in lines) { _pdf!.TextAligned(x + 2, ty, size, (lines.Count == 1 ? tw : w) - 4, l, valueTs, st.Align ?? (c.Bind is not null && double.TryParse(l, NumberStyles.Float, CultureInfo.InvariantCulture, out _) ? "right" : "left")); ty += size * 1.2; }
     }
 
     (string Text, TextStyle Style) CellText(LayoutCell c, int inst, Dictionary<string, FormTable> tables, TextStyle ts)
@@ -559,10 +571,12 @@ public sealed class FormPdfRenderer
                 var rows = Rows(_v.GetValueOrDefault(parts[0]));
                 if (parts[1] == "_row") return (inst < rows.Count || inst < (t.FixedRows?.Count ?? 0) ? (inst + 1).ToString(CultureInfo.InvariantCulture) : "", filled);
                 if (inst >= rows.Count) return ("", ts);
+                if (parts[1].EndsWith("_running")) return (rows[inst].GetValueOrDefault(parts[1]) ?? "", filled);
                 var col = t.Columns.FirstOrDefault(x => x.Key == parts[1]);
                 return col is null ? ("", ts) : (Show(col, rows[inst].GetValueOrDefault(parts[1])), filled);
             case "cell" when tables.TryGetValue(parts[0], out var t2) && int.TryParse(parts[2], out var ri):
                 var rws = Rows(_v.GetValueOrDefault(parts[0]));
+                if (parts[1].EndsWith("_running")) return (ri < rws.Count ? rws[ri].GetValueOrDefault(parts[1]) ?? "" : "", filled);
                 var cc = t2.Columns.FirstOrDefault(x => x.Key == parts[1]);
                 return ri < rws.Count && cc is not null ? (Show(cc, rws[ri].GetValueOrDefault(parts[1])), filled) : ("", ts);
             case "total":

@@ -49,6 +49,8 @@ public sealed class FormField
     public List<FormField>? Columns { get; set; }
     /// <summary>Where an imported field came from (sheet!cell, page/region, content control tag).</summary>
     public string? SourceLocation { get; set; }
+    /// <summary>Calculated fields converted from a spreadsheet: the original formula, kept for traceability.</summary>
+    public string? SourceFormula { get; set; }
 }
 
 public sealed class FieldCondition
