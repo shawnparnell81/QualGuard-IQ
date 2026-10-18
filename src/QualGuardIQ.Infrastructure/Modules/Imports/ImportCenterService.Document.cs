@@ -51,7 +51,7 @@ public sealed partial class ImportCenterService
         var m = await LoadDocumentAsync(job, ct);
         var summary = DocIntake.Analyze(m);
         var ws = WordSettings(job);
-        await ClearIssuesAsync(job, "SHAPE", "EMPTY", "FIDELITY", "DOCUMENT_SECURITY", "CONVERSION");
+        await ClearIssuesAsync(job, "SHAPE", "EMPTY", "FIDELITY", "DOCUMENT_SECURITY", "CONVERSION", "REVIEW", "PROFILE");
         foreach (var w in summary.Security.Take(100)) AddIssue(job, "document", null, ImportIssueSeverity.Warning, "DOCUMENT_SECURITY", w, "Nothing active is run or retrieved; review the item in the original document.");
         var analysis = new JsonObject { ["document"] = JsonSerializer.SerializeToNode(summary, JsonOpts) };
         job.Progress = 30;
@@ -60,6 +60,7 @@ public sealed partial class ImportCenterService
             case "template":
             {
                 var x = new WordFormConverter(m, new WordConversionOptions(ws.Fillable == true, ws.Title ?? m.Title ?? Path.GetFileNameWithoutExtension(job.OriginalFileName), job.OriginalFileName)).Convert();
+                RunEngine(job, analysis, x.Definition, x.Report, "docx");
                 analysis["conversion"] = new JsonObject
                 {
                     ["definition"] = JsonNode.Parse(FormDefinitions.Serialize(x.Definition)),

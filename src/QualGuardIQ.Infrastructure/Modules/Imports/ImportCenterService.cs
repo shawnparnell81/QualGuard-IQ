@@ -598,7 +598,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         var job = await LoadAsync(id, Permissions.ImportsEdit, ct);
         if (job.Status == ImportJobStatus.ValidationFailed && !skipInvalidRows) throw new AppException("Some rows have problems. Fix them, or choose to import only the rows without problems.");
         if (job.Status is not (ImportJobStatus.PreviewReady or ImportJobStatus.ValidationFailed)) throw new ConflictException("Validate the import before submitting it.");
-        CheckPdfReview(job);
+        CheckConversionReview(job);
         job.Settings = SetFlag(job.Settings, "skipInvalidRows", skipInvalidRows);
         Transition(job, ImportJobStatus.AwaitingApproval, skipInvalidRows ? "Rows with problems will be skipped." : null);
         await db.SaveChangesAsync(ct);
