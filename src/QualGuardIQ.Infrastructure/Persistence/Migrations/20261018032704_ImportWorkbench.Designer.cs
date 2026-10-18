@@ -13,7 +13,7 @@ using QualGuardIQ.Infrastructure.Persistence;
 namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261018031509_ImportWorkbench")]
+    [Migration("20261018032704_ImportWorkbench")]
     partial class ImportWorkbench
     {
         /// <inheritdoc />
@@ -4306,7 +4306,7 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_import_jobs_counts", "\"WarningCount\" >= 0 AND \"ErrorCount\" >= 0 AND \"TotalRows\" >= 0 AND \"ImportedRows\" >= 0");
 
-                            t.HasCheckConstraint("ck_import_jobs_mode", "\"ImportMode\" IN ('records', 'template', 'document', 'master-list')");
+                            t.HasCheckConstraint("ck_import_jobs_mode", "\"ImportMode\" IN ('records', 'template', 'document', 'master-list', 'attachment')");
 
                             t.HasCheckConstraint("ck_import_jobs_progress", "\"Progress\" BETWEEN 0 AND 100");
                         });

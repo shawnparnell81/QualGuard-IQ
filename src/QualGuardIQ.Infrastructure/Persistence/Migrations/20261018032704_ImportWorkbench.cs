@@ -10,6 +10,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.DropCheckConstraint(
+                name: "ck_import_jobs_mode",
+                schema: "qms",
+                table: "import_jobs");
+
             migrationBuilder.AddColumn<string>(
                 name: "Action",
                 schema: "qms",
@@ -31,6 +36,12 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 schema: "qms",
                 table: "imported_items",
                 sql: "\"Action\" IN ('created','updated')");
+
+            migrationBuilder.AddCheckConstraint(
+                name: "ck_import_jobs_mode",
+                schema: "qms",
+                table: "import_jobs",
+                sql: "\"ImportMode\" IN ('records', 'template', 'document', 'master-list', 'attachment')");
         }
 
         /// <inheritdoc />
@@ -41,6 +52,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 schema: "qms",
                 table: "imported_items");
 
+            migrationBuilder.DropCheckConstraint(
+                name: "ck_import_jobs_mode",
+                schema: "qms",
+                table: "import_jobs");
+
             migrationBuilder.DropColumn(
                 name: "Action",
                 schema: "qms",
@@ -50,6 +66,12 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 name: "PreviousValues",
                 schema: "qms",
                 table: "imported_items");
+
+            migrationBuilder.AddCheckConstraint(
+                name: "ck_import_jobs_mode",
+                schema: "qms",
+                table: "import_jobs",
+                sql: "\"ImportMode\" IN ('records', 'template', 'document', 'master-list')");
         }
     }
 }
