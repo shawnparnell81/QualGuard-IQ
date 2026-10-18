@@ -5,6 +5,7 @@ using QualGuardIQ.Api.Auth;
 using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Domain.Quality;
 using QualGuardIQ.Domain.Security;
+using QualGuardIQ.Infrastructure.Modules.Complaints;
 using QualGuardIQ.Infrastructure.Modules.Quality;
 using QualGuardIQ.Infrastructure.Modules.QualityOps;
 using QualGuardIQ.Infrastructure.Persistence;
@@ -19,7 +20,7 @@ public sealed record LotRecordRequest(Guid SiteId, Guid PartId, Guid? SupplierId
 [ApiController, Authorize, Route("api/quality-ops")]
 public sealed class QualityOpsController(AppDbContext db, ModuleSupport m, QualityEventService events, DeviationService deviations, InvestigationService investigations,
     ReleaseService releases, DelegationService delegations, RegisterService registers, ServiceLevelService serviceLevels, SkipLotService skipLots,
-    QualityReviewService reviews, QualityAnalyticsService analytics) : ControllerBase
+    QualityReviewService reviews, QualityAnalyticsService analytics, ComplaintService complaints) : ControllerBase
 {
     static string? Q(string? q) => string.IsNullOrWhiteSpace(q) ? null : $"%{q.Trim()}%";
     string Name(Guid? id) => id is null ? "" : db.Users.Where(u => u.Id == id).Select(u => u.DisplayName).FirstOrDefault() ?? "";
@@ -79,7 +80,7 @@ public sealed class QualityOpsController(AppDbContext db, ModuleSupport m, Quali
     [HttpPost("events/{id:guid}/triage")] public async Task<IActionResult> Triage(Guid id, CancellationToken ct) { await events.StartTriageAsync(id, ct); return NoContent(); }
     [HttpPost("events/{id:guid}/classify")] public async Task<IActionResult> Classify(Guid id, TriageInput r, CancellationToken ct) { await events.ClassifyAsync(id, r, ct); return NoContent(); }
     [HttpPost("events/{id:guid}/escalate")]
-    public async Task<object> Escalate(Guid id, EscalateInput r, CancellationToken ct) { var t = await events.EscalateAsync(id, r, deviations, investigations, ct); return new { t.Type, t.Id, t.Number }; }
+    public async Task<object> Escalate(Guid id, EscalateInput r, CancellationToken ct) { var t = await events.EscalateAsync(id, r, deviations, investigations, complaints, ct); return new { t.Type, t.Id, t.Number }; }
     [HttpPost("events/{id:guid}/close")] public async Task<IActionResult> CloseEvent(Guid id, NotesRequest r, CancellationToken ct) { await events.CloseAsync(id, r.Notes ?? "", ct); return NoContent(); }
     [HttpPost("events/{id:guid}/reject")] public async Task<IActionResult> RejectEvent(Guid id, ReasonRequest r, CancellationToken ct) { await events.RejectAsync(id, r.Reason, ct); return NoContent(); }
 

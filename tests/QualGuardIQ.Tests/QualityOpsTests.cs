@@ -61,6 +61,35 @@ public sealed class QualityOpsTests(TestApp app)
     }
 
     [Fact]
+    public async Task Complaint_automation_event_converts_to_a_customer_complaint()
+    {
+        var site = await app.CreateSiteAsync();
+        var (_, cs) = await app.CreateUserAsync([.. Ops, Permissions.MasterDataView, Permissions.MasterDataEdit, Permissions.ComplaintsView, Permissions.ComplaintsEdit], site);
+        var (_, noComplaints) = await app.CreateUserAsync(Ops, site);
+        var tag = Guid.NewGuid().ToString("N")[..8];
+        var customer = (await (await cs.PostOkAsync("/api/master/customers", new { code = "C" + tag, name = "Acme " + tag, siteId = site, status = 0 })).JsonAsync()).Id();
+        var noCustomer = (await (await cs.PostOkAsync("/api/quality-ops/events", Event(site, "Rattle reported", source: 3))).JsonAsync()).Id();
+        var ev = (await (await cs.PostOkAsync("/api/quality-ops/events", new { siteId = site, title = "Customer reports cracked bezel", description = "Three units cracked on arrival", category = "Customer",
+            customerId = customer, lotNumber = "CB-9", source = 3, clientReference = "CRM-" + tag })).JsonAsync()).Id();
+        foreach (var id in new[] { noCustomer, ev })
+        {
+            await cs.PostOkAsync($"/api/quality-ops/events/{id}/triage");
+            Assert.Equal(HttpStatusCode.NoContent, (await cs.PostAsync($"/api/quality-ops/events/{id}/classify", new { classification = "Complaint", likelihood = 3, impact = 4 })).StatusCode);
+        }
+        Assert.Equal(HttpStatusCode.BadRequest, (await cs.PostAsync($"/api/quality-ops/events/{noCustomer}/escalate", new { target = "complaint" })).StatusCode); // customer missing
+        Assert.Equal(HttpStatusCode.Forbidden, (await noComplaints.PostAsync($"/api/quality-ops/events/{ev}/escalate", new { target = "complaint" })).StatusCode);
+        var esc = await (await cs.PostOkAsync($"/api/quality-ops/events/{ev}/escalate", new { target = "complaint" })).JsonAsync();
+        Assert.Equal("Complaint", esc.Str("type"));
+        var complaint = await cs.GetElAsync($"/api/complaints/{esc.Id()}");
+        var c = complaint.TryGetProperty("complaint", out var inner) ? inner : complaint;
+        Assert.Equal("Customer reports cracked bezel", c.Str("title"));
+        Assert.Equal("CB-9", c.Str("lotNumber"));
+        Assert.Equal("CRM-" + tag, c.Str("customerReference"));
+        Assert.Equal(customer, c.GetProperty("customerId").GetGuid());
+        Assert.Equal(esc.Str("number"), (await cs.GetElAsync($"/api/quality-ops/events/{ev}")).GetProperty("event").Str("escalatedToNumber"));
+    }
+
+    [Fact]
     public async Task Deviation_is_completed_approved_through_a_delegate_and_used_within_its_limit()
     {
         var site = await app.CreateSiteAsync();

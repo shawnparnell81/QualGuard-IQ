@@ -206,7 +206,7 @@ export function EventDetail() {
           { name: 'likelihood', label: 'Likelihood', type: 'select', options: lv(s.likelihood), initial: e.likelihood ? String(e.likelihood) : '' }, { name: 'impact', label: 'Impact', type: 'select', options: lv(s.impact), initial: e.impact ? String(e.impact) : '' },
           { name: 'notes', label: 'Triage notes', type: 'multiline', initial: e.triageNotes ?? '' }]}
         onConfirm={async (v) => { await post(`${Q}/events/${e.id}/classify`, { category: nul(v.category), classification: v.classification, likelihood: Number(v.likelihood || 0), impact: Number(v.impact || 0), notes: nul(v.notes) }); qc.invalidateQueries({ queryKey: ['qevent', id] }); }} />
-      <EscalateDialog open={dlg === 'escalate'} eventId={e.id} title={e.title} onClose={() => setDlg(null)} onDone={(t) => { qc.invalidateQueries({ queryKey: ['qevent', id] }); if (t.type === 'Deviation') nav(`${base}/deviations/${t.id}`); else if (t.type === 'QualityInvestigation') nav(`${base}/investigations/${t.id}`); }} />
+      <EscalateDialog open={dlg === 'escalate'} eventId={e.id} title={e.title} onClose={() => setDlg(null)} onDone={(t) => { qc.invalidateQueries({ queryKey: ['qevent', id] }); if (t.type === 'Deviation') nav(`${base}/deviations/${t.id}`); else if (t.type === 'QualityInvestigation') nav(`${base}/investigations/${t.id}`); else if (t.type === 'Complaint') nav(`/complaints/${t.id}`); }} />
       <StepDialog open={dlg === 'close'} title="Close event" confirm="Close event" onClose={() => setDlg(null)} inputs={[{ name: 'notes', label: 'Closure notes', type: 'multiline' }]}
         onConfirm={async (v) => { await post(`${Q}/events/${e.id}/close`, { notes: v.notes }); qc.invalidateQueries({ queryKey: ['qevent', id] }); }} />
       <StepDialog open={dlg === 'reject'} title="Reject event" intro="Use when the report is not a quality event (duplicate, out of scope)." confirm="Reject" danger onClose={() => setDlg(null)} inputs={[{ name: 'reason', label: 'Reason', type: 'multiline' }]}
@@ -226,11 +226,11 @@ function EscalateDialog({ open, eventId, title, onClose, onDone }: { open: boole
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>Escalate event</DialogTitle>
       <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Create a deviation or an investigation from this event, or link it to an existing record in another module.</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Create a deviation, an investigation or a customer complaint from this event, or link it to an existing record in another module.</Typography>
         {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
         <Stack gap={2} sx={{ pt: 1 }}>
           <TextField select label="Escalate to" value={target} onChange={(e) => setTarget(e.target.value)}>
-            <MenuItem value="deviation">New deviation</MenuItem><MenuItem value="investigation">New investigation</MenuItem><MenuItem value="record">Existing record</MenuItem></TextField>
+            <MenuItem value="deviation">New deviation</MenuItem><MenuItem value="investigation">New investigation</MenuItem><MenuItem value="complaint">New customer complaint</MenuItem><MenuItem value="record">Existing record</MenuItem></TextField>
           {target !== 'record' && <TextField label="Title" value={t} onChange={(e) => setT(e.target.value)} />}
           {target !== 'record' && <TextField select label="Owner" value={owner} onChange={(e) => setOwner(e.target.value)}><MenuItem value="">Me</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>}
           {target === 'record' && <RecordPicker label="Find the NCR, CAPA, complaint or other record" onChange={(r) => setRec({ type: r?.type ?? '', id: r?.id ?? '' })} />}
