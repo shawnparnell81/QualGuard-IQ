@@ -47,10 +47,12 @@ public sealed class DocumentService(
 {
     private Task<DateOnly> TodayAsync(Guid siteId, CancellationToken ct) => calendar.TodayAsync(siteId, ct);
 
-    public async Task<ControlledDocument> CreateAsync(CreateDocumentRequest req, CancellationToken ct)
+    /// <param name="preAuthorized">True only when the caller has already authorized the creation, for example an import whose uploader held the edit
+    /// permission (checked at upload) and which someone else approved with the import approval permission.</param>
+    public async Task<ControlledDocument> CreateAsync(CreateDocumentRequest req, CancellationToken ct, bool preAuthorized = false)
     {
         var (_, edit, _) = DocumentRecordTypes.Perms(req.Kind);
-        if (!await access.CanAccessAsync(current.UserId!.Value, edit, req.SiteId, req.DepartmentId, ct)) throw new ForbiddenException();
+        if (!preAuthorized && !await access.CanAccessAsync(current.UserId!.Value, edit, req.SiteId, req.DepartmentId, ct)) throw new ForbiddenException();
         Validate(req.Title, req.DocumentType, req.ReviewIntervalMonths, req.SheetCount);
         if (!await db.Sites.AnyAsync(s => s.Id == req.SiteId && !s.IsArchived, ct)) throw new AppException("Select an active site.");
         if (req.DepartmentId is { } d && !await db.Departments.AnyAsync(x => x.Id == d && x.SiteId == req.SiteId, ct)) throw new AppException("The department does not belong to the site.");
@@ -95,10 +97,10 @@ public sealed class DocumentService(
         await IndexAsync(doc, ct);
     }
 
-    public async Task UpdateRevisionAsync(Guid revisionId, UpdateRevisionRequest req, CancellationToken ct)
+    public async Task UpdateRevisionAsync(Guid revisionId, UpdateRevisionRequest req, CancellationToken ct, bool preAuthorized = false)
     {
         var rev = await db.DocumentRevisions.Include(r => r.Document).FirstOrDefaultAsync(r => r.Id == revisionId, ct) ?? throw new NotFoundException("Revision");
-        await records.RequireEditAsync(DocumentRecordTypes.ForDocument(rev.Document!.Kind), rev.DocumentId, ct);
+        if (!preAuthorized) await records.RequireEditAsync(DocumentRecordTypes.ForDocument(rev.Document!.Kind), rev.DocumentId, ct);
         if (rev.Status != RevisionStatus.Draft) throw new AppException("Only draft revisions can be edited.", 409);
         if (string.IsNullOrWhiteSpace(req.ChangeSummary)) throw new AppException("A change summary is required.");
         if (req.EffectiveDate is { } e && e < await TodayAsync(rev.Document.SiteId, ct)) throw new AppException("The effective date cannot be in the past.");

@@ -149,7 +149,7 @@ public sealed partial class ImportCenterService
         var type = es.DocumentType ?? await db.DocumentTypes.Where(t => t.Kind == kind && t.IsActive).OrderBy(t => t.SortOrder).Select(t => t.Name).FirstOrDefaultAsync(ct)
             ?? throw new AppException("No active document type exists for this kind of document.");
         var doc = await docs.CreateAsync(new CreateDocumentRequest(kind, title, type, job.SiteId, job.DepartmentId, job.SubmittedById, 12, null, null, null, null,
-            $"Imported from {job.OriginalFileName} ({job.Number})"), ct);
+            $"Imported from {job.OriginalFileName} ({job.Number})"), ct, preAuthorized: true);
         var full = await db.Documents.Include(d => d.Revisions).FirstAsync(d => d.Id == doc.Id, ct);
         full.Source = job.FileType switch { "xlsx" or "xlsm" or "xls" => TemplateSource.Excel, "docx" or "doc" => TemplateSource.Word, "pdf" => TemplateSource.Pdf, "csv" => TemplateSource.Csv, _ => TemplateSource.Native };
         full.Description = $"Imported by {job.Number} from {job.OriginalFileName} (SHA-256 {job.FileHash[..12]}…).";
@@ -158,7 +158,7 @@ public sealed partial class ImportCenterService
         if (kind == DocumentKind.FormTemplate)
         {
             var def = ConvertedDefinition(job) ?? throw new AppException("The file has not been converted yet.");
-            await docs.UpdateRevisionAsync(rev.Id, new UpdateRevisionRequest(rev.ChangeSummary, null, false, rev.RowVersion, FormDefinitions.Serialize(def)), ct);
+            await docs.UpdateRevisionAsync(rev.Id, new UpdateRevisionRequest(rev.ChangeSummary, null, false, rev.RowVersion, FormDefinitions.Serialize(def)), ct, preAuthorized: true);
         }
         // the original travels with the new revision as locked evidence (copied, so either can be archived on its own)
         var src = await db.Attachments.AsNoTracking().FirstAsync(a => a.Id == job.SourceFileId, ct);
