@@ -63,8 +63,20 @@ export const makeTheme = (primary?: string | null, mode: PaletteMode = 'light') 
           a: { color: main },
         },
       },
-      MuiPaper: { defaultProps: { elevation: 0 }, styleOverrides: { root: { border: `1px solid ${divider}`, backgroundImage: 'none' }, rounded: { borderRadius: 3 } } },
-      MuiCard: { styleOverrides: { root: { borderRadius: 3 } } },
+      // Panels: hairline border with a soft shadow. Clickable cards lift on hover, pick up the brand colour on the border and show an accent edge.
+      MuiPaper: { defaultProps: { elevation: 0 }, styleOverrides: { root: { border: `1px solid ${divider}`, backgroundImage: 'none', boxShadow: dark ? 'none' : '0 1px 2px rgba(16, 24, 40, 0.05)' }, rounded: { borderRadius: 6 } } },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8, position: 'relative', overflow: 'hidden',
+            transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
+            '&:has(.MuiCardActionArea-root)::after': { content: '""', position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(180deg, ${main}, ${brand.copper})`, opacity: 0, transition: 'opacity .18s ease' },
+            '&:has(.MuiCardActionArea-root):hover': { transform: 'translateY(-2px)', borderColor: alpha(main, 0.55), boxShadow: dark ? `0 8px 22px ${alpha('#000000', 0.45)}` : `0 10px 24px ${alpha(main, 0.14)}` },
+            '&:has(.MuiCardActionArea-root):hover::after': { opacity: 1 },
+          },
+        },
+      },
+      MuiCardActionArea: { styleOverrides: { focusHighlight: { opacity: '0 !important' } } },
       MuiMenu: { styleOverrides: { paper: { boxShadow: dark ? 'none' : '0 6px 18px rgba(20, 32, 50, 0.12)' } } },
       MuiDialog: { styleOverrides: { paper: { borderRadius: 4, borderTop: `3px solid ${main}` } } },
       MuiTab: { styleOverrides: { root: { textTransform: 'none', fontWeight: 600, minWidth: 0, paddingLeft: 14, paddingRight: 14 } } },
