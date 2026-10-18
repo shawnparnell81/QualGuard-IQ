@@ -22,6 +22,6 @@ test.describe('E2E 25: video playback copies', () => {
     await expect(panel).toContainText('MP4: Queued');
     await expect(panel.getByRole('link', { name: 'Download original' })).toBeVisible();
     if (!status.converterAvailable) await expect(page.getByText(/Playback copies are not being made: .*Video:FfmpegPath/)).toBeVisible();
-    await shot(page, '23-video-conversion-status');
+    await shot(page, '195-gap23-video-conversion-status');
   });
 });

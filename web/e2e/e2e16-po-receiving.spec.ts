@@ -68,7 +68,7 @@ test.describe('E2E 16: PO receiving at the scan station', () => {
     const result = page.getByTestId('receive-result');
     await expect(result).toContainText('Awaiting inspection');
     await expect(result).toContainText(/Hold HOLD-/);
-    await shot(page, '12-po-receiving-scan-station');
+    await shot(page, '183-gap12-po-receiving-scan-station');
     await result.getByRole('link', { name: /Labels \(3\)/ }).click();
     await expect(page.getByTestId('receipt-label')).toHaveCount(3);
     await expect(page.getByTestId('receipt-label').first()).toContainText('Lot · line 1');
@@ -79,7 +79,7 @@ test.describe('E2E 16: PO receiving at the scan station', () => {
     await expect(page.getByText(/Hold HOLD-/)).toBeVisible();
     // Nothing on the phone layout is wider than the screen.
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(412);
-    await shot(page, '12-po-receiving');
+    await shot(page, '184-gap12-po-receiving');
   });
 
   test('blind receiving is offered only with its own permission and the API refuses it otherwise', async ({ page }) => {

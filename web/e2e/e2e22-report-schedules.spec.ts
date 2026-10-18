@@ -34,7 +34,7 @@ test.describe('E2E 22: report schedules', () => {
     await expect(history).toContainText('Manual');
     await history.getByRole('row').nth(1).click();
     await expect(card).toContainText(`${users.approver.name}: delivered`);
-    await shot(page, '19-report-schedule-history');
+    await shot(page, '191-gap19-report-schedule-history');
 
     await card.getByRole('button', { name: 'Pause' }).click();
     await dialog(page).getByLabel('Reason (optional)').fill('Plant shutdown week');
@@ -74,6 +74,6 @@ test.describe('E2E 22: report schedules', () => {
     await admin.getByRole('checkbox', { name: 'Allow scheduled reports to be attached' }).uncheck();
     await admin.getByRole('button', { name: 'Save policy' }).click();
     await expect(admin.getByText('Policy saved.')).toBeVisible();
-    await shot(page, '22-report-delivery-policy');
+    await shot(page, '194-gap22-report-delivery-policy');
   });
 });

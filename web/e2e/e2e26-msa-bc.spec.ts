@@ -28,7 +28,7 @@ test.describe('E2E 26: bias study results and BC manufacturing validation', () =
     const versions = page.getByRole('table').filter({ hasText: 'Calculation' });
     await expect(versions.getByText('Yes (approved basis)')).toHaveCount(1);
     await expect(versions.locator('tbody tr')).toHaveCount(2);
-    await shot(page, '06-bias-study-result-versions');
+    await shot(page, '176-gap06-bias-study-result-versions');
     await api.dispose(); await admin.dispose();
   });
 
@@ -39,7 +39,7 @@ test.describe('E2E 26: bias study results and BC manufacturing validation', () =
     await page.goto(`/integrations/${c.id}?tab=validation`);
     await expect(page.getByTestId('erp-gate-summary')).toContainText('Cannot be enabled yet');
     await expect(page.getByTestId('erp-assumption').first()).toContainText('Unverified');
-    await shot(page, '09-bc-manufacturing-validation');
+    await shot(page, '180-gap09-bc-manufacturing-validation');
     await api.dispose();
   });
 });
