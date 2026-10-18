@@ -28,6 +28,7 @@ public sealed class TestApp : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Seed:AdminMustChangePassword", "false");
         builder.UseSetting("RateLimits:LoginPerMinute", "1000");
         builder.UseSetting("RateLimits:RequestsPerMinute", "100000");
+        builder.UseSetting("RateLimits:ProcessingPerMinute", "100000");
         builder.UseSetting("Storage:ServiceUrl", Environment.GetEnvironmentVariable("QMS_TEST_S3") ?? "http://localhost:9000");
         builder.UseSetting("Storage:AccessKey", Environment.GetEnvironmentVariable("QMS_TEST_S3_KEY") ?? "qgiqminio");
         builder.UseSetting("Storage:SecretKey", Environment.GetEnvironmentVariable("QMS_TEST_S3_SECRET") ?? "qgiqminio-local-dev");

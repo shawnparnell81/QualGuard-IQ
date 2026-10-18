@@ -100,6 +100,10 @@ builder.Services.AddRateLimiter(o =>
     o.AddPolicy("login", ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimits:LoginPerMinute", 10), Window = TimeSpan.FromMinutes(1) }));
+    // Expensive processing (upload inspection, conversion, previews, rendering, OCR, migrations): a separate, lower per-caller limit.
+    o.AddPolicy("processing", ctx => RateLimitPartition.GetFixedWindowLimiter(
+        "proc:" + (ctx.User.FindFirst(ApiKeyHandler.ClientClaim)?.Value ?? ctx.User.Identity?.Name ?? ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown"),
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimits:ProcessingPerMinute", 30), Window = TimeSpan.FromMinutes(1) }));
     // Public API clients get their own per-client limit (set on the client); everyone else shares the per-user limit.
     o.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(ctx => ctx.User.FindFirst(ApiKeyHandler.ClientClaim)?.Value is { } client
         ? RateLimitPartition.GetFixedWindowLimiter("api:" + client + ":" + ctx.User.FindFirst(ApiKeyHandler.RateClaim)?.Value,
@@ -130,6 +134,7 @@ if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
 }
 await app.Services.GetRequiredService<QualGuardIQ.Infrastructure.Storage.IFileStorage>().EnsureReadyAsync(CancellationToken.None);
 
+app.UseCorrelationId();
 app.UseForwardedHeaders();
 app.UseExceptionHandler();
 app.Use(async (ctx, next) =>
@@ -184,6 +189,7 @@ app.Use(async (ctx, next) =>
     }
     await next();
 });
+app.UseMiddleware<IdempotencyMiddleware>();
 
 app.UseAuthorization();
 

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using QualGuardIQ.Domain.Imports;
 using QualGuardIQ.Infrastructure.Modules.Imports;
@@ -47,6 +48,7 @@ public sealed class ImportsController(ImportCenterService imports, AppDbContext 
         return new Page<JobListItem>(items, total, page, pageSize);
     }
 
+    [EnableRateLimiting("processing")]
     [HttpPost]
     [RequestSizeLimit(210L * 1024 * 1024), RequestFormLimits(MultipartBodyLengthLimit = 210L * 1024 * 1024)]
     public async Task<ActionResult<Guid>> Upload(IFormFile file, [FromForm] Guid siteId, [FromForm] Guid? departmentId, [FromForm] string mode, [FromForm] string? targetModule, [FromForm] Guid? targetTemplateId, CancellationToken ct)
@@ -81,6 +83,7 @@ public sealed class ImportsController(ImportCenterService imports, AppDbContext 
     [HttpPut("{id:guid}/excel-settings")] public async Task<IActionResult> ExcelSettings(Guid id, ExcelSettingsRequest req, CancellationToken ct) { await imports.UpdateExcelSettingsAsync(id, req, ct); return NoContent(); }
     [HttpPut("{id:guid}/word-settings")] public async Task<IActionResult> WordSettings(Guid id, WordSettingsRequest req, CancellationToken ct) { await imports.UpdateWordSettingsAsync(id, req, ct); return NoContent(); }
     /// <summary>The original rendered to PDF (Word and Excel through the office conversion adapter), for the side-by-side fidelity comparison.</summary>
+    [EnableRateLimiting("processing")]
     [HttpGet("{id:guid}/original-preview")]
     public async Task<IActionResult> OriginalPreview(Guid id, CancellationToken ct)
     {
@@ -112,8 +115,10 @@ public sealed class ImportsController(ImportCenterService imports, AppDbContext 
     /// <summary>Secured grid preview of one worksheet of the preserved original (values, formula, validation and named-range indicators; nothing is run).</summary>
     [HttpGet("{id:guid}/workbook")] public Task<QualGuardIQ.Infrastructure.Modules.Imports.Excel.GridPreview> Workbook(Guid id, [FromQuery] string? sheet, CancellationToken ct) => imports.WorkbookGridAsync(id, sheet, ct);
     [HttpPut("{id:guid}/mapping")] public async Task<IActionResult> Mapping(Guid id, MappingRequest req, CancellationToken ct) { await imports.UpdateMappingAsync(id, req, ct); return NoContent(); }
+    [EnableRateLimiting("processing")]
     [HttpPost("{id:guid}/validate")] public Task<DryRunSummary> Validate(Guid id, CancellationToken ct) => imports.ValidateAsync(id, ct);
     [HttpPost("{id:guid}/submit")] public async Task<IActionResult> Submit(Guid id, SubmitRequest req, CancellationToken ct) { await imports.SubmitAsync(id, req.SkipInvalidRows, ct); return NoContent(); }
+    [EnableRateLimiting("processing")]
     [HttpPost("{id:guid}/approve")]
     public async Task<IActionResult> Approve(Guid id, [FromBody(EmptyBodyBehavior = Microsoft.AspNetCore.Mvc.ModelBinding.EmptyBodyBehavior.Allow)] ApproveImportRequest? req, CancellationToken ct)
     { await imports.ApproveAsync(id, ct, req?.AcceptFidelityReport == true); return NoContent(); }
