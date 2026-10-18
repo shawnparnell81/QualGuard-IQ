@@ -96,10 +96,15 @@ public class Recall : Entity, IAudited, ISiteScoped
     public Guid? CapaId { get; set; }
     public Guid? NcrId { get; set; }
     public DateTimeOffset? ClosedAt { get; set; }
+    /// <summary>Mock recall: the trace and containment are exercised; no customer or supplier is contacted.</summary>
+    public bool IsExercise { get; set; }
+    public DateTimeOffset? ExerciseStartedAt { get; set; }
+    /// <summary>When the first complete trace finished (the exercise's trace time runs from the start to here).</summary>
+    public DateTimeOffset? TraceCompletedAt { get; set; }
     public Guid OwnerId { get; set; }
     public Guid SiteId { get; set; }
     public Guid? DepartmentId { get; set; }
-    public string AuditLabel => $"recall {Number}";
+    public string AuditLabel => IsExercise ? $"mock recall {Number}" : $"recall {Number}";
 }
 
 /// <summary>What a recall covers: a product, part, lot or serial. Traced customers and suppliers are computed from genealogy.</summary>

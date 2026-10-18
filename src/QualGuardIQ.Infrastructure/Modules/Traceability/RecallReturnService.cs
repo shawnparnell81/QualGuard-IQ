@@ -11,7 +11,7 @@ using QualGuardIQ.Infrastructure.Services;
 
 namespace QualGuardIQ.Infrastructure.Modules.Traceability;
 
-public sealed record RecallInput(string Title, string Reason, Severity RiskRating, Guid SiteId, Guid? DepartmentId, Guid? OwnerId, List<RecallItemInput> Items);
+public sealed record RecallInput(string Title, string Reason, Severity RiskRating, Guid SiteId, Guid? DepartmentId, Guid? OwnerId, List<RecallItemInput> Items, bool IsExercise = false);
 public sealed record RecallItemInput(Guid? ProductId, Guid? PartId, Guid? LotId, Guid? SerialId, string? Note);
 public sealed record RecallStepInput(string Notes);
 public sealed record PartyUpdate(Guid PartyId, bool Notified, bool Contained, string? Response);
@@ -40,7 +40,8 @@ public sealed class RecallService(AppDbContext db, ModuleSupport m, INumberingSe
         ModuleSupport.Required(r.Title, "Title", 300); ModuleSupport.Required(r.Reason, "Reason", 4000);
         if (r.Items.Count == 0) throw new AppException("Add at least one affected product, part, lot or serial.");
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var rc = new Recall { Number = await numbers.NextAsync(RecordType, r.SiteId, ct), Title = r.Title.Trim(), Reason = r.Reason.Trim(), RiskRating = r.RiskRating, OwnerId = r.OwnerId ?? m.UserId, SiteId = r.SiteId, DepartmentId = r.DepartmentId };
+        var rc = new Recall { Number = await numbers.NextAsync(RecordType, r.SiteId, ct), Title = r.Title.Trim(), Reason = r.Reason.Trim(), RiskRating = r.RiskRating, OwnerId = r.OwnerId ?? m.UserId, SiteId = r.SiteId, DepartmentId = r.DepartmentId,
+            IsExercise = r.IsExercise, ExerciseStartedAt = r.IsExercise ? m.Now : null };
         db.Recalls.Add(rc);
         foreach (var i in r.Items)
         {
@@ -99,8 +100,27 @@ public sealed class RecallService(AppDbContext db, ModuleSupport m, INumberingSe
             p.Quantity = v.Q; p.Lots = string.Join(", ", v.L.Order());
         }
         if (rc.Status == RecallStatus.Open) rc.Status = RecallStatus.Investigation;
+        if (rc.IsExercise && rc.TraceCompletedAt is null) rc.TraceCompletedAt = m.Now;
         await db.SaveChangesAsync(ct);
         return await db.RecallParties.AsNoTracking().Where(x => x.RecallId == id).ToListAsync(ct);
+    }
+
+    /// <summary>Mock recall result: trace time, parties and quantity traced, items without genealogy and containment progress.</summary>
+    public async Task<object> ExerciseReportAsync(Guid id, CancellationToken ct)
+    {
+        await m.ViewAsync(RecordType, id, ct);
+        var rc = await db.Recalls.AsNoTracking().FirstAsync(x => x.Id == id, ct);
+        if (!rc.IsExercise) throw new AppException("This recall is not an exercise.");
+        var parties = await db.RecallParties.AsNoTracking().Where(x => x.RecallId == id).ToListAsync(ct);
+        var customers = parties.Where(p => p.PartyKind == "Customer").ToList();
+        return new
+        {
+            rc.Number, rc.ExerciseStartedAt, rc.TraceCompletedAt,
+            TraceMinutes = rc.TraceCompletedAt is { } t && rc.ExerciseStartedAt is { } s0 ? Math.Round((t - s0).TotalMinutes, 1) : (double?)null,
+            Customers = customers.Count, Suppliers = parties.Count(p => p.PartyKind == "Supplier"), QuantityTraced = customers.Sum(p => p.Quantity),
+            CustomersContained = customers.Count(p => p.ContainedAt != null),
+            ContainedPercent = customers.Count == 0 ? (double?)null : Math.Round(100.0 * customers.Count(p => p.ContainedAt != null) / customers.Count, 1)
+        };
     }
 
     public async Task ContainAsync(Guid id, RecallStepInput r, CancellationToken ct)

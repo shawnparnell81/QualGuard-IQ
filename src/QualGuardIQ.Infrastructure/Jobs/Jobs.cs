@@ -140,11 +140,16 @@ public sealed class ReportScheduleJob(QualGuardIQ.Infrastructure.Modules.Platfor
     public Task RunAsync(CancellationToken ct) => distribution.RunDueAsync(ct);
 }
 
-/// <summary>Every 15 minutes: escalate approval stages waiting beyond their designed escalation time.</summary>
-public sealed class ApprovalEscalationJob(QualGuardIQ.Infrastructure.Services.WorkflowService workflow, QualGuardIQ.Infrastructure.Modules.Platform.RuleEngine rules)
+/// <summary>Every 15 minutes: escalate approval stages waiting beyond their designed escalation time, escalate missed service levels and close deviations that no longer apply.</summary>
+public sealed class ApprovalEscalationJob(QualGuardIQ.Infrastructure.Services.WorkflowService workflow, QualGuardIQ.Infrastructure.Modules.Platform.RuleEngine rules,
+    QualGuardIQ.Infrastructure.Modules.QualityOps.ServiceLevelService serviceLevels, QualGuardIQ.Infrastructure.Modules.QualityOps.DeviationService deviations)
 {
     [Hangfire.DisableConcurrentExecution(timeoutInSeconds: 300)]
-    public async Task RunAsync(CancellationToken ct) { await workflow.EscalateAsync(ct); await rules.EscalateAsync(ct); }
+    public async Task RunAsync(CancellationToken ct)
+    {
+        await workflow.EscalateAsync(ct); await rules.EscalateAsync(ct);
+        await serviceLevels.EscalateAsync(ct); await deviations.ExpireAsync(ct);
+    }
 }
 
 /// <summary>Every minute: sends pending label prints and retries failed ones whose back-off has passed.</summary>

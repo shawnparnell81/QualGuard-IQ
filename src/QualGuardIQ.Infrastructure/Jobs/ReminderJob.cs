@@ -64,6 +64,16 @@ public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegi
         foreach (var r in await db.Risks.Where(r => r.Status != RiskStatus.Closed && r.Status != RiskStatus.Cancelled && r.ReviewDueOn <= soon).Select(r => new { r.Id, r.Number, r.Title, r.OwnerId, Due = r.ReviewDueOn }).ToListAsync(ct))
             items.Add(($"risk-review:{r.Id}:{r.Due:yyyyMMdd}:{Phase(r.Due)}", r.OwnerId, $"Review of risk {r.Number} {r.Title} {(r.Due < today ? "is overdue" : $"is due {r.Due:yyyy-MM-dd}")}", "Risk", r.Id));
 
+        foreach (var g in await db.RegisterEntries.Where(g => !g.Archived && ((g.ExpiresOn != null && g.ExpiresOn <= soon) || (g.ReviewDueOn != null && g.ReviewDueOn <= soon)))
+                     .Select(g => new { g.Id, g.Number, g.Title, g.Kind, g.Status, g.OwnerId, g.ExpiresOn, g.ReviewDueOn }).ToListAsync(ct))
+        {
+            if (Modules.QualityOps.RegisterService.Definition(g.Kind).ClosedStatuses.Contains(g.Status)) continue;
+            if (g.ExpiresOn is { } ex && ex <= soon)
+                items.Add(($"register-expiry:{g.Id}:{ex:yyyyMMdd}:{Phase(ex)}", g.OwnerId, $"{g.Number} {g.Title} {(ex < today ? $"expired on {ex:yyyy-MM-dd}" : $"expires {ex:yyyy-MM-dd}")}", Modules.QualityOps.RegisterService.RecordType, g.Id));
+            if (g.ReviewDueOn is { } rv && rv <= soon)
+                items.Add(($"register-review:{g.Id}:{rv:yyyyMMdd}:{Phase(rv)}", g.OwnerId, $"Review of {g.Number} {g.Title} {(rv < today ? "is overdue" : $"is due {rv:yyyy-MM-dd}")}", Modules.QualityOps.RegisterService.RecordType, g.Id));
+        }
+
         var escalateBefore = today.AddDays(-EscalationDays);
         var escalations = await db.ActionItems.Where(a => (a.Status == ActionStatus.Open || a.Status == ActionStatus.InProgress) && a.DueDate < escalateBefore && a.EscalatedAt == null && a.CreatedById != null).ToListAsync(ct);
         foreach (var a in escalations)
