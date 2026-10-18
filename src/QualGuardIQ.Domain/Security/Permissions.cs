@@ -27,6 +27,10 @@ public static class Permissions
     public const string ImportsEdit = "imports.edit";
     /// <summary>Approve (run) and roll back imports submitted by someone else.</summary>
     public const string ImportsApprove = "imports.approve";
+    /// <summary>Install industry template packages and library templates as draft form templates.</summary>
+    public const string TemplatesInstall = "templates.install";
+    /// <summary>Export form templates as a template package file, and import package files from other installations.</summary>
+    public const string TemplatesExport = "templates.export";
     public const string NcrView = "ncr.view";
     public const string NcrEdit = "ncr.edit";
     public const string NcrApprove = "ncr.approve";

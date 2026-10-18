@@ -25,6 +25,9 @@ public sealed record LibraryTemplate(string Key, string Title, string Category, 
 /// </summary>
 public static class TemplateLibrary
 {
+    /// <summary>Version of the built-in library content; installed packages record the version they came from.</summary>
+    public const string Version = "2026.10";
+
     public static readonly IReadOnlyList<LibraryCategory> Categories =
     [
         new("NONCONFORMANCE", "Nonconformance", "ncr", 300, "Nonconformance reports, containment, segregation and disposition authorizations."),
