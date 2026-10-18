@@ -1,12 +1,39 @@
-# Local and self-hosted deployment. Copy .env.example to .env and set real secrets first.
+# Local and self-hosted deployment. Copy .env.example to .env, fill in the values, then run:
+#   docker compose up -d --build
+# The web app is published on http://localhost:${WEB_PORT:-8081}. PostgreSQL, MinIO and the API are not published on the
+# host, so they never clash with a PostgreSQL server or other services already installed on the computer.
+# File storage: MinIO in a container by default (COMPOSE_PROFILES=minio). For Cloudflare R2, Amazon S3 or another
+# S3-compatible service, set COMPOSE_PROFILES empty and fill in the STORAGE_* values in .env.
+
+x-storage: &storage
+  Storage__Provider: S3
+  Storage__ServiceUrl: ${STORAGE_SERVICE_URL:-http://minio:9000}
+  Storage__Bucket: ${STORAGE_BUCKET:-qms-files}
+  Storage__Region: ${STORAGE_REGION:-us-east-1}
+  Storage__ForcePathStyle: ${STORAGE_FORCE_PATH_STYLE:-true}
+  Storage__AccessKey: ${STORAGE_ACCESS_KEY:-${MINIO_ROOT_USER:-}}
+  Storage__SecretKey: ${STORAGE_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-}}
+
+x-app: &app
+  ConnectionStrings__Default: Host=postgres;Database=qgiq;Username=qgiq;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+  App__BaseUrl: ${APP_BASE_URL:-http://localhost:8081}
+  Seed__TimeZone: ${TIME_ZONE:-America/New_York}
+  DataProtection__KeyPath: /keys
+  Video__FfmpegPath: /usr/bin/ffmpeg
+  MalwareScanning__Provider: ClamAV
+  MalwareScanning__ClamAV__Host: clamav
+
 services:
   postgres:
     image: postgres:18
+    restart: unless-stopped
     environment:
       POSTGRES_DB: qgiq
       POSTGRES_USER: qgiq
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
     volumes: [pgdata:/var/lib/postgresql]
+    # Not published on the host by default. To connect a desktop tool, set POSTGRES_HOST_PORT in .env and add
+    # docker-compose.db-port.yml: docker compose -f docker-compose.yml -f docker-compose.db-port.yml up -d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U qgiq -d qgiq"]
       interval: 10s
@@ -14,62 +41,70 @@ services:
 
   clamav:
     image: clamav/clamav:stable
+    restart: unless-stopped
+    volumes: [clamdb:/var/lib/clamav]
     healthcheck:
       test: ["CMD-SHELL", "clamdcheck.sh"]
       interval: 30s
       retries: 20
-      start_period: 120s
+      start_period: 180s
+
   minio:
-    image: minio/minio
+    # Last published MinIO community image (the project now ships source only).
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    profiles: [minio]
+    restart: unless-stopped
     command: server /data --console-address :9001
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-qgiqminio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
     volumes: [miniodata:/data]
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      # the image has no curl; mc ships with it
+      test: ["CMD", "mc", "ready", "local"]
       interval: 10s
-      retries: 5
+      retries: 10
 
   api:
     build: { context: ., dockerfile: deploy/Dockerfile.api }
+    restart: unless-stopped
     environment:
-      ConnectionStrings__Default: Host=postgres;Database=qgiq;Username=qgiq;Password=${POSTGRES_PASSWORD}
+      <<: [*app, *storage]
       Database__MigrateOnStartup: "true"
-      Storage__ServiceUrl: http://minio:9000
-      MalwareScanning__Provider: ClamAV
-      MalwareScanning__ClamAV__Host: clamav
-      Storage__AccessKey: ${MINIO_ROOT_USER}
-      Storage__SecretKey: ${MINIO_ROOT_PASSWORD}
       Seed__ApplicationName: ${APP_NAME:-QualGuard IQ}
-      Seed__AdminEmail: ${ADMIN_EMAIL}
-      Seed__AdminPassword: ${ADMIN_PASSWORD}
-      Video__FfmpegPath: /usr/bin/ffmpeg
+      Seed__OrganizationName: ${ORGANIZATION_NAME:-Your Organization}
+      Seed__AdminEmail: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+      Seed__AdminPassword: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+      Seed__AdminName: ${ADMIN_NAME:-Administrator}
+    volumes: [dpkeys:/keys]
     depends_on:
       postgres: { condition: service_healthy }
-      minio: { condition: service_healthy }
+      minio: { condition: service_healthy, required: false }
       clamav: { condition: service_healthy }
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health/ready || exit 1"]
       interval: 15s
+      retries: 10
+      start_period: 120s
 
   worker:
     build: { context: ., dockerfile: deploy/Dockerfile.worker }
+    restart: unless-stopped
     environment:
-      ConnectionStrings__Default: Host=postgres;Database=qgiq;Username=qgiq;Password=${POSTGRES_PASSWORD}
-      Storage__ServiceUrl: http://minio:9000
-      Storage__AccessKey: ${MINIO_ROOT_USER}
-      Storage__SecretKey: ${MINIO_ROOT_PASSWORD}
-      Video__FfmpegPath: /usr/bin/ffmpeg
+      <<: [*app, *storage]
+    volumes: [dpkeys:/keys]
     depends_on:
       api: { condition: service_healthy }
 
   web:
     build: { context: ., dockerfile: deploy/Dockerfile.web }
-    ports: ["8081:80"]
+    restart: unless-stopped
+    ports: ["${WEB_PORT:-8081}:80"]
     depends_on:
       api: { condition: service_healthy }
 
 volumes:
   pgdata:
   miniodata:
+  clamdb:
+  dpkeys:

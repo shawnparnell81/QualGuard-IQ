@@ -44,7 +44,7 @@ Source, EF code-first migrations in schema `qms` with real foreign keys, templat
 - Baseline before this build: backend 299, e2e 84. All earlier tests still pass.
 
 ## Open questions
-Q1–Q6 in CHECKPOINT.md (Questions for Shawn). The most literal reading is built until answered.
+Q1–Q6 (questions for Shawn) were raised separately. The most literal reading is built until answered.
 
 ## Result
 Accepted against the prompts and the agreed fidelity items, with the limitations in [known limitations](../../guides/forms-import/known-limitations.md) and the open questions above.

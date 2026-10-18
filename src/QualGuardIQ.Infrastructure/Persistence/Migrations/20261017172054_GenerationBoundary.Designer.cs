@@ -4083,7 +4083,7 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("mes_events", "qms");
                 });
 
-            modelBuilder.Entity("QualGuardIQ.Domain.Intelligence.AiFunctionPolicy", b =>
+            modelBuilder.Entity("QualGuardIQ.Domain.Intelligence.GenerationFunctionPolicy", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -4127,10 +4127,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("ProviderId");
 
-                    b.ToTable("ai_function_policies", "qms");
+                    b.ToTable("generation_function_policies", "qms");
                 });
 
-            modelBuilder.Entity("QualGuardIQ.Domain.Intelligence.AiProvider", b =>
+            modelBuilder.Entity("QualGuardIQ.Domain.Intelligence.GenerationProvider", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -4212,10 +4212,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasIndex("Name")
                         .IsUnique();
 
-                    b.ToTable("ai_providers", "qms");
+                    b.ToTable("generation_providers", "qms");
                 });
 
-            modelBuilder.Entity("QualGuardIQ.Domain.Intelligence.AiRequestLog", b =>
+            modelBuilder.Entity("QualGuardIQ.Domain.Intelligence.GenerationRequestLog", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -4328,10 +4328,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UserId", "CreatedAt");
 
-                    b.ToTable("ai_request_logs", "qms");
+                    b.ToTable("generation_request_logs", "qms");
                 });
 
-            modelBuilder.Entity("QualGuardIQ.Domain.Intelligence.AiSettings", b =>
+            modelBuilder.Entity("QualGuardIQ.Domain.Intelligence.GenerationSettings", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
@@ -4384,7 +4384,7 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ai_settings", "qms");
+                    b.ToTable("generation_settings", "qms");
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.MasterData.Customer", b =>
@@ -20115,9 +20115,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("QualGuardIQ.Domain.Intelligence.AiFunctionPolicy", b =>
+            modelBuilder.Entity("QualGuardIQ.Domain.Intelligence.GenerationFunctionPolicy", b =>
                 {
-                    b.HasOne("QualGuardIQ.Domain.Intelligence.AiProvider", null)
+                    b.HasOne("QualGuardIQ.Domain.Intelligence.GenerationProvider", null)
                         .WithMany()
                         .HasForeignKey("ProviderId")
                         .OnDelete(DeleteBehavior.SetNull);

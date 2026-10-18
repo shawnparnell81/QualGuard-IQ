@@ -54,14 +54,16 @@ npm run dev        # http://localhost:5173, proxies /api to QGIQ_API_URL (defaul
 
 ## Run with Docker
 
-Copy `.env.example` to `.env`, fill in every value, then `docker compose up --build`.
-Compose includes a ClamAV daemon; the API scans every upload with it.
+Copy `.env.example` to `.env`, fill in the values, then `docker compose up -d --build` and open http://localhost:8081.
+Compose includes a ClamAV daemon; the API scans every upload with it. Files go to MinIO in a container by default
+(`COMPOSE_PROFILES=minio`); for Cloudflare R2 or Amazon S3 leave `COMPOSE_PROFILES` empty and fill in the `STORAGE_*` values.
+PostgreSQL is not published on the host. Step-by-step Windows instructions: [docs/guides/laptop-setup.md](docs/guides/laptop-setup.md).
 
 ## File storage and malware scanning
 
 | Setting | Values |
 |---|---|
-| `Storage:Provider` | `S3` (default; MinIO locally, Amazon S3 by `ServiceUrl`/credentials) or `AzureBlob` (`Storage:ConnectionString`, `Storage:Container`) |
+| `Storage:Provider` | `S3` (default; MinIO locally, Amazon S3 or Cloudflare R2 by `ServiceUrl`, `Region` (`auto` for R2) and credentials) or `AzureBlob` (`Storage:ConnectionString`, `Storage:Container`) |
 | `MalwareScanning:Provider` | `None` (default, files marked NotScanned) or `ClamAV` (`MalwareScanning:ClamAV:Host`/`Port`, default 127.0.0.1:3310, or `Socket`) |
 | `MalwareScanning:AllowWhenUnavailable` | `false` (default): uploads are refused while the scanner cannot be reached |
 

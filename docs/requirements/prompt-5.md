@@ -1,6 +1,6 @@
 # MASTER BUILD PROMPT 5 (Shawn, 2026-10-16 10:13 PM ET). Content verbatim; bullet lists joined with semicolons.
 ERP INTEGRATION, MES INTEGRATION, INVENTORY TRACEABILITY, SHOP FLOOR QUALITY, ADVANCED ANALYTICS, AI COPILOT, AND ENTERPRISE MANUFACTURING CONNECTIVITY
-SHAWN'S DIRECTIVE: Research and build the ERP connectors exactly as each vendor requires. The first prior product NetSuite connector was wrong (webhooks; it was replaced with OAuth 2.0 M2M + REST). ALL ERP CONNECTORS NEED TO BE CORRECT. Each connector must follow that vendor's official docs (auth flow, API, objects, field names, paging, rate limits, errors), with every claim cited to a doc in docs/integrations/<erp>.md, and be tested against recorded vendor-shaped fixtures or a sandbox. No guessed endpoints.
+SHAWN'S DIRECTIVE: Research and build the ERP connectors exactly as each vendor requires. The first NetSuite connector was wrong (webhooks; it was replaced with OAuth 2.0 M2M + REST). ALL ERP CONNECTORS NEED TO BE CORRECT. Each connector must follow that vendor's official docs (auth flow, API, objects, field names, paging, rate limits, errors), with every claim cited to a doc in docs/integrations/<erp>.md, and be tested against recorded vendor-shaped fixtures or a sandbox. No guessed endpoints.
 Run order: after Prompt 4, before Prompt 3 hardening.
 
 IMPORTANT

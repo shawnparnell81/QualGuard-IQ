@@ -1,6 +1,6 @@
 # Import, security and performance test results
 
-Run on 2026-10-18 (local PostgreSQL :5433, test databases only). Backend totals: see CHECKPOINT.md (B14 line). Counts below are test methods per class.
+Run on 2026-10-18 (local PostgreSQL :5433, test databases only). Backend totals: 484/484. Counts below are test methods per class.
 
 ## Import tests
 | Class | Tests | Covers |

@@ -1,0 +1,13 @@
+.git
+.vs
+.vscode
+**/bin
+**/obj
+**/node_modules
+web/dist
+web/test-results
+web/playwright-report
+docs
+.env
+*.private.pem
+*.DEVELOPMENT-ONLY.*

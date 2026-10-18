@@ -5,7 +5,7 @@
 | Component | Purpose | Image / project |
 |---|---|---|
 | PostgreSQL 18 | All application data (schema `qms`) and the job queue | `postgres:18` |
-| Object storage | Attachments and document files (MinIO, Amazon S3 or Azure Blob) | `minio/minio` |
+| Object storage | Attachments and document files (MinIO, Amazon S3, Cloudflare R2 or Azure Blob) | `minio/minio` (compose profile `minio`) |
 | ClamAV | Malware scanning of uploads | `clamav/clamav:stable` |
 | API | REST API and authentication | `deploy/Dockerfile.api` |
 | Worker | Scheduled and background jobs (Hangfire) | `deploy/Dockerfile.worker` |
@@ -13,8 +13,8 @@
 
 ## Docker Compose
 
-1. Copy `.env.example` to `.env` and set every value (database password, object storage keys, first administrator).
-2. `docker compose up --build -d`
+1. Copy `.env.example` to `.env` and set the values (database password, first administrator, file storage). With MinIO keep `COMPOSE_PROFILES=minio`; for Cloudflare R2 or Amazon S3 set `COMPOSE_PROFILES=` and fill in `STORAGE_SERVICE_URL`, `STORAGE_BUCKET`, `STORAGE_REGION` (`auto` for R2), `STORAGE_ACCESS_KEY` and `STORAGE_SECRET_KEY`. A bucket made in advance is only checked, never created.
+2. `docker compose up -d --build`. PostgreSQL is not published on the host; `docker-compose.db-port.yml` publishes it on `127.0.0.1:5433` when a desktop tool needs it. Windows steps: [laptop-setup.md](laptop-setup.md)
 3. Open the web app on the published port (8081 by default) and sign in as the first administrator. Change the password.
 4. Check `/health/ready` on the API.
 
@@ -24,13 +24,15 @@
 |---|---|
 | `ConnectionStrings:Default` | PostgreSQL connection string |
 | `Storage:Provider` | `S3` (MinIO or Amazon S3) or `AzureBlob` |
+| `Storage:ServiceUrl`, `Storage:Bucket`, `Storage:Region`, `Storage:AccessKey`, `Storage:SecretKey`, `Storage:ForcePathStyle` | S3 endpoint (empty for Amazon S3), bucket (default `qms-files`), signing region (default `us-east-1`; `auto` for Cloudflare R2), credentials, path-style addressing (default true) |
+| `DataProtection:KeyPath` | Folder for the Data Protection key ring (compose: `/keys` on the `dpkeys` volume), so sign-in sessions and encrypted settings survive restarts and rebuilds |
 | `MalwareScanning:Provider` | `None` or `ClamAV`; `MalwareScanning:AllowWhenUnavailable` defaults to `false` |
 | `Storage:MaxFileBytes`, `Storage:MaxVideoBytes` | Upload limits (defaults 100 MB and 1 GB); keep the reverse proxy limit (`client_max_body_size 1100m` in `deploy/nginx.conf`) at or above the video limit |
 | `Licensing:PublicKeyPem` | Publisher public key (PEM) used to verify marketplace licenses. This is the only licensing setting a deployment needs; the signing private key is held offline by the publisher (Shawn Parnell) and is never deployed |
 | `Licensing:DeploymentId` / `Licensing:CustomerId` | Optional. Licences limited to named deployments or a customer are accepted only when these match |
 | `Licensing:AcceptDevelopmentKeys` | Default false. Never set true on production; test installations only |
 | `Licensing:Signing:*` | Offline signing machine only (KeyId, Environment, PrivateKeyRef = env:NAME or file:/path). Not used by the API. See [license-key-custody.md](license-key-custody.md) |
-| `Seed:AdminEmail`, `Seed:AdminPassword` | First administrator, used only when no users exist |
+| `Seed:AdminEmail`, `Seed:AdminPassword` | First administrator, created at startup when no account with that email exists |
 | `Seed:*` | Organization and application names for a new installation |
 | `Seed:AdminMustChangePassword` | Default true: the seeded administrator chooses a new password at the first sign-in. Set false only for automated test installations |
 | `App:BaseUrl` | Public address of the web app (for example `https://qms.example.com`), used in password reset links. Required in production |

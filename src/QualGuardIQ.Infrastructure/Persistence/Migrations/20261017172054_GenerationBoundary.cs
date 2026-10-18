@@ -12,7 +12,7 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "ai_providers",
+                name: "generation_providers",
                 schema: "qms",
                 columns: table => new
                 {
@@ -40,11 +40,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ai_providers", x => x.Id);
+                    table.PrimaryKey("PK_generation_providers", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "ai_request_logs",
+                name: "generation_request_logs",
                 schema: "qms",
                 columns: table => new
                 {
@@ -82,11 +82,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ai_request_logs", x => x.Id);
+                    table.PrimaryKey("PK_generation_request_logs", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "ai_settings",
+                name: "generation_settings",
                 schema: "qms",
                 columns: table => new
                 {
@@ -108,11 +108,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ai_settings", x => x.Id);
+                    table.PrimaryKey("PK_generation_settings", x => x.Id);
                 });
 
             migrationBuilder.CreateTable(
-                name: "ai_function_policies",
+                name: "generation_function_policies",
                 schema: "qms",
                 columns: table => new
                 {
@@ -129,46 +129,46 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_ai_function_policies", x => x.Id);
+                    table.PrimaryKey("PK_generation_function_policies", x => x.Id);
                     table.ForeignKey(
-                        name: "FK_ai_function_policies_ai_providers_ProviderId",
+                        name: "FK_generation_function_policies_generation_providers_ProviderId",
                         column: x => x.ProviderId,
                         principalSchema: "qms",
-                        principalTable: "ai_providers",
+                        principalTable: "generation_providers",
                         principalColumn: "Id",
                         onDelete: ReferentialAction.SetNull);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_ai_function_policies_Function",
+                name: "IX_generation_function_policies_Function",
                 schema: "qms",
-                table: "ai_function_policies",
+                table: "generation_function_policies",
                 column: "Function",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_ai_function_policies_ProviderId",
+                name: "IX_generation_function_policies_ProviderId",
                 schema: "qms",
-                table: "ai_function_policies",
+                table: "generation_function_policies",
                 column: "ProviderId");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ai_providers_Name",
+                name: "IX_generation_providers_Name",
                 schema: "qms",
-                table: "ai_providers",
+                table: "generation_providers",
                 column: "Name",
                 unique: true);
 
             migrationBuilder.CreateIndex(
-                name: "IX_ai_request_logs_CreatedAt",
+                name: "IX_generation_request_logs_CreatedAt",
                 schema: "qms",
-                table: "ai_request_logs",
+                table: "generation_request_logs",
                 column: "CreatedAt");
 
             migrationBuilder.CreateIndex(
-                name: "IX_ai_request_logs_UserId_CreatedAt",
+                name: "IX_generation_request_logs_UserId_CreatedAt",
                 schema: "qms",
-                table: "ai_request_logs",
+                table: "generation_request_logs",
                 columns: new[] { "UserId", "CreatedAt" });
         }
 
@@ -176,19 +176,19 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "ai_function_policies",
+                name: "generation_function_policies",
                 schema: "qms");
 
             migrationBuilder.DropTable(
-                name: "ai_request_logs",
+                name: "generation_request_logs",
                 schema: "qms");
 
             migrationBuilder.DropTable(
-                name: "ai_settings",
+                name: "generation_settings",
                 schema: "qms");
 
             migrationBuilder.DropTable(
-                name: "ai_providers",
+                name: "generation_providers",
                 schema: "qms");
         }
     }
