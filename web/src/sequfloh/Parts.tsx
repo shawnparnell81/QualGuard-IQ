@@ -58,8 +58,6 @@ interface PartDetail { part: PartRow & { productId?: string; material?: string; 
 
 function PartDialog({ open, onClose, onSaved, edit }: { open: boolean; onClose: () => void; onSaved: (id: string) => void; edit?: PartDetail['part'] }) {
   const sites = useSites();
-  const families = useOptions('product-families');
-  const assemblies = useOptions('assembly-types');
   const blank = { partNumber: '', name: '', description: '', partType: 'Component', revision: 'A', unitOfMeasure: 'EA', material: '', siteId: '', status: 'Active',
     productFamily: '', assemblyType: '', isRepairable: false, isSerialized: false, isLotControlled: false, drawingNumber: '', specification: '' };
   const [f, setF] = useState(blank);
@@ -90,8 +88,8 @@ function PartDialog({ open, onClose, onSaved, edit }: { open: boolean; onClose: 
           <TextField select label="Part type" value={f.partType} onChange={s('partType')}>{['Raw', 'Component', 'SubAssembly', 'FinishedGood', 'Consumable'].map((t) => <MenuItem key={t} value={t}>{words(t)}</MenuItem>)}</TextField>
           <TextField label="Unit of measure" value={f.unitOfMeasure} onChange={s('unitOfMeasure')} />
           <TextField select label="Site" required value={f.siteId} onChange={s('siteId')}>{(sites.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.code} · {x.name}</MenuItem>)}</TextField>
-          <TextField select label="Product family" value={f.productFamily} onChange={s('productFamily')}><MenuItem value="">—</MenuItem>{(families.data ?? []).concat(f.productFamily && !(families.data ?? []).includes(f.productFamily) ? [f.productFamily] : []).map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}</TextField>
-          <TextField select label="Assembly type" value={f.assemblyType} onChange={s('assemblyType')}><MenuItem value="">—</MenuItem>{(assemblies.data ?? []).concat(f.assemblyType && !(assemblies.data ?? []).includes(f.assemblyType) ? [f.assemblyType] : []).map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}</TextField>
+          <TextField label="Product family" value={f.productFamily} onChange={s('productFamily')} />
+          <TextField label="Assembly type" value={f.assemblyType} onChange={s('assemblyType')} />
           <TextField select label="Status" value={f.status} onChange={s('status')}>{['Active', 'Inactive', 'Draft'].map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>
           <TextField label="Drawing number" value={f.drawingNumber} onChange={s('drawingNumber')} />
           <TextField label="Specification" value={f.specification} onChange={s('specification')} />
