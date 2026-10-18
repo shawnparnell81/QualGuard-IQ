@@ -220,6 +220,12 @@ const SqfDropdowns = lazy(() => import('./sequfloh/Admin').then((m) => ({ defaul
 const SqfModuleAccess = lazy(() => import('./sequfloh/Admin').then((m) => ({ default: m.ModuleAccessPage })));
 const SqfRoles = lazy(() => import('./sequfloh/Admin').then((m) => ({ default: m.RolesMatrixPage })));
 const SqfConfiguration = lazy(() => import('./sequfloh/Admin').then((m) => ({ default: m.ConfigurationPage })));
+const SqfParts = lazy(() => import('./sequfloh/Parts').then((m) => ({ default: m.PartMasterPage })));
+const SqfPart = lazy(() => import('./sequfloh/Parts').then((m) => ({ default: m.PartDetailPage })));
+const SqfLists = lazy(() => import('./sequfloh/Parts').then((m) => ({ default: m.PartsListsPage })));
+const SqfList = lazy(() => import('./sequfloh/Parts').then((m) => ({ default: m.PartsListDetailPage })));
+const SqfSteps = lazy(() => import('./sequfloh/Parts').then((m) => ({ default: m.OperationStepsPage })));
+const SqfRevisions = lazy(() => import('./sequfloh/Parts').then((m) => ({ default: m.RevisionHistoryPage })));
 const RiskList = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskList })));
 const RiskNew = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskNew })));
 const RiskDetail = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskDetail })));
@@ -391,6 +397,12 @@ export function App() {
               <Route path="/sequfloh/admin/module-access" element={<SqfModuleAccess />} />
               <Route path="/sequfloh/admin/roles" element={<SqfRoles />} />
               <Route path="/sequfloh/admin/configuration" element={<SqfConfiguration />} />
+              <Route path="/sequfloh/parts" element={<SqfParts />} />
+              <Route path="/sequfloh/parts/:id" element={<SqfPart />} />
+              <Route path="/sequfloh/parts-lists" element={<SqfLists />} />
+              <Route path="/sequfloh/parts-lists/:id" element={<SqfList />} />
+              <Route path="/sequfloh/operation-steps" element={<SqfSteps />} />
+              <Route path="/sequfloh/revision-history" element={<SqfRevisions />} />
               <Route path="/risks" element={<RiskList />} />
               <Route path="/risks/new" element={<RiskNew />} />
               <Route path="/risks/matrix" element={<RiskMatrix />} />
