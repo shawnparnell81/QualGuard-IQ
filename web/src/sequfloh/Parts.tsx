@@ -118,7 +118,7 @@ export function PartDetailPage() {
   const { id } = useParams();
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['sqf-part', id], queryFn: () => get<PartDetail>(`${S}/parts/${id}`) });
-  const history = useQuery({ queryKey: ['sqf-part-history', id], queryFn: () => get<{ id: string; action: string; userName?: string; at: string; summary?: string }[]>(`${S}/parts/${id}/history`) });
+  const history = useQuery({ queryKey: ['sqf-part-history', id], queryFn: () => get<AuditRow[]>(`${S}/parts/${id}/history`) });
   const [edit, setEdit] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [tab, setTab] = useState('overview');
@@ -162,11 +162,12 @@ export function SimpleTable({ head, rows }: { head: string[]; rows: React.ReactN
     <TableBody>{rows.map((r, i) => <TableRow key={i}>{r.map((c, j) => <TableCell key={j}>{c}</TableCell>)}</TableRow>)}</TableBody></Table></TableContainer></Paper>;
 }
 
-export function HistoryTable({ q }: { q: { data?: { id: string; action: string; userName?: string; at: string; summary?: string }[]; isLoading: boolean; error: unknown } }) {
+export interface AuditRow { occurredAt: string; userName?: string; action: string; description?: string; reason?: string }
+export function HistoryTable({ q }: { q: { data?: AuditRow[]; isLoading: boolean; error: unknown } }) {
   if (q.isLoading) return <Loading />;
   if (q.error) return <ErrorState error={q.error} />;
   if (!q.data?.length) return <Empty text="No audit history yet." />;
-  return <SimpleTable head={['When', 'Action', 'User', 'Details']} rows={q.data.map((h) => [fmtDateTime(h.at), words(h.action), h.userName ?? '—', h.summary ?? ''])} />;
+  return <SimpleTable head={['When', 'Action', 'User', 'Details']} rows={q.data.map((h) => [fmtDateTime(h.occurredAt), words(h.action), h.userName ?? '—', [h.description, h.reason].filter(Boolean).join(' · ')])} />;
 }
 
 // ------------------------------------------------------------------ parts lists
@@ -262,7 +263,7 @@ export function PartsListDetailPage() {
   const nav = useNavigate();
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ['sqf-list', id], queryFn: () => get<ListDetail>(`${S}/parts-lists/${id}`) });
-  const history = useQuery({ queryKey: ['sqf-list-history', id], queryFn: () => get<{ id: string; action: string; userName?: string; at: string; summary?: string }[]>(`${S}/parts-lists/${id}/history`) });
+  const history = useQuery({ queryKey: ['sqf-list-history', id], queryFn: () => get<AuditRow[]>(`${S}/parts-lists/${id}/history`) });
   const [tab, setTab] = useState('items');
   const [dlg, setDlg] = useState<null | 'edit' | 'item' | 'approve' | 'revise' | 'active' | 'copy'>(null);
   const [item, setItem] = useState<ItemRow | null>(null);

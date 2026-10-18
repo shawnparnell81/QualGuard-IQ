@@ -14,6 +14,8 @@ public partial class AppDbContext
     public DbSet<SequflohPartsListItem> SequflohPartsListItems => Set<SequflohPartsListItem>();
     public DbSet<SequflohPartsListRevision> SequflohPartsListRevisions => Set<SequflohPartsListRevision>();
     public DbSet<SequflohOperationStep> SequflohOperationSteps => Set<SequflohOperationStep>();
+    public DbSet<SequflohWorkInstruction> SequflohWorkInstructions => Set<SequflohWorkInstruction>();
+    public DbSet<SequflohWorkInstructionTransition> SequflohWorkInstructionTransitions => Set<SequflohWorkInstructionTransition>();
 
     private static void ConfigureSequfloh(ModelBuilder b)
     {
@@ -99,6 +101,48 @@ public partial class AppDbContext
             e.Property(x => x.RequiredQualification).HasMaxLength(200);
             e.Property(x => x.Unit).HasMaxLength(20);
             foreach (var p in new[] { nameof(SequflohOperationStep.Target), nameof(SequflohOperationStep.Minimum), nameof(SequflohOperationStep.Maximum) }) e.Property(p).HasPrecision(18, 6);
+        });
+        b.Entity<SequflohWorkInstruction>(e =>
+        {
+            e.ToTable("sequfloh_work_instructions");
+            e.HasIndex(x => new { x.Number, x.Revision }).IsUnique();
+            e.HasIndex(x => x.FamilyId);
+            e.HasIndex(x => new { x.Type, x.Status });
+            e.HasIndex(x => new { x.SiteId, x.Status });
+            e.HasIndex(x => x.PartId);
+            e.HasIndex(x => x.UpdatedAt);
+            e.HasOne<Domain.Organization.Site>().WithMany().HasForeignKey(x => x.SiteId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Domain.Organization.Department>().WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Part>().WithMany().HasForeignKey(x => x.PartId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<SequflohPartsList>().WithMany().HasForeignKey(x => x.SourcePartsListId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne<SequflohWorkInstruction>().WithMany().HasForeignKey(x => x.PreviousRevisionId).OnDelete(DeleteBehavior.Restrict);
+            foreach (var u in new[] { nameof(SequflohWorkInstruction.OwnerId), nameof(SequflohWorkInstruction.AuthorId), nameof(SequflohWorkInstruction.ReviewerId), nameof(SequflohWorkInstruction.ApproverId),
+                         nameof(SequflohWorkInstruction.ReviewedById), nameof(SequflohWorkInstruction.ApprovedById), nameof(SequflohWorkInstruction.ReleasedById) })
+                e.HasOne<ApplicationUser>().WithMany().HasForeignKey(u).OnDelete(DeleteBehavior.Restrict);
+            e.Property(x => x.Number).HasMaxLength(40);
+            e.Property(x => x.Title).HasMaxLength(300);
+            e.Property(x => x.Revision).HasMaxLength(10);
+            foreach (var p in new[] { nameof(SequflohWorkInstruction.PartNumber), nameof(SequflohWorkInstruction.ProductFamily), nameof(SequflohWorkInstruction.Assembly), nameof(SequflohWorkInstruction.Model),
+                         nameof(SequflohWorkInstruction.Variant), nameof(SequflohWorkInstruction.Workstation), nameof(SequflohWorkInstruction.ValidationType), nameof(SequflohWorkInstruction.FaiType),
+                         nameof(SequflohWorkInstruction.RepairCategory), nameof(SequflohWorkInstruction.RepairType) })
+                e.Property(p).HasMaxLength(100);
+            foreach (var p in new[] { nameof(SequflohWorkInstruction.PartDescription), nameof(SequflohWorkInstruction.Process), nameof(SequflohWorkInstruction.Operation), nameof(SequflohWorkInstruction.Location),
+                         nameof(SequflohWorkInstruction.RepairDescription) })
+                e.Property(p).HasMaxLength(300);
+            e.Property(x => x.ResultStatus).HasMaxLength(50);
+            e.Property(x => x.RevisionReason).HasMaxLength(2000);
+            foreach (var p in new[] { nameof(SequflohWorkInstruction.Content), nameof(SequflohWorkInstruction.Steps), nameof(SequflohWorkInstruction.Characteristics), nameof(SequflohWorkInstruction.PartsRows) })
+                e.Property(p).HasColumnType("jsonb");
+        });
+        b.Entity<SequflohWorkInstructionTransition>(e =>
+        {
+            e.ToTable("sequfloh_work_instruction_transitions");
+            e.HasIndex(x => new { x.WorkInstructionId, x.CreatedAt });
+            e.HasOne<SequflohWorkInstruction>().WithMany().HasForeignKey(x => x.WorkInstructionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+            e.Property(x => x.Action).HasMaxLength(40);
+            e.Property(x => x.Revision).HasMaxLength(10);
+            e.Property(x => x.Comment).HasMaxLength(4000);
         });
         b.Entity<Part>(e =>
         {
