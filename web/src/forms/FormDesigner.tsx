@@ -5,8 +5,8 @@ import ArrowDownward from '@mui/icons-material/ArrowDownward';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
 import { post, postBlob } from '../api';
 import { FormView } from './FormView';
-import type { BandText, ColumnDef, Condition, FormDef, PageSetup, SectionDef, SignatureDef, TableDef, TableTotal } from './definition';
-import { roleLabel } from './definition';
+import type { BandText, ColumnDef, Condition, FormDef, FormTheme, PageSetup, SectionDef, SectionStyle, SignatureDef, TableDef, TableTotal } from './definition';
+import { formThemes, roleLabel } from './definition';
 
 /** Every field type the server accepts, with the name shown in the designer. */
 export const allFieldTypes: [string, string][] = [
@@ -209,6 +209,7 @@ function PageProps({ page, onChange }: { page: PageSetup; onChange: (p: PageSetu
         <T label="Orientation" value={page.orientation} select={[['portrait', 'Portrait'], ['landscape', 'Landscape']]} onChange={(v) => set({ orientation: v as PageSetup['orientation'] })} /></Stack>
       <Stack direction="row" gap={1}><T label="Margins (mm)" type="number" value={page.marginMm} onChange={(v) => set({ marginMm: Number(v) })} /><T label="Font size (pt)" type="number" value={page.fontSize} onChange={(v) => set({ fontSize: Number(v) })} /></Stack>
       <T label="Default print output" value={page.printStyle} select={[['standardized', 'QualGuard IQ standardized'], ['original', 'Original look (converted files)']]} onChange={(v) => set({ printStyle: v as PageSetup['printStyle'] })} />
+      <T label="Form look" value={page.theme ?? 'report'} select={formThemes} onChange={(v) => set({ theme: v as FormTheme })} helperText="Changes how sections, tables and signatures are drawn on screen and on paper; fields and rules behave the same." />
       <T label="Watermark" value={page.watermark} onChange={(v) => set({ watermark: v || null })} helperText="Status watermarks such as DRAFT are added automatically." />
       <T label="Confidentiality" value={page.confidentiality ?? 'Internal'} onChange={(v) => set({ confidentiality: v })} />
       <Band label="Header" b={page.header} onChange={(header) => set({ header })} />
@@ -233,6 +234,7 @@ function SectionProps({ s, d, onChange }: { s: SectionDef; d: FormDef; onChange:
       <T label="Print orientation" value={s.orientation ?? ''} select={[['', 'Same as page'], ['portrait', 'Portrait'], ['landscape', 'Landscape']]} onChange={(v) => onChange({ orientation: v || null })} />
       <Check label="Start on a new page" checked={s.pageBreakBefore} onChange={(v) => onChange({ pageBreakBefore: v })} />
       <Check label="Keep together on one page" checked={s.keepTogether} onChange={(v) => onChange({ keepTogether: v })} />
+      <T label="Section style" value={s.style ?? ''} select={[['', 'Follow the form look'], ['standard', 'Plain heading'], ['panel', 'Panel'], ['callout', 'Call-out'], ['titleblock', 'Title block'], ['steps', 'Numbered step'], ['checklist', 'Checklist card'], ['ledger', 'Ledger (small print)'], ['signoff', 'Sign-off block']]} onChange={(v) => onChange({ style: (v || null) as SectionStyle | null })} />
     </Stack>
   );
 }
