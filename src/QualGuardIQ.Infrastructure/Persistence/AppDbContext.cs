@@ -139,6 +139,10 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.Property(x => x.Changes).HasColumnType("jsonb");
             e.HasIndex(x => new { x.EntityType, x.EntityId });
             e.HasIndex(x => x.OccurredAt);
+            // audit views filter by module (entity type prefix), action or user, newest first
+            e.HasIndex(x => new { x.EntityType, x.OccurredAt });
+            e.HasIndex(x => new { x.Action, x.OccurredAt });
+            e.HasIndex(x => new { x.UserId, x.OccurredAt });
         });
 
         b.Entity<NumberSequence>(e =>
