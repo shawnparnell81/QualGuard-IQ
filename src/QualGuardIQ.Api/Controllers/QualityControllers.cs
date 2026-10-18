@@ -429,7 +429,7 @@ public sealed class AuditsController(AppDbContext db, AuditService audits, Modul
 [ApiController, Authorize, Route("api/training")]
 public sealed class TrainingController(AppDbContext db, TrainingService training, ModuleSupport m) : ControllerBase
 {
-    public sealed record CompleteRequest(string Password, string? Notes);
+    public sealed record CompleteRequest(string Password, string? Notes, string? MfaCode = null);
 
     [HttpGet("courses")]
     [RequirePermission(Permissions.TrainingView)]
@@ -503,7 +503,7 @@ public sealed class TrainingController(AppDbContext db, TrainingService training
     }
 
     [HttpPost("assignments/{id:guid}/complete")]
-    public async Task<IActionResult> Complete(Guid id, CompleteRequest r, CancellationToken ct) { await training.CompleteAsync(id, r.Password, r.Notes, ct); return NoContent(); }
+    public async Task<IActionResult> Complete(Guid id, CompleteRequest r, CancellationToken ct) { await training.CompleteAsync(id, r.Password, r.Notes, ct, r.MfaCode); return NoContent(); }
 }
 
 [ApiController, Authorize, Route("api/calibration")]

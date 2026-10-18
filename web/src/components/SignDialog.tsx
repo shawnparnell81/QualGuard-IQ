@@ -8,12 +8,13 @@ export function SignDialog({ approvalId, recordNumber, stepName, onClose }: { ap
   const qc = useQueryClient();
   const [password, setPassword] = useState('');
   const [comment, setComment] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const sign = async (approve: boolean) => {
     setBusy(true); setError(null);
     try {
-      await post(`/api/my/approvals/${approvalId}/sign`, { approve, password, comment: comment || null });
+      await post(`/api/my/approvals/${approvalId}/sign`, { approve, password, mfaCode: mfaCode.trim() || null, comment: comment || null });
       await qc.invalidateQueries();
       onClose();
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
@@ -26,6 +27,7 @@ export function SignDialog({ approvalId, recordNumber, stepName, onClose }: { ap
         {error && <Alert severity="error">{error}</Alert>}
         <TextField label="Comment (required to reject)" multiline minRows={2} value={comment} onChange={(e) => setComment(e.target.value)} />
         <TextField label="Your password" type="password" autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+        <TextField label="Authenticator code (if your account uses one)" value={mfaCode} onChange={(e) => setMfaCode(e.target.value)} slotProps={{ htmlInput: { inputMode: 'numeric', autoComplete: 'one-time-code' } }} />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose}>Cancel</Button>
