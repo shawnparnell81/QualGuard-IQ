@@ -204,6 +204,27 @@ public static class DependencyInjection
             (id, ct) => sp.GetRequiredService<SupplierService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<SupplierService>().OnRejectedAsync(id, c, ct)));
         s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(NcrService.RecordType,
             (id, ct) => sp.GetRequiredService<NcrService>().OnApprovedAsync(id, ct), (id, _, ct) => sp.GetRequiredService<NcrService>().OnRejectedAsync(id, ct)));
+        // Quality operations (TECH 13, FI 6): events, deviations, investigations, release, delegation, registers, service levels, skip-lot, reviews, analytics.
+        s.AddScoped<Modules.QualityOps.QualityEventService>();
+        s.AddScoped<Modules.QualityOps.DeviationService>();
+        s.AddScoped<Modules.QualityOps.InvestigationService>();
+        s.AddScoped<Modules.QualityOps.ReleaseService>();
+        s.AddScoped<Modules.QualityOps.DelegationService>();
+        s.AddScoped<Modules.QualityOps.RegisterService>();
+        s.AddScoped<Modules.QualityOps.QualityAnalyticsService>();
+        s.AddScoped<Modules.QualityOps.ServiceLevelService>();
+        s.AddScoped<Modules.QualityOps.SkipLotService>();
+        s.AddScoped<Modules.QualityOps.QualityReviewService>();
+        P<QualityEvent>(Modules.QualityOps.QualityEventService.RecordType, Permissions.QualityOpsView, Permissions.QualityOpsEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/quality-ops/events/{x.Id}", x.Status is QualityEventStatus.Closed or QualityEventStatus.Rejected));
+        P<Deviation>(Modules.QualityOps.DeviationService.RecordType, Permissions.QualityOpsView, Permissions.QualityOpsEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/quality-ops/deviations/{x.Id}", x.Status is not (QualityDeviationStatus.Draft or QualityDeviationStatus.Rejected or QualityDeviationStatus.Approved)));
+        P<Investigation>(Modules.QualityOps.InvestigationService.RecordType, Permissions.QualityOpsView, Permissions.QualityOpsEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/quality-ops/investigations/{x.Id}", x.Status is InvestigationStatus.Closed or InvestigationStatus.Cancelled));
+        P<ReleaseDecision>(Modules.QualityOps.ReleaseService.RecordType, Permissions.QualityOpsView, Permissions.QualityOpsEdit, x => (x.Number, (x.Kind == ReleaseKind.Batch ? "Batch release " : "Product release ") + (x.LotNumber ?? ""), x.Status.ToString(), $"/quality-ops/releases/{x.Id}", x.Status != ReleaseStatus.Pending));
+        P<RegisterEntry>(Modules.QualityOps.RegisterService.RecordType, Permissions.QualityOpsView, Permissions.QualityOpsEdit, x => (x.Number, x.Title, x.Status, $"/quality-ops/registers/entry/{x.Id}", x.Archived));
+        P<QualityReview>(Modules.QualityOps.QualityReviewService.RecordType, Permissions.QualityOpsView, Permissions.QualityOpsEdit, x => (x.Number, x.Title, x.Status.ToString(), $"/quality-ops/reviews/{x.Id}", x.Status is QualityReviewStatus.PendingApproval or QualityReviewStatus.Approved));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.QualityOps.DeviationService.RecordType,
+            (id, ct) => sp.GetRequiredService<Modules.QualityOps.DeviationService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.QualityOps.DeviationService>().OnRejectedAsync(id, c, ct)));
+        s.AddScoped<IApprovalHandler>(sp => new DelegateApprovalHandler(Modules.QualityOps.QualityReviewService.RecordType,
+            (id, ct) => sp.GetRequiredService<Modules.QualityOps.QualityReviewService>().OnApprovedAsync(id, ct), (id, c, ct) => sp.GetRequiredService<Modules.QualityOps.QualityReviewService>().OnRejectedAsync(id, c, ct)));
         // Prompt 4: APQP, SPC/MSA, LPA, cost of quality, supplier development, analytics, portals.
         s.AddScoped<Modules.Apqp.ApqpService>();
         s.AddScoped<Modules.Apqp.ApqpImportService>();
