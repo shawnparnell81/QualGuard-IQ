@@ -20,7 +20,8 @@ x-app: &app
   Seed__TimeZone: ${TIME_ZONE:-America/New_York}
   DataProtection__KeyPath: /keys
   Video__FfmpegPath: /usr/bin/ffmpeg
-  MalwareScanning__Provider: ClamAV
+  # Virus scanning is optional: set MALWARE_SCANNER=ClamAV and add clamav to COMPOSE_PROFILES (Intel/AMD computers only).
+  MalwareScanning__Provider: ${MALWARE_SCANNER:-None}
   MalwareScanning__ClamAV__Host: clamav
 
 services:
@@ -40,7 +41,9 @@ services:
       retries: 5
 
   clamav:
+    # No ARM image exists, so this only runs on Intel/AMD computers when the clamav profile is on.
     image: clamav/clamav:stable
+    profiles: [clamav]
     restart: unless-stopped
     volumes: [clamdb:/var/lib/clamav]
     healthcheck:
@@ -80,7 +83,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       minio: { condition: service_healthy, required: false }
-      clamav: { condition: service_healthy }
+      clamav: { condition: service_healthy, required: false }
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health/ready || exit 1"]
       interval: 15s
