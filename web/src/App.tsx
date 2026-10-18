@@ -185,6 +185,32 @@ const ComplaintDetail = lazy(() => import('./pages/Complaints').then((m) => ({ d
 const ReportDashboard = lazy(() => import('./pages/Reports').then((m) => ({ default: m.ReportDashboard })));
 const ReportCatalog = lazy(() => import('./pages/Reports').then((m) => ({ default: m.ReportCatalog })));
 const ReportRun = lazy(() => import('./pages/Reports').then((m) => ({ default: m.ReportRun })));
+const QoQualityOpsHome = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.QualityOpsHome })));
+const QoEventList = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.EventList })));
+const QoEventNew = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.EventNew })));
+const QoEventDetail = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.EventDetail })));
+const QoDeviationList = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.DeviationList })));
+const QoDeviationNew = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.DeviationNew })));
+const QoDeviationDetail = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.DeviationDetail })));
+const QoInvestigationList = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.InvestigationList })));
+const QoInvestigationNew = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.InvestigationNew })));
+const QoInvestigationDetail = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.InvestigationDetail })));
+const QoReleaseBoard = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.ReleaseBoard })));
+const QoReleaseList = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.ReleaseList })));
+const QoReleaseNew = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.ReleaseNew })));
+const QoReleaseDetail = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.ReleaseDetail })));
+const QoDelegationsPage = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.DelegationsPage })));
+const QoRegistersHome = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.RegistersHome })));
+const QoRegisterList = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.RegisterList })));
+const QoRegisterEntryNew = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.RegisterEntryNew })));
+const QoRegisterEntryDetail = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.RegisterEntryDetail })));
+const QoServiceLevelsPage = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.ServiceLevelsPage })));
+const QoSkipLotPage = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.SkipLotPage })));
+const QoReviewList = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.ReviewList })));
+const QoReviewNew = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.ReviewNew })));
+const QoReviewDetail = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.ReviewDetail })));
+const QoQualityAnalyticsPage = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.QualityAnalyticsPage })));
+const QoQualityOpsSettingsPage = lazy(() => import('./pages/QualityOps').then((m) => ({ default: m.QualityOpsSettingsPage })));
 const RiskList = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskList })));
 const RiskNew = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskNew })));
 const RiskDetail = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskDetail })));
@@ -321,6 +347,32 @@ export function App() {
               <Route path="/reports" element={<ReportDashboard />} />
               <Route path="/reports/catalog" element={<ReportCatalog />} />
               <Route path="/reports/r/:key" element={<ReportRun />} />
+              <Route path="/quality-ops" element={<QoQualityOpsHome />} />
+              <Route path="/quality-ops/events" element={<QoEventList />} />
+              <Route path="/quality-ops/events/new" element={<QoEventNew />} />
+              <Route path="/quality-ops/events/:id" element={<QoEventDetail />} />
+              <Route path="/quality-ops/deviations" element={<QoDeviationList />} />
+              <Route path="/quality-ops/deviations/new" element={<QoDeviationNew />} />
+              <Route path="/quality-ops/deviations/:id" element={<QoDeviationDetail />} />
+              <Route path="/quality-ops/investigations" element={<QoInvestigationList />} />
+              <Route path="/quality-ops/investigations/new" element={<QoInvestigationNew />} />
+              <Route path="/quality-ops/investigations/:id" element={<QoInvestigationDetail />} />
+              <Route path="/quality-ops/releases" element={<QoReleaseBoard />} />
+              <Route path="/quality-ops/releases/all" element={<QoReleaseList />} />
+              <Route path="/quality-ops/releases/new" element={<QoReleaseNew />} />
+              <Route path="/quality-ops/releases/:id" element={<QoReleaseDetail />} />
+              <Route path="/quality-ops/delegations" element={<QoDelegationsPage />} />
+              <Route path="/quality-ops/registers" element={<QoRegistersHome />} />
+              <Route path="/quality-ops/registers/entries/:id" element={<QoRegisterEntryDetail />} />
+              <Route path="/quality-ops/registers/:key" element={<QoRegisterList />} />
+              <Route path="/quality-ops/registers/:key/new" element={<QoRegisterEntryNew />} />
+              <Route path="/quality-ops/service-levels" element={<QoServiceLevelsPage />} />
+              <Route path="/quality-ops/skip-lot" element={<QoSkipLotPage />} />
+              <Route path="/quality-ops/reviews" element={<QoReviewList />} />
+              <Route path="/quality-ops/reviews/new" element={<QoReviewNew />} />
+              <Route path="/quality-ops/reviews/:id" element={<QoReviewDetail />} />
+              <Route path="/quality-ops/analytics" element={<QoQualityAnalyticsPage />} />
+              <Route path="/quality-ops/settings" element={<QoQualityOpsSettingsPage />} />
               <Route path="/risks" element={<RiskList />} />
               <Route path="/risks/new" element={<RiskNew />} />
               <Route path="/risks/matrix" element={<RiskMatrix />} />
