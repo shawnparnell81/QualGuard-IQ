@@ -32,6 +32,10 @@ public sealed class ErpCallContext
     public required ErpConnection Connection { get; init; }
     public string? Secret { get; init; }
     public string? SecondarySecret { get; init; }
+    /// <summary>Named secrets from the connection's setup profile, already decrypted.</summary>
+    public IReadOnlyDictionary<string, string> Secrets { get; init; } = new Dictionary<string, string>();
+    /// <summary>Secrets the vendor replaced during this call (for example a rotated refresh token). The caller encrypts and stores them.</summary>
+    public Dictionary<string, string> Rotated { get; } = new();
     public required JsonObject Options { get; init; }
     public required ErpHttp Http { get; init; }
     public required ErpTokenCache Tokens { get; init; }
@@ -43,6 +47,11 @@ public sealed class ErpCallContext
     public int OptInt(string key, int fallback) => Options[key] is JsonValue v && v.TryGetValue<int>(out var i) ? i : int.TryParse(Opt(key), out var j) ? j : fallback;
     public string RequireSecret(string what) => string.IsNullOrEmpty(Secret) ? throw new ErpException($"Set the {what} on the connection first.") : Secret;
     public string Base => Connection.BaseUrl.TrimEnd('/');
+
+    /// <summary>A named secret: the latest rotated value, then the stored value, then the fallback slot (older connections kept it in Secret / SecondarySecret).</summary>
+    public string? SecretOf(string name, string? fallback = null) =>
+        Rotated.TryGetValue(name, out var r) ? r : Secrets.TryGetValue(name, out var v) && v.Length > 0 ? v : string.IsNullOrEmpty(fallback) ? null : fallback;
+    public string RequireNamed(string name, string label, string? fallback = null) => SecretOf(name, fallback) ?? throw new ErpException($"Set the {label} on the connection first.");
 }
 
 /// <summary>Access tokens and sessions per connection, reused until shortly before they expire (one session per connection).</summary>

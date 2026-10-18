@@ -51,6 +51,7 @@ public partial class AppDbContext
             e.HasIndex(x => x.Name).IsUnique();
             e.Property(x => x.Name).HasMaxLength(200); e.Property(x => x.Edition).HasMaxLength(50); e.Property(x => x.BaseUrl).HasMaxLength(500);
             e.Property(x => x.Options).HasColumnType("jsonb");
+            e.Property(x => x.EncryptedSecrets).HasColumnType("jsonb").HasDefaultValueSql("'{}'::jsonb");
             UserReq(e, x => x.OwnerId); SiteRefs(e);
         });
         b.Entity<ErpEntityMapping>(e =>

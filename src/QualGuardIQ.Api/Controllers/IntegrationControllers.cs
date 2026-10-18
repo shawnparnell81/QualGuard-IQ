@@ -26,7 +26,7 @@ public sealed class IntegrationsController(ErpSyncService svc, ErpAdapterRegistr
     static object Dto(ErpConnection c) => new
     {
         c.Id, c.Name, System = c.System.ToString(), c.Edition, c.BaseUrl, c.Account, c.Company, c.ClientId, c.Username, Options = System.Text.Json.JsonDocument.Parse(c.Options).RootElement,
-        HasSecret = c.EncryptedSecret != null, HasSecondarySecret = c.EncryptedSecondarySecret != null, c.SecretSetAt, c.Enabled, c.AllowWrites, c.MaxConcurrency, c.RequestsPerMinute,
+        HasSecret = c.EncryptedSecret != null, HasSecondarySecret = c.EncryptedSecondarySecret != null, SecretNames = ErpSyncService.SecretBag(c).Keys.OrderBy(k => k).ToList(), c.SecretSetAt, c.Enabled, c.AllowWrites, c.MaxConcurrency, c.RequestsPerMinute,
         c.InventorySystemOfRecord, c.SetupNotes, c.AdminNotes, c.LastTestAt, c.LastTestOk, c.LastTestMessage, Environment = c.Environment.ToString(), c.OwnerId, c.SiteId, c.DepartmentId, c.RowVersion, c.UpdatedAt
     };
 
@@ -35,7 +35,7 @@ public sealed class IntegrationsController(ErpSyncService svc, ErpAdapterRegistr
     public object Adapters() => adapters.All.Select(a => new
     {
         System = a.System.ToString(),
-        Editions = a.Editions.Select(e => new { Edition = e, Capabilities = a.Capabilities(e), Unverified = a.Unverified(e), SetupNotes = adapters.SetupNotes(a.System, e) })
+        Editions = a.Editions.Select(e => new { Edition = e, Capabilities = a.Capabilities(e), Unverified = a.Unverified(e), SetupNotes = adapters.SetupNotes(a.System, e), Setup = QualGuardIQ.Infrastructure.Modules.Integration.Erp.ErpSetupProfiles.For(a.System, e) })
     }).ToList();
 
     [HttpGet] [RequirePermission(Permissions.IntegrationsView)] public async Task<object> List(CancellationToken ct) => (await svc.ListAsync(ct)).Select(Dto).ToList();
