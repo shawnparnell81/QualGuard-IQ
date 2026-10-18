@@ -35815,6 +35815,562 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/v1/template-packages:
+    get:
+      tags:
+        - Template Packages
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PackageSummary'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PackageSummary'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PackageSummary'
+        '401':
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Missing permission or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Validation or business-rule error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not found or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 'Conflict: state or version mismatch'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/v1/template-packages/library/categories:
+    get:
+      tags:
+        - Template Packages
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LibraryCategoryDto'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LibraryCategoryDto'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/LibraryCategoryDto'
+        '401':
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Missing permission or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Validation or business-rule error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not found or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 'Conflict: state or version mismatch'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/v1/template-packages/library/templates:
+    get:
+      tags:
+        - Template Packages
+      description: Requires an authenticated user.
+      parameters:
+        - name: category
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: pack
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PackageTemplate'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PackageTemplate'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/PackageTemplate'
+        '401':
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Missing permission or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Validation or business-rule error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not found or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 'Conflict: state or version mismatch'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  '/api/v1/template-packages/library/templates/{key}':
+    get:
+      tags:
+        - Template Packages
+      description: Requires an authenticated user.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/TemplatePreview'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TemplatePreview'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/TemplatePreview'
+        '401':
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Missing permission or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Validation or business-rule error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not found or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 'Conflict: state or version mismatch'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  '/api/v1/template-packages/{key}':
+    get:
+      tags:
+        - Template Packages
+      description: Requires an authenticated user.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: version
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PackageDetail'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackageDetail'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PackageDetail'
+        '401':
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Missing permission or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Validation or business-rule error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not found or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 'Conflict: state or version mismatch'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  '/api/v1/template-packages/{key}/install':
+    post:
+      tags:
+        - Template Packages
+      description: Requires an authenticated user.
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstallRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/InstallRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/InstallRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/InstallResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/InstallResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/InstallResult'
+        '401':
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Missing permission or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Validation or business-rule error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not found or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 'Conflict: state or version mismatch'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/v1/template-packages/export:
+    post:
+      tags:
+        - Template Packages
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ExportRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Missing permission or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Validation or business-rule error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not found or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 'Conflict: state or version mismatch'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/v1/template-packages/import:
+    post:
+      tags:
+        - Template Packages
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  $ref: '#/components/schemas/IFormFile'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PackageSummary'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PackageSummary'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PackageSummary'
+        '401':
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Missing permission or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Validation or business-rule error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not found or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 'Conflict: state or version mismatch'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
   /api/admin/users:
     get:
       tags:
@@ -49255,6 +49811,30 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/KpiSeries'
+    ExportRequest:
+      required:
+        - packageKey
+        - name
+        - version
+        - description
+        - documentIds
+      type: object
+      properties:
+        packageKey:
+          type: string
+        name:
+          type: string
+        version:
+          type: string
+        description:
+          type:
+            - 'null'
+            - string
+        documentIds:
+          type: array
+          items:
+            type: string
+            format: uuid
     ExtensionContent:
       type: object
       properties:
@@ -51684,6 +52264,80 @@ components:
             format: uuid
     InspectionStatus:
       type: integer
+    InstalledTemplate:
+      required:
+        - key
+        - title
+        - documentId
+        - number
+        - alreadyInstalled
+      type: object
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        documentId:
+          type: string
+          format: uuid
+        number:
+          type: string
+        alreadyInstalled:
+          type: boolean
+    InstallRequest:
+      required:
+        - siteId
+        - departmentId
+        - templateKeys
+      type: object
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        departmentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        templateKeys:
+          type:
+            - 'null'
+            - array
+          items:
+            type: string
+        version:
+          type:
+            - 'null'
+            - string
+    InstallResult:
+      required:
+        - packageKey
+        - version
+        - templates
+        - installed
+        - alreadyInstalled
+      type: object
+      properties:
+        packageKey:
+          type: string
+        version:
+          type: string
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstalledTemplate'
+        installed:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        alreadyInstalled:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     InventoryCategory:
       type: integer
     InventoryHold:
@@ -52792,6 +53446,29 @@ components:
         isActive:
           type: boolean
           default: true
+    LibraryCategoryDto:
+      required:
+        - code
+        - name
+        - moduleKey
+        - description
+        - count
+      type: object
+      properties:
+        code:
+          type: string
+        name:
+          type: string
+        moduleKey:
+          type: string
+        description:
+          type: string
+        count:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
     LibraryItem:
       required:
         - id
@@ -56143,6 +56820,135 @@ components:
       properties:
         achieved:
           type: boolean
+    PackageDetail:
+      required:
+        - package
+        - templates
+      type: object
+      properties:
+        package:
+          $ref: '#/components/schemas/PackageSummary'
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/PackageTemplate'
+    PackageSummary:
+      required:
+        - key
+        - version
+        - name
+        - description
+        - origin
+        - integrity
+        - categories
+        - templateCount
+        - installedCount
+        - installedAt
+        - packageId
+      type: object
+      properties:
+        key:
+          type: string
+        version:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        origin:
+          $ref: '#/components/schemas/TemplatePackageOrigin'
+        integrity:
+          $ref: '#/components/schemas/TemplatePackageIntegrity'
+        categories:
+          type: array
+          items:
+            type: string
+        templateCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        installedCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        installedAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        packageId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+    PackageTemplate:
+      required:
+        - key
+        - title
+        - category
+        - categoryName
+        - moduleKey
+        - purpose
+        - fieldCount
+        - tableCount
+        - signatureCount
+        - packs
+        - tags
+        - installedDocumentId
+        - installedNumber
+      type: object
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        category:
+          type: string
+        categoryName:
+          type: string
+        moduleKey:
+          type: string
+        purpose:
+          type: string
+        fieldCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        tableCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        signatureCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        packs:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        installedDocumentId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        installedNumber:
+          type:
+            - 'null'
+            - string
     PackedRow:
       required:
         - id
@@ -67923,6 +68729,41 @@ components:
             - string
           format: int32
           default: 320
+    TemplatePackageIntegrity:
+      type: integer
+    TemplatePackageOrigin:
+      type: integer
+    TemplatePreview:
+      required:
+        - key
+        - title
+        - category
+        - purpose
+        - scope
+        - instructions
+        - workflow
+        - retention
+        - definition
+      type: object
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        category:
+          type: string
+        purpose:
+          type: string
+        scope:
+          type: string
+        instructions:
+          type: string
+        workflow:
+          type: string
+        retention:
+          type: string
+        definition:
+          $ref: '#/components/schemas/JsonElement'
     TemplateRevisionStatus:
       type: integer
     TemplateRow:
@@ -70472,6 +71313,7 @@ tags:
   - name: Sso
   - name: SsoAdmin
   - name: TemplateLibrary
+  - name: Template Packages
   - name: Users
   - name: Warehouse
   - name: Receiving

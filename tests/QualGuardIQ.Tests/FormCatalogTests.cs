@@ -36,7 +36,7 @@ public sealed class FormCatalogDataTests(TestApp app)
         using var scope = app.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var codes = await db.TemplateCategories.Where(c => c.IsSystem).Select(c => c.Code).ToListAsync();
-        Assert.Equal(24, codes.Count);
+        Assert.Equal(24 + QualGuardIQ.Infrastructure.Modules.Templates.TemplateLibrary.Categories.Count, codes.Count);
         Assert.Contains("FORM", codes);
         Assert.Contains("REFERENCE_DOCUMENT", codes);
     }

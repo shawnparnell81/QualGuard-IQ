@@ -133,11 +133,36 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 table: "template_packages",
                 columns: new[] { "PackageKey", "Version", "Origin" },
                 unique: true);
+
+            // the enterprise template library categories, so installed templates and the catalog filters share them
+            migrationBuilder.Sql(@"
+INSERT INTO qms.template_categories (""Id"", ""Code"", ""Name"", ""Description"", ""ModuleKey"", ""IsSystem"", ""IsActive"", ""DisplayOrder"", ""CreatedAt"", ""UpdatedAt"")
+VALUES
+ (gen_random_uuid(), 'NONCONFORMANCE', 'Nonconformance', 'Nonconformance reports, containment, segregation and disposition authorizations.', 'ncr', true, true, 300, now(), now()),
+ (gen_random_uuid(), 'CAPA', 'CAPA', 'Corrective and preventive action from request to closure.', 'capa', true, true, 310, now(), now()),
+ (gen_random_uuid(), 'ROOT_CAUSE', 'Root cause and problem solving', 'Structured cause analysis methods and the eight discipline package.', 'capa', true, true, 320, now(), now()),
+ (gen_random_uuid(), 'APQP', 'APQP', 'Advanced product quality planning records, organization-authored.', 'apqp', true, true, 330, now(), now()),
+ (gen_random_uuid(), 'PPAP', 'PPAP', 'Production part approval submission package elements, configurable by the organization.', 'apqp', true, true, 340, now(), now()),
+ (gen_random_uuid(), 'FAI', 'First article inspection', 'First article inspection package records.', 'fai', true, true, 350, now(), now()),
+ (gen_random_uuid(), 'INSPECTION', 'AQL and inspection', 'Receiving, in-process, final and sampling inspection records.', 'inspection', true, true, 360, now(), now()),
+ (gen_random_uuid(), 'CALIBRATION', 'Calibration and measurement systems', 'Calibration control and measurement system analysis.', 'calibration', true, true, 370, now(), now()),
+ (gen_random_uuid(), 'DOCUMENT_CONTROL', 'Document control', 'Master lists, registers and change records for controlled information.', 'document-control', true, true, 380, now(), now()),
+ (gen_random_uuid(), 'AUDIT', 'Audits', 'Audit programme, planning, execution, reporting and follow-up.', 'audits', true, true, 390, now(), now()),
+ (gen_random_uuid(), 'TRAINING', 'Training and competence', 'Training needs, delivery, assessment and qualification.', 'training', true, true, 400, now(), now()),
+ (gen_random_uuid(), 'SUPPLIER', 'Supplier quality', 'Supplier approval, monitoring, development and change control.', 'suppliers', true, true, 410, now(), now()),
+ (gen_random_uuid(), 'CUSTOMER_QUALITY', 'Customer quality', 'Complaints, returns, field performance and customer requirements.', 'customer-quality', true, true, 420, now(), now()),
+ (gen_random_uuid(), 'RISK_CHANGE', 'Risk and change', 'Risk and opportunity registers, assessments, change control and deviations.', 'risks', true, true, 430, now(), now()),
+ (gen_random_uuid(), 'MANAGEMENT_REVIEW', 'Management review', 'Management review inputs, records, decisions and actions.', 'management-review', true, true, 440, now(), now()),
+ (gen_random_uuid(), 'DESIGN_DEVICE', 'Design and device history', 'Design history, device master and device history records and validation.', 'design-control', true, true, 450, now(), now()),
+ (gen_random_uuid(), 'CONFIGURATION', 'Configuration and process control', 'Configuration control and special process verification.', 'configuration', true, true, 460, now(), now())
+ON CONFLICT (""Code"") DO NOTHING;");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql(@"DELETE FROM qms.template_categories c WHERE c.""Code"" IN ('NONCONFORMANCE', 'CAPA', 'ROOT_CAUSE', 'APQP', 'PPAP', 'FAI', 'INSPECTION', 'CALIBRATION', 'DOCUMENT_CONTROL', 'AUDIT', 'TRAINING', 'SUPPLIER', 'CUSTOMER_QUALITY', 'RISK_CHANGE', 'MANAGEMENT_REVIEW', 'DESIGN_DEVICE', 'CONFIGURATION') AND NOT EXISTS (SELECT 1 FROM qms.documents d WHERE d.""CategoryId"" = c.""Id"");");
+
             migrationBuilder.DropTable(
                 name: "template_package_items",
                 schema: "qms");
