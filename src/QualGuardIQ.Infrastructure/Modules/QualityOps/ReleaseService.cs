@@ -91,8 +91,14 @@ public sealed class ReleaseService(AppDbContext db, ModuleSupport m, INumberingS
         return x;
     }
 
-    public static string Hash(ReleaseDecision x) => Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
-        $"{x.Id}|{x.Number}|{x.LotNumber}|{x.Quantity}|{x.DecidedById}|{x.DecidedByName}|{x.DecisionMeaning}|{x.DecidedAt?.UtcTicks / 10}|{x.DecisionComment}|{x.Checklist}"))).ToLowerInvariant();
+    /// <summary>Signature hash over the decision. Quantity and checklist are normalized so the stored values (numeric scale, jsonb key order) verify.</summary>
+    public static string Hash(ReleaseDecision x)
+    {
+        var checks = string.Join(";", (JsonSerializer.Deserialize<List<ReleaseCheck>>(x.Checklist ?? "[]", Json) ?? []).Select(c => $"{c.Key}={c.Passed}:{c.Detail}"));
+        var qty = x.Quantity?.ToString("0.####", System.Globalization.CultureInfo.InvariantCulture);
+        return Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(
+            $"{x.Id}|{x.Number}|{x.LotNumber}|{qty}|{x.DecidedById}|{x.DecidedByName}|{x.DecisionMeaning}|{x.DecidedAt?.UtcTicks / 10}|{x.DecisionComment}|{checks}"))).ToLowerInvariant();
+    }
 
     public async Task CancelAsync(Guid id, string reason, CancellationToken ct)
     {
@@ -107,7 +113,9 @@ public sealed class ReleaseService(AppDbContext db, ModuleSupport m, INumberingS
     /// <summary>The quality hold and release board: active holds and pending release decisions the user may see.</summary>
     public async Task<object> BoardAsync(CancellationToken ct)
     {
-        var holds = await (await m.ScopeAsync(db.InventoryHolds.AsNoTracking(), Permissions.InventoryView, ct))
+        // holds are shown to users who can see inventory; release decisions to users of quality operations
+        var holdScope = await m.CanAnyAsync(Permissions.InventoryView, ct) ? await m.ScopeAsync(db.InventoryHolds.AsNoTracking(), Permissions.InventoryView, ct) : db.InventoryHolds.Where(_ => false);
+        var holds = await holdScope
             .Where(h => h.Status == HoldStatus.Active || h.Status == HoldStatus.ReleaseRequested).OrderBy(h => h.CreatedAt)
             .Select(h => new { h.Id, h.Number, h.Kind, h.Status, h.Reason, h.PartId, PartNumber = db.Parts.Where(p => p.Id == h.PartId).Select(p => p.PartNumber).FirstOrDefault(),
                 LotNumber = db.Lots.Where(l => l.Id == h.LotId).Select(l => l.Number).FirstOrDefault(), h.CreatedAt }).Take(500).ToListAsync(ct);
