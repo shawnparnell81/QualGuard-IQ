@@ -73,6 +73,8 @@ public static class DependencyInjection
         services.AddScoped<TemplateCatalogService>();
         services.AddScoped<Modules.Imports.ImportCenterService>();
         services.AddSingleton<Modules.Imports.ILegacyOfficeConverter, Modules.Imports.HeadlessOfficeConverter>();
+        services.AddSingleton<Modules.Imports.Pdf.IOcrEngine, Modules.Imports.Pdf.ConfiguredOcrEngine>();
+        services.AddSingleton<Modules.Imports.Pdf.IPdfPageRenderer, Modules.Imports.Pdf.PopplerPageRenderer>();
         services.AddScoped<Modules.Imports.IImportTarget, Modules.Imports.FormRecordImportTarget>();
         services.AddScoped<QualGuardIQ.Infrastructure.Modules.Quality.FormValueIndexer>();
         services.AddScoped<DocumentTypeService>();

@@ -121,7 +121,7 @@ public sealed partial class ImportCenterService
         return WorkbookIntake.Grid(await LoadWorkbookAsync(job, ct), sheet);
     }
 
-    static string? ConvertedTitle(ImportJob job) => Obj(job.Analysis)["document"]?["title"]?.GetValue<string?>() is { Length: > 0 } t ? t : null;
+    static string? ConvertedTitle(ImportJob job) => (Obj(job.Analysis)["document"] ?? Obj(job.Analysis)["pdf"])?["title"]?.GetValue<string?>() is { Length: > 0 } t ? t : null;
 
     public static FormDefinition? ConvertedDefinition(ImportJob job) =>
         Obj(job.Analysis)["conversion"]?["definition"] is JsonNode n ? FormDefinitions.Parse(n.ToJsonString()) : null;
@@ -143,17 +143,17 @@ public sealed partial class ImportCenterService
 
     async Task<Guid> CreateFromFileAsync(ImportJob job, CancellationToken ct)
     {
-        var es = ExcelSettings(job); var ws = WordSettings(job);
-        var title = (es.Title ?? ws.Title ?? (job.ImportMode == "template" ? ConvertedTitle(job) : null) ?? Path.GetFileNameWithoutExtension(job.OriginalFileName)).Trim();
+        var es = ExcelSettings(job); var ws = WordSettings(job); var pdfs = PdfSettings(job);
+        var title = (es.Title ?? ws.Title ?? pdfs.Title ?? (job.ImportMode == "template" ? ConvertedTitle(job) : null) ?? Path.GetFileNameWithoutExtension(job.OriginalFileName)).Trim();
         if (title.Length == 0) title = job.OriginalFileName;
         if (title.Length > 200) title = title[..200];
         var kind = job.ImportMode == "template" ? DocumentKind.FormTemplate : DocumentKind.Document;
-        var type = es.DocumentType ?? ws.DocumentType ?? await db.DocumentTypes.Where(t => t.Kind == kind && t.IsActive).OrderBy(t => t.SortOrder).Select(t => t.Name).FirstOrDefaultAsync(ct)
+        var type = es.DocumentType ?? ws.DocumentType ?? pdfs.DocumentType ?? await db.DocumentTypes.Where(t => t.Kind == kind && t.IsActive).OrderBy(t => t.SortOrder).Select(t => t.Name).FirstOrDefaultAsync(ct)
             ?? throw new AppException("No active document type exists for this kind of document.");
         var doc = await docs.CreateAsync(new CreateDocumentRequest(kind, title, type, job.SiteId, job.DepartmentId, job.SubmittedById, 12, null, null, null, null,
             $"Imported from {job.OriginalFileName} ({job.Number})"), ct, preAuthorized: true);
         var full = await db.Documents.Include(d => d.Revisions).FirstAsync(d => d.Id == doc.Id, ct);
-        full.Source = job.FileType switch { "xlsx" or "xlsm" or "xls" => TemplateSource.Excel, "docx" or "doc" => TemplateSource.Word, "pdf" => TemplateSource.Pdf, "csv" => TemplateSource.Csv, _ => TemplateSource.Native };
+        full.Source = job.FileType switch { "xlsx" or "xlsm" or "xls" => TemplateSource.Excel, "docx" or "doc" => TemplateSource.Word, "pdf" or "image" => TemplateSource.Pdf, "csv" => TemplateSource.Csv, _ => TemplateSource.Native };
         full.Description = $"Imported by {job.Number} from {job.OriginalFileName} (SHA-256 {job.FileHash[..12]}…).";
         var rev = full.Revisions.Single();
         await db.SaveChangesAsync(ct);
