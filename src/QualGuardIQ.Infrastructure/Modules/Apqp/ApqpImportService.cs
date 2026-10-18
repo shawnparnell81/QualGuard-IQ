@@ -174,7 +174,7 @@ public sealed class ApqpImportService(AppDbContext db, ModuleSupport m, ApqpServ
         {
             await using var tx = await db.Database.BeginTransactionAsync(ct);
             if (willRevise) { target = await apqp.ReviseAsync(type, doc.Id, r.RevisionReason!, ct); revised = true; }
-            await WriteAsync(type, target.Id, mode, prepared.Where(p => p.Result.Status == "Accepted").Select(p => p.Build!(target.Id)).ToList(), ct);
+            await WriteAsync(type, target, mode, prepared.Where(p => p.Result.Status == "Accepted").Select(p => p.Build!(target.Id)).ToList(), ct);
             Fill(job, target, revised ? doc.Id : null, message);
             db.ApqpLineImports.Add(job);
             db.AuditEntries.Add(new AuditEntry
@@ -358,18 +358,32 @@ public sealed class ApqpImportService(AppDbContext db, ModuleSupport m, ApqpServ
         return n == TabularImport.Norm(ap.ToString()) || n == ap.ToString()[..1].ToLowerInvariant();
     }
 
-    async Task WriteAsync(string type, Guid targetId, string mode, List<object> lines, CancellationToken ct)
+    async Task WriteAsync(string type, ApqpDocument target, string mode, List<object> lines, CancellationToken ct)
     {
+        var targetId = target.Id;
+        // the import's own entry records the file and counts; this one records the lines it replaced or added, value by value
         switch (type)
         {
             case ApqpService.PfmeaType:
+            {
+                var before = await db.PfmeaLines.AsNoTracking().Where(x => x.PfmeaId == targetId).OrderBy(x => x.StepSequence).ThenBy(x => x.CreatedAt).ToListAsync(ct);
+                var added = lines.Cast<PfmeaLine>().ToList();
+                LineAudit.Write(db, current, m.Now, type, targetId, target.SiteId, "FMEA lines", target.AuditLabel, before, mode == "Replace" ? added : [.. before, .. added],
+                    nameof(PfmeaLine.PfmeaId), ApqpService.PfmeaKey, ApqpService.PfmeaName);
                 if (mode == "Replace") db.PfmeaLines.RemoveRange(db.PfmeaLines.Where(x => x.PfmeaId == targetId));
-                db.PfmeaLines.AddRange(lines.Cast<PfmeaLine>());
+                db.PfmeaLines.AddRange(added);
                 break;
+            }
             case ApqpService.PlanType:
+            {
+                var before = await db.ControlPlanLines.AsNoTracking().Where(x => x.PlanId == targetId).OrderBy(x => x.StepSequence).ThenBy(x => x.CreatedAt).ToListAsync(ct);
+                var added = lines.Cast<ControlPlanLine>().ToList();
+                LineAudit.Write(db, current, m.Now, type, targetId, target.SiteId, "control plan lines", target.AuditLabel, before, mode == "Replace" ? added : [.. before, .. added],
+                    nameof(ControlPlanLine.PlanId), ApqpService.PlanKey, ApqpService.PlanName);
                 if (mode == "Replace") db.ControlPlanLines.RemoveRange(db.ControlPlanLines.Where(x => x.PlanId == targetId));
-                db.ControlPlanLines.AddRange(lines.Cast<ControlPlanLine>());
+                db.ControlPlanLines.AddRange(added);
                 break;
+            }
         }
         await db.SaveChangesAsync(ct);
     }
