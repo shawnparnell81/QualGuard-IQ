@@ -8,6 +8,7 @@ import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { fmtDate } from '../components/Status';
 import { mono } from '../theme';
+import { ConversionPreview, ExcelSettingsPanel, FidelityReportView, WorkbookGrid, WorkbookInventory, type Conversion, type WorkbookSummary } from './ImportWorkbook';
 
 export const IMPORT_STATUS = ['Uploaded', 'Security scan pending', 'Security scan failed', 'Inspecting', 'Parsing', 'Mapping required', 'Preview ready', 'Validation failed',
   'Awaiting approval', 'Importing', 'Imported', 'Partially imported', 'Completed with warnings', 'Failed', 'Canceled', 'Rolled back', 'Archived'];
@@ -65,6 +66,7 @@ function UploadPanel({ onStarted }: { onStarted: (id: string) => void }) {
   const templates = useQuery({ queryKey: ['import-templates'], queryFn: () => get<{ items: { id: string; number: string; title: string }[] }>('/api/template-library?view=effective&pageSize=200') });
   const [siteId, setSiteId] = useState('');
   const [target, setTarget] = useState('form-records');
+  const [mode, setMode] = useState('records');
   const [templateId, setTemplateId] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [over, setOver] = useState(false);
@@ -77,25 +79,31 @@ function UploadPanel({ onStarted }: { onStarted: (id: string) => void }) {
     setError(null); setBusy(true);
     try {
       const fd = new FormData();
-      fd.append('file', file); fd.append('siteId', site); fd.append('mode', 'records'); fd.append('targetModule', target);
-      if (templateId) fd.append('targetTemplateId', templateId);
+      fd.append('file', file); fd.append('siteId', site); fd.append('mode', mode);
+      if (mode === 'records') { fd.append('targetModule', target); if (templateId) fd.append('targetTemplateId', templateId); }
       onStarted(await post<string>('/api/imports', fd));
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
-  const t = targets.data?.find((x) => x.key === target);
+  const t = mode === 'records' ? targets.data?.find((x) => x.key === target) : undefined;
+  const isBook = !!file && /\.(xlsx|xlsm|xls)$/i.test(file.name);
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Typography variant="h6" gutterBottom>Import data</Typography>
       <Box onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={drop} aria-label="Drop a file here"
         sx={{ border: '2px dashed', borderColor: over ? 'primary.main' : 'divider', borderRadius: 1, p: 3, textAlign: 'center', bgcolor: over ? 'action.hover' : undefined, mb: 2 }}>
-        <Typography>{file ? `${file.name} (${(file.size / 1024).toFixed(1)} KB)` : 'Drop a CSV file here, or choose one.'}</Typography>
-        <Button component="label" sx={{ mt: 1 }}>Choose file<input hidden type="file" data-testid="import-file" accept=".csv,.txt,.tsv" onChange={(e) => setFile(e.target.files?.[0] ?? null)} /></Button>
+        <Typography>{file ? `${file.name} (${(file.size / 1024).toFixed(1)} KB)` : 'Drop a CSV or Excel file here, or choose one.'}</Typography>
+        <Button component="label" sx={{ mt: 1 }}>Choose file<input hidden type="file" data-testid="import-file" accept=".csv,.txt,.tsv,.xlsx,.xlsm,.xls" onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); if (f && !/\.(xlsx|xlsm|xls)$/i.test(f.name)) setMode('records'); }} /></Button>
       </Box>
       <Stack direction={{ xs: 'column', md: 'row' }} gap={2}>
         <TextField select size="small" label="Site" value={site} onChange={(e) => setSiteId(e.target.value)} sx={{ minWidth: 180 }}>
           {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}</TextField>
-        <TextField select size="small" label="Import into" value={target} onChange={(e) => setTarget(e.target.value)} sx={{ minWidth: 200 }}>
-          {(targets.data ?? []).map((x) => <MenuItem key={x.key} value={x.key}>{x.name}</MenuItem>)}</TextField>
+        <TextField select size="small" label="What to do" value={mode} onChange={(e) => setMode(e.target.value)} sx={{ minWidth: 260 }} SelectProps={{ SelectDisplayProps: { 'aria-label': 'Import mode' } as object }}>
+          <MenuItem value="records">Import rows as records</MenuItem>
+          <MenuItem value="template" disabled={!isBook}>Convert to an electronic form</MenuItem>
+          <MenuItem value="document" disabled={!isBook}>Keep the workbook as a controlled document</MenuItem>
+        </TextField>
+        {mode === 'records' && <TextField select size="small" label="Import into" value={target} onChange={(e) => setTarget(e.target.value)} sx={{ minWidth: 200 }}>
+          {(targets.data ?? []).map((x) => <MenuItem key={x.key} value={x.key}>{x.name}</MenuItem>)}</TextField>}
         {t?.needsTemplate && <TextField select size="small" label="Form template" value={templateId} onChange={(e) => setTemplateId(e.target.value)} sx={{ minWidth: 280 }}>
           {(templates.data?.items ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.number} · {x.title}</MenuItem>)}</TextField>}
         <Button variant="contained" disabled={!file || !site || busy || (t?.needsTemplate && !templateId)} onClick={start}>Upload and inspect</Button>
@@ -108,11 +116,11 @@ function UploadPanel({ onStarted }: { onStarted: (id: string) => void }) {
 interface Mapping { id: string; sourceLocation: string; sourceName: string; sourceType: string; targetField: string | null; targetType: string | null; transformationRule: string | null; mappingConfidence: number; userConfirmed: boolean; defaultValue: string | null; requiredValue: boolean }
 interface Issue { id: string; sourceLocation: string; rowNumber: number | null; severity: number; issueCode: string; description: string; suggestedResolution: string | null; userResolution: string | null }
 interface Hist { eventDate: string; event: string; actorName: string; previousValue: string | null; newValue: string | null; message: string | null }
-interface Detail { id: string; number: string; originalFileName: string; fileType: string; fileSize: number; fileHash: string; targetModule: string | null; status: number; progress: number; totalRows: number; importedRows: number;
+interface Detail { id: string; number: string; originalFileName: string; fileType: string; importMode: string; fileSize: number; fileHash: string; targetModule: string | null; status: number; progress: number; totalRows: number; importedRows: number;
   warningCount: number; errorCount: number; submittedById: string; submittedBy: string; submittedAt: string; approvedAt: string | null; rowVersion: number; background: boolean;
-  settings: { csv?: { encoding: string; delimiter: string; hasHeader: boolean; headerRow: number; dateFormat: string | null; decimalSeparator: string; emptyValue: string }; duplicateKeys?: string[] };
-  analysis: { columns?: { location: string; name: string; inferredType: string; blank: number; samples: string[] }[]; sampleRows?: string[][] };
-  summary: { dryRun?: { rows: number; valid: number; invalid: number; duplicates: number; existingDuplicates: number; preview: { row: number; values: Record<string, string | null>; problems: string[]; duplicate: boolean }[] }; imported?: number; skippedInvalid?: number; skippedDuplicates?: number };
+  settings: { excel?: { sheet?: string | null; headerRow?: number | null; sheets?: string[] | null; title?: string | null }; csv?: { encoding: string; delimiter: string; hasHeader: boolean; headerRow: number; dateFormat: string | null; decimalSeparator: string; emptyValue: string }; duplicateKeys?: string[] };
+  analysis: { workbook?: WorkbookSummary; conversion?: Conversion; sheet?: string; headerRow?: number; columns?: { location: string; name: string; inferredType: string; blank: number; samples: string[] }[]; sampleRows?: string[][] };
+  summary: { dryRun?: { rows: number; valid: number; invalid: number; duplicates: number; existingDuplicates: number; preview: { row: number; values: Record<string, string | null>; problems: string[]; duplicate: boolean }[] }; imported?: number; skippedInvalid?: number; skippedDuplicates?: number; documentId?: string; documentNumber?: string; kind?: string };
   mappings: Mapping[]; issues: Issue[]; history: Hist[]; targetFields: { key: string; label: string; type: string; required: boolean }[] }
 
 const DATE_FORMATS = ['yyyy-MM-dd', 'MM/dd/yyyy', 'M/d/yyyy', 'dd/MM/yyyy', 'd/M/yyyy', 'dd.MM.yyyy', 'dd-MMM-yyyy', 'yyyy/MM/dd'];
@@ -121,7 +129,7 @@ export function ImportJobDetail() {
   const { id } = useParams();
   const qc = useQueryClient();
   const { can, me } = useAuth();
-  const [tab, setTab] = useState('mapping');
+  const [tabSel, setTab] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [edits, setEdits] = useState<Record<string, Partial<Mapping>>>({});
   const [skipInvalid, setSkipInvalid] = useState(false);
@@ -131,6 +139,9 @@ export function ImportJobDetail() {
   const refresh = () => { qc.invalidateQueries({ queryKey: ['import', id] }); qc.invalidateQueries({ queryKey: ['imports'] }); };
   const run = async (f: () => Promise<unknown>) => { setError(null); try { await f(); setEdits({}); refresh(); } catch (e) { setError((e as Error).message); } };
   if (!j) return null;
+  const whole = j.importMode === 'template' || j.importMode === 'document';
+  const book = ['xlsx', 'xlsm', 'xls'].includes(j.fileType);
+  const tab = tabSel ?? (j.analysis.conversion ? 'conversion' : whole ? 'preview' : 'mapping');
   const editable = [5, 6, 7].includes(j.status);
   const m = (x: Mapping) => ({ ...x, ...edits[x.sourceLocation] });
   const csv = j.settings.csv;
@@ -147,7 +158,7 @@ export function ImportJobDetail() {
       </Stack>}>
       <Stack direction="row" gap={2} alignItems="center" flexWrap="wrap" sx={{ mb: 2 }}>
         <Chip color={statusColor(j.status)} label={IMPORT_STATUS[j.status]} />
-        <Typography variant="body2">{j.fileType.toUpperCase()} · {(j.fileSize / 1024).toFixed(1)} KB · {j.totalRows} rows · uploaded by {j.submittedBy} {fmtDate(j.submittedAt)}</Typography>
+        <Typography variant="body2">{j.fileType.toUpperCase()} · {(j.fileSize / 1024).toFixed(1)} KB · {j.analysis.conversion ? `${j.analysis.conversion.report.fields} fields, ${j.analysis.conversion.report.tables} tables` : j.importMode === 'document' ? `${j.analysis.workbook?.sheets.length ?? 0} worksheets` : `${j.totalRows} rows`} · uploaded by {j.submittedBy} {fmtDate(j.submittedAt)}</Typography>
         <Typography variant="body2" sx={{ fontFamily: mono }} title="SHA-256 of the preserved original">{j.fileHash.slice(0, 16)}…</Typography>
         {j.background && [3, 4, 9].includes(j.status) && <Typography variant="body2">Large file: processing in the background.</Typography>}
       </Stack>
@@ -156,10 +167,21 @@ export function ImportJobDetail() {
       {j.status === 2 && <Alert severity="error" sx={{ mb: 2 }}>The file did not pass the security inspection and will not be processed.</Alert>}
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
-        <Tab value="mapping" label="Settings and mapping" /><Tab value="preview" label="Preview and validation" />
+        {j.analysis.conversion && <Tab value="conversion" label="Side-by-side preview" />}
+        {j.analysis.conversion && <Tab value="fidelity" label="Fidelity report" />}
+        {!whole && <Tab value="mapping" label="Settings and mapping" />}
+        <Tab value="preview" label={whole ? 'Check and approve' : 'Preview and validation'} />
+        {j.analysis.workbook && <Tab value="workbook" label="Workbook" />}
         <Tab value="issues" label={`Issues (${j.issues.length})`} /><Tab value="history" label="History" />
       </Tabs>
 
+      {book && j.analysis.workbook && (tab === 'mapping' || tab === 'conversion' || (whole && tab === 'preview')) && <Box sx={{ mb: 2 }}>
+        <ExcelSettingsPanel key={JSON.stringify(j.settings.excel ?? {})} jobId={j.id} mode={j.importMode} sheets={j.analysis.workbook.sheets} editable={editable && can('imports.edit')}
+          current={{ ...(j.settings.excel ?? {}), sheetUsed: j.analysis.sheet, headerUsed: j.analysis.headerRow }} onDone={(e) => { if (e) setError(e); else refresh(); }} />
+      </Box>}
+      {tab === 'conversion' && j.analysis.conversion && <ConversionPreview jobId={j.id} conversion={j.analysis.conversion} />}
+      {tab === 'fidelity' && j.analysis.conversion && <FidelityReportView report={j.analysis.conversion.report} map={j.analysis.conversion.map} />}
+      {tab === 'workbook' && j.analysis.workbook && <Stack gap={2}><WorkbookInventory wb={j.analysis.workbook} />{!j.analysis.conversion && <Paper variant="outlined" sx={{ p: 1.5 }}><WorkbookGrid jobId={j.id} sheet={j.analysis.sheet} /></Paper>}</Stack>}
       {tab === 'mapping' && <Stack gap={2}>
         {csv && <Paper variant="outlined" sx={{ p: 2 }}>
           <Typography variant="subtitle1" gutterBottom>File settings</Typography>
@@ -204,10 +226,15 @@ export function ImportJobDetail() {
       </Stack>}
 
       {tab === 'preview' && <Stack gap={2}>
-        {dry ? <Alert severity={dry.invalid ? 'warning' : 'success'}>Dry run: {dry.valid} of {dry.rows} rows ready to import · {dry.invalid} with problems · {dry.duplicates} repeated in the file · {dry.existingDuplicates} already exist.</Alert>
+        {whole && j.status !== 10 && j.status !== 12 && <Alert severity="info">{j.importMode === 'template'
+          ? 'After approval the converted form becomes a new draft form template, with the original workbook kept on its revision. Review the side-by-side preview and the fidelity report first.'
+          : 'After approval the workbook becomes a new controlled document (draft revision) with the file exactly as uploaded.'}</Alert>}
+        {j.summary.documentId && <Alert severity="success">{j.importMode === 'template' ? 'Draft form template' : 'Controlled document'} <RouterLink to={`/${j.importMode === 'template' ? 'forms/templates' : 'documents'}/${j.summary.documentId}`}>{j.summary.documentNumber}</RouterLink> created.</Alert>}
+        {whole && editable && can('imports.edit') && !dry && <Box><Button variant="outlined" onClick={() => run(() => post(`/api/imports/${id}/validate`))}>Check</Button></Box>}
+        {whole ? null : dry ? <Alert severity={dry.invalid ? 'warning' : 'success'}>Dry run: {dry.valid} of {dry.rows} rows ready to import · {dry.invalid} with problems · {dry.duplicates} repeated in the file · {dry.existingDuplicates} already exist.</Alert>
           : <Alert severity="info">Validate the mapping to see a preview. Nothing is imported until someone approves it.</Alert>}
-        {j.summary.imported !== undefined && <Alert severity="success">{j.summary.imported} records created{j.summary.skippedInvalid ? `, ${j.summary.skippedInvalid} rows skipped` : ''}{j.summary.skippedDuplicates ? `, ${j.summary.skippedDuplicates} duplicates skipped` : ''}.</Alert>}
-        {dry && <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
+        {j.summary.imported !== undefined && !whole && <Alert severity="success">{j.summary.imported} records created{j.summary.skippedInvalid ? `, ${j.summary.skippedInvalid} rows skipped` : ''}{j.summary.skippedDuplicates ? `, ${j.summary.skippedDuplicates} duplicates skipped` : ''}.</Alert>}
+        {dry && !whole && <Paper variant="outlined" sx={{ overflowX: 'auto' }}>
           <Table size="small" aria-label="Preview">
             <TableHead><TableRow><TableCell>Row</TableCell>{j.targetFields.filter((f) => j.mappings.some((x) => x.targetField === f.key)).map((f) => <TableCell key={f.key}>{f.label}</TableCell>)}<TableCell>Result</TableCell></TableRow></TableHead>
             <TableBody>{dry.preview.map((r) => <TableRow key={r.row} sx={{ bgcolor: r.problems.length ? 'error.50' : undefined }}>

@@ -613,8 +613,11 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         if (!WholeFile(job)) _ = Target(job.TargetModule);
         else
         {
-            var (_, edit, _) = Documents.DocumentRecordTypes.Perms(job.ImportMode == "template" ? DocumentKind.FormTemplate : DocumentKind.Document);
-            if (!await access.CanAccessAsync(Me, edit, job.SiteId, job.DepartmentId, ct)) throw new ForbiddenException();
+            // a new controlled document or template: the uploader needed its edit permission; the approver needs its approve permission
+            var (_, _, approve) = Documents.DocumentRecordTypes.Perms(job.ImportMode == "template" ? DocumentKind.FormTemplate : DocumentKind.Document);
+            if (!await access.CanAccessAsync(Me, approve, job.SiteId, job.DepartmentId, ct)) throw new ForbiddenException();
+            if (!await access.CanAccessAsync(job.SubmittedById, Documents.DocumentRecordTypes.Perms(job.ImportMode == "template" ? DocumentKind.FormTemplate : DocumentKind.Document).Edit, job.SiteId, job.DepartmentId, ct))
+                throw new AppException("The person who uploaded the file can no longer create this kind of document.");
         }
         job.ApprovedById = Me; job.ApprovedAt = clock.UtcNow;
         Transition(job, ImportJobStatus.Importing, "Approved");

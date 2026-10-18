@@ -216,6 +216,7 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
               {kind === 2 && rev.fieldSchema && <Stack direction="row" gap={1}>
                 <Button variant="outlined" size="small" href={`/api/forms/templates/revisions/${rev.id}/pdf?style=standardized`} target="_blank">Print rev {rev.revision}</Button>
                 {parseDefinition(rev.fieldSchema).layout && <Button variant="outlined" size="small" href={`/api/forms/templates/revisions/${rev.id}/pdf?style=original`} target="_blank">Print original look</Button>}
+                {rev.status === 3 && <OfflineWorkbook templateId={d.id} siteId={d.siteId} />}
               </Stack>}
               {kind === 2 && !draftEditable && rev.fieldSchema && (isV2(rev.fieldSchema) ? <Paper sx={{ p: 3 }}><FormView def={parseDefinition(rev.fieldSchema)} values={{}} onChange={() => {}} readOnly /></Paper> : <SchemaPreview schema={rev.fieldSchema} />)}
             </Stack>
@@ -331,5 +332,30 @@ export function DocumentTypesPage() {
         <DialogActions><Button onClick={() => setEdit(null)}>Cancel</Button><Button variant="contained" disabled={!edit?.name?.trim()} onClick={save}>Save</Button></DialogActions>
       </Dialog>
     </ModuleWorkspace>
+  );
+}
+
+/** Excel round trip: a protected workbook of the effective revision for offline completion, and its reimport as a draft record. */
+function OfflineWorkbook({ templateId, siteId }: { templateId: string; siteId: string }) {
+  const nav = useNavigate();
+  const { can } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const submit = async (f: File | null | undefined) => {
+    if (!f) return;
+    setError(null); setBusy(true);
+    try {
+      const fd = new FormData(); fd.append('file', f); fd.append('siteId', siteId);
+      const r = await post<{ recordId: string }>(`/api/forms/templates/${templateId}/workbook`, fd);
+      nav(`/forms/records/${r.recordId}`);
+    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+  };
+  return (
+    <>
+      <Button variant="outlined" size="small" href={`/api/forms/templates/${templateId}/workbook`}>Download offline workbook</Button>
+      {can('forms.edit') && <Button variant="outlined" size="small" component="label" disabled={busy}>Submit completed workbook
+        <input hidden type="file" accept=".xlsx" data-testid="offline-workbook" onChange={(e) => submit(e.target.files?.[0])} /></Button>}
+      {error && <Alert severity="error" sx={{ py: 0 }}>{error}</Alert>}
+    </>
   );
 }
