@@ -73,6 +73,7 @@ public sealed class SequflohPartsService(AppDbContext db, ModuleSupport m, IAcce
     public async Task<IQueryable<Part>> PartsQueryAsync(string? q, string? view, string? family, MasterStatus? status, PartType? type, CancellationToken ct)
     {
         var query = await m.ScopeAsync(db.Parts.AsNoTracking(), Permissions.SequflohAccess, ct);
+        if (view == "active") query = query.Where(x => x.Status == MasterStatus.Active);
         if (view == "repairable") query = query.Where(x => x.IsRepairable);
         if (view == "assemblies") query = query.Where(x => x.PartType == PartType.Assembly || x.PartType == PartType.Subassembly || x.AssemblyType != null);
         if (!string.IsNullOrWhiteSpace(family)) query = query.Where(x => x.ProductFamily == family);
@@ -260,7 +261,8 @@ public sealed class SequflohPartsService(AppDbContext db, ModuleSupport m, IAcce
         await RequireAsync(Permissions.SequflohManagePartsLists, ct);
         var settings = await f.GetSettingsAsync(ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
-        var l = await db.SequflohPartsLists.FromSqlInterpolated($"SELECT * FROM qms.sequfloh_parts_lists WHERE \"Id\" = {id} FOR UPDATE").Include(x => x.Items).FirstOrDefaultAsync(ct) ?? throw new NotFoundException("Parts list");
+        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT 1 FROM qms.sequfloh_parts_lists WHERE \"Id\" = {id} FOR UPDATE", ct);
+        var l = await db.SequflohPartsLists.Include(x => x.Items).FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("Parts list");
         if (l.Status != PartsListStatus.Approved) throw new ConflictException("Only an approved parts list can be revised; edit the draft instead.");
         if (settings.WorkInstructions.RevisionReasonRequired && string.IsNullOrWhiteSpace(r.Reason)) throw new AppException("Enter the reason for the new revision.");
         db.SequflohPartsListRevisions.Add(new SequflohPartsListRevision { PartsListId = id, Revision = l.Revision, StatusAtRevision = l.Status, Reason = T(r.Reason, 2000), Snapshot = Snapshot(l) });

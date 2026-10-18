@@ -5,7 +5,7 @@ import { shot, signIn, unique, users } from './support';
 test.describe('SEQUFLOH parts and items', () => {
   test('a part is created in the shared Part Master and carried into a controlled parts list', async ({ page }) => {
     test.setTimeout(150_000);
-    const pn = unique('SQP');
+    const pn = unique('SQP').replace(' ', '-');
     await signIn(page, users.author);
     await page.goto('/sequfloh/parts');
     await expect(page.getByRole('heading', { name: 'Part Master' })).toBeVisible();

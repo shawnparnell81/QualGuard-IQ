@@ -2,8 +2,11 @@ using QualGuardIQ.Domain.Common;
 
 namespace QualGuardIQ.Domain.Sequfloh;
 
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
 public enum PartsListType { Standard = 0, RepairKit = 1, AssemblyBom = 2, RepairParts = 3, Custom = 4 }
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
 public enum PartsListStatus { Draft = 0, Approved = 1, Inactive = 2 }
+[System.Text.Json.Serialization.JsonConverter(typeof(System.Text.Json.Serialization.JsonStringEnumConverter))]
 public enum TraceabilityRequirement { None = 0, Lot = 1, Serial = 2, LotAndSerial = 3 }
 
 /// <summary>Controlled parts list (standard list, repair kit, assembly BOM, repair parts, custom). An approved list is changed only through a new revision.</summary>

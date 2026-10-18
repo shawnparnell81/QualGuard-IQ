@@ -15,6 +15,10 @@ import { Confirm, Empty, ErrorState, Filters, Grid, Loading, Mono, Paged, PagedT
 
 const crumbs = (label: string, extra?: { label: string; to?: string }) => [{ label: 'SEQUFLOH', to: '/sequfloh' }, { label: 'Parts and Items', to: '/sequfloh/parts' }, { label, to: extra ? undefined : undefined }, ...(extra ? [extra] : [])];
 const yes = (b?: boolean) => (b ? 'Yes' : 'No');
+/** Shared Part Master enums (numeric on the wire, as in the Master Data module). */
+const partTypes = ['Component', 'Assembly', 'Material', 'Subassembly', 'Consumable', 'Packaging', 'Other'];
+const partTypeValue: Record<string, number> = { Component: 0, Assembly: 1, Material: 2, Subassembly: 3, Consumable: 4, Packaging: 5, Other: 9 };
+const masterStatuses = ['Active', 'Inactive', 'Obsolete'];
 
 // ------------------------------------------------------------------ Part Master
 interface PartRow { id: string; partNumber: string; name: string; description?: string; revision: string; productFamily?: string; partType: string; assemblyType?: string; unitOfMeasure: string;
@@ -39,8 +43,8 @@ export function PartMasterPage() {
       <Filters search={v('q')} onSearch={(s) => set('q', s)} values={{ family: v('family'), status: v('status'), type: v('type') }} onChange={set}
         onClear={() => { setSp(view ? { view } : {}); setPage(1); }}
         filters={[{ key: 'family', label: 'Product family', options: (families.data ?? []).map((f) => [f, f]) },
-          { key: 'status', label: 'Status', options: [['Active', 'Active'], ['Inactive', 'Inactive'], ['Draft', 'Draft']] },
-          { key: 'type', label: 'Part type', options: ['Raw', 'Component', 'SubAssembly', 'FinishedGood', 'Consumable'].map((t) => [t, words(t)]) }]} />
+          { key: 'status', label: 'Status', options: masterStatuses.map((x) => [x, x]) },
+          { key: 'type', label: 'Part type', options: partTypes.map((t) => [t, words(t)]) }]} />
       <PagedTable q={q} page={page} size={size} onPage={setPage} onSize={setSize} sort={sort} onSort={setSort} onRow={(r) => nav(`/sequfloh/parts/${r.id}`)} empty="No parts match these filters."
         cols={[{ key: 'partNumber', label: 'Part number', sort: true, render: (r) => <Mono>{r.partNumber}</Mono> }, { key: 'name', label: 'Name', sort: true }, { key: 'revision', label: 'Rev' },
           { key: 'productFamily', label: 'Product family', sort: true, render: (r) => r.productFamily ?? '—' }, { key: 'partType', label: 'Type', render: (r) => words(r.partType) },
@@ -67,8 +71,8 @@ function PartDialog({ open, onClose, onSaved, edit }: { open: boolean; onClose: 
   const b = (k: keyof typeof blank) => (_: unknown, c: boolean) => setF({ ...f, [k]: c });
   const save = async () => {
     setErr(null);
-    const body = { part: { partNumber: f.partNumber, name: f.name, description: nul(f.description), partType: f.partType, revision: f.revision, unitOfMeasure: f.unitOfMeasure, productId: edit?.productId ?? null,
-      material: nul(f.material), hasSpecialCharacteristics: edit?.hasSpecialCharacteristics ?? false, siteId: f.siteId, departmentId: edit?.departmentId ?? null, status: f.status, rowVersion: edit?.rowVersion ?? 0 },
+    const body = { part: { partNumber: f.partNumber, name: f.name, description: nul(f.description), partType: partTypeValue[f.partType] ?? 0, revision: f.revision, unitOfMeasure: f.unitOfMeasure, productId: edit?.productId ?? null,
+      material: nul(f.material), hasSpecialCharacteristics: edit?.hasSpecialCharacteristics ?? false, siteId: f.siteId, departmentId: edit?.departmentId ?? null, status: Math.max(0, masterStatuses.indexOf(f.status)), rowVersion: edit?.rowVersion ?? 0 },
       execution: { productFamily: nul(f.productFamily), assemblyType: nul(f.assemblyType), isRepairable: f.isRepairable, isSerialized: f.isSerialized, isLotControlled: f.isLotControlled,
         drawingNumber: nul(f.drawingNumber), specification: nul(f.specification), rowVersion: edit?.rowVersion ?? 0 } };
     try {
@@ -85,12 +89,12 @@ function PartDialog({ open, onClose, onSaved, edit }: { open: boolean; onClose: 
           <TextField label="Part number" required value={f.partNumber} onChange={s('partNumber')} />
           <TextField label="Name" required value={f.name} onChange={s('name')} />
           <TextField label="Revision" required value={f.revision} onChange={s('revision')} />
-          <TextField select label="Part type" value={f.partType} onChange={s('partType')}>{['Raw', 'Component', 'SubAssembly', 'FinishedGood', 'Consumable'].map((t) => <MenuItem key={t} value={t}>{words(t)}</MenuItem>)}</TextField>
+          <TextField select label="Part type" value={f.partType} onChange={s('partType')}>{partTypes.map((t) => <MenuItem key={t} value={t}>{words(t)}</MenuItem>)}</TextField>
           <TextField label="Unit of measure" value={f.unitOfMeasure} onChange={s('unitOfMeasure')} />
           <TextField select label="Site" required value={f.siteId} onChange={s('siteId')}>{(sites.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.code} · {x.name}</MenuItem>)}</TextField>
           <TextField label="Product family" value={f.productFamily} onChange={s('productFamily')} />
           <TextField label="Assembly type" value={f.assemblyType} onChange={s('assemblyType')} />
-          <TextField select label="Status" value={f.status} onChange={s('status')}>{['Active', 'Inactive', 'Draft'].map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>
+          <TextField select label="Status" value={f.status} onChange={s('status')}>{masterStatuses.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>
           <TextField label="Drawing number" value={f.drawingNumber} onChange={s('drawingNumber')} />
           <TextField label="Specification" value={f.specification} onChange={s('specification')} />
           <TextField label="Material" value={f.material} onChange={s('material')} />
