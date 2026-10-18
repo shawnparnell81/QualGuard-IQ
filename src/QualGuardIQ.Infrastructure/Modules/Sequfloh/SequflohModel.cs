@@ -16,6 +16,8 @@ public partial class AppDbContext
     public DbSet<SequflohOperationStep> SequflohOperationSteps => Set<SequflohOperationStep>();
     public DbSet<SequflohWorkInstruction> SequflohWorkInstructions => Set<SequflohWorkInstruction>();
     public DbSet<SequflohWorkInstructionTransition> SequflohWorkInstructionTransitions => Set<SequflohWorkInstructionTransition>();
+    public DbSet<SequflohTrackingRecord> SequflohTrackingRecords => Set<SequflohTrackingRecord>();
+    public DbSet<SequflohTaskEvent> SequflohTaskEvents => Set<SequflohTaskEvent>();
 
     private static void ConfigureSequfloh(ModelBuilder b)
     {
@@ -142,6 +144,61 @@ public partial class AppDbContext
             e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
             e.Property(x => x.Action).HasMaxLength(40);
             e.Property(x => x.Revision).HasMaxLength(10);
+            e.Property(x => x.Comment).HasMaxLength(4000);
+        });
+        b.Entity<SequflohTrackingRecord>(e =>
+        {
+            e.ToTable("sequfloh_tracking_records");
+            e.HasIndex(x => x.Number).IsUnique();
+            e.HasIndex(x => new { x.Type, x.Status });
+            e.HasIndex(x => new { x.Type, x.Result, x.Status });
+            e.HasIndex(x => new { x.AssignedUserId, x.Status });
+            e.HasIndex(x => new { x.DepartmentId, x.Status });
+            e.HasIndex(x => new { x.SiteId, x.Status });
+            e.HasIndex(x => new { x.Status, x.DueAt });
+            e.HasIndex(x => new { x.ApprovalStatus, x.OwnerId });
+            e.HasIndex(x => x.WorkInstructionId);
+            e.HasIndex(x => x.PartId);
+            e.HasOne<SequflohWorkInstruction>().WithMany().HasForeignKey(x => x.WorkInstructionId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Part>().WithMany().HasForeignKey(x => x.PartId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Domain.Organization.Site>().WithMany().HasForeignKey(x => x.SiteId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<Domain.Organization.Department>().WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.Restrict);
+            foreach (var u in new[] { nameof(SequflohTrackingRecord.OwnerId), nameof(SequflohTrackingRecord.AssignedUserId), nameof(SequflohTrackingRecord.ActiveOperatorId), nameof(SequflohTrackingRecord.CompletedById),
+                         nameof(SequflohTrackingRecord.QualityReviewedById), nameof(SequflohTrackingRecord.EngineeringReviewedById) })
+                e.HasOne<ApplicationUser>().WithMany().HasForeignKey(u).OnDelete(DeleteBehavior.Restrict);
+            e.Property(x => x.Number).HasMaxLength(40);
+            e.Property(x => x.WorkInstructionNumber).HasMaxLength(40);
+            e.Property(x => x.WorkInstructionRevision).HasMaxLength(10);
+            e.Property(x => x.WorkInstructionTitle).HasMaxLength(300);
+            foreach (var p in new[] { nameof(SequflohTrackingRecord.PartNumber), nameof(SequflohTrackingRecord.SerialNumber), nameof(SequflohTrackingRecord.LotNumber), nameof(SequflohTrackingRecord.WorkOrder),
+                         nameof(SequflohTrackingRecord.RepairOrder), nameof(SequflohTrackingRecord.CustomerReturnReference), nameof(SequflohTrackingRecord.Project), nameof(SequflohTrackingRecord.Priority),
+                         nameof(SequflohTrackingRecord.Result), nameof(SequflohTrackingRecord.ApprovalStatus), nameof(SequflohTrackingRecord.FaiType), nameof(SequflohTrackingRecord.FinalDisposition) })
+                e.Property(p).HasMaxLength(100);
+            foreach (var p in new[] { nameof(SequflohTrackingRecord.PartDescription), nameof(SequflohTrackingRecord.Operation), nameof(SequflohTrackingRecord.RepairDescription), nameof(SequflohTrackingRecord.PauseReason),
+                         nameof(SequflohTrackingRecord.HoldReason), nameof(SequflohTrackingRecord.CancelReason), nameof(SequflohTrackingRecord.FailureReason), nameof(SequflohTrackingRecord.RejectionReason) })
+                e.Property(p).HasMaxLength(300);
+            foreach (var p in new[] { nameof(SequflohTrackingRecord.VarianceReason), nameof(SequflohTrackingRecord.EngineeringConclusion), nameof(SequflohTrackingRecord.EvidenceReferences), nameof(SequflohTrackingRecord.TechnicianComments),
+                         nameof(SequflohTrackingRecord.QualityComments), nameof(SequflohTrackingRecord.EngineeringComments), nameof(SequflohTrackingRecord.Deviations), nameof(SequflohTrackingRecord.NonconformanceReferences),
+                         nameof(SequflohTrackingRecord.ReportedCondition), nameof(SequflohTrackingRecord.ObservedCondition) })
+                e.Property(p).HasMaxLength(4000);
+            foreach (var p in new[] { nameof(SequflohTrackingRecord.MinBenchmarkMinutes), nameof(SequflohTrackingRecord.MaxBenchmarkMinutes), nameof(SequflohTrackingRecord.VarianceMinutes) }) e.Property(p).HasPrecision(12, 2);
+            foreach (var p in new[] { nameof(SequflohTrackingRecord.Details), nameof(SequflohTrackingRecord.Steps), nameof(SequflohTrackingRecord.Characteristics), nameof(SequflohTrackingRecord.PartsRows), nameof(SequflohTrackingRecord.Signoffs) })
+                e.Property(p).HasColumnType("jsonb");
+        });
+        b.Entity<SequflohTaskEvent>(e =>
+        {
+            e.ToTable("sequfloh_task_events");
+            e.HasIndex(x => x.OperationId).IsUnique();
+            e.HasIndex(x => new { x.TrackingRecordId, x.CreatedAt });
+            e.HasIndex(x => new { x.EventType, x.CreatedAt });
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasOne<SequflohTrackingRecord>().WithMany().HasForeignKey(x => x.TrackingRecordId).OnDelete(DeleteBehavior.Restrict);
+            foreach (var u in new[] { nameof(SequflohTaskEvent.UserId), nameof(SequflohTaskEvent.AssignedBeforeId), nameof(SequflohTaskEvent.AssignedAfterId) })
+                e.HasOne<ApplicationUser>().WithMany().HasForeignKey(u).OnDelete(DeleteBehavior.Restrict);
+            e.Property(x => x.TrackingNumber).HasMaxLength(40);
+            e.Property(x => x.EventType).HasMaxLength(40);
+            e.Property(x => x.UserName).HasMaxLength(200);
+            e.Property(x => x.Reason).HasMaxLength(300);
             e.Property(x => x.Comment).HasMaxLength(4000);
         });
         b.Entity<Part>(e =>
