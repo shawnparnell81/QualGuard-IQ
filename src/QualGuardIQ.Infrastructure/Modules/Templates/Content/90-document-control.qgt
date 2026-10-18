@@ -1,0 +1,405 @@
+# Document control templates (TECH 4, FI 1 document control). Registers are controlled records; the live lists are under Master lists.
+
+block doc_register_columns
+c dr_number | Number | text | *
+c dr_title | Title | text | *
+c dr_revision | Revision | text | *
+c dr_status | Status | choice | * [Draft; In review; Approved; Effective; Superseded; Obsolete; Withdrawn]
+c dr_owner | Owner | user
+c dr_department | Department | department
+c dr_effective | Effective date | date
+c dr_review_due | Review due | date
+c dr_document | Controlled document | record
+rule dr_rows.dr_status | in | Obsolete,Withdrawn | #EEEEEE
+end
+
+block doc_register_summary
+f dr_as_of | Register as of | date | *
+f dr_total | Entries | calc | {COUNTA(dr_rows.dr_number)}
+f dr_effective_count | Effective | calc | {COUNTIF(dr_rows.dr_status, "Effective")}
+f dr_review_overdue | Reviews overdue | calc | {COUNTIF(dr_rows.dr_review_due, "<" & dr_as_of)}
+rule dr_review_overdue | greaterThan | 0 | #FFF4D6 | bold
+end
+
+block doc_signatures
+sign doc_prepared | Prepared by | prepared | I prepared this record and it is complete and accurate.
+sign doc_reviewed | Reviewed by | reviewed | I reviewed this record. | documents.edit
+sign doc_approved | Approved by | approved | I approve this record. | documents.approve
+end
+
+template master-document-list | Master Document List | DOCUMENT_CONTROL
+packs manufacturing, medical-device, aerospace
+tags master list, documents, register
+purpose Keep a controlled list of every controlled document with its current revision, status, dates, owner, distribution, training requirement and retention rule, so that only current documents are used.
+scope All controlled documents of the organization or site: manuals, policies, procedures, work instructions, forms and specifications.
+instructions Use the live master document list for daily control; issue this record when a dated, signed copy of the list is needed for an audit, a customer or a transfer. Every entry links to the controlled document.
+workflow Compiled from the live list, reviewed, approved, issued.
+retention Keep each issued list for the retention period set by the organization.
+landscape
+section mdl | Documents | 1
+use doc_register_summary
+table dr_rows | Documents | 1
+use doc_register_columns
+c dr_category | Category | text
+c dr_expires | Expiration date | date
+c dr_distribution | Distribution | text
+c dr_training | Training required | boolean
+c dr_retention | Retention rule | text
+c dr_process | Related process | text
+use doc_signatures
+end
+
+template master-record-list | Master Record List | DOCUMENT_CONTROL
+packs manufacturing, medical-device, aerospace
+tags master list, records, retention
+purpose List every type of quality record the organization keeps, with where it is stored, who owns it, how long it is kept, how it is protected and how it is disposed of.
+scope All quality records, electronic and paper.
+instructions List each record type once. The retention period starts from the event named in the trigger. Records under legal hold are never disposed of while the hold applies.
+workflow Maintained by document control, reviewed annually, approved.
+retention Keep each revision for the retention period set by the organization.
+landscape
+section mrl | Records | 1
+table mrl_rows | Record types | 1
+c mrl_record | Record type | text | *
+c mrl_form | Form or template | text
+c mrl_owner | Owner | user
+c mrl_storage | Storage | choice | * [This system; Other electronic system; Paper archive; Off-site archive]
+c mrl_location | Location | text
+c mrl_retention | Retention period | text | *
+c mrl_trigger | Retention starts from | choice | [Record closed; Product shipped; Product end of life; Contract end; Employee leaves; Calendar year end]
+c mrl_protection | Protection and backup | text
+c mrl_disposal | Disposal method | choice | [Secure deletion; Shredding; Return to customer; Archive transfer]
+f mrl_count | Record types | calc | {COUNTA(mrl_rows.mrl_record)}
+use doc_signatures
+end
+
+template master-drawing-list | Master Drawing List | DOCUMENT_CONTROL
+packs manufacturing, aerospace
+tags master list, drawings, engineering
+purpose Keep a controlled list of engineering drawings with part number, size, sheets and current revision, so production and inspection use the released revision.
+scope Drawings released for manufacturing, inspection or purchasing.
+instructions Use the live drawings list for daily control; issue this record for audits, customers and suppliers. Each entry links to the controlled drawing.
+workflow Compiled, reviewed, approved, issued.
+retention Keep each issued list for the retention period set by the organization.
+landscape
+section mdwl | Drawings | 1
+use doc_register_summary
+table dr_rows | Drawings | 1
+use doc_register_columns
+c dr_part | Part number | text
+c dr_size | Size | choice | [A; B; C; D; E; A4; A3; A2; A1; A0]
+c dr_sheets | Sheets | integer | min=1
+c dr_customer_rev | Customer revision | text
+use doc_signatures
+end
+
+template master-specification-list | Master Specification List | DOCUMENT_CONTROL
+packs manufacturing, aerospace, electronics
+tags master list, specifications
+purpose Keep a controlled list of internal, customer and industry specifications in use, with revisions and the products they apply to.
+scope Material, process, product, test and packaging specifications.
+instructions Record the issuing body for external specifications and how updates are monitored. Each entry links to the controlled document.
+workflow Compiled, reviewed, approved, issued.
+retention Keep each issued list for the retention period set by the organization.
+landscape
+section msl | Specifications | 1
+use doc_register_summary
+table dr_rows | Specifications | 1
+use doc_register_columns
+c dr_spec_type | Type | choice | [Material; Process; Product; Test; Packaging; Customer; Industry]
+c dr_issuer | Issued by | text
+c dr_applies_to | Applies to | text
+c dr_monitor | Update monitoring | text
+use doc_signatures
+end
+
+template master-form-list | Master Form List | DOCUMENT_CONTROL
+packs manufacturing, medical-device, aerospace, electronics
+tags master list, forms, templates
+purpose Keep a controlled list of form templates with their revision, owning module and the procedure that calls for each.
+scope Controlled forms and form templates, electronic and paper.
+instructions Each form links to its template in the template library. Paper forms list the location of blank stock so obsolete stock can be withdrawn.
+workflow Compiled, reviewed, approved, issued.
+retention Keep each issued list for the retention period set by the organization.
+landscape
+section mfl | Forms | 1
+use doc_register_summary
+table dr_rows | Forms | 1
+use doc_register_columns
+c dr_module | Module | text
+c dr_procedure | Called for by procedure | text
+c dr_medium | Medium | choice | [Electronic; Paper; Both]
+use doc_signatures
+end
+
+template master-procedure-list | Master Procedure List | DOCUMENT_CONTROL
+packs manufacturing, medical-device, aerospace, electronics
+tags master list, procedures, register
+purpose Keep a controlled list of procedures and policies with their revision, owner, process and the requirements each addresses.
+scope Policies and procedures of the management system.
+instructions List each procedure with the process it belongs to. Record the requirement references it addresses so coverage can be checked.
+workflow Compiled, reviewed, approved, issued.
+retention Keep each issued list for the retention period set by the organization.
+landscape
+section mpl | Procedures | 1
+use doc_register_summary
+table dr_rows | Procedures | 1
+use doc_register_columns
+c dr_type | Type | choice | [Policy; Procedure; Manual]
+c dr_process | Process | text
+c dr_requirements | Requirements addressed | text
+use doc_signatures
+end
+
+template policy-register | Policy Register | DOCUMENT_CONTROL
+packs manufacturing
+tags register, policies
+purpose Register the policies of the organization with their approval authority, communication and review dates.
+scope Quality, safety, environmental, information security and other policies.
+instructions Record how each policy is communicated and when it was last reviewed by top management.
+workflow Maintained, reviewed at management review, approved.
+retention Keep each revision for the retention period set by the organization.
+landscape
+section pr | Policies | 1
+use doc_register_summary
+table dr_rows | Policies | 1
+use doc_register_columns
+c dr_authority | Approval authority | text
+c dr_communicated | Communicated by | choice | [Notice boards; Intranet; Training; Induction; All]
+use doc_signatures
+end
+
+template procedure-register | Procedure Register | DOCUMENT_CONTROL
+packs manufacturing
+tags register, procedures
+purpose Register procedures with their owner, process, training requirement and review dates.
+scope Procedures of the management system.
+instructions Record whether training is required on each revision so that training is assigned when it changes.
+workflow Maintained, reviewed, approved.
+retention Keep each revision for the retention period set by the organization.
+landscape
+section prc | Procedures | 1
+use doc_register_summary
+table dr_rows | Procedures | 1
+use doc_register_columns
+c dr_process | Process | text
+c dr_training | Training required | boolean
+use doc_signatures
+end
+
+template master-work-instruction-list | Master Work Instruction List | DOCUMENT_CONTROL
+packs manufacturing, electronics
+tags master list, work instructions, register
+purpose Keep a controlled list of work instructions with their operation, work centre, product and revision, so the instruction at each workstation can be checked against the list.
+scope Work instructions, visual aids and set-up sheets used at workstations.
+instructions Record the workstation where each instruction is posted. Walk the floor against the list at the frequency the organization sets.
+workflow Compiled, reviewed, approved, issued, floor-checked.
+retention Keep each issued list for the retention period set by the organization.
+landscape
+section mwil | Work instructions | 1
+use doc_register_summary
+table dr_rows | Work instructions | 1
+use doc_register_columns
+c dr_operation | Operation | text
+c dr_work_centre | Work centre or station | text
+c dr_product | Product or part | text
+c dr_visual | Visual aid | boolean
+use doc_signatures
+end
+
+template external-document-register | External Document Register | DOCUMENT_CONTROL
+packs manufacturing, aerospace, medical-device
+tags register, external documents, standards
+purpose Register documents of external origin (standards, regulations, customer documents) with their issuer, revision and how changes are monitored.
+scope External documents needed for planning and operation of the management system.
+instructions Record the source and how the organization learns of new revisions. Review each entry at the interval set; record the date checked.
+workflow Maintained, checked at interval, reviewed.
+retention Keep each revision for the retention period set by the organization.
+landscape
+section edr | External documents | 1
+table edr_rows | Documents | 1
+c ed_number | Number | text | *
+c ed_title | Title | text | *
+c ed_issuer | Issuer | text | *
+c ed_revision | Revision or edition | text | *
+c ed_type | Type | choice | [Standard; Regulation; Customer document; Supplier document; Industry guidance]
+c ed_monitor | Change monitoring | text
+c ed_last_check | Last checked | date
+c ed_owner | Owner | user
+c ed_location | Location | text
+use register_signatures
+end
+
+template obsolete-document-register | Obsolete Document Register | DOCUMENT_CONTROL
+packs manufacturing, aerospace, medical-device
+tags register, obsolete, withdrawn
+purpose Record documents made obsolete, why, when, what replaced them and how copies were withdrawn, and identify any copy retained for reference.
+scope Every controlled document that is made obsolete or superseded.
+instructions Record the withdrawal of every controlled copy. Copies retained for legal or knowledge purposes are marked obsolete and listed.
+workflow Recorded at obsolescence, copies withdrawn, verified.
+retention Keep for the retention period set by the organization.
+landscape
+section odr | Obsolete documents | 1
+table odr_rows | Documents | 1
+c od_number | Number | text | *
+c od_title | Title | text | *
+c od_revision | Last revision | text | *
+c od_obsolete_on | Obsolete on | date | *
+c od_reason | Reason | choice | * [Superseded; Process discontinued; Product discontinued; Merged; Customer request]
+c od_replaced_by | Replaced by | text
+c od_copies_withdrawn | Copies withdrawn | boolean | *
+c od_retained | Copy retained for reference | boolean
+c od_retained_where | Where retained | text
+rule odr_rows.od_copies_withdrawn | equals | false | #FDE7E9 | bold
+use register_signatures
+end
+
+template document-change-request | Document Change Request | DOCUMENT_CONTROL
+packs manufacturing, medical-device, aerospace, electronics
+tags change request, documents, DCR
+purpose Request a new document, a change or withdrawal of a document, stating the change, the reason and the impact so the owner can decide.
+scope Every controlled document.
+instructions Describe the change precisely, with the affected sections. Assess the impact on training, records, other documents, product and customers. The owner accepts or rejects; accepted requests are implemented as a new revision.
+workflow Requested, assessed by the owner, accepted or rejected, implemented, closed.
+retention Keep with the document history for the retention period set by the organization.
+section dcr | Request | 2
+f dcr_document | Document | record
+f dcr_type | Request type | choice | * [New document; Change; Withdrawal; Periodic review]
+f dcr_current_rev | Current revision | text
+f dcr_change | Change requested | longtext | *
+f dcr_reason | Reason | longtext | *
+f dcr_urgency | Urgency | choice | [Routine; Urgent; Safety or regulatory]
+rule dcr_urgency | equals | Safety or regulatory | #FDE7E9 | bold
+section dcr_impact | Impact | 1
+table dcr_impacts | Impact assessment | 0
+rows Training needed; Records or forms affected; Other documents affected; Product or process affected; Customer notification or approval needed; Supplier affected; Validation needed; Software or system change needed
+c im_answer | Answer | choice | * [Yes; No]
+c im_detail | Detail | text
+rule dcr_impacts.im_answer | equals | Yes | #FFF4D6
+section dcr_decision | Decision | 2
+f dcr_impacts_yes | Impacts identified | calc | {COUNTIF(dcr_impacts.im_answer, "Yes")}
+f dcr_decision_value | Decision | choice | [Accepted; Rejected; Deferred]
+f dcr_decision_reason | Reason for decision | longtext
+f dcr_new_rev | New revision | text | when=dcr_decision_value=Accepted
+use doc_signatures
+end
+
+template document-review-record | Document Review Record | DOCUMENT_CONTROL
+packs manufacturing, medical-device
+tags review, periodic review, documents
+purpose Record the periodic review of a document: whether it is still accurate, needed and effective, and the outcome.
+scope Controlled documents due for periodic review.
+instructions Review the document against current practice, requirements and records. Record each question. A change is raised as a change request; a document no longer needed is withdrawn.
+workflow Review due, reviewed, outcome approved.
+retention Keep with the document history for the retention period set by the organization.
+section drr | Document | 3
+f drr_document | Document | record | *
+f drr_revision | Revision | text | *
+f drr_due | Review due | date
+f drr_reviewed_on | Reviewed on | date | *
+section drr_questions | Review | 1
+table drr_rows | Questions | 0
+rows The document reflects current practice; Referenced documents and standards are current; Roles and responsibilities are correct; Forms and records it requires are still used; Audit findings and nonconformances relating to it are addressed; It is still needed
+c dq_answer | Answer | choice | * [Yes; No]
+c dq_comment | Comment | text
+rule drr_rows.dq_answer | equals | No | #FFF4D6 | bold
+section drr_outcome | Outcome | 2
+f drr_outcome_value | Outcome | choice | * [No change - review date reset; Change required; Withdraw]
+f drr_change_request | Change request | record | when=drr_outcome_value=Change_required
+f drr_next_review | Next review | date
+use doc_signatures
+end
+
+template controlled-copy-register | Controlled Copy Register | DOCUMENT_CONTROL
+packs manufacturing, aerospace
+tags controlled copies, distribution, paper
+purpose Register every controlled paper copy issued, its holder and location, so every copy can be replaced or withdrawn when the document changes.
+scope Controlled paper copies; electronic access is controlled by the system.
+instructions Number each copy. On a new revision, issue new copies and record the return or destruction of the old ones.
+workflow Issued, replaced on revision, withdrawn, verified.
+retention Keep for the retention period set by the organization.
+landscape
+section ccr | Copies | 1
+table ccr_rows | Copies | 1
+c cc_document | Document | text | *
+c cc_revision | Revision | text | *
+c cc_copy | Copy number | text | *
+c cc_holder | Holder | user
+c cc_location | Location | text | *
+c cc_issued | Issued on | date | *
+c cc_withdrawn | Withdrawn on | date
+c cc_status | Status | choice | * [Current; Replaced; Withdrawn; Lost]
+rule ccr_rows.cc_status | equals | Lost | #FDE7E9 | bold
+f cc_current | Current copies | calc | {COUNTIF(ccr_rows.cc_status, "Current")}
+use register_signatures
+end
+
+template document-distribution-list | Document Distribution List | DOCUMENT_CONTROL
+packs manufacturing
+tags distribution, documents
+purpose Define who must receive or have access to a document and how, so distribution can be repeated for every revision.
+scope Documents distributed beyond their owner's function.
+instructions List each recipient or role with the method. Recipients who must acknowledge are marked so acknowledgment can be tracked.
+workflow Defined, approved, used for every revision.
+retention Keep with the document history for the retention period set by the organization.
+section ddl | Document | 2
+f ddl_document | Document | record | *
+f ddl_revision | Revision | text
+section ddl_recipients | Recipients | 1
+table ddl_rows | Recipients | 1
+c dd_recipient | Recipient | user
+c dd_role | Role or group | text
+c dd_department | Department | department
+c dd_method | Method | choice | * [System access; E-mail notice; Controlled paper copy; Customer portal; Supplier portal]
+c dd_ack | Acknowledgment required | boolean
+f ddl_count | Recipients | calc | {COUNTA(ddl_rows.dd_method)}
+use doc_signatures
+end
+
+template document-acknowledgment-register | Document Acknowledgment Register | DOCUMENT_CONTROL
+packs manufacturing, medical-device
+tags acknowledgment, read and understood
+purpose Record that each person who must read a document revision has read and understood it, by the due date.
+scope Document revisions that require acknowledgment.
+instructions Each person acknowledges with their own signature in the system. Overdue acknowledgments are reported to the person's manager.
+workflow Assigned, acknowledged, overdue escalated, closed.
+retention Keep with the document history for the retention period set by the organization.
+section dar | Document | 3
+f dar_document | Document | record | *
+f dar_revision | Revision | text | *
+f dar_due | Acknowledge by | date | *
+section dar_people | Acknowledgments | 1
+table dar_rows | People | 1
+c da_person | Person | user | *
+c da_department | Department | department
+c da_ack_on | Acknowledged on | date
+c da_status | Status | calc | {IF(ISNUMBER(DAYS(da_ack_on, dar_due)), IF(DAYS(da_ack_on, dar_due) <= 0, "On time", "Late"), "Open")}
+rule dar_rows.da_status | equals | Late | #FFF4D6 | bold
+rule dar_rows.da_status | equals | Open | #FDE7E9
+f dar_total | People | calc | {COUNTA(dar_rows.da_person)}
+f dar_done | Acknowledged | calc | {COUNT(dar_rows.da_ack_on)}
+f dar_pct | Acknowledged | calc | {IF(dar_total > 0, dar_done / dar_total * 100, 0)} dec=0 unit=%
+use register_signatures
+end
+
+template document-retention-schedule | Document Retention Schedule | DOCUMENT_CONTROL
+packs manufacturing, medical-device, aerospace
+tags retention, schedule, disposal, legal hold
+purpose Set the retention period and disposal method for each category of document and record, with the requirement that sets it.
+scope All documents and records of the organization.
+instructions Record the source of each period: law, contract, customer or the organization's decision. The longest applicable period wins. Legal holds suspend disposal.
+workflow Drafted, reviewed by legal and quality, approved, reviewed annually.
+retention Keep each revision for the retention period set by the organization.
+landscape
+section drs | Schedule | 1
+table drs_rows | Categories | 1
+c rs_category | Category | text | *
+c rs_examples | Examples | text
+c rs_period_years | Period (years) | integer | * min=0
+c rs_trigger | Starts from | choice | * [Creation; Closure; Product end of life; Contract end; Employee leaves; Calendar year end]
+c rs_source | Source | choice | * [Law or regulation; Contract; Customer requirement; Organization decision]
+c rs_reference | Reference | text
+c rs_disposal | Disposal | choice | [Secure deletion; Shredding; Archive transfer; Return to customer]
+c rs_hold | Subject to legal hold review | boolean
+use doc_signatures
+end

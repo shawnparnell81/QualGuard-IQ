@@ -1,0 +1,388 @@
+# First article inspection templates (TECH 4, FI 1, FI 5 aerospace pack). Original, configurable structure; no standard text is reproduced.
+
+block fai_header
+section fai_part | Part and first article | 3
+f fai_part_number | Part number | text | *
+f fai_part_name | Part name | text | *
+f fai_part_revision | Part revision | text | *
+f fai_drawing_number | Drawing number | text | *
+f fai_drawing_revision | Drawing revision | text | *
+f fai_serial | Serial or lot of the first article | text | *
+f fai_type | FAI type | choice | * [Full; Partial; Delta; Re-verification]
+f fai_reason | Reason | choice | * [New part; Design change; Process change; Manufacturing location change; Source change; Production lapse; Customer request; Corrective action]
+f fai_manufacturing_process | Manufacturing process reference | text
+f fai_po | Purchase or work order | text
+end
+
+block fai_signatures
+sign fai_inspector | Inspected by | performed | I performed and recorded this inspection on the first article identified.
+sign fai_reviewer | Reviewed by | reviewed | I reviewed the inspection results for completeness and conformance. | fai.edit
+sign fai_approver | Approved by | approved | I approve this first article record. | fai.approve
+sign fai_customer | Customer acceptance | customer | The customer records its acceptance where required. | | optional
+end
+
+block fai_characteristics_table
+section characteristics_section | Characteristics | 1 | One row per balloon number. Enter limits from the drawing; the result is calculated from the measured value.
+table fai_chars | Characteristics | 1
+groups Reference:3; Requirement:4; Result:4
+c ch_balloon | Balloon | text | *
+c ch_location | Drawing zone or sheet | text
+c ch_type | Type | choice | * [Dimension; Geometric tolerance; Note; Material; Finish; Marking; Functional; Other]
+c ch_requirement | Requirement | text | *
+c ch_nominal | Nominal | number | dec=4
+c ch_lsl | Lower limit | number | dec=4
+c ch_usl | Upper limit | number | dec=4
+c ch_measured | Measured | number | dec=4
+c ch_attribute | Attribute result | choice | [Conforms; Does not conform; Not applicable]
+c ch_equipment | Equipment | equipment
+c ch_result | Result | calc | {IF(ISNUMBER(ch_measured), IF(AND(OR(ISBLANK(ch_lsl), ch_measured >= ch_lsl), OR(ISBLANK(ch_usl), ch_measured <= ch_usl)), "ACCEPT", "REJECT"), IF(ch_attribute = "Does not conform", "REJECT", IF(ch_attribute = "Conforms", "ACCEPT", "OPEN")))}
+rule fai_chars.ch_result | equals | REJECT | #FDE7E9 | bold
+rule fai_chars.ch_result | equals | OPEN | #FFF4D6
+f ch_total | Characteristics | calc | {COUNTA(fai_chars.ch_balloon)}
+f ch_rejected | Rejected | calc | {COUNTIF(fai_chars.ch_result, "REJECT")}
+f ch_open | Not yet inspected | calc | {COUNTIF(fai_chars.ch_result, "OPEN")}
+f ch_complete_pct | Inspected | calc | {IF(ch_total > 0, (ch_total - ch_open) / ch_total * 100, 0)} dec=0 unit=%
+end
+
+template fai-cover | FAI Cover Record | FAI
+packs aerospace
+tags FAI, cover, first article
+purpose Identify a first article inspection, its scope, the organization and customer, and summarize the result of every part of the package.
+scope Every first article inspection, full, partial or delta.
+instructions Open the cover record first. Link each part of the package as it is completed. The overall result is set when every part is complete and every nonconforming characteristic is dispositioned.
+workflow Opened, package parts completed, reviewed, approved, closed.
+retention Keep for the life of the part plus ten years, or longer where the contract requires.
+use fai_header
+section fai_parties | Organization and customer | 3
+f fai_org_name | Organization | text | *
+f fai_org_code | Organization code | text
+f fai_customer_ref | Customer reference | text
+f fai_contract | Contract or order | text
+f fai_assembly | Part of an assembly | boolean
+f fai_parent | Parent assembly part number | text | when=fai_assembly=true
+section fai_package | Package | 1
+table fai_package_parts | Package parts | 0
+rows Part and drawing accountability; Material and process accountability; Characteristic results; Equipment used; Nonconforming characteristics
+c pk_record | Record | record
+c pk_status | Status | choice | * [Not started; In progress; Complete; Not applicable]
+c pk_note | Note | text
+rule fai_package_parts.pk_status | in | Not started,In progress | #FFF4D6
+section fai_overall | Overall result | 2
+f fai_open_parts | Package parts open | calc | {COUNTIF(fai_package_parts.pk_status, "Not started") + COUNTIF(fai_package_parts.pk_status, "In progress")}
+f fai_result | FAI result | choice | [Open; Complete - conforming; Complete - not conforming]
+f fai_result_note | Note | longtext
+rule fai_result | equals | Complete - not conforming | #FDE7E9 | bold
+use fai_signatures
+end
+
+template fai-part-accountability | Part and Drawing Accountability | FAI
+packs aerospace
+tags FAI, accountability, drawing, bill of materials
+purpose Account for the part, its drawing and every subassembly or detail part included in the first article, with their own first article references.
+scope Every first article inspection; assemblies list each component.
+instructions List each component of the part with its own FAI reference or the reason none is needed. Confirm the drawing and revision used match the design release.
+workflow Prepared, reviewed, approved.
+retention Keep with the first article package.
+use fai_header
+section drawing_accountability | Drawing | 2
+f da_released | Drawing revision matches the released design | boolean | *
+f da_model | Model or digital product definition reference | text
+f da_changes | Changes not yet on the drawing | longtext
+section components | Components | 1
+table component_rows | Components | 0
+c cmp_part | Component part number | text | *
+c cmp_name | Name | text
+c cmp_revision | Revision | text
+c cmp_serial | Serial or lot | text
+c cmp_fai_ref | Component FAI reference | text
+c cmp_no_fai_reason | Reason when no FAI | text
+use fai_signatures
+end
+
+template fai-balloon-register | Balloon Characteristic Register | FAI
+packs aerospace
+tags FAI, balloon, characteristics, drawing
+purpose Number every design characteristic on the drawing and model (dimensions, notes, materials, finishes and markings) so each is inspected and reported exactly once.
+scope Every drawing used for a first article.
+instructions Balloon the drawing in a consistent order by sheet and zone. Record each balloon with its requirement and type. Attach the ballooned drawing. Notes with several requirements get one balloon per requirement.
+workflow Ballooned, checked by a second person, approved.
+retention Keep with the first article package.
+use fai_header
+section balloon_register | Register | 1
+table balloon_rows | Balloons | 1
+c bl_number | Balloon | text | *
+c bl_sheet | Sheet | integer | min=1
+c bl_zone | Zone | text
+c bl_type | Type | choice | * [Dimension; Geometric tolerance; Note; Material; Finish; Marking; Functional; Other]
+c bl_requirement | Requirement | text | *
+c bl_key | Key or critical characteristic | boolean
+rule balloon_rows.bl_key | equals | true | #FFF4D6 | bold
+f bl_count | Balloons | calc | {COUNTA(balloon_rows.bl_number)}
+f bl_key_count | Key characteristics | calc | {COUNTIF(balloon_rows.bl_key, TRUE)}
+f bl_drawing | Ballooned drawing | attachment | *
+use fai_signatures
+end
+
+template fai-balloon-package | Balloon Inspection Package | FAI
+packs aerospace
+tags FAI, balloon, inspection package
+purpose Combine the ballooned drawing, the characteristic results and the equipment used into one inspection package for a part.
+scope Parts inspected by balloon number, for first article or periodic layout.
+instructions Attach the ballooned drawing. Inspect each balloon and record the result. Results are calculated from the limits; any rejected balloon needs a nonconforming characteristic record.
+workflow Ballooned, inspected, reviewed, approved.
+retention Keep with the first article package.
+use fai_header
+section balloon_drawing | Drawing | 2
+f bp_drawing | Ballooned drawing | attachment | *
+f bp_model_ref | Model reference | text
+use fai_characteristics_table
+section bp_ncr | Nonconformance | 2
+f bp_ncr_needed | Nonconforming characteristic record needed | calc | {IF(ch_rejected > 0, "Yes", "No")}
+f bp_ncr | Nonconformance record | record
+rule bp_ncr_needed | equals | Yes | #FDE7E9 | bold
+use fai_signatures
+end
+
+template fai-configurable-package | First Article Package (AS9102-style, configurable) | FAI
+packs aerospace
+tags FAI, first article package, three-part structure, configurable
+purpose Provide a complete, configurable first article package in three parts: part accountability, product accountability (materials, processes and functional tests) and characteristic accountability with results.
+scope Customers and contracts that require a three-part first article package; the organization configures the fields and approvals to match each customer's requirement.
+instructions Complete each part in order. Every design characteristic is accounted for by balloon. Special processes name the approved source and the certificate. Functional tests reference the procedure and report.
+workflow Opened, three parts completed, reviewed, approved, customer acceptance recorded where required.
+retention Keep for the life of the part plus ten years, or longer where the contract requires.
+landscape
+use fai_header
+section part1 | Part 1 - Part accountability | 1
+table p1_components | Components and subassemblies | 0
+c p1_part | Part number | text | *
+c p1_name | Name | text
+c p1_serial | Serial or lot | text
+c p1_fai | FAI reference | text
+section part2 | Part 2 - Product accountability | 1
+table p2_materials | Materials, special processes and tests | 1
+c p2_type | Type | choice | * [Raw material; Special process; Functional test; Purchased part]
+c p2_spec | Specification | text | *
+c p2_code | Process or material code | text
+c p2_supplier | Source | supplier
+c p2_certificate | Certificate or report | text | *
+c p2_approved_source | Approved source | boolean
+c p2_result | Result | choice | [Acceptable; Not acceptable]
+rule p2_materials.p2_result | equals | Not acceptable | #FDE7E9 | bold
+rule p2_materials.p2_approved_source | equals | false | #FFF4D6
+use fai_characteristics_table
+use fai_signatures
+end
+
+template fai-material-process | Material and Process Accountability | FAI
+packs aerospace
+tags FAI, material, special process, certificates
+purpose Account for every raw material, special process and functional test required by the design, with the source used and the evidence of conformance.
+scope Every first article whose design names materials, special processes or functional tests.
+instructions Record each requirement with the specification, the source and the certificate. Sources must be approved where the customer controls them.
+workflow Prepared, certificates verified, approved.
+retention Keep with the first article package.
+use fai_header
+section mp | Materials and processes | 1
+table mp_rows | Requirements | 1
+c mp_type | Type | choice | * [Raw material; Special process; Functional test]
+c mp_spec | Specification and revision | text | *
+c mp_code | Code | text
+c mp_source | Source | supplier
+c mp_approved | Approved source | boolean
+c mp_certificate | Certificate | text | *
+c mp_verified | Certificate verified against requirement | passfail
+rule mp_rows.mp_verified | equals | FAIL | #FDE7E9 | bold
+f mp_certs | Certificates | attachment
+use fai_signatures
+end
+
+template fai-characteristic-results | Characteristic Results | FAI
+packs aerospace
+tags FAI, results, characteristics
+purpose Record the inspection result of every ballooned characteristic of the first article.
+scope Every first article.
+instructions Record each result against the balloon number. Variable results are compared with the limits automatically. Record the equipment used for each measurement.
+workflow Inspected, reviewed, approved.
+retention Keep with the first article package.
+use fai_header, fai_characteristics_table, fai_signatures
+end
+
+template fai-characteristic-matrix | First Article Characteristic Matrix | FAI
+packs aerospace
+tags FAI, matrix, characteristics, serials
+purpose Show the result of each characteristic across several first article units, cavities or serials in one matrix.
+scope First articles that cover more than one unit, cavity or tool.
+instructions Enter the limits once per characteristic and the measured value for each unit. The worst value and the result are calculated.
+workflow Inspected, reviewed, approved.
+retention Keep with the first article package.
+landscape
+use fai_header
+section matrix | Matrix | 1
+table matrix_rows | Characteristics | 1
+groups Characteristic:3; Units:5; Result:3
+c mx_balloon | Balloon | text | *
+c mx_lsl | Lower limit | number | dec=4
+c mx_usl | Upper limit | number | dec=4
+c mx_u1 | Unit 1 | number | dec=4
+c mx_u2 | Unit 2 | number | dec=4
+c mx_u3 | Unit 3 | number | dec=4
+c mx_u4 | Unit 4 | number | dec=4
+c mx_u5 | Unit 5 | number | dec=4
+c mx_min | Lowest | calc | {MIN(mx_u1, mx_u2, mx_u3, mx_u4, mx_u5)} dec=4
+c mx_max | Highest | calc | {MAX(mx_u1, mx_u2, mx_u3, mx_u4, mx_u5)} dec=4
+c mx_result | Result | calc | {IF(AND(OR(ISBLANK(mx_lsl), mx_min >= mx_lsl), OR(ISBLANK(mx_usl), mx_max <= mx_usl)), "ACCEPT", "REJECT")}
+rule matrix_rows.mx_result | equals | REJECT | #FDE7E9 | bold
+f mx_rejected | Characteristics rejected | calc | {COUNTIF(matrix_rows.mx_result, "REJECT")}
+use fai_signatures
+end
+
+template fai-drawing-verification | Drawing Characteristic Verification | FAI
+packs aerospace
+tags FAI, drawing verification, notes
+purpose Verify that every note, general tolerance, finish, marking and material call-out on the drawing has been inspected or evidenced, not only the dimensioned features.
+scope Every drawing used for a first article.
+instructions Work through the drawing sheet by sheet. Record each note and how it was verified. Notes that cannot be verified need a nonconforming characteristic record or a customer clarification.
+workflow Verified, reviewed, approved.
+retention Keep with the first article package.
+use fai_header
+section dv | Verification | 1
+table dv_rows | Drawing items | 1
+c dv_sheet | Sheet | integer | min=1
+c dv_item | Note or call-out | text | *
+c dv_category | Category | choice | * [General note; General tolerance; Finish; Marking; Material; Heat treatment; Coating; Other]
+c dv_method | Verified by | choice | * [Inspection; Certificate; Process record; Test; Visual; Not applicable]
+c dv_reference | Reference | text
+c dv_result | Result | passfail
+rule dv_rows.dv_result | equals | FAIL | #FDE7E9 | bold
+f dv_failed | Items failed | calc | {COUNTIF(dv_rows.dv_result, "FAIL")}
+use fai_signatures
+end
+
+template fai-equipment-used | Equipment Used | FAI
+packs aerospace
+tags FAI, equipment, calibration
+purpose Record the inspection and test equipment used for the first article, with calibration status on the date of use.
+scope Every first article.
+instructions List each item of equipment. Calibration must be current on the date of use; equipment out of calibration invalidates the results it produced.
+workflow Recorded, verified, approved.
+retention Keep with the first article package.
+use fai_header
+section eq | Equipment | 1
+table eq_rows | Equipment | 1
+c eq_item | Equipment | equipment | *
+c eq_used_on | Used on | date | *
+c eq_cal_due | Calibration due | date | *
+c eq_balloons | Balloons measured | text
+c eq_current | Calibration current | calc | {IF(eq_cal_due >= eq_used_on, "Yes", "No")}
+rule eq_rows.eq_current | equals | No | #FDE7E9 | bold
+f eq_not_current | Equipment out of calibration | calc | {COUNTIF(eq_rows.eq_current, "No")}
+use fai_signatures
+end
+
+template fai-nonconforming-characteristic | Nonconforming Characteristic Record | FAI
+packs aerospace
+tags FAI, nonconforming, disposition
+purpose Record each characteristic of the first article that does not conform, its disposition and the corrective action, so the first article can be completed.
+scope First articles with any rejected characteristic.
+instructions List each rejected balloon with the requirement and the actual result. Raise a nonconformance for disposition. The first article is not complete until every row is dispositioned and the corrective action is recorded.
+workflow Recorded, dispositioned, corrective action raised, approved.
+retention Keep with the first article package.
+use fai_header
+section nc_chars | Nonconforming characteristics | 1
+table nc_rows | Characteristics | 1
+c nc_balloon | Balloon | text | *
+c nc_requirement | Requirement | text | *
+c nc_actual | Actual | text | *
+c nc_disposition | Disposition | choice | * [Rework and re-inspect; Use as is with approval; Scrap; Design change requested]
+c nc_record | Nonconformance | record
+c nc_capa | Corrective action | record
+c nc_reinspected | Re-inspected | passfail
+rule nc_rows.nc_reinspected | equals | FAIL | #FDE7E9 | bold
+use fai_signatures
+end
+
+template fai-partial | Partial FAI Record | FAI
+packs aerospace
+tags FAI, partial
+purpose Record a partial first article that re-verifies only the characteristics affected by a change, with the justification for the reduced scope.
+scope Changes to design, process, source or location that affect only some characteristics.
+instructions State the change and the characteristics it affects. Inspect every affected characteristic. Reference the previous full first article that remains valid for the rest.
+workflow Scope justified, affected characteristics inspected, reviewed, approved.
+retention Keep with the first article package.
+use fai_header
+section partial_scope | Scope | 2
+f pf_previous | Previous full first article | record | *
+f pf_change | Change that triggered the partial FAI | longtext | *
+f pf_change_record | Change record | record
+f pf_justification | Justification of the characteristics selected | longtext | *
+use fai_characteristics_table, fai_signatures
+end
+
+template fai-delta | Delta FAI Record | FAI
+packs aerospace
+tags FAI, delta, change
+purpose Record a delta first article that shows only the differences from the previous first article: characteristics added, changed or removed by a drawing revision.
+scope Drawing revisions where the customer accepts a delta first article.
+instructions List the changes between the drawing revisions. Inspect every added or changed characteristic. Removed characteristics are listed for traceability.
+workflow Changes listed, inspected, reviewed, approved.
+retention Keep with the first article package.
+use fai_header
+section delta_changes | Changes from the previous revision | 1
+f df_previous | Previous first article | record | *
+f df_from_revision | From drawing revision | text | *
+table delta_rows | Changes | 1
+c dl_balloon | Balloon | text | *
+c dl_change | Change | choice | * [Added; Changed; Removed]
+c dl_previous_req | Previous requirement | text
+c dl_new_req | New requirement | text
+c dl_result | Result | choice | [Accept; Reject; Not applicable]
+rule delta_rows.dl_result | equals | Reject | #FDE7E9 | bold
+f dl_added | Added | calc | {COUNTIF(delta_rows.dl_change, "Added")}
+f dl_changed | Changed | calc | {COUNTIF(delta_rows.dl_change, "Changed")}
+f dl_rejected | Rejected | calc | {COUNTIF(delta_rows.dl_result, "Reject")}
+use fai_signatures
+end
+
+template fai-approval | FAI Approval | FAI
+packs aerospace
+tags FAI, approval
+purpose Approve a completed first article package for production release, recording the reviews performed and any conditions.
+scope Every completed first article package.
+instructions Confirm each review item. Approval with conditions states the condition and its expiry. Customer acceptance is recorded where the contract requires it.
+workflow Reviewed, approved or rejected, customer acceptance recorded.
+retention Keep with the first article package.
+use fai_header
+section fai_review | Review | 1
+table fai_review_rows | Review items | 0
+rows Every characteristic is accounted for; Every result is recorded and within limits or dispositioned; Materials and special processes come from approved sources; Equipment was in calibration; Nonconforming characteristics have corrective action; The package matches the drawing revision
+c rv_answer | Answer | choice | * [Yes; No; Not applicable]
+c rv_comment | Comment | text
+rule fai_review_rows.rv_answer | equals | No | #FDE7E9 | bold
+section fai_decision | Decision | 2
+f fa_decision | Decision | choice | * [Approved; Approved with conditions; Rejected]
+f fa_conditions | Conditions | longtext | reqwhen=fa_decision=Approved_with_conditions
+f fa_condition_expires | Conditions expire | date | when=fa_decision=Approved_with_conditions
+f fa_no_answers | Review items answered No | calc | {COUNTIF(fai_review_rows.rv_answer, "No")}
+use fai_signatures
+end
+
+template fai-closure | FAI Closure | FAI
+packs aerospace
+tags FAI, closure
+purpose Close a first article once it is approved, every nonconforming characteristic is resolved and production release has been communicated.
+scope Every approved first article.
+instructions Confirm each closure condition and record the release reference. A first article stays open while any corrective action from it is open.
+workflow Closure conditions confirmed, closed.
+retention Keep with the first article package.
+use fai_header
+section fai_close | Closure | 2
+f fc_approval | Approval record | record | *
+f fc_nc_resolved | All nonconforming characteristics resolved | boolean | *
+f fc_actions_closed | Corrective actions closed or tracked | boolean | *
+f fc_release_ref | Production release reference | text
+f fc_release_date | Released on | date
+f fc_reverify_due | Re-verification due (production lapse date) | date
+f fc_summary | Closure summary | longtext
+use fai_signatures
+end

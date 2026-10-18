@@ -1,0 +1,783 @@
+# Calibration and measurement system templates (TECH 4, FI 1 calibration documents). Statistical constants used in the studies are
+# standard mathematical values; acceptance criteria are entered by the organization.
+
+block cal_equipment_header
+section cal_item | Equipment | 3
+f ce_equipment | Equipment | equipment | *
+f ce_asset | Asset ID | text
+f ce_description | Description | text | *
+f ce_manufacturer | Manufacturer | text
+f ce_model | Model | text
+f ce_serial | Serial number | text
+f ce_range | Range | text
+f ce_resolution | Resolution | text
+f ce_location | Location | text
+end
+
+block cal_register_signatures
+sign cal_maintained | Maintained by | prepared | I confirm this register is complete and current as of the date signed.
+sign cal_reviewed | Reviewed by | reviewed | I reviewed this register for completeness and accuracy. | calibration.edit
+end
+
+block cal_signatures
+sign cal_performed | Performed by | performed | I performed this work and recorded the results as found.
+sign cal_checked | Checked by | verified | I checked the results and the calculations. | calibration.edit
+sign cal_approved | Approved by | approved | I approve this record. | calibration.approve
+end
+
+block msa_header
+section msa_subject | Study subject | 3
+f ms_gauge | Gauge or measurement system | equipment | *
+f ms_characteristic | Characteristic | text | *
+f ms_part | Part | part
+f ms_lsl | Lower specification limit | number | dec=4
+f ms_usl | Upper specification limit | number | dec=4
+f ms_tolerance | Tolerance | calc | {IF(AND(ISNUMBER(ms_usl), ISNUMBER(ms_lsl)), ms_usl - ms_lsl, "")} dec=4
+f ms_process_sd | Process standard deviation (when known) | number | dec=5 min=0
+f ms_study_date | Study date | date | *
+f ms_conditions | Conditions (temperature, set-up, method) | text
+end
+
+block msa_signatures
+sign msa_performed | Study performed by | performed | I performed this study and the data recorded is complete.
+sign msa_reviewed | Reviewed by | reviewed | I reviewed the study, the calculations and the decision.
+sign msa_approved | Approved by | approved | I approve the use of this measurement system as decided. | msa.approve
+end
+
+template calibration-master-list | Calibration Master List | CALIBRATION
+packs manufacturing
+tags calibration, master list, register
+purpose Keep one controlled list of every item of measuring and test equipment that needs calibration, with its identification, range, accuracy, interval, due date, provider and status.
+scope All measuring and test equipment used to accept product or control processes, including employee-owned and customer-owned equipment.
+instructions List every item. The next due date is calculated from the last calibration and the interval. Items past due are highlighted and must not be used. Retired items stay on the list with their retirement date.
+workflow Maintained continuously, reviewed monthly, approved at each review.
+retention Keep each revision for the retention period set by the organization; keep equipment history for its life plus that period.
+landscape
+section cml | Equipment | 1
+f cml_as_of | List as of | date | *
+table cml_rows | Equipment | 1
+groups Identification:4; Specification:3; Calibration:5; Status:2
+c cm_id | Equipment ID | text | *
+c cm_name | Name | text | *
+c cm_type | Type | text
+c cm_serial | Serial number | text
+c cm_range | Range | text
+c cm_accuracy | Accuracy | text
+c cm_acceptance | Acceptance criteria | text
+c cm_interval | Interval (days) | integer | * min=1
+c cm_last | Last calibration | date | *
+c cm_next | Next due | calc | {DATEADD(cm_last, cm_interval)}
+c cm_provider | Provider | text
+c cm_days_left | Days to due | calc | {DAYS(DATEADD(cm_last, cm_interval), cml_as_of)}
+c cm_status | Status | choice | * [Active; Limited use; Out of service; Quarantined; Retired]
+c cm_owner | Owner | user
+rule cml_rows.cm_days_left | lessThan | 0 | #FDE7E9 | bold
+rule cml_rows.cm_days_left | lessOrEqual | 30 | #FFF4D6
+rule cml_rows.cm_status | in | Out of service,Quarantined | #FDE7E9
+f cml_count | Items listed | calc | {COUNTA(cml_rows.cm_id)}
+f cml_overdue | Items past due | calc | {COUNTIF(cml_rows.cm_days_left, "<0")}
+f cml_due30 | Due within 30 days | calc | {COUNTIFS(cml_rows.cm_days_left, ">=0", cml_rows.cm_days_left, "<=30")}
+use cal_register_signatures
+end
+
+template calibration-recall-list | Calibration Recall List | CALIBRATION
+packs manufacturing
+tags calibration, recall, due
+purpose List the equipment due or past due for calibration in a period so it can be recalled from use, with the holder and the recall outcome.
+scope Equipment on the calibration master list due within the recall period.
+instructions Issue the list at the start of each period. Record when each item is recalled and returned. Items not returned by the due date are quarantined in the system.
+workflow Issued, items recalled, outcomes recorded, list closed.
+retention Keep for the retention period set by the organization.
+section recall_period | Period | 3
+f rl_from | Period from | date | *
+f rl_to | Period to | date | *
+f rl_issued_by | Issued by | user | *
+check rl_to | greaterOrEqual | rl_from | The period end cannot be before its start.
+section recall_items | Items | 1
+table rl_rows | Equipment due | 1
+c rl_equipment | Equipment | equipment | *
+c rl_due | Due date | date | *
+c rl_holder | Holder | user
+c rl_location | Location | text
+c rl_recalled | Recalled on | date
+c rl_returned | Returned on | date
+c rl_outcome | Outcome | choice | [Calibrated; Sent to provider; Extended; Quarantined; Retired; Not found]
+rule rl_rows.rl_outcome | in | Quarantined,Not found | #FDE7E9 | bold
+f rl_total | Items due | calc | {COUNTA(rl_rows.rl_due)}
+f rl_open | Without an outcome | calc | {COUNTBLANK(rl_rows.rl_outcome)}
+use cal_register_signatures
+end
+
+template gauge-register | Gauge Register | CALIBRATION
+packs manufacturing
+tags gauge, register, identification
+purpose Register every gauge with a unique identification, its type, owner and the characteristics it is approved to measure, so each measurement can be traced to a registered gauge.
+scope Fixed and variable gauges, including part-specific gauges and employee-owned gauges.
+instructions Register a gauge before first use. Record the characteristics or part numbers it is approved for. Mark gauges that are part-specific so they are reviewed when the part changes.
+workflow Registered, approved for use, reviewed on change, retired.
+retention Keep for the life of the gauge plus the retention period set by the organization.
+landscape
+section gr | Gauges | 1
+table gr_rows | Gauges | 1
+c gr_id | Gauge ID | text | *
+c gr_type | Type | choice | * [Caliper; Micrometer; Height gauge; Indicator; Plug gauge; Ring gauge; Thread gauge; Fixture; Coordinate measuring machine; Torque tool; Pressure gauge; Scale; Other]
+c gr_description | Description | text | *
+c gr_owner | Owner | choice | [Company; Employee; Customer]
+c gr_holder | Holder | user
+c gr_part_specific | Part-specific | boolean
+c gr_approved_for | Approved for | text
+c gr_equipment | Equipment record | equipment
+c gr_status | Status | choice | * [In use; Spare; Quarantined; Retired]
+rule gr_rows.gr_status | equals | Quarantined | #FDE7E9
+f gr_count | Gauges | calc | {COUNTA(gr_rows.gr_id)}
+use cal_register_signatures
+end
+
+template gauge-inventory | Gauge Inventory | CALIBRATION
+packs manufacturing
+tags gauge, inventory, physical count
+purpose Confirm by physical count that every registered gauge is present, identified, in good condition and in calibration, and record the gauges that are missing or unregistered.
+scope Every gauge storage location and work area, at the frequency the organization sets.
+instructions Count each location. Compare with the register. Gauges found but not registered are quarantined until registered; registered gauges not found are investigated.
+workflow Counted, differences investigated, reviewed.
+retention Keep for the retention period set by the organization.
+section inventory_scope | Inventory | 3
+f gi_date | Inventory date | date | *
+f gi_location | Location | text | *
+f gi_counted_by | Counted by | user | *
+section inventory_items | Count | 1
+table gi_rows | Gauges | 1
+c gi_gauge | Gauge ID | text | *
+c gi_found | Found | boolean | *
+c gi_registered | Registered | boolean | *
+c gi_label_ok | Calibration label legible and current | boolean
+c gi_condition | Condition | choice | [Good; Damaged; Worn]
+c gi_action | Action | text
+rule gi_rows.gi_condition | in | Damaged,Worn | #FFF4D6
+f gi_counted | Gauges counted | calc | {COUNTA(gi_rows.gi_gauge)}
+f gi_missing | Not found | calc | {COUNTIF(gi_rows.gi_found, FALSE)}
+f gi_unregistered | Not registered | calc | {COUNTIF(gi_rows.gi_registered, FALSE)}
+use cal_register_signatures
+end
+
+template measurement-equipment-register | Measurement Equipment Register | CALIBRATION
+packs manufacturing
+tags equipment, register, measurement
+purpose Register all measurement and test equipment, including items that need verification but not calibration, with the control applied to each.
+scope All measurement and test equipment at the site.
+instructions Record each item and the control applied. Items needing calibration also appear on the calibration master list. Items used for reference only are labelled so they are not used to accept product.
+workflow Maintained, reviewed periodically, approved.
+retention Keep for the life of the equipment plus the retention period set by the organization.
+landscape
+section mer | Equipment | 1
+table mer_rows | Equipment | 1
+c mr_equipment | Equipment | equipment | *
+c mr_category | Category | text
+c mr_control | Control | choice | * [Calibration; Verification before use; Reference only; Not controlled]
+c mr_department | Department | department
+c mr_used_for | Used for | text
+c mr_status | Status | choice | [Active; Limited use; Out of service; Retired]
+rule mer_rows.mr_control | equals | Not controlled | #FFF4D6
+use cal_register_signatures
+end
+
+template calibration-schedule | Calibration Schedule | CALIBRATION
+packs manufacturing
+tags calibration, schedule, plan
+purpose Plan the calibrations due over a year by month, with the provider and the estimated cost, so capacity and budget are known in advance.
+scope Equipment on the calibration master list.
+instructions List each item with its due month and provider. Mark each month when the calibration is completed. Overdue items are reported to the owner.
+workflow Planned, updated monthly, reviewed.
+retention Keep for the retention period set by the organization.
+landscape
+section schedule_year | Year | 3
+f cs_year | Year | integer | * min=2000 max=2100
+f cs_site | Site | site
+section schedule_rows | Schedule | 1
+table cs_rows | Equipment | 1
+groups Equipment:3; Plan:3; Result:3
+c cs_equipment | Equipment | equipment | *
+c cs_interval | Interval (days) | integer | min=1
+c cs_type | Type | choice | [Internal; External; On site by provider]
+c cs_month | Due month | choice | * [January; February; March; April; May; June; July; August; September; October; November; December]
+c cs_provider | Provider | text
+c cs_cost | Estimated cost | currency | min=0
+c cs_done | Completed on | date
+c cs_result | Result | choice | [Pass; Adjusted; Out of tolerance; Retired]
+c cs_certificate | Certificate | text
+rule cs_rows.cs_result | equals | Out of tolerance | #FDE7E9 | bold
+total cs_cost | sum | Estimated cost
+f cs_planned | Calibrations planned | calc | {COUNTA(cs_rows.cs_month)}
+f cs_completed | Completed | calc | {COUNT(cs_rows.cs_done)}
+f cs_progress | Progress | calc | {IF(cs_planned > 0, cs_completed / cs_planned * 100, 0)} dec=0 unit=%
+use cal_register_signatures
+end
+
+template external-calibration-request | External Calibration Request | CALIBRATION
+packs manufacturing
+tags calibration, external, provider, request
+purpose Request calibration from an external provider, stating the scope, the points, the accreditation required and whether as-found data is needed.
+scope Equipment calibrated by an external provider.
+instructions Select an approved provider whose accredited scope covers the equipment. Ask for as-found and as-left data so out-of-tolerance conditions can be assessed.
+workflow Requested, sent, received, certificate reviewed, closed.
+retention Keep for the life of the equipment plus the retention period set by the organization.
+use cal_equipment_header
+section ext_request | Request | 2
+f er_provider | Provider | supplier | *
+f er_accreditation | Accreditation required | choice | * [Accredited calibration; Traceable calibration; Manufacturer service]
+f er_points | Calibration points | longtext | *
+f er_as_found | As-found data required | boolean | *
+f er_adjust | Adjust if outside tolerance | boolean
+f er_sent_on | Sent on | date
+f er_needed_by | Needed by | date
+f er_po | Purchase order | text
+section ext_return | Return | 2
+f er_returned_on | Returned on | date
+f er_certificate | Certificate number | text
+f er_cert_file | Certificate | attachment
+f er_review | Certificate reviewed and accepted | passfail
+use cal_signatures
+end
+
+template internal-calibration-record | Internal Calibration Record | CALIBRATION
+packs manufacturing
+tags calibration, internal, as found, as left
+purpose Record an internal calibration: the standards used, the environment, and the as-found and as-left readings at each point against the tolerance.
+scope Equipment calibrated in house by trained people.
+instructions Use only standards that are in calibration. Record as-found readings before any adjustment. Errors are calculated live; any as-found point outside tolerance needs an out-of-tolerance investigation.
+workflow Calibrated, checked, approved, label applied.
+retention Keep for the life of the equipment plus the retention period set by the organization.
+landscape
+use cal_equipment_header
+section cal_env | Method and environment | 3
+f ic_procedure | Calibration procedure | text | *
+f ic_temperature | Temperature | number | dec=1 unit=°C
+f ic_humidity | Relative humidity | percent | min=0 max=100
+f ic_standard | Standard used | equipment | *
+f ic_standard_due | Standard calibration due | date | *
+f ic_date | Calibration date | date | *
+f ic_standard_ok | Standard in calibration | calc | {IF(ic_standard_due >= ic_date, "Yes", "No")}
+rule ic_standard_ok | equals | No | #FDE7E9 | bold
+section cal_points | Readings | 1
+table ic_points | Points | 1
+groups Point:2; As found:3; As left:3
+c pt_nominal | Nominal | number | * dec=5
+c pt_tolerance | Tolerance (±) | number | * dec=5 min=0
+c pt_found | Reading | number | dec=5
+c pt_found_error | Error | calc | {IF(ISNUMBER(pt_found), pt_found - pt_nominal, "")} dec=5
+c pt_found_ok | In tolerance | calc | {IF(ISNUMBER(pt_found), IF(ABS(pt_found - pt_nominal) <= pt_tolerance, "IN", "OUT"), "")}
+c pt_left | Reading | number | dec=5
+c pt_left_error | Error | calc | {IF(ISNUMBER(pt_left), pt_left - pt_nominal, "")} dec=5
+c pt_left_ok | In tolerance | calc | {IF(ISNUMBER(pt_left), IF(ABS(pt_left - pt_nominal) <= pt_tolerance, "IN", "OUT"), "")}
+rule ic_points.pt_found_ok | equals | OUT | #FDE7E9 | bold
+rule ic_points.pt_left_ok | equals | OUT | #FDE7E9 | bold
+section cal_result | Result | 3
+f ic_found_out | As-found points out of tolerance | calc | {COUNTIF(ic_points.pt_found_ok, "OUT")}
+f ic_left_out | As-left points out of tolerance | calc | {COUNTIF(ic_points.pt_left_ok, "OUT")}
+f ic_adjusted | Adjusted | boolean
+f ic_result | Result | calc | {IF(ic_left_out > 0, "FAIL", IF(ic_found_out > 0, "PASS AFTER ADJUSTMENT - INVESTIGATE", "PASS"))}
+f ic_interval | Interval (days) | integer | * min=1
+f ic_next_due | Next due | calc | {DATEADD(ic_date, ic_interval)}
+rule ic_result | equals | FAIL | #FDE7E9 | bold
+rule ic_result | contains | INVESTIGATE | #FFF4D6 | bold
+use cal_signatures
+end
+
+template calibration-certificate | Calibration Certificate | CALIBRATION
+packs manufacturing
+tags calibration, certificate
+purpose Issue a calibration certificate for equipment calibrated in house, stating the equipment, the standards and their traceability, the results, the uncertainty and the authorization.
+scope Internal calibrations that need a certificate for customers, auditors or other sites.
+instructions Complete after the calibration record is approved. Every standard is listed with its traceability. The certificate states results only for the points calibrated.
+workflow Prepared from the approved record, authorized, issued.
+retention Keep for the life of the equipment plus the retention period set by the organization.
+use cal_equipment_header
+section cert | Certificate | 3
+f cc_number | Certificate number | text | *
+f cc_record | Calibration record | record | *
+f cc_date | Calibration date | date | *
+f cc_due | Due date | date
+f cc_customer | Issued to | text
+f cc_uncertainty | Measurement uncertainty statement | longtext | *
+section cert_standards | Standards and traceability | 1
+table cc_standards | Standards | 1
+c cs_standard | Standard | equipment | *
+c cs_certificate_no | Its certificate | text | *
+c cs_traceable_to | Traceable to | text | *
+c cs_due | Due | date
+section cert_results | Results summary | 1
+table cc_results | Results | 1
+c cr_point | Point | text | *
+c cr_result | Result | text | *
+c cr_within | Within tolerance | boolean
+use cal_signatures
+end
+
+template calibration-certificate-summary | Calibration Certificate Summary | CALIBRATION
+packs manufacturing
+tags calibration, certificate, review
+purpose Review an external calibration certificate and summarize the results, the as-found condition and whether the equipment can be returned to use.
+scope Certificates received from external providers.
+instructions Check the certificate against the request. Any as-found out-of-tolerance result needs an investigation of the product measured since the last calibration.
+workflow Received, reviewed, accepted or rejected, equipment status updated.
+retention Keep for the life of the equipment plus the retention period set by the organization.
+use cal_equipment_header
+section cert_review | Certificate | 3
+f csm_provider | Provider | supplier | *
+f csm_number | Certificate number | text | *
+f csm_date | Calibration date | date | *
+f csm_accredited | Accredited certificate | boolean
+f csm_file | Certificate | attachment | *
+section cert_checks | Review | 1
+table csm_checks | Checks | 0
+rows Equipment identification matches; Points requested were calibrated; As-found data provided; Results within tolerance as found; Results within tolerance as left; Uncertainty stated; Standards traceable; Provider scope covers the work
+c ck_answer | Answer | choice | * [Yes; No; Not applicable]
+c ck_note | Note | text
+rule csm_checks.ck_answer | equals | No | #FDE7E9 | bold
+section cert_decision | Decision | 2
+f csm_no | Checks answered No | calc | {COUNTIF(csm_checks.ck_answer, "No")}
+f csm_decision | Decision | choice | * [Accept and return to use; Accept with limited use; Reject and return to provider; Investigate out of tolerance]
+f csm_ooti | Out-of-tolerance investigation | record | when=csm_decision=Investigate_out_of_tolerance
+use cal_signatures
+end
+
+template calibration-standards-record | Calibration Standards Record | CALIBRATION
+packs manufacturing
+tags calibration, standards, reference, traceability
+purpose Register the reference and working standards used for internal calibration, with their traceability, uncertainty and due dates.
+scope Reference standards, working standards and check standards.
+instructions List every standard with its hierarchy level and its own calibration. A standard may calibrate only equipment of lower accuracy than itself by the ratio the organization sets.
+workflow Maintained, reviewed, approved.
+retention Keep for the life of each standard plus the retention period set by the organization.
+landscape
+section stds | Standards | 1
+table std_rows | Standards | 1
+c sd_equipment | Standard | equipment | *
+c sd_level | Level | choice | * [Reference; Working; Check]
+c sd_traceable | Traceable to | text | *
+c sd_certificate | Certificate | text
+c sd_uncertainty | Uncertainty | text | *
+c sd_due | Due | date | *
+c sd_custodian | Custodian | user
+c sd_ratio | Accuracy ratio required | number | dec=1 min=1
+use cal_register_signatures
+end
+
+template calibration-label-record | Calibration Label Record | CALIBRATION
+packs manufacturing
+tags calibration, labels, status
+purpose Record the calibration status labels issued, so each label can be traced to a calibration record and voided labels are accounted for.
+scope Every calibration, limited-use and do-not-use label issued.
+instructions Record each label when it is applied. Voided or damaged labels are recorded as voided, never re-used.
+workflow Issued, applied, verified.
+retention Keep for the retention period set by the organization.
+section labels | Labels | 1
+table lbl_rows | Labels | 1
+c lb_number | Label number | text | *
+c lb_type | Type | choice | * [Calibrated; Limited use; Do not use; Reference only; Calibration not required]
+c lb_equipment | Equipment | equipment | *
+c lb_calibrated | Calibrated on | date
+c lb_due | Due | date
+c lb_applied_by | Applied by | user
+c lb_status | Status | choice | [Applied; Voided; Replaced]
+rule lbl_rows.lb_type | equals | Do not use | #FDE7E9 | bold
+use cal_register_signatures
+end
+
+template out-of-tolerance-investigation | Out-of-Tolerance Investigation | CALIBRATION
+packs manufacturing
+tags calibration, out of tolerance, OOT, investigation
+purpose Investigate an as-found out-of-tolerance result: the size of the error, the period at risk, the product and decisions affected and the actions taken.
+scope Every as-found result outside tolerance, and equipment found damaged, lost or used past due.
+instructions Quantify the error against the tolerance of the product measured. Identify the measurements made since the last good calibration. Assess each affected lot; raise a nonconformance when product is suspect and notify customers when shipped product is affected.
+workflow Opened, error quantified, impact assessed, actions taken, approved, closed.
+retention Keep for the life of the equipment and the affected product plus the retention period set by the organization.
+use cal_equipment_header
+section oot | Out-of-tolerance condition | 3
+f oo_found_on | Found on | date | *
+f oo_last_good | Last good calibration | date | *
+f oo_days_at_risk | Days at risk | calc | {DAYS(oo_found_on, oo_last_good)}
+f oo_error | Largest as-found error | number | * dec=5
+f oo_tolerance | Equipment tolerance | number | * dec=5 min=0
+f oo_ratio | Error as share of tolerance | calc | {IF(oo_tolerance > 0, ABS(oo_error) / oo_tolerance * 100, "")} dec=0 unit=%
+f oo_product_tol | Smallest product tolerance measured | number | dec=5 min=0
+f oo_product_share | Error as share of product tolerance | calc | {IF(oo_product_tol > 0, ABS(oo_error) / oo_product_tol * 100, "")} dec=1 unit=%
+rule oo_product_share | greaterOrEqual | 10 | #FDE7E9 | bold
+section oot_impact | Product and decisions affected | 1
+table oo_lots | Measurements since the last good calibration | 0
+c ol_lot | Lot, order or job | text | *
+c ol_part | Part | part
+c ol_date | Measured on | date
+c ol_shipped | Shipped | boolean
+c ol_effect | Effect | choice | * [No effect - within margin; Re-inspect; Suspect - nonconformance raised; Customer notified]
+c ol_record | Record | record
+rule oo_lots.ol_effect | in | Suspect - nonconformance raised,Customer notified | #FDE7E9 | bold
+section oot_conclusion | Conclusion | 2
+f oo_cause | Cause of the out-of-tolerance condition | longtext | *
+f oo_actions | Actions taken | longtext | *
+f oo_interval_change | Interval changed | boolean
+f oo_new_interval | New interval (days) | integer | when=oo_interval_change=true min=1
+f oo_customer_notice | Customer notification required | calc | {IF(COUNTIF(oo_lots.ol_effect, "Customer notified") > 0, "Yes", "No")}
+use cal_signatures
+end
+
+template impact-assessment | Impact Assessment | CALIBRATION
+packs manufacturing
+tags calibration, impact, measurement decisions
+purpose Assess the effect of a measurement problem (out-of-tolerance equipment, wrong method or unqualified operator) on the acceptance decisions made with it.
+scope Measurement problems that may have affected product acceptance.
+instructions List each decision made with the affected measurement. Recalculate it with the corrected value or margin. Decisions that would have changed are treated as suspect product.
+workflow Decisions listed, re-evaluated, conclusions approved.
+retention Keep for the retention period set by the organization.
+section ia_basis | Basis | 2
+f ia_problem | Measurement problem | longtext | *
+f ia_source | Source record | record
+f ia_error | Correction or margin applied | number | dec=5
+section ia_decisions | Decisions | 1
+table ia_rows | Decisions re-evaluated | 1
+c iar_reference | Record or lot | text | *
+c iar_lsl | Lower limit | number | dec=5
+c iar_usl | Upper limit | number | dec=5
+c iar_measured | Measured | number | * dec=5
+c iar_corrected | Corrected | calc | {iar_measured - ia_error} dec=5
+c iar_still_ok | Still conforms | calc | {IF(AND(OR(ISBLANK(iar_lsl), iar_measured - ia_error >= iar_lsl), OR(ISBLANK(iar_usl), iar_measured - ia_error <= iar_usl)), "Yes", "No")}
+rule ia_rows.iar_still_ok | equals | No | #FDE7E9 | bold
+f ia_changed | Decisions that change | calc | {COUNTIF(ia_rows.iar_still_ok, "No")}
+f ia_conclusion | Conclusion | longtext | *
+use cal_signatures
+end
+
+template equipment-repair-record | Equipment Repair Record | CALIBRATION
+packs manufacturing
+tags calibration, repair, equipment
+purpose Record the repair of measuring equipment and confirm it is calibrated before it returns to use.
+scope Measuring and test equipment that is repaired internally or externally.
+instructions Record the fault and the repair. Equipment is calibrated after repair; the as-received condition decides whether an out-of-tolerance investigation is needed.
+workflow Fault reported, repaired, calibrated, returned to use.
+retention Keep for the life of the equipment plus the retention period set by the organization.
+use cal_equipment_header
+section repair | Repair | 2
+f rp_fault | Fault reported | longtext | *
+f rp_reported_by | Reported by | user
+f rp_reported_on | Reported on | date | *
+f rp_repairer | Repaired by | text | *
+f rp_work | Work carried out | longtext | *
+f rp_parts | Parts replaced | text
+f rp_cost | Cost | currency | min=0
+f rp_calibrated | Calibrated after repair | boolean | *
+f rp_cal_record | Calibration record | record | reqwhen=rp_calibrated=true
+f rp_oot_needed | Out-of-tolerance investigation needed | boolean
+use cal_signatures
+end
+
+template equipment-retirement-record | Equipment Retirement Record | CALIBRATION
+packs manufacturing
+tags calibration, retirement, disposal
+purpose Retire measuring equipment from use, record the reason and the final condition, and make sure it cannot be used again.
+scope Measuring and test equipment that is scrapped, sold, returned or permanently withdrawn.
+instructions Record the reason and the final calibration status. Remove labels, mark the equipment and update the master list. Keep the history.
+workflow Requested, approved, removed from use, list updated.
+retention Keep for the retention period set by the organization after retirement.
+use cal_equipment_header
+section retire | Retirement | 2
+f rt_reason | Reason | choice | * [Beyond repair; Obsolete; Lost; Replaced; Sold or returned; No longer needed]
+f rt_final_status | Final calibration status | choice | [In tolerance; Out of tolerance; Not known]
+f rt_oot_needed | Out-of-tolerance investigation needed | calc | {IF(OR(rt_final_status = "Out of tolerance", rt_final_status = "Not known"), "Yes", "No")}
+f rt_disposal | Disposal method | text
+f rt_date | Retired on | date | *
+f rt_list_updated | Master list updated | boolean | *
+f rt_labels_removed | Labels removed and equipment marked | boolean | *
+rule rt_oot_needed | equals | Yes | #FFF4D6 | bold
+use cal_signatures
+end
+
+template calibration-extension-request | Calibration Extension Request | CALIBRATION
+packs manufacturing
+tags calibration, extension, interval
+purpose Request a one-time extension of a calibration due date, with the justification and the controls applied during the extension.
+scope Equipment that cannot be calibrated by its due date.
+instructions Justify the extension with the equipment history. Extensions are short, approved before the due date and never repeated for the same due date.
+workflow Requested, approved or refused before the due date, equipment status updated.
+retention Keep for the life of the equipment plus the retention period set by the organization.
+use cal_equipment_header
+section ext | Extension | 2
+f ex_due | Current due date | date | *
+f ex_new_due | Requested due date | date | *
+f ex_days | Extension (days) | calc | {DAYS(ex_new_due, ex_due)}
+f ex_reason | Reason | longtext | *
+f ex_history | Calibration history (as-found results) | longtext | *
+f ex_controls | Controls during extension | longtext | *
+f ex_previous | Previous extensions for this item | integer | min=0
+check ex_new_due | greaterThan | ex_due | The requested due date must be after the current due date.
+rule ex_days | greaterThan | 30 | #FFF4D6 | bold
+rule ex_previous | greaterThan | 0 | #FDE7E9 | bold
+use cal_signatures
+end
+
+template limited-use-authorization | Limited Use Authorization | CALIBRATION
+packs manufacturing
+tags calibration, limited use, restriction
+purpose Authorize equipment for limited use where it meets requirements only over part of its range or for some functions, and state the limits clearly.
+scope Equipment that cannot be calibrated over its full range or function.
+instructions State the limits precisely. Apply a limited-use label that shows the limits. Users are told of the limits before use.
+workflow Requested, approved, label applied, reviewed at each calibration.
+retention Keep for the life of the equipment plus the retention period set by the organization.
+use cal_equipment_header
+section limits | Limits | 2
+f lu_limits | Limits of use | longtext | *
+f lu_functions_excluded | Functions or ranges excluded | longtext | *
+f lu_reason | Reason | longtext | *
+f lu_label | Limited-use label number | text | *
+f lu_users_informed | Users informed | boolean | *
+f lu_expires | Valid until | date | *
+use cal_signatures
+end
+
+template bias-study | Bias Study | CALIBRATION
+packs manufacturing
+tags MSA, bias, measurement system analysis
+purpose Determine the bias of a measurement system: the difference between the average of repeated measurements of a reference part and its reference value.
+scope Measurement systems used to accept product or control processes.
+instructions Measure the reference part at least ten times under normal conditions. Bias, percent bias and the t statistic are calculated live. Enter the acceptance criterion and the critical t value the organization uses.
+workflow Planned, measured, calculated, decided, approved.
+retention Keep for the life of the measurement system plus the retention period set by the organization.
+use msa_header
+section bias_ref | Reference | 3
+f bs_reference | Reference value | number | * dec=5
+f bs_reference_source | Reference value source | text | *
+f bs_acceptance | Acceptable bias (% of tolerance) | percent | * min=0 max=100
+f bs_t_critical | Critical t value | number | * dec=3 min=0
+section bias_readings | Readings | 1
+table bs_rows | Readings | 10
+c bs_reading | Reading | number | * dec=5
+c bs_operator | Operator | user
+c bs_bias | Bias | calc | {bs_reading - bs_reference} dec=5
+section bias_result | Result | 3
+f bs_n | Readings | calc | {COUNT(bs_rows.bs_reading)}
+f bs_mean | Average | calc | {AVERAGE(bs_rows.bs_reading)} dec=5
+f bs_sd | Repeatability standard deviation | calc | {STDEV(bs_rows.bs_reading)} dec=5
+f bs_bias_value | Bias | calc | {bs_mean - bs_reference} dec=5
+f bs_bias_pct | Bias (% of tolerance) | calc | {IF(ISNUMBER(ms_tolerance), ABS(bs_bias_value) / ms_tolerance * 100, "")} dec=1 unit=%
+f bs_t | t statistic | calc | {IF(bs_sd > 0, ABS(bs_bias_value) / (bs_sd / SQRT(bs_n)), "")} dec=3
+f bs_significant | Bias statistically significant | calc | {IF(bs_t > bs_t_critical, "Yes", "No")}
+f bs_decision | Decision | calc | {IF(OR(bs_bias_pct <= bs_acceptance, bs_significant = "No"), "ACCEPTABLE", "NOT ACCEPTABLE")}
+rule bs_decision | equals | NOT ACCEPTABLE | #FDE7E9 | bold
+rule bs_decision | equals | ACCEPTABLE | #E6F4EA | bold
+use msa_signatures
+end
+
+template stability-study | Stability Study | CALIBRATION
+packs manufacturing
+tags MSA, stability, control chart
+purpose Determine whether a measurement system stays stable over time by measuring the same master part in subgroups and plotting the averages and ranges.
+scope Measurement systems where drift over time could affect decisions.
+instructions Measure the master part three to five times per subgroup at regular intervals. Control limits are calculated from the data; points outside the limits show instability that must be investigated.
+workflow Data collected over the period, limits calculated, decided, approved.
+retention Keep for the life of the measurement system plus the retention period set by the organization.
+landscape
+use msa_header
+section stab_basis | Basis | 3
+f st_master | Master part reference value | number | * dec=5
+f st_subgroup | Readings per subgroup | integer | * min=2 max=5
+section stab_data | Subgroups | 1
+table st_rows | Subgroups | 5
+groups Subgroup:1; Readings:5; Statistics:2
+c st_date | Date | date | *
+c st_r1 | Reading 1 | number | * dec=5
+c st_r2 | Reading 2 | number | * dec=5
+c st_r3 | Reading 3 | number | dec=5
+c st_r4 | Reading 4 | number | dec=5
+c st_r5 | Reading 5 | number | dec=5
+c st_mean | Average | calc | {AVERAGE(st_r1, st_r2, st_r3, st_r4, st_r5)} dec=5
+c st_range | Range | calc | {MAX(st_r1, st_r2, st_r3, st_r4, st_r5) - MIN(st_r1, st_r2, st_r3, st_r4, st_r5)} dec=5
+section stab_limits | Control limits | 3
+f st_grand | Grand average | calc | {AVERAGE(st_rows.st_mean)} dec=5
+f st_rbar | Average range | calc | {AVERAGE(st_rows.st_range)} dec=5
+f st_a2 | A2 constant | calc | {CHOOSE(st_subgroup - 1, 1.880, 1.023, 0.729, 0.577)} dec=3
+f st_d4 | D4 constant | calc | {CHOOSE(st_subgroup - 1, 3.267, 2.574, 2.282, 2.114)} dec=3
+f st_ucl | Upper control limit (average) | calc | {st_grand + st_a2 * st_rbar} dec=5
+f st_lcl | Lower control limit (average) | calc | {st_grand - st_a2 * st_rbar} dec=5
+f st_ucl_r | Upper control limit (range) | calc | {st_d4 * st_rbar} dec=5
+f st_out | Averages outside limits | calc | {COUNTIF(st_rows.st_mean, ">" & st_ucl) + COUNTIF(st_rows.st_mean, "<" & st_lcl)}
+f st_out_r | Ranges above limit | calc | {COUNTIF(st_rows.st_range, ">" & st_ucl_r)}
+f st_bias_drift | Grand average minus master value | calc | {st_grand - st_master} dec=5
+f st_decision | Decision | calc | {IF(AND(st_out = 0, st_out_r = 0), "STABLE", "NOT STABLE - INVESTIGATE")}
+rule st_decision | contains | NOT STABLE | #FDE7E9 | bold
+use msa_signatures
+end
+
+template linearity-study | Linearity Study | CALIBRATION
+packs manufacturing
+tags MSA, linearity, bias across range
+purpose Determine whether the bias of a measurement system changes across its operating range by measuring reference parts spread over the range.
+scope Measurement systems used over a range of values.
+instructions Select at least five reference parts covering the range. Measure each part several times and enter the average. Slope, intercept and linearity are calculated live by least squares.
+workflow Parts selected, measured, calculated, decided, approved.
+retention Keep for the life of the measurement system plus the retention period set by the organization.
+use msa_header
+section lin_basis | Basis | 3
+f ln_process_var | Process variation (six standard deviations or tolerance) | number | * dec=5 min=0
+f ln_acceptance | Acceptable linearity (% of process variation) | percent | * min=0 max=100
+section lin_parts | Reference parts | 1
+table ln_rows | Parts | 5
+c ln_reference | Reference value | number | * dec=5
+c ln_average | Average of readings | number | * dec=5
+c ln_readings | Readings taken | integer | min=1
+c ln_bias | Bias | calc | {ln_average - ln_reference} dec=5
+c ln_xy | Reference x bias | calc | {ln_reference * (ln_average - ln_reference)} dec=8
+c ln_xx | Reference squared | calc | {ln_reference * ln_reference} dec=8
+section lin_result | Result | 3
+f ln_n | Parts | calc | {COUNT(ln_rows.ln_reference)}
+f ln_sx | Sum of references | calc | {SUM(ln_rows.ln_reference)} dec=6
+f ln_sy | Sum of bias | calc | {SUM(ln_rows.ln_bias)} dec=6
+f ln_sxy | Sum of products | calc | {SUM(ln_rows.ln_xy)} dec=8
+f ln_sxx | Sum of squares | calc | {SUM(ln_rows.ln_xx)} dec=8
+f ln_slope | Slope | calc | {IF(ln_n * ln_sxx - ln_sx ^ 2 <> 0, (ln_n * ln_sxy - ln_sx * ln_sy) / (ln_n * ln_sxx - ln_sx ^ 2), "")} dec=6
+f ln_intercept | Intercept | calc | {IF(ln_n > 0, ln_sy / ln_n - ln_slope * ln_sx / ln_n, "")} dec=6
+f ln_linearity | Linearity | calc | {ABS(ln_slope) * ln_process_var} dec=5
+f ln_linearity_pct | Linearity (% of process variation) | calc | {IF(ln_process_var > 0, ABS(ln_slope) * 100, "")} dec=1 unit=%
+f ln_decision | Decision | calc | {IF(ln_linearity_pct <= ln_acceptance, "ACCEPTABLE", "NOT ACCEPTABLE")}
+rule ln_decision | equals | NOT ACCEPTABLE | #FDE7E9 | bold
+use msa_signatures
+end
+
+template variable-gage-rr | Variable Gage R&R | CALIBRATION
+packs manufacturing
+tags MSA, gage R&R, gauge R&R worksheet, repeatability, reproducibility
+purpose Quantify the repeatability and reproducibility of a variable measurement system with two or three appraisers, two or three trials and up to ten parts, using the average and range method.
+scope Variable measurement systems named in control plans and inspection plans.
+instructions Select parts that represent the process range. Each appraiser measures each part in random order for each trial without seeing other results. Leave appraiser C or trial 3 blank when not used. Every statistic is calculated live.
+workflow Planned, measured, calculated, decided, approved.
+retention Keep for the life of the measurement system plus the retention period set by the organization.
+landscape
+use msa_header
+section grr_setup | Study set-up | 3
+f gr_appraisers | Appraisers | choice | * [2; 3]
+f gr_trials | Trials | choice | * [2; 3]
+f gr_appraiser_a | Appraiser A | user | *
+f gr_appraiser_b | Appraiser B | user | *
+f gr_appraiser_c | Appraiser C | user | when=gr_appraisers=3
+section grr_data | Measurements | 1
+table grr_rows | Parts | 0
+rows Part 1; Part 2; Part 3; Part 4; Part 5; Part 6; Part 7; Part 8; Part 9; Part 10
+groups Part:1; Appraiser A:3; Appraiser B:3; Appraiser C:3; Ranges:3; Averages:4
+c a1 | Trial 1 | number | dec=5
+c a2 | Trial 2 | number | dec=5
+c a3 | Trial 3 | number | dec=5
+c b1 | Trial 1 | number | dec=5
+c b2 | Trial 2 | number | dec=5
+c b3 | Trial 3 | number | dec=5
+c c1 | Trial 1 | number | dec=5
+c c2 | Trial 2 | number | dec=5
+c c3 | Trial 3 | number | dec=5
+c ra | Range A | calc | {IF(COUNT(a1, a2, a3) > 1, MAX(a1, a2, a3) - MIN(a1, a2, a3), "")} dec=5
+c rb | Range B | calc | {IF(COUNT(b1, b2, b3) > 1, MAX(b1, b2, b3) - MIN(b1, b2, b3), "")} dec=5
+c rc | Range C | calc | {IF(COUNT(c1, c2, c3) > 1, MAX(c1, c2, c3) - MIN(c1, c2, c3), "")} dec=5
+c xa | Average A | calc | {IF(COUNT(a1, a2, a3) > 0, AVERAGE(a1, a2, a3), "")} dec=5
+c xb | Average B | calc | {IF(COUNT(b1, b2, b3) > 0, AVERAGE(b1, b2, b3), "")} dec=5
+c xc | Average C | calc | {IF(COUNT(c1, c2, c3) > 0, AVERAGE(c1, c2, c3), "")} dec=5
+c xp | Part average | calc | {IF(COUNT(a1, a2, a3, b1, b2, b3, c1, c2, c3) > 0, AVERAGE(a1, a2, a3, b1, b2, b3, c1, c2, c3), "")} dec=5
+section grr_results | Results | 3
+f g_ops | Appraisers used | calc | {VALUE(gr_appraisers)}
+f g_r | Trials used | calc | {VALUE(gr_trials)}
+f g_n | Parts measured | calc | {COUNT(grr_rows.xp)}
+f g_rbar_a | Average range A | calc | {AVERAGE(grr_rows.ra)} dec=5
+f g_rbar_b | Average range B | calc | {AVERAGE(grr_rows.rb)} dec=5
+f g_rbar_c | Average range C | calc | {IF(g_ops = 3, AVERAGE(grr_rows.rc), "")} dec=5
+f g_rbar | Average of ranges | calc | {IF(g_ops = 3, (g_rbar_a + g_rbar_b + g_rbar_c) / 3, (g_rbar_a + g_rbar_b) / 2)} dec=5
+f g_xa | Appraiser A average | calc | {AVERAGE(grr_rows.xa)} dec=5
+f g_xb | Appraiser B average | calc | {AVERAGE(grr_rows.xb)} dec=5
+f g_xc | Appraiser C average | calc | {IF(g_ops = 3, AVERAGE(grr_rows.xc), "")} dec=5
+f g_xdiff | Difference between appraiser averages | calc | {IF(g_ops = 3, MAX(g_xa, g_xb, g_xc) - MIN(g_xa, g_xb, g_xc), ABS(g_xa - g_xb))} dec=5
+f g_rp | Range of part averages | calc | {MAX(grr_rows.xp) - MIN(grr_rows.xp)} dec=5
+f g_k1 | K1 (trials) | calc | {IF(g_r = 2, 0.8862, 0.5908)} dec=4
+f g_k2 | K2 (appraisers) | calc | {IF(g_ops = 2, 0.7071, 0.5231)} dec=4
+f g_k3 | K3 (parts) | calc | {CHOOSE(g_n - 1, 0.7071, 0.5231, 0.4467, 0.4030, 0.3742, 0.3534, 0.3375, 0.3249, 0.3146)} dec=4
+f g_ev | Repeatability (EV) | calc | {g_rbar * g_k1} dec=5
+f g_av | Reproducibility (AV) | calc | {SQRT(MAX(0, (g_xdiff * g_k2) ^ 2 - g_ev ^ 2 / (g_n * g_r)))} dec=5
+f g_grr | Gage R&R | calc | {SQRT(g_ev ^ 2 + g_av ^ 2)} dec=5
+f g_pv | Part variation (PV) | calc | {IF(ISNUMBER(ms_process_sd), ms_process_sd, g_rp * g_k3)} dec=5
+f g_tv | Total variation (TV) | calc | {SQRT(g_grr ^ 2 + g_pv ^ 2)} dec=5
+f g_pct_ev | EV % of total variation | calc | {IF(g_tv > 0, g_ev / g_tv * 100, "")} dec=1 unit=%
+f g_pct_av | AV % of total variation | calc | {IF(g_tv > 0, g_av / g_tv * 100, "")} dec=1 unit=%
+f g_pct_grr | GRR % of total variation | calc | {IF(g_tv > 0, g_grr / g_tv * 100, "")} dec=1 unit=%
+f g_pct_tol | GRR % of tolerance | calc | {IF(ISNUMBER(ms_tolerance), 6 * g_grr / ms_tolerance * 100, "")} dec=1 unit=%
+f g_ndc | Number of distinct categories | calc | {IF(g_grr > 0, INT(1.41 * g_pv / g_grr), "")}
+f g_decision | Decision | calc | {IF(g_pct_grr < 10, "ACCEPTABLE", IF(g_pct_grr <= 30, "CONDITIONALLY ACCEPTABLE", "NOT ACCEPTABLE"))}
+rule g_decision | equals | NOT ACCEPTABLE | #FDE7E9 | bold
+rule g_decision | equals | CONDITIONALLY ACCEPTABLE | #FFF4D6 | bold
+rule g_decision | equals | ACCEPTABLE | #E6F4EA | bold
+rule g_ndc | lessThan | 5 | #FFF4D6 | bold
+note The decision bands shown (below 10 percent, 10 to 30 percent, above 30 percent) are common defaults; the organization sets its own criteria and records any customer-specific rule in the notes.
+f g_notes | Notes and actions | longtext
+use msa_signatures
+end
+
+template attribute-gage-rr | Attribute Gage R&R | CALIBRATION
+packs manufacturing
+tags MSA, attribute agreement, go no-go
+purpose Assess an attribute (accept or reject) measurement system by comparing each appraiser's decisions with themselves, with each other and with the reference decision.
+scope Attribute gauges and visual inspections used to accept product.
+instructions Include parts near the limits as well as clearly good and bad parts, with a reference decision for each. Each appraiser judges each part in random order for each trial. Agreement percentages are calculated live.
+workflow Planned, judged, calculated, decided, approved.
+retention Keep for the life of the measurement system plus the retention period set by the organization.
+landscape
+use msa_header
+section attr_setup | Set-up | 3
+f ag_appraiser_a | Appraiser A | user | *
+f ag_appraiser_b | Appraiser B | user | *
+f ag_appraiser_c | Appraiser C | user
+f ag_target | Required effectiveness | percent | * min=0 max=100
+section attr_data | Decisions | 1
+table attr_rows | Parts | 10
+groups Part:2; Appraiser A:2; Appraiser B:2; Appraiser C:2; Agreement:3
+c at_part | Part | text | *
+c at_reference | Reference | choice | * [Accept; Reject]
+c at_a1 | Trial 1 | choice | [Accept; Reject]
+c at_a2 | Trial 2 | choice | [Accept; Reject]
+c at_b1 | Trial 1 | choice | [Accept; Reject]
+c at_b2 | Trial 2 | choice | [Accept; Reject]
+c at_c1 | Trial 1 | choice | [Accept; Reject]
+c at_c2 | Trial 2 | choice | [Accept; Reject]
+c at_within | Each appraiser consistent | calc | {IF(AND(at_a1 = at_a2, at_b1 = at_b2, OR(ISBLANK(at_c1), at_c1 = at_c2)), "Yes", "No")}
+c at_between | All appraisers agree | calc | {IF(AND(at_a1 = at_a2, at_a1 = at_b1, at_b1 = at_b2, OR(ISBLANK(at_c1), AND(at_c1 = at_a1, at_c2 = at_a1))), "Yes", "No")}
+c at_vs_ref | All agree with reference | calc | {IF(AND(at_a1 = at_reference, at_a2 = at_reference, at_b1 = at_reference, at_b2 = at_reference, OR(ISBLANK(at_c1), AND(at_c1 = at_reference, at_c2 = at_reference))), "Yes", "No")}
+rule attr_rows.at_vs_ref | equals | No | #FDE7E9 | bold
+section attr_results | Results | 3
+f at_n | Parts | calc | {COUNTA(attr_rows.at_part)}
+f at_within_pct | Within-appraiser agreement | calc | {IF(at_n > 0, COUNTIF(attr_rows.at_within, "Yes") / at_n * 100, "")} dec=1 unit=%
+f at_between_pct | Between-appraiser agreement | calc | {IF(at_n > 0, COUNTIF(attr_rows.at_between, "Yes") / at_n * 100, "")} dec=1 unit=%
+f at_effectiveness | Agreement with reference (effectiveness) | calc | {IF(at_n > 0, COUNTIF(attr_rows.at_vs_ref, "Yes") / at_n * 100, "")} dec=1 unit=%
+f at_decision | Decision | calc | {IF(at_effectiveness >= ag_target, "ACCEPTABLE", "NOT ACCEPTABLE")}
+rule at_decision | equals | NOT ACCEPTABLE | #FDE7E9 | bold
+use msa_signatures
+end
+
+template msa-review | Measurement System Analysis Review | CALIBRATION
+packs manufacturing
+tags MSA, review, summary
+purpose Review the measurement system studies for a product or process together, decide which systems are fit for use and plan improvement for those that are not.
+scope Measurement systems named in a control plan or inspection plan.
+instructions List each system with its latest studies and decision. Systems not acceptable need an improvement action or customer agreement before use.
+workflow Compiled, reviewed with the team, decisions approved.
+retention Keep for the life of the product plus the retention period set by the organization.
+landscape
+section msa_scope | Scope | 3
+f mr_scope | Product, process or control plan | text | *
+f mr_control_plan | Control plan | record
+f mr_review_date | Review date | date | *
+section msa_systems | Systems | 1
+table mr_rows | Measurement systems | 1
+c mrs_gauge | Gauge | equipment | *
+c mrs_characteristic | Characteristic | text | *
+c mrs_grr | Gage R&R % | percent | min=0
+c mrs_ndc | Distinct categories | integer | min=0
+c mrs_bias | Bias acceptable | choice | [Yes; No; Not studied]
+c mrs_linearity | Linearity acceptable | choice | [Yes; No; Not studied]
+c mrs_stability | Stable | choice | [Yes; No; Not studied]
+c mrs_decision | Decision | choice | * [Fit for use; Fit with conditions; Not fit - improve]
+c mrs_action | Action | text
+rule mr_rows.mrs_decision | equals | Not fit - improve | #FDE7E9 | bold
+f mr_not_fit | Systems not fit | calc | {COUNTIF(mr_rows.mrs_decision, "Not fit - improve")}
+use msa_signatures
+end

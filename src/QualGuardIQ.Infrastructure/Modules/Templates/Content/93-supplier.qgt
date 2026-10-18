@@ -1,0 +1,394 @@
+# Supplier quality templates (TECH 4, FI 1 supplier quality).
+
+block supplier_header
+section sup_id | Supplier | 3
+f sp_supplier | Supplier | supplier | *
+f sp_code | Supplier code | text
+f sp_commodity | Commodity, product or service | text | *
+f sp_site_address | Manufacturing site | text
+f sp_contact | Supplier contact | text
+f sp_buyer | Buyer | user
+f sp_sqe | Supplier quality engineer | user
+end
+
+block supplier_signatures
+sign sup_prepared | Prepared by | prepared | I prepared this record and the information in it is complete.
+sign sup_reviewed | Reviewed by | reviewed | I reviewed this record. | suppliers.edit
+sign sup_approved | Approved by | approved | I approve this record. | suppliers.approve
+end
+
+block supplier_scoring
+section scoring | Assessment | 1 | Score each criterion 0 to 5 from the evidence. Weight sets the importance; the weighted score is calculated.
+table sc_rows | Criteria | 1
+c sc_criterion | Criterion | text | *
+c sc_weight | Weight | number | * min=0 dec=1
+c sc_score | Score (0 to 5) | integer | * min=0 max=5
+c sc_weighted | Weighted | calc | {sc_weight * sc_score} dec=2
+c sc_evidence | Evidence | text
+rule sc_rows.sc_score | lessOrEqual | 2 | #FFF4D6 | bold
+total sc_weight | sum | Total weight
+total sc_weighted | sum | Total weighted
+f sc_total_weight | Total weight | calc | {SUM(sc_rows.sc_weight)}
+f sc_total | Weighted score | calc | {SUM(sc_rows.sc_weighted)} dec=2
+f sc_pct | Score | calc | {IF(sc_total_weight > 0, sc_total / (sc_total_weight * 5) * 100, 0)} dec=0 unit=%
+rule sc_pct | lessThan | 70 | #FDE7E9 | bold
+end
+
+template approved-supplier-list | Approved Supplier List | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags approved supplier list, ASL, register
+purpose Keep a controlled list of approved suppliers with the scope of approval, criticality, risk, status and review dates, so purchasing uses only approved sources for approved scopes.
+scope Suppliers of products and services that affect product conformity.
+instructions Use the live approved supplier list for daily control; issue this record for audits and customers. Restricted and suspended suppliers stay on the list with their status.
+workflow Compiled, reviewed by purchasing and quality, approved, issued.
+retention Keep each issued list for the retention period set by the organization.
+landscape
+section asl | Suppliers | 1
+f asl_as_of | As of | date | *
+table asl_rows | Suppliers | 1
+c al_supplier | Supplier | supplier | *
+c al_scope | Approved scope | text | *
+c al_criticality | Criticality | choice | * [Critical; High; Medium; Low]
+c al_status | Status | choice | * [Approved; Conditionally approved; Restricted; Suspended; Disqualified]
+c al_approved_on | Approved on | date
+c al_next_review | Next review | date
+c al_certificate | Certificate | text
+c al_cert_expires | Certificate expires | date
+c al_rating | Performance rating | choice | [A; B; C; D]
+rule asl_rows.al_status | in | Restricted,Suspended,Disqualified | #FDE7E9 | bold
+rule asl_rows.al_status | equals | Conditionally approved | #FFF4D6
+f asl_count | Suppliers | calc | {COUNTA(asl_rows.al_scope)}
+f asl_review_overdue | Reviews overdue | calc | {COUNTIF(asl_rows.al_next_review, "<" & asl_as_of)}
+f asl_cert_expired | Certificates expired | calc | {COUNTIF(asl_rows.al_cert_expires, "<" & asl_as_of)}
+use supplier_signatures
+end
+
+template supplier-qualification | Supplier Qualification | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags supplier qualification, approval, onboarding
+purpose Qualify a new supplier, or a new scope for an existing one, by combining the questionnaire, the risk assessment, the audit where needed and the sample approval into one decision.
+scope New suppliers and new scopes for existing suppliers.
+instructions Complete each qualification step the supplier's criticality requires. The decision states the approved scope and any condition.
+workflow Requested, steps completed, decision approved, supplier added to the approved list.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use supplier_header
+section qual_steps | Qualification steps | 1
+table qs_rows | Steps | 0
+rows Supplier questionnaire; Risk assessment; Quality agreement signed; Certificates verified; On-site or remote audit; Sample or first article approval; Financial review; Trade compliance and sanctions screening
+c qs_required | Required | boolean
+c qs_result | Result | choice | [Passed; Passed with conditions; Failed; Not done]
+c qs_record | Record | record
+c qs_note | Note | text
+rule qs_rows.qs_result | equals | Failed | #FDE7E9 | bold
+section qual_decision | Decision | 2
+f qd_failed | Steps failed | calc | {COUNTIF(qs_rows.qs_result, "Failed")}
+f qd_decision | Decision | choice | * [Approved; Conditionally approved; Not approved]
+f qd_scope | Approved scope | longtext | *
+f qd_conditions | Conditions | longtext | when=qd_decision=Conditionally_approved
+f qd_review | First review due | date
+use supplier_signatures
+end
+
+template supplier-questionnaire | Supplier Questionnaire | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags supplier questionnaire, self-assessment
+purpose Collect a supplier's own description of its organization, certifications, capabilities and quality controls, as the first step of qualification.
+scope Prospective suppliers and suppliers due for reapproval.
+instructions Send to the supplier and ask for evidence with each answer. Answers are verified during the risk assessment or the audit.
+workflow Sent, completed by the supplier, reviewed.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use supplier_header
+section sq_org | Organization | 3
+f sq_employees | Employees | integer | min=0
+f sq_years | Years in business | integer | min=0
+f sq_sites | Manufacturing sites | integer | min=0
+f sq_ownership | Ownership | text
+f sq_cert | Management system certifications | multichoice | [Quality; Environmental; Health and safety; Information security; Industry-specific; None]
+f sq_cert_files | Certificates | attachment
+section sq_answers | Questions | 1
+table sq_rows | Questions | 0
+rows Documented quality management system; Control of documents and records; Incoming inspection of purchased material; Process control and inspection plans; Calibration of measuring equipment; Control of nonconforming product; Corrective action process; Traceability of lots; Change notification to customers; Control of sub-tier suppliers; Training records; Business continuity plan
+c sq_answer | Answer | choice | * [Yes; Partly; No]
+c sq_evidence | Evidence | text
+rule sq_rows.sq_answer | equals | No | #FDE7E9 | bold
+rule sq_rows.sq_answer | equals | Partly | #FFF4D6
+section sq_score | Summary | 3
+f sq_yes | Yes | calc | {COUNTIF(sq_rows.sq_answer, "Yes")}
+f sq_no | No | calc | {COUNTIF(sq_rows.sq_answer, "No")}
+f sq_pct | Positive answers | calc | {(sq_yes + COUNTIF(sq_rows.sq_answer, "Partly") / 2) / 12 * 100} dec=0 unit=%
+use supplier_signatures
+end
+
+template supplier-risk-assessment | Supplier Risk Assessment | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags supplier risk, risk assessment
+purpose Assess the risk a supplier presents to supply, quality and compliance, and decide the level of control applied.
+scope New suppliers, suppliers at reapproval and suppliers after significant events.
+instructions Rate each factor for likelihood and impact. The risk level sets the controls: audit frequency, inspection level and review interval.
+workflow Assessed, reviewed, controls set, reviewed at the interval.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use supplier_header
+section sra | Risk factors | 1
+table sra_rows | Factors | 0
+rows Product or service criticality; Single or sole source; Quality history; Delivery history; Financial stability; Geographic and logistics risk; Capacity; Process complexity; Regulatory or compliance exposure; Information security exposure; Sub-tier dependence
+c sr_likelihood | Likelihood (1 to 5) | integer | * min=1 max=5
+c sr_impact | Impact (1 to 5) | integer | * min=1 max=5
+c sr_score | Score | calc | {sr_likelihood * sr_impact}
+c sr_note | Note | text
+rule sra_rows.sr_score | greaterOrEqual | 15 | #FDE7E9 | bold
+rule sra_rows.sr_score | greaterOrEqual | 8 | #FFF4D6
+section sra_result | Result | 3
+f sr_max | Highest factor score | calc | {MAX(sra_rows.sr_score)}
+f sr_avg | Average factor score | calc | {AVERAGE(sra_rows.sr_score)} dec=1
+f sr_level | Risk level | calc | {IF(sr_max >= 15, "High", IF(sr_max >= 8, "Medium", "Low"))}
+f sr_controls | Controls applied | longtext | *
+rule sr_level | equals | High | #FDE7E9 | bold
+use supplier_signatures
+end
+
+template supplier-audit-template | Supplier Audit | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags supplier audit, on-site assessment, weighted score
+purpose Assess a supplier on site or remotely against weighted criteria and decide its approval status from the score and the findings.
+scope Suppliers whose criticality or risk requires an audit.
+instructions Score each criterion from the evidence. The organization sets the weights. Record findings with their requirement and evidence.
+workflow Planned, held, scored, reported, supplier responds, closed.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use supplier_header
+section sat_visit | Visit | 3
+f sat_date | Date | date | *
+f sat_lead | Lead auditor | user | *
+f sat_mode | Mode | choice | * [On site; Remote; Hybrid]
+use supplier_scoring
+section sat_findings | Findings | 1
+table sat_find_rows | Findings | 0
+c sfr_type | Type | choice | * [Major; Minor; Observation]
+c sfr_text | Finding | longtext | *
+c sfr_due | Response due | date
+c sfr_scar | Corrective action request | record
+rule sat_find_rows.sfr_type | equals | Major | #FDE7E9 | bold
+section sat_outcome | Outcome | 2
+f sat_major | Major findings | calc | {COUNTIF(sat_find_rows.sfr_type, "Major")}
+f sat_result | Result | calc | {IF(AND(sc_pct >= 80, sat_major = 0), "Approved", IF(sc_pct >= 60, "Conditionally approved", "Not approved"))}
+rule sat_result | equals | Not approved | #FDE7E9 | bold
+use supplier_signatures
+end
+
+template supplier-scorecard | Supplier Scorecard | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags scorecard, supplier performance, PPM, on-time delivery
+purpose Rate a supplier's performance for a period on quality, delivery, responsiveness and cost, with each measure calculated from the data entered.
+scope Suppliers in the scorecard programme.
+instructions Enter the period data. Defective parts per million, on-time delivery and the overall rating are calculated. The weights and thresholds are set by the organization.
+workflow Compiled each period, shared with the supplier, reviewed.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use supplier_header
+section sc_period | Period | 3
+f scp_from | From | date | *
+f scp_to | To | date | *
+f scp_parts_received | Parts received | integer | * min=0
+f scp_parts_rejected | Parts rejected | integer | * min=0
+f scp_deliveries | Deliveries | integer | * min=0
+f scp_on_time | Deliveries on time | integer | * min=0
+f scp_ncrs | Nonconformances raised | integer | min=0
+f scp_scar_late | Late corrective action responses | integer | min=0
+f scp_ppm_target | PPM target | number | * min=0
+f scp_otd_target | On-time target | percent | * min=0 max=100
+check scp_parts_rejected | lessOrEqual | scp_parts_received | Rejected parts cannot exceed parts received.
+check scp_on_time | lessOrEqual | scp_deliveries | On-time deliveries cannot exceed deliveries.
+section sc_results | Results | 3
+f scp_ppm | Defective parts per million | calc | {IF(scp_parts_received > 0, scp_parts_rejected / scp_parts_received * 1000000, 0)} dec=0
+f scp_otd | On-time delivery | calc | {IF(scp_deliveries > 0, scp_on_time / scp_deliveries * 100, 0)} dec=1 unit=%
+f scp_quality_pts | Quality points (of 50) | calc | {IF(scp_ppm <= scp_ppm_target, 50, MAX(0, 50 - (scp_ppm - scp_ppm_target) / MAX(scp_ppm_target, 1) * 25))} dec=0
+f scp_delivery_pts | Delivery points (of 35) | calc | {IF(scp_otd >= scp_otd_target, 35, MAX(0, 35 - (scp_otd_target - scp_otd) * 2))} dec=0
+f scp_response_pts | Responsiveness points (of 15) | calc | {MAX(0, 15 - scp_scar_late * 5)} dec=0
+f scp_total | Total score | calc | {scp_quality_pts + scp_delivery_pts + scp_response_pts} dec=0
+f scp_rating | Rating | calc | {IF(scp_total >= 90, "A", IF(scp_total >= 75, "B", IF(scp_total >= 60, "C", "D")))}
+rule scp_rating | equals | D | #FDE7E9 | bold
+rule scp_rating | equals | C | #FFF4D6 | bold
+use supplier_signatures
+end
+
+template supplier-performance-review | Supplier Performance Review | SUPPLIER
+packs manufacturing, aerospace, medical-device
+tags performance review, business review
+purpose Review a supplier's performance with the supplier over several periods: trends, issues, actions and the decision on the relationship.
+scope Critical and high-risk suppliers, at least annually.
+instructions Bring the scorecards and open issues. Agree actions with owners on both sides. Record the decision on status and next review.
+workflow Prepared, held with the supplier, actions agreed, decision approved.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use supplier_header
+section spr_trend | Trend | 1
+table spr_rows | Periods | 2
+c spr_period | Period | text | *
+c spr_ppm | PPM | number | min=0 dec=0
+c spr_otd | On-time % | percent | min=0 max=100
+c spr_score | Score | number | min=0 max=100 dec=0
+c spr_rating | Rating | choice | [A; B; C; D]
+rule spr_rows.spr_rating | equals | D | #FDE7E9 | bold
+f spr_avg_score | Average score | calc | {AVERAGE(spr_rows.spr_score)} dec=0
+use action_plan
+section spr_decision | Decision | 2
+f spr_decision_value | Decision | choice | * [Continue; Continue with development plan; Restrict new business; Phase out]
+f spr_next | Next review | date
+use supplier_signatures
+end
+
+template supplier-development-plan | Supplier Development Plan | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags supplier development, improvement
+purpose Plan and track the improvement of a supplier's capability against measurable targets, with actions on both sides.
+scope Suppliers below target performance or strategic suppliers being developed.
+instructions Set baseline and target for each measure. Plan actions with owners and dates. Review progress regularly; the plan closes when targets are met and sustained.
+workflow Agreed, actions executed, progress reviewed, closed.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use supplier_header
+section sdp_targets | Targets | 1
+table sdp_rows | Measures | 1
+c sd_measure | Measure | text | *
+c sd_baseline | Baseline | number | * dec=2
+c sd_target | Target | number | * dec=2
+c sd_current | Current | number | dec=2
+c sd_progress | Progress | calc | {IF(AND(ISNUMBER(sd_current), sd_target <> sd_baseline), (sd_current - sd_baseline) / (sd_target - sd_baseline) * 100, "")} dec=0 unit=%
+rule sdp_rows.sd_progress | lessThan | 50 | #FFF4D6
+use action_plan, supplier_signatures
+end
+
+template scar | Supplier Corrective Action Request | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags SCAR, corrective action, supplier
+purpose Request corrective action from a supplier for a nonconformance it caused, and evaluate its response: containment, root cause, corrective action and verification.
+scope Supplier-caused nonconformances that need a supplier response.
+instructions Describe the problem with evidence. The supplier contains within the time set, then responds with root cause and corrective action by the due date. The response is evaluated before acceptance.
+workflow Issued, supplier contains, supplier responds, response evaluated, verified, closed.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use supplier_header
+section scar_problem | Problem | 2
+f scr_ncr | Nonconformance | record
+f scr_part | Part | part
+f scr_description | Problem description | longtext | *
+f scr_qty | Quantity affected | integer | min=0
+f scr_issued | Issued on | date | *
+f scr_containment_due | Containment due | date | *
+f scr_response_due | Response due | date | *
+f scr_evidence | Evidence | attachment
+section scar_response | Supplier response | 2
+f scr_containment | Containment taken | longtext
+f scr_root_cause | Root cause (occurrence and escape) | longtext
+f scr_action | Corrective action | longtext
+f scr_implemented | Implemented on | date
+f scr_responded | Response received on | date
+f scr_days_late | Response days late | calc | {IF(ISNUMBER(DAYS(scr_responded, scr_response_due)), MAX(0, DAYS(scr_responded, scr_response_due)), "")}
+rule scr_days_late | greaterThan | 0 | #FFF4D6 | bold
+section scar_evaluation | Evaluation | 2
+f scr_response_ok | Response accepted | passfail
+f scr_verification | Verification of effectiveness | longtext
+f scr_effective | Effective | passfail
+f scr_cost | Cost recovered | currency | min=0
+use supplier_signatures
+end
+
+template supplier-change-notification | Supplier Change Notification | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags supplier change, PCN, change notification
+purpose Record a change notified by a supplier (process, material, site, sub-tier or design), assess its effect and decide whether and how it is approved.
+scope Changes that suppliers must notify under the purchase order or quality agreement.
+instructions Record the change as notified. Assess the effect on form, fit, function, reliability and compliance. Decide the validation needed before acceptance.
+workflow Received, assessed, validation agreed, decision approved, change implemented.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use supplier_header
+section scn | Change | 2
+f scn_type | Change type | choice | * [Process; Material; Manufacturing site; Sub-tier supplier; Design; Equipment; Packaging; End of life]
+f scn_description | Change as notified | longtext | *
+f scn_received | Received on | date | *
+f scn_effective | Proposed effective date | date
+f scn_parts | Parts affected | longtext | *
+section scn_assessment | Assessment | 1
+table scn_rows | Effect | 0
+rows Form or fit; Function or performance; Reliability; Regulatory or compliance; Customer notification or approval; Inspection or test; Inventory and transition
+c sa_effect | Effect | choice | * [None; Possible; Yes]
+c sa_note | Note | text
+rule scn_rows.sa_effect | equals | Yes | #FFF4D6 | bold
+section scn_decision | Decision | 2
+f scn_validation | Validation required | longtext
+f scn_decision_value | Decision | choice | [Approved; Approved after validation; Rejected]
+f scn_customer_ref | Customer approval reference | text
+use supplier_signatures
+end
+
+template supplier-deviation-request | Supplier Deviation Request | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags deviation, waiver, supplier
+purpose Evaluate a supplier's request to ship product that departs from a requirement, for a limited quantity or time, and record the decision and its limits.
+scope Supplier requests to ship product not fully meeting requirements.
+instructions Record the requirement and the departure. Evaluate the effect. Deviations are limited in quantity or time; customer approval is obtained where required.
+workflow Requested, evaluated, approved or rejected, limits tracked, closed.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use supplier_header
+section sdr | Request | 2
+f sdr_part | Part | part | *
+f sdr_requirement | Requirement | longtext | *
+f sdr_departure | Departure | longtext | *
+f sdr_reason | Reason | longtext | *
+f sdr_qty | Quantity | integer | * min=1
+f sdr_from | Valid from | date | *
+f sdr_to | Valid to | date | *
+f sdr_days | Duration (days) | calc | {DAYS(sdr_to, sdr_from)}
+check sdr_to | greaterOrEqual | sdr_from | The end date cannot be before the start date.
+section sdr_evaluation | Evaluation | 2
+f sdr_effect | Effect on form, fit, function or safety | longtext | *
+f sdr_customer_needed | Customer approval needed | boolean
+f sdr_customer_ref | Customer approval reference | text | when=sdr_customer_needed=true
+f sdr_identification | Identification of deviated product | text | *
+f sdr_decision | Decision | choice | [Approved; Rejected]
+use supplier_signatures
+end
+
+template supplier-certification-register | Supplier Certification Register | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags supplier certification, certificates, expiry
+purpose Register the certificates held by suppliers, with the issuer, scope and expiry, so lapses are seen before they affect approval.
+scope Certificates the organization requires from suppliers.
+instructions Record each certificate and attach it. The status is calculated from the expiry date.
+workflow Maintained, checked monthly, reviewed.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+landscape
+section scr_scope | Register | 2
+f scg_as_of | As of | date | *
+section scr_rows_section | Certificates | 1
+table scg_rows | Certificates | 1
+c sg_supplier | Supplier | supplier | *
+c sg_standard | Standard | text | *
+c sg_certificate | Certificate number | text | *
+c sg_issuer | Issuer | text
+c sg_scope | Scope | text
+c sg_expires | Expires | date | *
+c sg_status | Status | calc | {IF(DAYS(sg_expires, scg_as_of) < 0, "Expired", IF(DAYS(sg_expires, scg_as_of) <= 60, "Expiring", "Valid"))}
+rule scg_rows.sg_status | equals | Expired | #FDE7E9 | bold
+rule scg_rows.sg_status | equals | Expiring | #FFF4D6
+f sg_expired | Expired | calc | {COUNTIF(scg_rows.sg_status, "Expired")}
+use supplier_signatures
+end
+
+template supplier-reapproval | Supplier Reapproval | SUPPLIER
+packs manufacturing, aerospace, medical-device, electronics
+tags reapproval, periodic review, supplier
+purpose Decide at the review interval whether a supplier stays approved, from its performance, risk, certificates and audit results.
+scope Approved suppliers at their review date.
+instructions Bring the current scorecard, risk assessment and certificates. Record each input and the decision.
+workflow Review due, inputs compiled, decision approved, list updated.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use supplier_header
+section reap_inputs | Inputs | 1
+table reap_rows | Inputs | 0
+rows Performance rating; Risk level; Certificates current; Last audit result; Open corrective actions; Changes notified; Quality agreement current
+c ri_value | Value | text
+c ri_acceptable | Acceptable | choice | * [Yes; No]
+c ri_record | Record | record
+rule reap_rows.ri_acceptable | equals | No | #FDE7E9 | bold
+section reap_decision | Decision | 2
+f ra_not_ok | Inputs not acceptable | calc | {COUNTIF(reap_rows.ri_acceptable, "No")}
+f ra_decision | Decision | choice | * [Reapproved; Reapproved with conditions; Restricted; Disqualified]
+f ra_next_review | Next review | date | *
+use supplier_signatures
+end
