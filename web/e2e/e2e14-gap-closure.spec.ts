@@ -110,7 +110,7 @@ test.describe('E2E 14: gap closure', () => {
   test('retention policies take filters and priority, and the dry run explains which policy governs each record', async ({ page }) => {
     const admin = await Api.as(users.admin);
     const t = Date.now().toString(36);
-    const ncr = await admin.post<{ id: string; number: string }>('/api/ncrs', { title: `Retention ${t}`, description: 'Retention dry run', source: 'In-process', siteId: state().siteId, detectedOn: new Date().toISOString().slice(0, 10), severity: 1 });
+    const ncr = await admin.post<{ id: string; number: string }>('/api/ncrs', { title: `Retention ${t}`, description: 'Retention dry run', source: 'In-process', siteId: state().siteId, detectedOn: localDate(), severity: 1 });
     const number = (await admin.get<{ number: string }>(`/api/ncrs/${ncr.id}`)).number;
     await signIn(page, users.admin);
     await page.goto('/governance/retention');
@@ -142,7 +142,7 @@ test.describe('E2E 14: gap closure', () => {
     test.setTimeout(150_000);
     const admin = await Api.as(users.admin);
     const tag = `cl${Date.now().toString(36)}`;
-    const ncr = await admin.post<{ id: string }>('/api/ncrs', { title: `Library ${tag}`, description: 'Many files', source: 'In-process', siteId: state().siteId, detectedOn: new Date().toISOString().slice(0, 10), severity: 1 });
+    const ncr = await admin.post<{ id: string }>('/api/ncrs', { title: `Library ${tag}`, description: 'Many files', source: 'In-process', siteId: state().siteId, detectedOn: localDate(), severity: 1 });
     // Bulk fixture straight into the test database (the API's upload path is covered elsewhere); same database serve-api.sh created.
     const env = { ...process.env, PGHOST: process.env.E2E_PGHOST ?? 'localhost', PGPORT: process.env.E2E_PGPORT ?? '5433', PGUSER: process.env.E2E_PGUSER ?? 'qgiq', PGPASSWORD: process.env.E2E_PGPASSWORD ?? 'qgiq_local_dev' };
     execFileSync('psql', ['-d', process.env.E2E_DB ?? 'qgiq_e2e', '-v', 'ON_ERROR_STOP=1', '-q', '-c', `

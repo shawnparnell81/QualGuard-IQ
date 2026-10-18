@@ -57,7 +57,6 @@ public sealed class KpiEngine(AppDbContext db, ModuleSupport m)
         return list;
     }
 
-    static DateTimeOffset T(DateOnly d) => new(d.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
 
     public async Task<KpiSeries> SeriesAsync(string key, KpiPeriod period, DateOnly from, DateOnly to, Guid? siteId, CancellationToken ct)
     {
@@ -76,7 +75,7 @@ public sealed class KpiEngine(AppDbContext db, ModuleSupport m)
         var ship = await Q(db.TraceEvents.AsNoTracking().Where(x => x.Kind == TraceEventKind.Shipment), Permissions.TraceView);
         foreach (var (s, e, label) in buckets)
         {
-            var f = T(s); var t = T(e.AddDays(1));
+            var (f, t) = await m.DayRangeAsync(siteId, s, e, ct);
             decimal num = 0, den = 0; decimal? val = null;
             switch (key)
             {

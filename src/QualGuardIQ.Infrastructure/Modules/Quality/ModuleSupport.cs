@@ -15,6 +15,18 @@ public sealed class ModuleSupport(AppDbContext db, IAccessService access, ICurre
     public Task<DateOnly> TodayAsync(Guid? siteId, CancellationToken ct) => calendar.TodayAsync(siteId, ct);
     public DateTimeOffset Now => clock.UtcNow;
     public Task<TimeZoneInfo> ZoneAsync(Guid? siteId, CancellationToken ct) => calendar.ZoneAsync(siteId, ct);
+    /// <summary>Instant range covering business days <paramref name="from"/> to <paramref name="to"/> (inclusive) in the site's time zone.</summary>
+    public async Task<(DateTimeOffset From, DateTimeOffset To)> DayRangeAsync(Guid? siteId, DateOnly from, DateOnly to, CancellationToken ct)
+    {
+        var zone = await calendar.ZoneAsync(siteId, ct);
+        static DateTimeOffset Start(DateOnly d, TimeZoneInfo z)
+        {
+            var local = d.ToDateTime(TimeOnly.MinValue);
+            while (z.IsInvalidTime(local)) local = local.AddMinutes(30);
+            return new DateTimeOffset(local, z.GetUtcOffset(local)).ToUniversalTime();
+        }
+        return (Start(from, zone), Start(to.AddDays(1), zone));
+    }
 
     public async Task RequireAsync(string permission, Guid siteId, Guid? departmentId, CancellationToken ct)
     {

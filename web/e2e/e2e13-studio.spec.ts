@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, signIn, state, unique, users } from './support';
+import { Api, signIn, state, unique, users, localDate } from './support';
 
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
 async function shot(page: Page, name: string) {
@@ -61,7 +61,7 @@ test.describe('E2E 13: platform studio, recovery, marketplace and content (Promp
 
   test('a video attached to an NCR plays in the content library with its version history', async ({ page }) => {
     const author = await Api.as(users.author);
-    const ncr = await author.post('/api/ncrs', { title: unique('Video NCR'), description: 'Setup', source: 'In-process', siteId: state().siteId, detectedOn: new Date().toISOString().slice(0, 10), severity: 1 });
+    const ncr = await author.post('/api/ncrs', { title: unique('Video NCR'), description: 'Setup', source: 'In-process', siteId: state().siteId, detectedOn: localDate(), severity: 1 });
     const name = `${unique('line-setup').replace(/\s+/g, '-')}.mp4`;
     const v1 = await author.upload('Ncr', ncr.id, name, 'not really a video, but bytes '.repeat(50), 'video/mp4');
     expect(v1.contentType).toBe('video/mp4');
