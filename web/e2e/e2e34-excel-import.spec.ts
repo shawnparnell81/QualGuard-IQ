@@ -50,6 +50,8 @@ test.describe('Forms B6: Excel conversion', () => {
     await signIn(p2, users.approver);
     await p2.goto(url);
     await p2.getByRole('tab', { name: 'Check and approve' }).click();
+    await expect(p2.getByRole('button', { name: 'Approve and import' })).toBeDisabled();
+    await p2.getByLabel('I have reviewed the side-by-side preview and accept the fidelity report').check();
     await p2.getByRole('button', { name: 'Approve and import' }).click();
     await expect(p2.getByText(/Draft form template/)).toBeVisible();
     await shot(p2, 'forms-import/b6-template-created');

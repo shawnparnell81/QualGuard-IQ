@@ -11,7 +11,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 const table = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 const crc32 = (b: Buffer) => { let c = 0xffffffff; for (const x of b) c = table[(c ^ x) & 0xff] ^ (c >>> 8); return (c ^ 0xffffffff) >>> 0; };
 
-function zip(files: [string, Buffer][]): Buffer {
+export function zip(files: [string, Buffer][]): Buffer {
   const parts: Buffer[] = []; const central: Buffer[] = []; let offset = 0;
   for (const [name, data] of files) {
     const n = enc(name); const crc = crc32(data);

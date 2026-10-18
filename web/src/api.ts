@@ -60,3 +60,13 @@ export async function postBlob(url: string, body: unknown): Promise<Blob> {
   }
   return r.blob();
 }
+
+/** GET that returns a file (rendered previews). Errors are read as problem details like other calls. */
+export async function getBlob(url: string): Promise<Blob> {
+  const r = await fetch(url, { credentials: 'same-origin' });
+  if (!r.ok) {
+    const p = await r.json().catch(() => ({}));
+    throw new ApiError(r.status, p.title ?? `Request failed (${r.status})`, p.errors, p.code, p);
+  }
+  return r.blob();
+}
