@@ -118,9 +118,9 @@ public sealed class DocumentService(
     }
 
     /// <summary>Starts a new draft revision. Earlier revisions are never modified.</summary>
-    public async Task<DocumentRevision> ReviseAsync(Guid id, string? label, string changeSummary, CancellationToken ct)
+    public async Task<DocumentRevision> ReviseAsync(Guid id, string? label, string changeSummary, CancellationToken ct, bool preAuthorized = false)
     {
-        var doc = await LoadForEditAsync(id, ct);
+        var doc = await LoadForEditAsync(id, ct, preAuthorized);
         if (doc.Status != DocumentStatus.Active) throw new AppException("Only active documents can be revised.");
         if (doc.Revisions.Any(r => r.Status is RevisionStatus.Draft or RevisionStatus.InReview)) throw new ConflictException("A revision is already in progress.");
         if (string.IsNullOrWhiteSpace(changeSummary)) throw new AppException("A change summary is required.");
@@ -239,10 +239,10 @@ public sealed class DocumentService(
             .OrderByDescending(r => r.Sequence).FirstOrDefaultAsync(ct);
     }
 
-    private async Task<ControlledDocument> LoadForEditAsync(Guid id, CancellationToken ct)
+    private async Task<ControlledDocument> LoadForEditAsync(Guid id, CancellationToken ct, bool preAuthorized = false)
     {
         var doc = await db.Documents.Include(d => d.Revisions).FirstOrDefaultAsync(d => d.Id == id, ct) ?? throw new NotFoundException("Document");
-        await records.RequireEditAsync(DocumentRecordTypes.ForDocument(doc.Kind), id, ct);
+        if (!preAuthorized) await records.RequireEditAsync(DocumentRecordTypes.ForDocument(doc.Kind), id, ct);
         return doc;
     }
 

@@ -44,9 +44,9 @@ test.describe('Forms B13: form schema migration', () => {
     await expect(page.getByLabel('Original · revision A')).toBeVisible();
     await expect(page.getByLabel('Migrated · revision B')).toBeVisible();
     const cmp = page.getByRole('table', { name: 'Field comparison' });
-    await expect(cmp.getByRole('row').filter({ hasText: 'Total' })).toContainText('a+b');
-    await expect(cmp.getByRole('row').filter({ hasText: 'Result' })).toContainText('Accept, Reject');
-    await expect(cmp.getByRole('row').filter({ hasText: 'Reject reason' })).toContainText('Yes');
+    await expect(cmp.locator('tbody tr').filter({ hasText: 'Total' })).toContainText('a+b');
+    await expect(cmp.locator('tbody tr').filter({ hasText: 'Result' })).toContainText('Accept, Reject');
+    await expect(cmp.locator('tbody tr').filter({ hasText: 'Reject reason' })).toContainText('Yes');
     await expect(cmp.getByText('Kept, placed in a section')).toHaveCount(V1.length);
     await shot(page, 'forms-import/b13-migration-comparison');
 
@@ -56,6 +56,7 @@ test.describe('Forms B13: form schema migration', () => {
     await approver.sign(doc.number, users.approver.password);
 
     // the approver rolls the migration back; a new draft revision restores the original definition
+    await page.context().clearCookies();
     await signIn(page, users.approver);
     await page.goto('/forms/migration');
     await page.getByRole('tab', { name: 'Migration history' }).click();
