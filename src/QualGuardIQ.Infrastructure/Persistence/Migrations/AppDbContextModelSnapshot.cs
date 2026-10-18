@@ -289,6 +289,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)");
 
+                    b.Property<string>("Distribution")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
                     b.Property<string>("DocumentType")
                         .IsRequired()
                         .HasMaxLength(60)
@@ -297,6 +301,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<string>("DrawingSize")
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)");
+
+                    b.Property<DateOnly?>("ExpiresOn")
+                        .HasColumnType("date");
 
                     b.Property<string>("IndustryPack")
                         .HasMaxLength(100)
@@ -326,6 +333,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<string>("PartNumber")
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
+
+                    b.Property<string>("RelatedProcess")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<Guid?>("RetentionPolicyId")
                         .HasColumnType("uuid");
@@ -11342,12 +11353,24 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("AcceptanceCriteria")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Accuracy")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<string>("AssetNumber")
                         .HasMaxLength(60)
                         .HasColumnType("character varying(60)");
 
                     b.Property<int>("CalibrationIntervalDays")
                         .HasColumnType("integer");
+
+                    b.Property<string>("CalibrationProvider")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
 
                     b.Property<string>("Category")
                         .IsRequired()
@@ -11367,6 +11390,13 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.Property<DateOnly?>("LastCalibratedOn")
                         .HasColumnType("date");
+
+                    b.Property<bool>("LimitedUse")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LimitedUseNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<string>("Location")
                         .HasColumnType("text");
@@ -11413,6 +11443,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
 
+                    b.Property<string>("Resolution")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<uint>("RowVersion")
                         .IsConcurrencyToken()
                         .ValueGeneratedOnAddOrUpdate()
@@ -11449,6 +11483,8 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("OwnerId");
+
+                    b.HasIndex("SerialNumber");
 
                     b.HasIndex("SiteId");
 

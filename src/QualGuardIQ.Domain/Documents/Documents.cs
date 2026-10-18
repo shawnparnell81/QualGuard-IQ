@@ -41,6 +41,12 @@ public class ControlledDocument : Entity, IAudited, ISiteScoped, IArchivable
     /// <summary>How the template was created: native, converted from a file, installed from a package, or cloned.</summary>
     public TemplateSource Source { get; set; }
     public Guid? ClonedFromId { get; set; }
+    /// <summary>Master document list: the date after which the document may no longer be used, when it has one.</summary>
+    public DateOnly? ExpiresOn { get; set; }
+    /// <summary>Master document list: who holds controlled copies (departments, locations or roles, as text).</summary>
+    public string? Distribution { get; set; }
+    /// <summary>Master document list: the process the document belongs to.</summary>
+    public string? RelatedProcess { get; set; }
 }
 
 public enum TemplateSource { Native = 0, Excel = 1, Word = 2, Csv = 3, Pdf = 4, Package = 5, Clone = 6 }

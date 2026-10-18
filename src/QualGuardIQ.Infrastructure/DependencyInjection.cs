@@ -77,6 +77,20 @@ public static class DependencyInjection
         services.AddSingleton<Modules.Imports.Pdf.IOcrEngine, Modules.Imports.Pdf.ConfiguredOcrEngine>();
         services.AddSingleton<Modules.Imports.Pdf.IPdfPageRenderer, Modules.Imports.Pdf.PopplerPageRenderer>();
         services.AddScoped<Modules.Imports.IImportTarget, Modules.Imports.FormRecordImportTarget>();
+        // master list migration (Excel mode D): governed lists import into the module's own records
+        services.AddScoped<Modules.MasterLists.MasterListService>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.EquipmentListImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.MasterDocumentListImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.DrawingListImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.SupplierListImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.SupplierCertificationImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.CustomerListImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.ProductListImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.PartListImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.EmployeeListImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.TrainingCourseListImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.SkillsMatrixImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.RiskRegisterImportTarget>();
         services.AddScoped<QualGuardIQ.Infrastructure.Modules.Quality.FormValueIndexer>();
         services.AddScoped<DocumentTypeService>();
         foreach (var (kind, docType, revType) in new[]

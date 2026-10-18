@@ -52,6 +52,8 @@ public partial class AppDbContext
             e.Property(x => x.IndustryPack).HasMaxLength(100);
             e.Property(x => x.Description).HasMaxLength(4000);
             e.Property(x => x.Confidentiality).HasMaxLength(40).IsRequired().HasDefaultValue("Internal");
+            e.Property(x => x.Distribution).HasMaxLength(1000);
+            e.Property(x => x.RelatedProcess).HasMaxLength(200);
             e.HasOne<TemplateCategory>().WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<RetentionPolicy>().WithMany().HasForeignKey(x => x.RetentionPolicyId).OnDelete(DeleteBehavior.Restrict);
             e.HasOne<ControlledDocument>().WithMany().HasForeignKey(x => x.ClonedFromId).OnDelete(DeleteBehavior.Restrict);

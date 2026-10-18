@@ -34,6 +34,17 @@ public class Equipment : Entity, IAudited, ISiteScoped
     public DateOnly? QualifiedOn { get; set; }
     public DateOnly? QualificationDueOn { get; set; }
     public string? QualificationNotes { get; set; }
+    /// <summary>Calibration master list: smallest readable increment.</summary>
+    public string? Resolution { get; set; }
+    /// <summary>Calibration master list: stated accuracy of the instrument.</summary>
+    public string? Accuracy { get; set; }
+    /// <summary>Calibration master list: what a calibration must show for the equipment to pass.</summary>
+    public string? AcceptanceCriteria { get; set; }
+    /// <summary>Calibration master list: internal laboratory or external calibration provider.</summary>
+    public string? CalibrationProvider { get; set; }
+    /// <summary>Limited-use status: the equipment may be used only within the stated restriction.</summary>
+    public bool LimitedUse { get; set; }
+    public string? LimitedUseNote { get; set; }
     public string AuditLabel => $"equipment {Number}";
 }
 
