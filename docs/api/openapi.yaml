@@ -27961,6 +27961,272 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/master-lists:
+    get:
+      tags:
+        - MasterLists
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+            application/json:
+              schema:
+                type: array
+            text/json:
+              schema:
+                type: array
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/master-lists/{type}':
+    get:
+      tags:
+        - MasterLists
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: includeInactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: desc
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 50
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/MasterListPage'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MasterListPage'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/MasterListPage'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/master-lists/{type}/export':
+    get:
+      tags:
+        - MasterLists
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: format
+          in: query
+          schema:
+            type: string
+            default: xlsx
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: includeInactive
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: desc
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/master-lists/{type}/history':
+    get:
+      tags:
+        - MasterLists
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: take
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 100
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+            application/json:
+              schema:
+                type: array
+            text/json:
+              schema:
+                type: array
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/master-lists/{type}/views':
+    get:
+      tags:
+        - MasterLists
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+            application/json:
+              schema:
+                type: array
+            text/json:
+              schema:
+                type: array
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - MasterLists
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveMasterViewRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SaveMasterViewRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SaveMasterViewRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: uuid
+            application/json:
+              schema:
+                type: string
+                format: uuid
+            text/json:
+              schema:
+                type: string
+                format: uuid
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/master-lists/{type}/views/{id}':
+    delete:
+      tags:
+        - MasterLists
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/oauth/token:
     post:
       tags:
@@ -54011,6 +54277,19 @@ components:
           type: string
     MasterChangeStatus:
       type: integer
+    MasterColumn:
+      required:
+        - key
+        - label
+        - type
+      type: object
+      properties:
+        key:
+          type: string
+        label:
+          type: string
+        type:
+          type: string
     MasterDataChange:
       type: object
       properties:
@@ -54080,6 +54359,113 @@ components:
             - integer
             - string
           format: uint32
+    MasterListPage:
+      required:
+        - type
+        - total
+        - page
+        - pageSize
+        - rows
+        - byStatus
+        - inactive
+      type: object
+      properties:
+        type:
+          $ref: '#/components/schemas/MasterListType'
+        total:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        page:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        pageSize:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        rows:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterRow'
+        byStatus:
+          type: object
+          additionalProperties:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+        inactive:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    MasterListType:
+      required:
+        - key
+        - name
+        - module
+        - recordType
+        - viewPermission
+        - editPermission
+        - importTarget
+        - revisionControlled
+        - approval
+        - description
+        - columns
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        module:
+          type: string
+        recordType:
+          type: string
+        viewPermission:
+          type: string
+        editPermission:
+          type: string
+        importTarget:
+          type:
+            - 'null'
+            - string
+        revisionControlled:
+          type: boolean
+        approval:
+          type: boolean
+        description:
+          type: string
+        columns:
+          type: array
+          items:
+            $ref: '#/components/schemas/MasterColumn'
+    MasterRow:
+      required:
+        - id
+        - url
+        - active
+        - values
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        active:
+          type: boolean
+        values:
+          type: object
     MasterStatus:
       type: integer
     MatrixCell:
@@ -63325,6 +63711,19 @@ components:
             - integer
             - string
           format: int32
+    SaveMasterViewRequest:
+      required:
+        - name
+        - settings
+        - isDefault
+      type: object
+      properties:
+        name:
+          type: string
+        settings:
+          type: string
+        isDefault:
+          type: boolean
     SavePartRequest:
       required:
         - partNumber
@@ -67448,6 +67847,8 @@ components:
           type: string
         needsTemplate:
           type: boolean
+        masterList:
+          type: boolean
     TemplateChoice:
       required:
         - kind
@@ -70042,6 +70443,7 @@ tags:
   - name: Labels
   - name: MasterData
   - name: Suppliers
+  - name: MasterLists
   - name: OAuth
   - name: Objectives
   - name: Reviews
