@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
-import { Alert, Box, Button, MenuItem, Paper, Stack, Step, StepLabel, Stepper, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, FormControlLabel, MenuItem, Paper, Stack, Step, StepLabel, Stepper, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Bar, CartesianGrid, Line, ComposedChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { get, post } from '../api';
@@ -21,7 +21,8 @@ export const claimStatus = ['Submitted', 'UnderReview', 'Approved', 'Rejected', 
 const mnum = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue() ?? '')}</span>;
 const money = (n?: number | null) => (n == null ? '—' : n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }));
 
-interface Recall { id: string; number: string; title: string; reason: string; riskRating: number; status: number; containment?: string; customerNotification?: string; closureSummary?: string; capaId?: string; ncrId?: string; closedAt?: string; createdAt: string; siteId: string }
+interface Recall { id: string; number: string; title: string; reason: string; riskRating: number; status: number; containment?: string; customerNotification?: string; closureSummary?: string; capaId?: string; ncrId?: string; closedAt?: string; createdAt: string; siteId: string; isExercise?: boolean; exerciseStartedAt?: string; traceCompletedAt?: string }
+interface ExerciseReport { number: string; exerciseStartedAt?: string; traceCompletedAt?: string; traceMinutes?: number | null; customers: number; suppliers: number; quantityTraced: number; customersContained: number; containedPercent?: number | null }
 interface RecallItem { id: string; productId?: string; partId?: string; lotId?: string; serialId?: string; note?: string }
 interface RecallParty { id: string; partyKind: string; partyId: string; quantity: number; lots: string; serials: string; notifiedAt?: string; containedAt?: string; response?: string }
 interface Ret { id: string; number: string; customerId: string; productId?: string; partId?: string; serialNumber?: string; lotNumber?: string; quantity: number; returnReason: string; customerReference?: string; status: number; authorizedOn: string; receivedOn?: string; condition?: string; inspectionNotes?: string; failureConfirmed?: boolean; rootCause?: string; correctiveAction?: string; disposition: number; dispositionNotes?: string; complaintId?: string; ncrId?: string; capaId?: string; warrantyClaimId?: string; siteId: string }
@@ -51,7 +52,7 @@ export function RecallList() {
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Recalls' }]} title="Recalls" actions={can('recalls.edit') ? <Button variant="contained" component={RouterLink} to="/field/recalls/new">Open a recall</Button> : undefined}>
       <DataTable data={q.data ?? []} onRowClick={(r) => nav(`/field/recalls/${r.id}`)} empty="No recalls."
-        columns={[{ header: 'Recall', accessorKey: 'number', cell: mnum }, { header: 'Title', accessorKey: 'title' }, { header: 'Risk', accessorFn: (r) => severity[r.riskRating], cell: (x) => <StatusChip status={x.getValue()} /> },
+        columns={[{ header: 'Recall', accessorKey: 'number', cell: mnum }, { header: 'Title', accessorKey: 'title' }, { header: 'Kind', accessorFn: (r) => (r.isExercise ? 'Mock recall' : 'Recall') }, { header: 'Risk', accessorFn: (r) => severity[r.riskRating], cell: (x) => <StatusChip status={x.getValue()} /> },
           { header: 'Opened', accessorKey: 'createdAt', cell: (x) => fmtDate(x.getValue()) }, { header: 'Status', accessorFn: (r) => recallStatus[r.status], cell: (x) => <StatusChip status={x.getValue()} /> }]} />
     </ModuleWorkspace>
   );
@@ -62,7 +63,7 @@ export function RecallNew() {
   const names = useNames();
   const lots = useQuery({ queryKey: ['lots', ''], queryFn: () => get<{ id: string; number: string }[]>('/api/trace/lots') });
   const sers = useQuery({ queryKey: ['serials', ''], queryFn: () => get<{ id: string; serialNumber: string }[]>('/api/trace/serials') });
-  const [v, setV] = useState({ title: '', reason: '', riskRating: '1', siteId: '' });
+  const [v, setV] = useState({ title: '', reason: '', riskRating: '1', siteId: '', isExercise: false });
   const [items, setItems] = useState<{ ref: string; note: string }[]>([{ ref: '', note: '' }]);
   const [error, setError] = useState<string | null>(null);
   const refs: [string, string][] = [...(lots.data ?? []).map((l) => [`lot:${l.id}`, `Lot ${l.number}`] as [string, string]), ...(sers.data ?? []).map((s) => [`serial:${s.id}`, `Serial ${s.serialNumber}`] as [string, string]), ...names.parts.map((p) => [`part:${p.id}`, `Part ${lookupLabel(p)}`] as [string, string])];
@@ -75,6 +76,10 @@ export function RecallNew() {
           <TextField label="Reason" multiline minRows={3} value={v.reason} onChange={(e) => setV({ ...v, reason: e.target.value })} sx={{ gridColumn: '1 / -1' }} />
           <TextField select label="Risk rating" value={v.riskRating} onChange={(e) => setV({ ...v, riskRating: e.target.value })}>{severity.map((s, i) => <MenuItem key={s} value={String(i)}>{s}</MenuItem>)}</TextField>
           <SiteSelect value={v.siteId} onChange={(s) => setV({ ...v, siteId: s })} />
+          <Box sx={{ gridColumn: '1 / -1' }}>
+            <FormControlLabel control={<Checkbox checked={v.isExercise} onChange={(e) => setV({ ...v, isExercise: e.target.checked })} />} label="Mock recall exercise" />
+            <Typography variant="body2" color="text.secondary">An exercise traces the suspect items and times how long tracing and containment take. It is recorded and audited as a mock recall.</Typography>
+          </Box>
         </Box>
         <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mt: 3 }}>Suspect lots, serials or parts</Typography>
         {items.map((it, i) => <Stack key={i} direction="row" gap={1} sx={{ mb: 1 }}>
@@ -107,8 +112,9 @@ export function RecallDetail() {
   const [tab, setTab] = useState('parties');
   const [dlg, setDlg] = useState<'contain' | 'close' | 'capa' | null>(null);
   const q = useQuery({ queryKey: ['recall', id], queryFn: () => get<{ recall: Recall; items: RecallItem[]; parties: RecallParty[] }>(`/api/recalls/${id}`) });
+  const exercise = useQuery({ queryKey: ['recall-exercise', id], queryFn: () => get<ExerciseReport>(`/api/recalls/${id}/exercise`), enabled: !!q.data?.recall.isExercise });
   const capas = useQuery({ queryKey: ['capas', ''], queryFn: () => get<{ items: { id: string; number: string; title: string }[] }>('/api/capas?pageSize=200'), enabled: dlg === 'capa' });
-  const refresh = () => qc.invalidateQueries({ queryKey: ['recall', id] });
+  const refresh = () => { qc.invalidateQueries({ queryKey: ['recall', id] }); qc.invalidateQueries({ queryKey: ['recall-exercise', id] }); };
   const { error, busy, run } = useRunner(refresh);
   const r = q.data?.recall;
   if (!r) return <Loading to="/field/recalls" label="Recalls" error={q.error} />;
@@ -118,7 +124,7 @@ export function RecallDetail() {
   const step = Math.min(r.status, 5);
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Recalls', to: '/field/recalls' }, { label: r.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{r.number}</span><span>{r.title}</span><StatusChip status={recallStatus[r.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{r.number}</span><span>{r.title}</span><StatusChip status={recallStatus[r.status]} />{r.isExercise && <StatusChip status="Mock recall" />}</Stack>}
       tabs={[{ label: 'Impacted parties', value: 'parties' }, { label: 'Suspect items', value: 'items' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {edit && r.status <= 1 && <Button variant="contained" disabled={busy} onClick={() => run(() => post(`/api/recalls/${id}/trace`))}>{r.status === 0 ? 'Trace lots' : 'Re-run trace'}</Button>}
@@ -127,6 +133,15 @@ export function RecallDetail() {
         {edit && r.status >= 2 && <Button variant="contained" color="secondary" onClick={() => setDlg('close')}>Submit for closure</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+      {r.isExercise && <Paper variant="outlined" sx={{ p: 2, mb: 2 }} aria-label="Mock recall result">
+        <Typography variant="overline" color="text.secondary">Mock recall result</Typography>
+        {exercise.data ? <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 2, mt: 1 }}>
+          {([['Exercise started', fmtDateTime(exercise.data.exerciseStartedAt)], ['Trace completed', exercise.data.traceCompletedAt ? fmtDateTime(exercise.data.traceCompletedAt) : 'Not yet traced'],
+            ['Time to trace', exercise.data.traceMinutes == null ? '—' : `${exercise.data.traceMinutes} min`], ['Customers', String(exercise.data.customers)], ['Suppliers', String(exercise.data.suppliers)],
+            ['Quantity traced', String(exercise.data.quantityTraced)], ['Customers contained', exercise.data.containedPercent == null ? '—' : `${exercise.data.customersContained} (${exercise.data.containedPercent}%)`]] as [string, string][]).map(([k, val]) =>
+            <Box key={k}><Typography fontSize={12} color="text.secondary">{k}</Typography><Typography sx={{ fontFamily: mono, fontWeight: 600 }}>{val}</Typography></Box>)}
+        </Box> : <Typography color="text.secondary">Loading…</Typography>}
+      </Paper>}
       <Paper sx={{ p: 2, mb: 2 }}>
         <Stepper activeStep={step} alternativeLabel>{['Opened', 'Traced', 'Contained', 'Customers notified', 'Closure signed', 'Closed'].map((l) => <Step key={l}><StepLabel>{l}</StepLabel></Step>)}</Stepper>
       </Paper>
