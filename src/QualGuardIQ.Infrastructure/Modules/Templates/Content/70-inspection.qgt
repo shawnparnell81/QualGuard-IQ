@@ -1,0 +1,405 @@
+# AQL and inspection templates (TECH 4, FI 1 AQL). Sampling plans are entered by the organization; no published sampling table is reproduced.
+
+block insp_header
+section insp_lot | Lot and inspection | 3
+f insp_part_number | Part number | text | *
+f insp_part_revision | Revision | text
+f insp_lot | Lot or batch | text | *
+f insp_lot_size | Lot size | integer | * min=1
+f insp_plan | Inspection plan | record
+f insp_plan_revision | Plan revision | text
+f insp_inspector | Inspector | user | *
+f insp_date | Inspection date | date | *
+f insp_location | Location | text
+end
+
+block insp_sampling
+section sampling | Sampling | 3 | Enter the sample size and the accept and reject numbers from the organization's approved sampling plan for this lot size and inspection level.
+f smp_plan_type | Sampling plan | choice | * [Single sampling; Double sampling; Zero acceptance; 100 percent; Skip lot]
+f smp_level | Inspection level | choice | [Reduced; Normal; Tightened]
+f smp_aql | AQL | number | dec=3 min=0
+f smp_size | Sample size | integer | * min=1
+f smp_accept | Accept number | integer | * min=0
+f smp_reject | Reject number | integer | * min=1
+f smp_defectives | Defectives found | calc | {SUM(insp_chars.ic_rejected)}
+f smp_decision | Sampling decision | calc | {IF(smp_defectives <= smp_accept, "ACCEPT", IF(smp_defectives >= smp_reject, "REJECT", "SECOND SAMPLE"))}
+f smp_percent | Percent defective in sample | calc | {IF(smp_size > 0, smp_defectives / smp_size * 100, 0)} dec=2 unit=%
+check smp_reject | greaterThan | smp_accept | The reject number must be greater than the accept number.
+check smp_size | lessOrEqual | insp_lot_size | The sample size cannot exceed the lot size.
+rule smp_decision | equals | REJECT | #FDE7E9 | bold
+rule smp_decision | equals | ACCEPT | #E6F4EA | bold
+rule smp_decision | equals | SECOND SAMPLE | #FFF4D6 | bold
+end
+
+block insp_characteristics
+section insp_char_section | Characteristic results | 1
+table insp_chars | Characteristics | 1
+groups Characteristic:3; Specification:3; Results:4
+c ic_char | Characteristic | text | *
+c ic_class | Class | choice | [Critical; Major; Minor]
+c ic_method | Method or gauge | text
+c ic_nominal | Nominal | number | dec=4
+c ic_lsl | Lower limit | number | dec=4
+c ic_usl | Upper limit | number | dec=4
+c ic_checked | Checked | integer | * min=0
+c ic_rejected | Rejected | integer | * min=0
+c ic_equipment | Equipment | equipment
+c ic_result | Result | calc | {IF(ic_rejected = 0, "PASS", "FAIL")}
+rule insp_chars.ic_result | equals | FAIL | #FDE7E9 | bold
+rule insp_chars.ic_class | equals | Critical | #FFF4D6 | bold
+total ic_checked | sum | Checked
+total ic_rejected | sum | Rejected
+end
+
+block insp_disposition
+section lot_disposition | Lot disposition | 2
+f lot_decision | Lot decision | choice | * [Accepted; Rejected; Accepted with deviation; Sort 100 percent; Hold pending review]
+f lot_ncr | Nonconformance | record | reqwhen=lot_decision=Rejected
+f lot_deviation | Deviation reference | text | when=lot_decision=Accepted_with_deviation
+f lot_stock_status | Stock status set to | choice | [Released; Quarantined; Returned; Scrapped]
+f lot_notes | Notes | longtext
+rule lot_decision | equals | Rejected | #FDE7E9 | bold
+end
+
+block insp_signatures
+sign insp_performed | Inspected by | performed | I performed this inspection and recorded the results as found.
+sign insp_verified | Verified by | verified | I verified the results and the lot decision. | inspection.edit
+sign insp_approved | Approved by | approved | I approve the disposition of this lot. | inspection.approve | optional
+end
+
+template receiving-inspection | Receiving Inspection | INSPECTION
+packs manufacturing
+tags inspection, receiving, incoming, AQL
+purpose Inspect purchased material and parts on receipt against the purchase order, the specification and the inspection plan, and decide whether the lot is released to stock.
+scope Purchased material, parts and services that the inspection plan requires to be inspected on receipt.
+instructions Check the paperwork first, then sample the lot as the plan requires. Record each characteristic. A rejected lot is quarantined and a supplier nonconformance is raised.
+workflow Received, inspected, verified, released or quarantined.
+retention Keep for the life of the product plus the retention period set by the organization.
+use insp_header
+section receipt | Receipt | 3
+f rcv_supplier | Supplier | supplier | *
+f rcv_po | Purchase order | text | *
+f rcv_packing_slip | Packing slip or delivery note | text
+f rcv_received_on | Received on | date | *
+f rcv_qty_received | Quantity received | integer | * min=0
+f rcv_qty_ordered | Quantity ordered | integer | min=0
+f rcv_qty_check | Quantity matches the order | calc | {IF(rcv_qty_received = rcv_qty_ordered, "Yes", "No")}
+section documents_check | Documents | 1
+table doc_checks | Documents received | 0
+rows Certificate of conformance; Material certificate; Test report; First article report; Packing slip; Customs or dangerous goods paperwork
+c dc_required | Required | boolean
+c dc_received | Received | boolean
+c dc_acceptable | Acceptable | passfail
+c dc_reference | Reference | text
+rule doc_checks.dc_acceptable | equals | FAIL | #FDE7E9 | bold
+use insp_sampling, insp_characteristics, insp_disposition, insp_signatures
+end
+
+template in-process-inspection | In-Process Inspection | INSPECTION
+packs manufacturing
+tags inspection, in-process, patrol
+purpose Check product at defined operations during production so that nonconforming work is stopped before it moves on.
+scope Operations where the control plan specifies an in-process check.
+instructions Inspect at the frequency the control plan states. When a check fails, stop, contain the work since the last good check and follow the reaction plan.
+workflow Checked at frequency, failures contained, verified.
+retention Keep for the retention period set by the organization.
+use insp_header
+section operation | Operation | 3
+f ip_operation | Operation | text | *
+f ip_machine | Machine or work centre | text
+f ip_shift | Shift | choice | [Day; Afternoon; Night]
+f ip_frequency | Frequency | text
+f ip_work_order | Work order | text
+use insp_characteristics
+section reaction | Reaction | 2
+f ip_failures | Characteristics failed | calc | {COUNTIF(insp_chars.ic_result, "FAIL")}
+f ip_reaction | Reaction plan followed | longtext | reqwhen=ip_reaction_needed=true
+f ip_reaction_needed | Reaction needed | boolean
+f ip_contained_from | Contained back to | datetime | when=ip_reaction_needed=true
+use insp_signatures
+end
+
+template final-inspection | Final Inspection | INSPECTION
+packs manufacturing
+tags inspection, final, release
+purpose Confirm that finished product meets every requirement before it is released for shipment, including the evidence that all planned inspections were completed.
+scope Finished product before release.
+instructions Confirm the earlier inspections are complete. Sample the finished lot as the plan requires and record the results. Release only when every check passes.
+workflow Inspected, verified, released or held.
+retention Keep for the life of the product plus the retention period set by the organization.
+use insp_header
+section prior_checks | Prior checks | 1
+table prior_rows | Earlier inspections complete | 0
+rows Receiving inspection; In-process inspection; Functional test; Packaging and labelling; Traveller or route card complete
+c pr_complete | Complete | choice | * [Yes; No; Not applicable]
+c pr_reference | Reference | text
+rule prior_rows.pr_complete | equals | No | #FDE7E9 | bold
+use insp_sampling, insp_characteristics, insp_disposition, insp_signatures
+end
+
+template first-piece-inspection | First-Piece Inspection | INSPECTION
+packs manufacturing
+tags inspection, first piece, set-up approval
+purpose Approve the first part produced after a set-up, tool change, material change or long stoppage before the run continues.
+scope Every set-up and change the control plan names.
+instructions Run the first piece and inspect every characteristic in the plan. The run may continue only after the first piece is approved. Retain the piece where the plan requires.
+workflow Set-up, first piece inspected, approved, run released.
+retention Keep for the retention period set by the organization.
+use insp_header
+section setup | Set-up | 3
+f fp_trigger | Reason | choice | * [New set-up; Tool change; Material change; Operator change; Stoppage over limit; Repair; Programme change]
+f fp_machine | Machine | text | *
+f fp_tool | Tool or fixture | text
+f fp_program | Programme and revision | text
+f fp_setter | Set up by | user
+use insp_characteristics
+section fp_outcome | Outcome | 2
+f fp_result | First piece result | calc | {IF(COUNTIF(insp_chars.ic_result, "FAIL") = 0, "APPROVED", "REJECTED")}
+f fp_retained | First piece retained | boolean
+f fp_released_at | Run released at | datetime
+rule fp_result | equals | REJECTED | #FDE7E9 | bold
+use insp_signatures
+end
+
+template dock-audit | Dock Audit | INSPECTION
+packs manufacturing
+tags inspection, dock audit, outgoing
+purpose Audit packed product at the shipping dock from the customer's point of view: right part, right quantity, right labels, right packaging and right documents.
+scope Shipments selected by the dock audit plan.
+instructions Select the shipments at the frequency set by the plan. Open the packaging, check each item and record the result. Failures stop the shipment.
+workflow Selected, audited, shipped or held.
+retention Keep for the retention period set by the organization.
+section dock | Shipment | 3
+f da_shipment | Shipment or order | text | *
+f da_customer_ship | Ship-to | text
+f da_containers | Containers audited | integer | min=1
+f da_auditor | Auditor | user | *
+f da_date | Date | date | *
+section dock_checks | Checks | 1
+table dock_rows | Checks | 0
+rows Correct part number; Correct revision; Correct quantity per container; Label content and placement; Barcode readable; Packaging as specified; Product condition; No foreign material; Shipping documents; Certificate of conformance
+c dk_result | Result | passfail
+c dk_note | Note | text
+rule dock_rows.dk_result | equals | FAIL | #FDE7E9 | bold
+section dock_outcome | Outcome | 2
+f dk_failures | Checks failed | calc | {COUNTIF(dock_rows.dk_result, "FAIL")}
+f dk_decision | Decision | calc | {IF(dk_failures = 0, "SHIP", "HOLD")}
+rule dk_decision | equals | HOLD | #FDE7E9 | bold
+use insp_signatures
+end
+
+template packaging-inspection | Packaging Inspection | INSPECTION
+packs manufacturing
+tags inspection, packaging, labelling
+purpose Verify that packaging and labelling meet the packaging specification before product is packed or shipped.
+scope Packaging lines and packed product as the plan requires.
+instructions Check the packaging specification revision, the materials and each label. Record the measurement where the specification sets a limit.
+workflow Inspected, verified, released.
+retention Keep for the retention period set by the organization.
+use insp_header
+section pkg_spec | Specification | 3
+f pkg_spec | Packaging specification | text | *
+f pkg_spec_rev | Revision | text
+f pkg_type | Packaging type | choice | [Returnable; Expendable; Customer supplied]
+section pkg_checks | Checks | 1
+table pkg_rows | Checks | 0
+rows Container type; Dunnage and separators; Quantity per layer; Layers per container; Container weight; Moisture or corrosion protection; Seal or tamper evidence; Part label; Container label; Master label
+c pk_requirement | Requirement | text
+c pk_actual | Actual | text
+c pk_result | Result | passfail
+rule pkg_rows.pk_result | equals | FAIL | #FDE7E9 | bold
+f pkg_failures | Checks failed | calc | {COUNTIF(pkg_rows.pk_result, "FAIL")}
+use insp_disposition, insp_signatures
+end
+
+template sample-inspection | Sample Inspection | INSPECTION
+packs manufacturing
+tags inspection, sampling, AQL, sampling inspection
+purpose Inspect a sample drawn from a lot to the organization's approved sampling plan and decide the lot from the number of defectives found.
+scope Lots inspected by sampling rather than 100 percent.
+instructions Draw the sample at random across the lot. Enter the sample size and accept and reject numbers from the approved plan. The decision is calculated from the defectives found.
+workflow Sampled, inspected, decided, verified.
+retention Keep for the retention period set by the organization.
+use insp_header, insp_sampling, insp_characteristics, insp_disposition, insp_signatures
+end
+
+template lot-acceptance-inspection | Lot Acceptance Inspection | INSPECTION
+packs manufacturing
+tags inspection, lot acceptance, lot inspection, AQL
+purpose Decide whether a lot is accepted, rejected or sorted, on the basis of a sample inspection and the lot's documentation, and record the decision with its authority.
+scope Lots presented for acceptance: purchased, produced or returned.
+instructions Inspect the sample as the plan requires. Record any defect by class. The lot decision follows the sampling decision unless an authorized person records a deviation.
+workflow Sampled, inspected, decided, approved.
+retention Keep for the retention period set by the organization.
+use insp_header, insp_sampling, insp_characteristics
+section defects_by_class | Defects by class | 3
+f lai_critical | Critical defects | integer | min=0
+f lai_major | Major defects | integer | min=0
+f lai_minor | Minor defects | integer | min=0
+f lai_critical_reject | Critical defect found | calc | {IF(lai_critical > 0, "Yes", "No")}
+rule lai_critical_reject | equals | Yes | #FDE7E9 | bold
+use insp_disposition, insp_signatures
+end
+
+template skip-lot-inspection | Skip-Lot Inspection | INSPECTION
+packs manufacturing
+tags inspection, skip lot
+purpose Record a lot received under skip-lot status: whether the lot was selected for inspection or skipped, and the result when inspected.
+scope Part and supplier combinations qualified for skip-lot inspection.
+instructions Confirm the skip-lot status is current. Lots selected by the skip frequency are inspected to the sampling plan; skipped lots are released on documentation review. A rejected lot returns the part to normal inspection.
+workflow Received, selected or skipped, inspected where selected, released.
+retention Keep for the retention period set by the organization.
+use insp_header
+section skip_status | Skip-lot status | 3
+f sl_review | Qualifying skip-lot review | record
+f sl_frequency | Skip frequency (inspect 1 in N lots) | integer | * min=1
+f sl_lot_sequence | Lot sequence number since qualification | integer | * min=1
+f sl_selected | Lot selected for inspection | calc | {IF(MOD(sl_lot_sequence, sl_frequency) = 0, "Yes", "No")}
+f sl_docs_ok | Documentation acceptable | passfail | *
+use insp_sampling, insp_characteristics, insp_disposition, insp_signatures
+end
+
+template skip-lot-review | Skip-Lot Review | INSPECTION
+packs manufacturing
+tags inspection, skip lot, qualification
+purpose Decide whether a part and supplier combination qualifies for, stays on, or leaves skip-lot inspection, from its recent lot history.
+scope Part and supplier combinations considered for reduced inspection.
+instructions Enter the recent lot history. The organization sets the number of consecutive accepted lots and the period needed to qualify. Any rejection, supplier change or process change removes the status.
+workflow History reviewed, decision approved, reviewed at the set interval.
+retention Keep while the status applies plus the retention period set by the organization.
+section skip_subject | Subject | 3
+f slr_supplier | Supplier | supplier | *
+f slr_part | Part | part | *
+f slr_required_lots | Consecutive accepted lots required | integer | * min=1
+f slr_period | Review period | choice | [3 months; 6 months; 12 months]
+section skip_history | Lot history | 1
+table slr_lots | Recent lots | 1
+c slr_lot | Lot | text | *
+c slr_date | Received | date
+c slr_result | Result | choice | * [Accepted; Rejected]
+c slr_record | Inspection record | record
+rule slr_lots.slr_result | equals | Rejected | #FDE7E9 | bold
+section skip_decision | Decision | 2
+f slr_accepted | Lots accepted | calc | {COUNTIF(slr_lots.slr_result, "Accepted")}
+f slr_rejected | Lots rejected | calc | {COUNTIF(slr_lots.slr_result, "Rejected")}
+f slr_qualifies | Meets the qualification rule | calc | {IF(AND(slr_rejected = 0, slr_accepted >= slr_required_lots), "Yes", "No")}
+f slr_decision | Decision | choice | * [Qualify for skip lot; Remain on skip lot; Return to normal inspection]
+f slr_next_review | Next review | date
+end
+
+template inspection-plan-template | Inspection Plan | INSPECTION
+packs manufacturing
+tags inspection plan, characteristics, sampling
+purpose Define what is inspected for a part at each inspection point: characteristics, methods, equipment, sample size, frequency and reaction.
+scope Parts that need receiving, in-process or final inspection.
+instructions List every characteristic with its specification and method. Set the sample size and frequency from the organization's sampling rules. Reference the control plan where one exists.
+workflow Drafted, reviewed, approved, revised on change.
+retention Keep for the life of the part plus the retention period set by the organization.
+landscape
+section plan_subject | Subject | 3
+f ipl_part_number | Part number | text | *
+f ipl_revision | Part revision | text | *
+f ipl_type | Inspection type | choice | * [Receiving; In-process; Final; First piece; Audit]
+f ipl_control_plan | Control plan | record
+f ipl_aql | Default AQL | number | dec=3 min=0
+section plan_chars | Characteristics | 1
+table ipl_rows | Characteristics | 1
+groups Characteristic:3; Specification:3; Method:4
+c pl_char | Characteristic | text | *
+c pl_class | Class | choice | * [Critical; Major; Minor]
+c pl_balloon | Balloon | text
+c pl_nominal | Nominal | number | dec=4
+c pl_lsl | Lower limit | number | dec=4
+c pl_usl | Upper limit | number | dec=4
+c pl_method | Method | text | *
+c pl_equipment | Equipment | equipment
+c pl_sample | Sample size | text | *
+c pl_frequency | Frequency | text | *
+rule ipl_rows.pl_class | equals | Critical | #FFF4D6 | bold
+section plan_reaction | Reaction | 1
+f ipl_reaction | Reaction plan | longtext | *
+use approval_trio
+end
+
+template characteristic-results | Characteristic Results | INSPECTION
+packs manufacturing
+tags inspection, results, variables
+purpose Record variable measurements for characteristics, with summary statistics calculated live for each characteristic.
+scope Inspections that record measured values.
+instructions Enter the limits and up to ten measured values for each characteristic. Mean, range, standard deviation and the result are calculated.
+workflow Measured, reviewed, verified.
+retention Keep for the retention period set by the organization.
+landscape
+use insp_header
+section var_results | Measurements | 1
+table var_rows | Characteristics | 1
+groups Characteristic:3; Values:5; Statistics:4
+c vr_char | Characteristic | text | *
+c vr_lsl | Lower limit | number | dec=4
+c vr_usl | Upper limit | number | dec=4
+c vr_v1 | Value 1 | number | dec=4
+c vr_v2 | Value 2 | number | dec=4
+c vr_v3 | Value 3 | number | dec=4
+c vr_v4 | Value 4 | number | dec=4
+c vr_v5 | Value 5 | number | dec=4
+c vr_mean | Mean | calc | {AVERAGE(vr_v1, vr_v2, vr_v3, vr_v4, vr_v5)} dec=4
+c vr_range | Range | calc | {MAX(vr_v1, vr_v2, vr_v3, vr_v4, vr_v5) - MIN(vr_v1, vr_v2, vr_v3, vr_v4, vr_v5)} dec=4
+c vr_sd | Std dev | calc | {STDEV(vr_v1, vr_v2, vr_v3, vr_v4, vr_v5)} dec=5
+c vr_result | Result | calc | {IF(AND(OR(ISBLANK(vr_lsl), MIN(vr_v1, vr_v2, vr_v3, vr_v4, vr_v5) >= vr_lsl), OR(ISBLANK(vr_usl), MAX(vr_v1, vr_v2, vr_v3, vr_v4, vr_v5) <= vr_usl)), "PASS", "FAIL")}
+rule var_rows.vr_result | equals | FAIL | #FDE7E9 | bold
+f vr_failed | Characteristics failed | calc | {COUNTIF(var_rows.vr_result, "FAIL")}
+use insp_signatures
+end
+
+template defect-summary | Defect Summary | INSPECTION
+packs manufacturing
+tags inspection, defects, Pareto
+purpose Summarize the defects found over a period by type, with counts, share and cumulative share for Pareto analysis.
+scope Any inspection point or product over a reporting period.
+instructions Enter each defect type with its count. Share and cumulative share are calculated; sort by count, highest first, before review.
+workflow Compiled, reviewed, actions assigned.
+retention Keep for the retention period set by the organization.
+section summary_scope | Scope | 3
+f ds_from | Period from | date | *
+f ds_to | Period to | date | *
+f ds_area | Inspection point or area | text | *
+f ds_inspected | Units inspected | integer | * min=0
+check ds_to | greaterOrEqual | ds_from | The period end cannot be before its start.
+section defects | Defects | 1
+table defect_rows | Defect types | 1
+c df_type | Defect type | text | *
+c df_code | Code | text
+c df_count | Count | integer | * min=0
+c df_action | Action | text
+total df_count | sum | Total defects
+running df_count
+f df_total | Total defects | calc | {SUM(defect_rows.df_count)}
+f df_top_share | Share of the largest defect type | calc | {IF(df_total > 0, MAX(defect_rows.df_count) / df_total * 100, 0)} dec=1 unit=%
+f df_ppm | Defects per million units | calc | {IF(ds_inspected > 0, df_total / ds_inspected * 1000000, 0)} dec=0
+use approval_trio
+end
+
+template lot-disposition | Lot Disposition | INSPECTION
+packs manufacturing
+tags inspection, lot disposition, hold, release
+purpose Record the authorized disposition of a lot that is held: the reason, the decision, the quantities in each outcome and the authority.
+scope Lots held by inspection, by a nonconformance, or by a customer or supplier notice.
+instructions State why the lot is held. The disposition is decided by an authorized person; quantities in each outcome must add up to the lot quantity.
+workflow Held, dispositioned, approved, executed, verified.
+retention Keep for the life of the product plus the retention period set by the organization.
+use insp_header
+section hold | Hold | 2
+f ld_reason | Reason for hold | longtext | *
+f ld_source | Raised by | choice | * [Inspection; Nonconformance; Customer notice; Supplier notice; Audit; Other]
+f ld_source_record | Source record | record
+section ld_outcomes | Outcomes | 1
+table ld_rows | Disposition quantities | 1
+c ld_outcome | Outcome | choice | * [Release; Rework; Sort; Return to supplier; Scrap; Use with deviation]
+c ld_qty | Quantity | integer | * min=0
+c ld_reference | Reference | text
+total ld_qty | sum | Total
+f ld_total | Quantity dispositioned | calc | {SUM(ld_rows.ld_qty)}
+f ld_balance | Balance against lot size | calc | {insp_lot_size - ld_total}
+rule ld_balance | notEquals | 0 | #FFF4D6 | bold
+use insp_signatures
+end

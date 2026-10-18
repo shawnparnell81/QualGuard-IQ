@@ -1,0 +1,416 @@
+# Training and competence templates (TECH 4, FI 1 training).
+
+block training_signatures
+sign tr_prepared | Prepared by | prepared | I prepared this record and it is complete and accurate.
+sign tr_reviewed | Reviewed by | reviewed | I reviewed this record. | training.edit
+sign tr_approved | Approved by | approved | I approve this record. | training.edit
+end
+
+block matrix_levels
+note Levels: 0 not trained, 1 in training (supervised), 2 trained (works alone), 3 experienced (can solve problems), 4 can train others. Required is the level the role needs.
+end
+
+template training-matrix | Training Matrix | TRAINING
+packs manufacturing, aerospace, medical-device, electronics
+tags training matrix, competence, gaps
+purpose Show, for a department or area, which people are trained on which documents and skills, against what their role requires, so gaps are visible and planned.
+scope Departments, cells or work areas.
+instructions List the people and, for each, the level reached on each item against the level required. Gaps are counted automatically. Review at every change of people, documents or processes.
+workflow Maintained by the supervisor, reviewed monthly, approved.
+retention Keep each revision for the retention period set by the organization.
+landscape
+section tm_scope | Scope | 3
+f tm_department | Department | department | *
+f tm_as_of | As of | date | *
+f tm_owner | Owner | user | *
+section tm_matrix | Matrix | 1
+use matrix_levels
+table tm_rows | People and items | 1
+groups Person:2; Item:2; Level:3; Training:2
+c tm_person | Person | user | *
+c tm_role | Role | text
+c tm_item | Document, course or skill | text | *
+c tm_item_rev | Revision | text
+c tm_required | Required | integer | * min=0 max=4
+c tm_actual | Actual | integer | * min=0 max=4
+c tm_gap | Gap | calc | {MAX(0, tm_required - tm_actual)}
+c tm_trained_on | Trained on | date
+c tm_due | Retraining due | date
+rule tm_rows.tm_gap | greaterThan | 0 | #FDE7E9 | bold
+f tm_entries | Entries | calc | {COUNTA(tm_rows.tm_item)}
+f tm_gaps | Entries with a gap | calc | {COUNTIF(tm_rows.tm_gap, ">0")}
+f tm_coverage | Coverage | calc | {IF(tm_entries > 0, (tm_entries - tm_gaps) / tm_entries * 100, 0)} dec=0 unit=%
+f tm_retrain_overdue | Retraining overdue | calc | {COUNTIF(tm_rows.tm_due, "<" & tm_as_of)}
+use training_signatures
+end
+
+template competency-matrix | Competency Matrix | TRAINING
+packs manufacturing, aerospace, medical-device, electronics
+tags competency matrix, competence
+purpose Record the competencies each role needs (education, training, skills and experience) and assess each person against them.
+scope Roles that affect product conformity and the effectiveness of the management system.
+instructions Define the competencies for the role first. Assess each person with the evidence. Gaps are closed by training, mentoring or reassignment and re-assessed.
+workflow Competencies defined, people assessed, gaps planned, reviewed annually.
+retention Keep each revision for the retention period set by the organization.
+landscape
+section cm_role | Role | 3
+f cm_role_name | Role | text | *
+f cm_department | Department | department
+f cm_assessor | Assessor | user | *
+section cm_competencies | Competencies | 1
+table cm_rows | Assessments | 1
+c cm_person | Person | user | *
+c cm_competency | Competency | text | *
+c cm_type | Type | choice | * [Education; Training; Skill; Experience; Certification; Behaviour]
+c cm_required | Required level | integer | * min=0 max=4
+c cm_assessed | Assessed level | integer | * min=0 max=4
+c cm_evidence | Evidence | text
+c cm_gap | Gap | calc | {MAX(0, cm_required - cm_assessed)}
+c cm_plan | Plan to close the gap | text
+rule cm_rows.cm_gap | greaterThan | 0 | #FDE7E9 | bold
+f cm_gaps | Gaps | calc | {COUNTIF(cm_rows.cm_gap, ">0")}
+use training_signatures
+end
+
+template skills-matrix | Skills Matrix | TRAINING
+packs manufacturing, electronics
+tags skills matrix, flexibility, cross-training
+purpose Show who can perform which operations at what level, so shifts can be staffed and cross-training planned to remove single points of dependence.
+scope Production areas, cells and lines.
+instructions Rate each person on each operation. The number of qualified people per operation shows where cover is thin. Plan cross-training where fewer than the target number are qualified.
+workflow Maintained by the supervisor, reviewed monthly.
+retention Keep each revision for the retention period set by the organization.
+landscape
+section sk_scope | Scope | 3
+f sk_area | Area or line | text | *
+f sk_target_cover | Target qualified people per operation | integer | * min=1
+f sk_as_of | As of | date | *
+section sk_matrix | Matrix | 1
+use matrix_levels
+table sk_rows | Operations | 1
+groups Operation:1; People:6; Cover:2
+c sk_operation | Operation | text | *
+c sk_p1 | Person 1 | integer | min=0 max=4
+c sk_p2 | Person 2 | integer | min=0 max=4
+c sk_p3 | Person 3 | integer | min=0 max=4
+c sk_p4 | Person 4 | integer | min=0 max=4
+c sk_p5 | Person 5 | integer | min=0 max=4
+c sk_p6 | Person 6 | integer | min=0 max=4
+c sk_qualified | Qualified (level 2 or more) | calc | {COUNTIF(CELLS(sk_p1, sk_p2, sk_p3, sk_p4, sk_p5, sk_p6), ">=2")}
+c sk_short | Short of target | calc | {MAX(0, sk_target_cover - COUNTIF(CELLS(sk_p1, sk_p2, sk_p3, sk_p4, sk_p5, sk_p6), ">=2"))}
+rule sk_rows.sk_short | greaterThan | 0 | #FDE7E9 | bold
+section sk_people | People | 3
+f sk_person1 | Person 1 | user
+f sk_person2 | Person 2 | user
+f sk_person3 | Person 3 | user
+f sk_person4 | Person 4 | user
+f sk_person5 | Person 5 | user
+f sk_person6 | Person 6 | user
+f sk_thin | Operations short of cover | calc | {COUNTIF(sk_rows.sk_short, ">0")}
+use training_signatures
+end
+
+template position-training-requirements | Position Training Requirements | TRAINING
+packs manufacturing, aerospace, medical-device, electronics
+tags position, role, training requirements, curriculum
+purpose Define the training a position needs: the documents, courses and qualifications, when each must be completed and how often it is repeated.
+scope Every position whose work affects quality.
+instructions List each requirement with its due period from the start date and its renewal. New starters are assigned these requirements automatically when the position is set.
+workflow Drafted by the manager, reviewed by training, approved, revised on change.
+retention Keep each revision for the retention period set by the organization.
+section ptr | Position | 3
+f ptr_position | Position | text | *
+f ptr_department | Department | department
+f ptr_owner | Owner | user | *
+section ptr_requirements | Requirements | 1
+table ptr_rows | Requirements | 1
+c pr_item | Document, course or qualification | text | *
+c pr_type | Type | choice | * [Document read and understood; Classroom course; On-the-job training; External course; Certification; Assessment]
+c pr_due_days | Due within (days of start) | integer | * min=0
+c pr_renewal_months | Renewal (months, 0 for none) | integer | min=0
+c pr_mandatory | Mandatory before working alone | boolean
+c pr_record | Course or document | record
+f ptr_count | Requirements | calc | {COUNTA(ptr_rows.pr_item)}
+f ptr_before_alone | Required before working alone | calc | {COUNTIF(ptr_rows.pr_mandatory, TRUE)}
+use training_signatures
+end
+
+template training-curriculum | Training Curriculum | TRAINING
+packs manufacturing, medical-device
+tags curriculum, course plan
+purpose Define a structured curriculum: modules in sequence, with objectives, duration, method and how learning is assessed.
+scope Curricula for roles, programmes and onboarding.
+instructions List each module in the order taken, with its learning objective and assessment. Total hours are calculated.
+workflow Drafted, reviewed, approved, revised.
+retention Keep each revision for the retention period set by the organization.
+section cur | Curriculum | 2
+f cur_name | Curriculum | text | *
+f cur_audience | Audience | text | *
+f cur_owner | Owner | user | *
+f cur_objective | Overall objective | longtext | *
+section cur_modules | Modules | 1
+table cur_rows | Modules | 1
+c cu_seq | Sequence | integer | * min=1
+c cu_module | Module | text | *
+c cu_objective | Learning objective | text | *
+c cu_method | Method | choice | * [Classroom; E-learning; On the job; Self-study; Workshop; External]
+c cu_hours | Hours | number | * min=0 dec=1
+c cu_assessment | Assessment | choice | [Test; Practical demonstration; Observation; Sign-off; None]
+total cu_hours | sum | Total hours
+running cu_hours
+f cur_hours | Total hours | calc | {SUM(cur_rows.cu_hours)} dec=1
+use training_signatures
+end
+
+template qualification-matrix | Qualification Matrix | TRAINING
+packs manufacturing, aerospace, medical-device, electronics
+tags qualification matrix, certified operations
+purpose Show who is qualified for operations and processes that need formal qualification (special processes, inspection, testing) and when each qualification expires.
+scope Operations and processes that need qualified people.
+instructions Record the qualification, its evidence and expiry for each person. Expired qualifications are highlighted; the person may not perform the operation until requalified.
+workflow Maintained, checked monthly, reviewed.
+retention Keep for the retention period set by the organization.
+landscape
+section qm_scope | Scope | 3
+f qm_area | Area | text | *
+f qm_as_of | As of | date | *
+section qm_rows_section | Qualifications | 1
+table qm_rows | Qualifications | 1
+c qm_person | Person | user | *
+c qm_process | Operation or process | text | *
+c qm_method | Qualified by | choice | * [Practical test; Written test; External certification; Witnessed work; Experience record]
+c qm_qualified_on | Qualified on | date | *
+c qm_expires | Expires | date
+c qm_status | Status | calc | {IF(ISBLANK(qm_expires), "Current", IF(DAYS(qm_expires, qm_as_of) < 0, "Expired", IF(DAYS(qm_expires, qm_as_of) <= 30, "Expiring", "Current")))}
+c qm_evidence | Evidence | text
+rule qm_rows.qm_status | equals | Expired | #FDE7E9 | bold
+rule qm_rows.qm_status | equals | Expiring | #FFF4D6
+f qm_expired | Expired | calc | {COUNTIF(qm_rows.qm_status, "Expired")}
+use training_signatures
+end
+
+template training-assignment | Training Assignment | TRAINING
+packs manufacturing, medical-device
+tags training assignment
+purpose Assign training to people with a reason and a due date, and track completion.
+scope Training assigned for new starters, changes, findings and development.
+instructions State why the training is assigned. Each person completes and signs in the system; overdue assignments are escalated to the manager.
+workflow Assigned, completed, verified, closed.
+retention Keep for the retention period set by the organization.
+section ta | Assignment | 2
+f ta_item | Course, document or skill | text | *
+f ta_record | Course or document | record
+f ta_reason | Reason | choice | * [New starter; Document revision; Process change; Corrective action; Audit finding; Development; Retraining]
+f ta_reason_record | Related record | record
+f ta_due | Due | date | *
+f ta_trainer | Trainer | user
+section ta_people | People | 1
+table ta_rows | People | 1
+c tp_person | Person | user | *
+c tp_completed | Completed on | date
+c tp_status | Status | calc | {IF(ISNUMBER(DAYS(tp_completed, ta_due)), IF(DAYS(tp_completed, ta_due) <= 0, "On time", "Late"), "Open")}
+rule ta_rows.tp_status | equals | Open | #FFF4D6
+f ta_total | People | calc | {COUNTA(ta_rows.tp_person)}
+f ta_done | Completed | calc | {COUNT(ta_rows.tp_completed)}
+use training_signatures
+end
+
+template training-attendance | Training Attendance | TRAINING
+packs manufacturing, medical-device, aerospace
+tags attendance, sign-in sheet
+purpose Record attendance at a training session: the session, the trainer, the material used and each attendee.
+scope Classroom, workshop and on-the-floor training sessions.
+instructions Record the material and its revision. Each attendee confirms attendance with their own signature in the system or on the printed sheet.
+workflow Session held, attendance recorded, assessments linked, closed.
+retention Keep for the retention period set by the organization.
+section session | Session | 3
+f ts_title | Session | text | *
+f ts_date | Date | date | *
+f ts_hours | Duration (hours) | number | * min=0 dec=1
+f ts_trainer | Trainer | user | *
+f ts_material | Material and revision | text
+f ts_location | Location | text
+section attendees | Attendees | 1
+table att_rows | Attendees | 3
+c at_person | Attendee | user | *
+c at_department | Department | department
+c at_attended | Attended | boolean | *
+c at_assessment | Assessment result | choice | [Passed; Not passed; Not assessed]
+rule att_rows.at_assessment | equals | Not passed | #FDE7E9 | bold
+f att_count | Attended | calc | {COUNTIF(att_rows.at_attended, TRUE)}
+f att_hours | Training hours delivered | calc | {att_count * ts_hours} dec=1
+use training_signatures
+end
+
+template training-assessment | Training Assessment | TRAINING
+packs manufacturing, medical-device
+tags assessment, test, knowledge check
+purpose Assess whether a trainee has learned what the training intended, with the questions or tasks, the marks and the pass mark.
+scope Training that requires an assessment.
+instructions Score each question or task. The result is calculated against the pass mark. A trainee who does not pass is retrained and reassessed.
+workflow Assessed, scored, reviewed, retraining assigned where needed.
+retention Keep for the retention period set by the organization.
+section asmt | Assessment | 3
+f as_trainee | Trainee | user | *
+f as_course | Course | text | *
+f as_date | Date | date | *
+f as_assessor | Assessor | user | *
+f as_pass_mark | Pass mark | percent | * min=0 max=100
+section asmt_items | Questions and tasks | 1
+table as_rows | Items | 1
+c as_item | Question or task | longtext | *
+c as_max | Marks available | number | * min=0
+c as_scored | Marks scored | number | * min=0
+total as_max | sum | Available
+total as_scored | sum | Scored
+section asmt_result | Result | 3
+f as_total_max | Marks available | calc | {SUM(as_rows.as_max)}
+f as_total | Marks scored | calc | {SUM(as_rows.as_scored)}
+f as_pct | Score | calc | {IF(as_total_max > 0, as_total / as_total_max * 100, 0)} dec=0 unit=%
+f as_result | Result | calc | {IF(as_pct >= as_pass_mark, "PASS", "NOT PASSED")}
+rule as_result | equals | NOT PASSED | #FDE7E9 | bold
+use training_signatures
+end
+
+template on-the-job-qualification | On-the-Job Qualification | TRAINING
+packs manufacturing, electronics, aerospace
+tags on-the-job, OJT, qualification
+purpose Qualify a person to perform an operation on their own after supervised practice, with the tasks demonstrated and the trainer's and supervisor's sign-off.
+scope Operations that require on-the-job training before working alone.
+instructions The trainee performs each task under supervision the number of times required. The trainer records each demonstration. The supervisor verifies before the person works alone.
+workflow Training started, tasks demonstrated, trainer sign-off, supervisor verification.
+retention Keep for the retention period set by the organization after the person leaves the role.
+section ojt | Qualification | 3
+f oj_trainee | Trainee | user | *
+f oj_operation | Operation | text | *
+f oj_instruction | Work instruction and revision | text | *
+f oj_trainer | Trainer | user | *
+f oj_start | Started | date | *
+section ojt_tasks | Tasks | 1
+table oj_rows | Tasks | 1
+c oj_task | Task | text | *
+c oj_required | Demonstrations required | integer | * min=1
+c oj_done | Demonstrations done | integer | min=0
+c oj_ok | Complete | calc | {IF(oj_done >= oj_required, "Yes", "No")}
+rule oj_rows.oj_ok | equals | No | #FFF4D6
+f oj_open | Tasks not complete | calc | {COUNTIF(oj_rows.oj_ok, "No")}
+sign oj_trainer_sign | Trainer | performed | I trained this person and observed each task demonstrated as recorded.
+sign oj_trainee_sign | Trainee | prepared | I received this training and can perform these tasks.
+sign oj_supervisor_sign | Supervisor verification | verified | I verified this person can perform the operation without supervision. | training.edit
+end
+
+template supervisor-verification | Supervisor Verification | TRAINING
+packs manufacturing, medical-device
+tags supervisor verification, competence check
+purpose Record the supervisor's verification that a trained person applies the training correctly in their actual work.
+scope Training that requires verification of application at work.
+instructions Observe the person at work after training. Record what was observed against each point.
+workflow Observed, recorded, verified.
+retention Keep for the retention period set by the organization.
+section sv | Verification | 3
+f sv_person | Person | user | *
+f sv_training | Training verified | text | *
+f sv_date | Date observed | date | *
+section sv_points | Points observed | 1
+table sv_rows | Points | 1
+c sv_point | Point | text | *
+c sv_result | Result | choice | * [Applied correctly; Applied with coaching; Not applied]
+c sv_note | Note | text
+rule sv_rows.sv_result | equals | Not applied | #FDE7E9 | bold
+f sv_not | Not applied | calc | {COUNTIF(sv_rows.sv_result, "Not applied")}
+f sv_outcome | Outcome | calc | {IF(sv_not = 0, "Verified", "Retraining needed")}
+sign sv_supervisor | Supervisor | verified | I observed this person at work and recorded what I saw. | training.edit
+end
+
+template certification-register | Certification Register | TRAINING
+packs manufacturing, aerospace, medical-device, electronics
+tags certification, register, expiry
+purpose Register certifications held by people (internal and external), with the issuer, the reference and the expiry, so renewals are planned.
+scope Certifications required by roles, customers or regulations.
+instructions Record each certification with its evidence. The status is calculated from the expiry date.
+workflow Maintained, checked monthly, reviewed.
+retention Keep for the retention period set by the organization after expiry.
+landscape
+section cr_scope | Register | 2
+f cr_as_of | As of | date | *
+f cr_owner | Owner | user | *
+section cr_rows_section | Certifications | 1
+table cr_rows | Certifications | 1
+c cr_person | Person | user | *
+c cr_certification | Certification | text | *
+c cr_issuer | Issuer | text
+c cr_reference | Reference | text
+c cr_issued | Issued | date
+c cr_expires | Expires | date
+c cr_status | Status | calc | {IF(ISBLANK(cr_expires), "No expiry", IF(DAYS(cr_expires, cr_as_of) < 0, "Expired", IF(DAYS(cr_expires, cr_as_of) <= 60, "Renew", "Valid")))}
+rule cr_rows.cr_status | equals | Expired | #FDE7E9 | bold
+rule cr_rows.cr_status | equals | Renew | #FFF4D6
+f cr_expired | Expired | calc | {COUNTIF(cr_rows.cr_status, "Expired")}
+f cr_renew | Due for renewal | calc | {COUNTIF(cr_rows.cr_status, "Renew")}
+use training_signatures
+end
+
+template qualification-register | Qualification Register | TRAINING
+packs manufacturing, aerospace, medical-device
+tags qualification, register, auditors, inspectors
+purpose Register people qualified for roles that need formal approval (auditors, inspectors, testers, approvers), with their scope and the basis of approval.
+scope Roles that the organization approves people for.
+instructions Record the scope of each approval precisely. Approvals are reviewed at the interval set and withdrawn when the basis no longer holds.
+workflow Approved, registered, reviewed, withdrawn when needed.
+retention Keep for the retention period set by the organization after withdrawal.
+section qr | Register | 1
+table qr_rows | Qualified people | 1
+c qr_person | Person | user | *
+c qr_role | Role | choice | * [Internal auditor; Lead auditor; Supplier auditor; Inspector; Tester; Calibration technician; Approver; Trainer; Other]
+c qr_scope | Scope | text | *
+c qr_basis | Basis of approval | text | *
+c qr_approved_on | Approved on | date | *
+c qr_review_due | Review due | date
+c qr_status | Status | choice | * [Active; Suspended; Withdrawn]
+rule qr_rows.qr_status | in | Suspended,Withdrawn | #EEEEEE
+use training_signatures
+end
+
+template retraining-record | Retraining Record | TRAINING
+packs manufacturing, medical-device
+tags retraining, refresher
+purpose Record retraining given because of a revision, a lapse, an error or a finding, and confirm the person is competent again.
+scope Retraining for any reason.
+instructions State the trigger and link the record. Retraining is verified the same way as the original training.
+workflow Triggered, retrained, verified, closed.
+retention Keep for the retention period set by the organization.
+section rtr | Retraining | 2
+f rt_person | Person | user | *
+f rt_item | Training | text | *
+f rt_trigger | Trigger | choice | * [Document revision; Qualification lapse; Error or nonconformance; Audit finding; Periodic refresher; Return from absence]
+f rt_trigger_record | Related record | record
+f rt_date | Retrained on | date | *
+f rt_trainer | Trainer | user
+f rt_method | Method | choice | [Classroom; On the job; Read and understood; E-learning]
+f rt_result | Result | choice | * [Competent; Further training needed]
+rule rt_result | equals | Further training needed | #FFF4D6 | bold
+use training_signatures
+end
+
+template training-effectiveness-review | Training Effectiveness Review | TRAINING
+packs manufacturing, medical-device, aerospace
+tags training effectiveness, evaluation
+purpose Evaluate whether training achieved its purpose by comparing a performance measure before and after, and decide on further action.
+scope Training programmes and significant individual training, as the organization decides.
+instructions Choose a measure linked to the training purpose before training. Measure after enough time has passed. The change is calculated.
+workflow Measure set, training delivered, measured after, decision recorded.
+retention Keep for the retention period set by the organization.
+section te | Training | 2
+f te_training | Training | text | *
+f te_purpose | Purpose of the training | longtext | *
+f te_measure | Measure | text | *
+f te_higher_better | Higher is better | boolean
+f te_before | Before | number | * dec=3
+f te_after | After | number | dec=3
+f te_change | Change | calc | {IF(ISNUMBER(te_after), te_after - te_before, "")} dec=3
+f te_change_pct | Change | calc | {IF(AND(ISNUMBER(te_after), te_before <> 0), (te_after - te_before) / ABS(te_before) * 100, "")} dec=1 unit=%
+f te_improved | Improved | calc | {IF(ISNUMBER(te_after), IF(te_higher_better, IF(te_after > te_before, "Yes", "No"), IF(te_after < te_before, "Yes", "No")), "")}
+f te_decision | Decision | choice | [Effective; Partly effective - more training; Not effective - redesign]
+rule te_improved | equals | No | #FDE7E9 | bold
+use training_signatures
+end

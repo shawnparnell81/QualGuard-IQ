@@ -1,0 +1,694 @@
+# PPAP templates: configurable submission-package elements (TECH 4, FI 1, FI 5 automotive pack).
+# Element names, required elements per level, customer requirements and approval rules are set by the organization when it adopts a template.
+# Nothing here reproduces a published manual or a licensed form; wording, layout and calculations are original.
+
+block ppap_level_matrix
+section level_matrix | Submission elements by level | 1 | The default retention and submission rules below are a starting point. The organization and the customer agree the final rule for each element; change the rule column when adopting the template.
+table level_elements | Elements | 0
+rows Design record; Authorized engineering change documents; Customer engineering approval; Design FMEA; Process flow diagram; Process FMEA; Control plan; Measurement system analysis studies; Dimensional results; Material and performance test results; Initial process studies; Qualified laboratory documentation; Appearance approval report; Sample production parts; Master sample; Checking aids; Customer-specific requirements; Part submission warrant; Bulk material requirements checklist
+c el_rule | Rule for this level | choice | * [Submit to customer; Retain and make available; Customer decides; Not required]
+c el_required | Required by customer | boolean
+c el_status | Status | choice | * [Not started; In progress; Complete; Not applicable]
+c el_record | Record | record
+c el_owner | Owner | user
+c el_note | Note | text
+rule level_elements.el_status | in | Not started,In progress | #FFF4D6
+rule level_elements.el_status | equals | Complete | #E6F4EA
+f el_count_submit | Elements to submit | calc | {COUNTIF(level_elements.el_rule, "Submit to customer")}
+f el_count_complete | Elements complete | calc | {COUNTIF(level_elements.el_status, "Complete")}
+f el_count_na | Elements not applicable | calc | {COUNTIF(level_elements.el_status, "Not applicable")}
+f el_count_open | Elements open | calc | {COUNTIF(level_elements.el_status, "Not started") + COUNTIF(level_elements.el_status, "In progress")}
+f el_ready | Package ready | calc | {IF(el_count_open = 0, "Ready", "Not ready")}
+rule el_ready | equals | Not ready | #FFF4D6 | bold
+end
+
+block ppap_package_decision
+section package_decision | Customer decision | 2 | Record the customer's decision exactly as received and attach the customer's notice.
+f customer_decision | Customer decision | choice | [Awaiting decision; Full approval; Interim approval; Rejected]
+f decision_date | Decision date | date
+f interim_expires | Interim approval expires | date | when=customer_decision=Interim_approval
+f interim_conditions | Interim conditions | longtext | when=customer_decision=Interim_approval
+f rejection_reasons | Reasons for rejection | longtext | when=customer_decision=Rejected
+f customer_notice | Customer notice | attachment
+rule customer_decision | equals | Rejected | #FDE7E9 | bold
+rule customer_decision | equals | Interim approval | #FFF4D6
+end
+
+template ppap-level-1 | Submission Package - Level 1 | PPAP
+packs automotive
+tags PPAP, level 1, submission package
+purpose Assemble and track a level 1 production part approval submission: the warrant (and appearance approval where applicable) is submitted, all other elements are retained and available on request.
+scope Parts where the customer requests a level 1 submission.
+instructions Confirm the level with the customer. Mark each element's rule, link the record that evidences it and complete every element before the warrant is signed. Elements that are retained must still be complete and retrievable.
+workflow Package opened, elements completed, internal review, warrant signed, submitted, customer decision recorded.
+retention Keep for the life of the part plus one calendar year after the part is no longer active, or longer where the customer requires.
+use ppap_header, ppap_level_matrix, ppap_package_decision, ppap_signatures
+end
+
+template ppap-level-2 | Submission Package - Level 2 | PPAP
+packs automotive
+tags PPAP, level 2, submission package
+purpose Assemble and track a level 2 production part approval submission: the warrant with product samples and limited supporting data, all other elements retained.
+scope Parts where the customer requests a level 2 submission.
+instructions Agree with the customer which supporting data is submitted. Mark each element's rule, link the evidence and complete every element before the warrant is signed.
+workflow Package opened, elements completed, internal review, warrant signed, submitted, customer decision recorded.
+retention Keep for the life of the part plus one calendar year after the part is no longer active, or longer where the customer requires.
+use ppap_header, ppap_level_matrix, ppap_package_decision, ppap_signatures
+end
+
+template ppap-level-3 | Submission Package - Level 3 | PPAP
+packs automotive
+tags PPAP, level 3, submission package
+purpose Assemble and track a level 3 production part approval submission: the warrant with product samples and complete supporting data.
+scope Parts where the customer requests a level 3 submission, the usual default when no level is stated.
+instructions Mark each element's rule, link the record that evidences it and confirm every submitted element is complete and reviewed before the warrant is signed.
+workflow Package opened, elements completed, internal review, warrant signed, submitted, customer decision recorded.
+retention Keep for the life of the part plus one calendar year after the part is no longer active, or longer where the customer requires.
+use ppap_header, ppap_level_matrix, ppap_package_decision, ppap_signatures
+end
+
+template ppap-level-4 | Submission Package - Level 4 | PPAP
+packs automotive
+tags PPAP, level 4, submission package
+purpose Assemble and track a level 4 production part approval submission: the warrant and the other requirements the customer defines.
+scope Parts where the customer defines its own submission requirements.
+instructions Record the customer's definition of what is submitted in the notes and set each element's rule to match. Link the evidence and complete every element before the warrant is signed.
+workflow Package opened, customer requirements recorded, elements completed, internal review, warrant signed, submitted, customer decision recorded.
+retention Keep for the life of the part plus one calendar year after the part is no longer active, or longer where the customer requires.
+use ppap_header
+section customer_definition | Customer definition of the submission | 1
+f customer_definition_text | Customer-defined requirements | longtext | *
+f customer_definition_ref | Customer document or communication reference | text | *
+use ppap_level_matrix, ppap_package_decision, ppap_signatures
+end
+
+template ppap-level-5 | Submission Package - Level 5 | PPAP
+packs automotive
+tags PPAP, level 5, submission package, on-site review
+purpose Assemble and track a level 5 production part approval: the warrant with samples and complete supporting data reviewed at the organization's manufacturing location.
+scope Parts where the customer reviews the submission on site.
+instructions Prepare every element for review at the manufacturing location. Record the review date, the customer representatives and the outcome. Link the evidence for each element.
+workflow Package prepared, on-site review held, findings closed, warrant signed, customer decision recorded.
+retention Keep for the life of the part plus one calendar year after the part is no longer active, or longer where the customer requires.
+use ppap_header
+section onsite_review | On-site review | 2
+f onsite_date | Review date | date | *
+f onsite_location | Location | text | *
+f onsite_reviewers | Customer representatives | longtext | *
+f onsite_findings | Findings | longtext
+f onsite_findings_closed | All findings closed | boolean
+use ppap_level_matrix, ppap_package_decision, ppap_signatures
+end
+
+template ppap-cover-sheet | Submission Cover Sheet | PPAP
+packs automotive
+tags PPAP, cover sheet
+purpose Identify a submission and its contents for the customer's receiving function: part, level, reason, contact and the list of what is enclosed.
+scope Every submission sent to a customer.
+instructions Complete the cover sheet last, after the package index is final. List every enclosure with its document number and revision.
+workflow Prepared with the package, reviewed, sent with the submission.
+retention Keep with the submission package.
+use ppap_header
+section cover_contact | Organization and customer contacts | 3
+f org_name | Organization name | text | *
+f org_code | Organization or supplier code | text
+f org_contact | Organization contact | user | *
+f customer_contact | Customer contact | text | *
+f customer_plant | Customer receiving location | text
+f shipment_method | Shipment method | choice | [Electronic portal; E-mail; Courier; Hand delivered with samples]
+section enclosures_section | Enclosures | 1
+table enclosures | Enclosures | 1
+c enc_element | Element | text | *
+c enc_document | Document number | text | *
+c enc_revision | Revision | text
+c enc_pages | Pages | integer | min=0
+c enc_record | Record | record
+total enc_pages | sum | Total pages
+f enc_count | Enclosures | calc | {COUNTA(enclosures.enc_element)}
+use ppap_signatures
+end
+
+template ppap-element-checklist | Submission Element Checklist | PPAP
+packs automotive
+tags PPAP, checklist, elements
+purpose Check each element of a submission for completeness and consistency before the warrant is signed.
+scope Every submission, whatever the level.
+instructions Review each element against the questions. A No needs a correction before the package goes to the customer. The checklist stays with the retained file.
+workflow Completed by the package owner, reviewed by quality, attached to the package.
+retention Keep with the submission package.
+use ppap_header
+section element_checks | Element checks | 1
+table element_rows | Checks | 0
+rows Design record is the current customer revision; Engineering change documents are listed and approved; DFMEA and PFMEA revisions match the control plan; Process flow operation numbers match PFMEA and control plan; Every special characteristic appears in PFMEA and control plan; Measurement studies cover every measurement in the control plan; Dimensional results cover every drawing characteristic; Material and performance results meet every specification; Initial process studies meet the agreed capability; Laboratory scope covers the tests performed; Appearance approval obtained where applicable; Samples are labelled and retained; Checking aids are listed with calibration status; Customer-specific requirements are addressed; Warrant data matches the package
+c ec_answer | Answer | choice | * [Yes; No; Not applicable]
+c ec_evidence | Evidence or comment | text
+c ec_corrected | Correction made | boolean
+rule element_rows.ec_answer | equals | No | #FDE7E9 | bold
+section element_result | Result | 2
+f ec_no | Checks answered No | calc | {COUNTIF(element_rows.ec_answer, "No")}
+f ec_ok | Ready for warrant | calc | {IF(ec_no = 0, "Yes", "No")}
+rule ec_ok | equals | No | #FDE7E9 | bold
+use ppap_signatures
+end
+
+template ppap-design-record-index | Design Record Index | PPAP
+packs automotive
+tags PPAP, design record
+purpose List every design record that defines the part, including drawings, models, specifications and referenced documents, with revisions, so the package can be traced to the exact design.
+scope Every part submitted for approval.
+instructions List each design record and its revision. Where the design is held as a model, record the model identifier and the release reference. Mark which records were supplied by the customer.
+workflow Prepared, checked against the customer release, approved.
+retention Keep with the submission package.
+use ppap_header
+section design_records | Design records | 1
+table design_record_rows | Records | 1
+c dr_type | Type | choice | * [Drawing; Model; Specification; Material specification; Performance specification; Referenced standard; Other]
+c dr_number | Number | text | *
+c dr_title | Title | text
+c dr_revision | Revision | text | *
+c dr_date | Release date | date
+c dr_customer | Supplied by customer | boolean
+c dr_document | Controlled document | record
+use ppap_signatures
+end
+
+template ppap-engineering-change | Engineering Change Record | PPAP
+packs automotive
+tags PPAP, engineering change
+purpose Record the authorized engineering changes included in a submission that are not yet incorporated in the design record.
+scope Submissions that include changes not yet shown on the design record.
+instructions List each change with its authorization. Changes without written customer authorization cannot be included in the submission.
+workflow Changes listed, authorization verified, approved.
+retention Keep with the submission package.
+use ppap_header
+section changes_section | Changes | 1
+table change_rows | Changes | 1
+c chg_number | Change number | text | *
+c chg_description | Description | longtext | *
+c chg_authorized_by | Authorized by (customer) | text | *
+c chg_authorization_ref | Authorization reference | text | *
+c chg_date | Authorization date | date | *
+c chg_in_record | Shown on the design record | boolean
+c chg_record | Change record | record
+use ppap_signatures
+end
+
+template ppap-customer-engineering-approval | Customer Engineering Approval | PPAP
+packs automotive
+tags PPAP, engineering approval
+purpose Record the customer's engineering approval, waiver or trial authorization where the customer requires it before production approval.
+scope Parts where the customer's engineering function approves the design, materials or test results.
+instructions Record the approval as received with its reference and any limits. Attach the customer document.
+workflow Requested, approval received and recorded, verified by quality.
+retention Keep with the submission package.
+use ppap_header
+section cea | Engineering approval | 2
+f cea_type | Approval type | choice | * [Engineering approval; Waiver; Trial authorization; Deviation]
+f cea_reference | Customer reference | text | *
+f cea_approver | Approved by (customer) | text | *
+f cea_date | Approval date | date | *
+f cea_expires | Valid until | date
+f cea_limits | Limits or conditions | longtext
+f cea_document | Customer document | attachment
+check cea_expires | greaterOrEqual | cea_date | The validity date cannot be before the approval date.
+use ppap_signatures
+end
+
+template ppap-dfmea-reference | DFMEA Reference | PPAP
+packs automotive
+tags PPAP, DFMEA, design risk
+purpose Reference the design FMEA that supports the submission and confirm it covers the part, its special characteristics and its current revision.
+scope Parts where the organization is design responsible, or where the customer supplies its DFMEA for reference.
+instructions Link the DFMEA record and confirm each check. Where the organization is not design responsible, record who holds the DFMEA.
+workflow Referenced, checked, approved.
+retention Keep with the submission package.
+use ppap_header
+section dfmea_ref | DFMEA | 2
+f dfmea_responsibility | Design responsibility | choice | * [Organization; Customer; Shared]
+f dfmea_record | DFMEA record | record | reqwhen=dfmea_responsibility=Organization
+f dfmea_revision | DFMEA revision | text
+f dfmea_date | DFMEA date | date
+f dfmea_holder | Held by (when not the organization) | text | when=dfmea_responsibility!=Organization
+f dfmea_covers_part | Covers this part and revision | boolean
+f dfmea_specials | Special characteristics identified | boolean
+f dfmea_actions_closed | High-priority actions closed or planned | boolean
+use ppap_signatures
+end
+
+template ppap-process-flow-reference | Process Flow Reference | PPAP
+packs automotive
+tags PPAP, process flow
+purpose Reference the process flow submitted with the package and confirm it is the current flow used to make the submitted parts.
+scope Every submission that includes or retains a process flow.
+instructions Link the process flow record and confirm the checks. List the operations so reviewers can compare them with the PFMEA and control plan.
+workflow Referenced, checked, approved.
+retention Keep with the submission package.
+use ppap_header
+section flow_ref | Process flow | 2
+f flow_record | Process flow record | record | *
+f flow_revision | Revision | text | *
+f flow_current | Matches the process used for the submitted parts | boolean | *
+f flow_rework | Rework and scrap paths shown | boolean
+section flow_ops | Operations | 1
+table flow_ops_rows | Operations | 1
+c fo_number | Operation | text | *
+c fo_description | Description | text | *
+c fo_in_pfmea | In PFMEA | boolean
+c fo_in_cp | In control plan | boolean
+use ppap_signatures
+end
+
+template ppap-pfmea-reference | PFMEA Reference | PPAP
+packs automotive
+tags PPAP, PFMEA
+purpose Reference the process FMEA that supports the submission and summarize its coverage and its open high-risk items.
+scope Every submission.
+instructions Link the PFMEA record. Summarize the items with the highest severity or priority and the status of their actions.
+workflow Referenced, summarized, approved.
+retention Keep with the submission package.
+use ppap_header
+section pfmea_ref | PFMEA | 2
+f pfmea_record | PFMEA record | record | *
+f pfmea_revision | Revision | text | *
+f pfmea_all_steps | Every process step analysed | boolean | *
+f pfmea_specials | Special characteristics addressed | boolean
+section pfmea_top | High-risk items | 1
+table pfmea_top_rows | Items | 0
+c pt_operation | Operation | text | *
+c pt_mode | Failure mode | text | *
+c pt_severity | Severity | integer | min=1 max=10
+c pt_action | Action | text
+c pt_status | Action status | choice | [Open; Complete; Not required]
+rule pfmea_top_rows.pt_severity | greaterOrEqual | 9 | #FDE7E9 | bold
+use ppap_signatures
+end
+
+template ppap-control-plan-reference | Control Plan Reference | PPAP
+packs automotive
+tags PPAP, control plan
+purpose Reference the control plan that supports the submission and confirm it covers every special characteristic and every operation.
+scope Every submission.
+instructions Link the control plan record and confirm each check. Record the phase of the plan submitted.
+workflow Referenced, checked, approved.
+retention Keep with the submission package.
+use ppap_header
+section cp_ref | Control plan | 2
+f cp_record | Control plan record | record | *
+f cp_revision | Revision | text | *
+f cp_phase | Phase | choice | * [Prototype; Pre-launch; Production; Safe launch]
+f cp_specials | Every special characteristic controlled | boolean | *
+f cp_reaction | Reaction plans stated | boolean
+f cp_customer_approval | Customer approval of the control plan (where required) | text
+use ppap_signatures
+end
+
+template ppap-msa-study | Measurement System Study | PPAP
+packs automotive
+tags PPAP, MSA, gauge study
+purpose Summarize the measurement system studies for the gauges and test equipment named in the control plan.
+scope Every measurement and test system in the control plan.
+instructions List each measurement system with its study type and result. Link the study record. Results outside the organization's acceptance criteria need customer agreement or an improved system.
+workflow Studies listed, results reviewed, approved.
+retention Keep with the submission package.
+landscape
+use ppap_header
+section msa_rows_section | Studies | 1
+table msa_rows | Measurement systems | 1
+c msa_gauge | Gauge or equipment | equipment | *
+c msa_characteristic | Characteristic | text | *
+c msa_type | Study type | choice | * [Variable gauge R&R; Attribute agreement; Bias; Linearity; Stability]
+c msa_grr_pct | Result (% of tolerance or agreement %) | percent | min=0 max=100
+c msa_ndc | Distinct categories | integer | min=0
+c msa_decision | Decision | choice | [Acceptable; Conditionally acceptable; Not acceptable]
+c msa_record | Study record | record
+rule msa_rows.msa_decision | equals | Not acceptable | #FDE7E9 | bold
+f msa_count | Systems studied | calc | {COUNTA(msa_rows.msa_type)}
+f msa_not_ok | Not acceptable | calc | {COUNTIF(msa_rows.msa_decision, "Not acceptable")}
+use ppap_signatures
+end
+
+template ppap-dimensional-results | Dimensional Results | PPAP
+packs automotive
+tags PPAP, dimensional, layout
+purpose Record the measured results for every dimension and note on the design record, from parts produced by the production process, against the specification.
+scope Every submission; one record per production process, cavity, mould, pattern or die where more than one is used.
+instructions Number each characteristic to match the ballooned drawing. Enter the limits and each measured value. Results outside the limits make the part not acceptable for submission unless the customer approves a deviation.
+workflow Measured, recorded, reviewed by quality, approved.
+retention Keep with the submission package.
+landscape
+use ppap_header
+section dim_source | Production source | 3
+f dim_process | Process or line | text | *
+f dim_cavity | Cavity, mould or die | text
+f dim_samples | Samples measured | integer | * min=1
+f dim_lab | Measured by (laboratory or function) | text
+section dim_results | Results | 1
+table dim_rows | Characteristics | 1
+groups Characteristic:2; Specification:3; Results:3; Decision:1
+c dim_no | No. | text | *
+c dim_char | Characteristic | text | *
+c dim_nominal | Nominal | number | dec=4
+c dim_lsl | Lower limit | number | * dec=4
+c dim_usl | Upper limit | number | * dec=4
+c dim_min | Lowest measured | number | * dec=4
+c dim_max | Highest measured | number | * dec=4
+c dim_method | Method | text
+c dim_ok | OK | calc | {IF(AND(dim_min >= dim_lsl, dim_max <= dim_usl), "OK", "NOT OK")}
+rule dim_rows.dim_ok | equals | NOT OK | #FDE7E9 | bold
+section dim_summary | Summary | 3
+f dim_count | Characteristics | calc | {COUNTA(dim_rows.dim_no)}
+f dim_not_ok | Characteristics not OK | calc | {COUNTIF(dim_rows.dim_ok, "NOT OK")}
+f dim_conclusion | All characteristics conform | calc | {IF(dim_not_ok = 0, "Yes", "No")}
+rule dim_conclusion | equals | No | #FDE7E9 | bold
+use ppap_signatures
+end
+
+template ppap-material-results | Material Test Results | PPAP
+packs automotive
+tags PPAP, material, test results
+purpose Record the results of the chemical, physical and metallurgical tests required by the design record and material specifications.
+scope Every part with material requirements on the design record or specifications.
+instructions Record each requirement with the specification, the result and the laboratory. Attach the laboratory reports. Name the material supplier where the customer controls the approved source list.
+workflow Tested, recorded, reviewed, approved.
+retention Keep with the submission package.
+landscape
+use ppap_header
+section mat_source | Material | 3
+f mat_spec | Material specification | text | *
+f mat_spec_rev | Specification revision | text
+f mat_supplier | Material supplier | supplier
+f mat_heat | Heat, lot or batch | text
+section mat_results | Results | 1
+table mat_rows | Tests | 1
+c mat_test | Test | text | *
+c mat_requirement | Requirement | text | *
+c mat_lower | Lower limit | number | dec=4
+c mat_upper | Upper limit | number | dec=4
+c mat_result | Result | number | * dec=4
+c mat_unit | Unit | text
+c mat_lab | Laboratory | text
+c mat_ok | OK | calc | {IF(AND(OR(ISBLANK(mat_lower), mat_result >= mat_lower), OR(ISBLANK(mat_upper), mat_result <= mat_upper)), "OK", "NOT OK")}
+rule mat_rows.mat_ok | equals | NOT OK | #FDE7E9 | bold
+f mat_not_ok | Tests not OK | calc | {COUNTIF(mat_rows.mat_ok, "NOT OK")}
+f mat_reports | Laboratory reports | attachment
+use ppap_signatures
+end
+
+template ppap-performance-results | Performance Test Results | PPAP
+packs automotive
+tags PPAP, performance, functional test
+purpose Record the results of the performance and functional tests required by the design record or the test plan.
+scope Every part with performance or functional test requirements.
+instructions Record each test with its procedure, the number of samples tested, the acceptance criterion and the result. Attach the test reports.
+workflow Tested, recorded, reviewed, approved.
+retention Keep with the submission package.
+landscape
+use ppap_header
+section perf_results | Results | 1
+table perf_rows | Tests | 1
+c perf_test | Test | text | *
+c perf_procedure | Procedure | text | *
+c perf_criterion | Acceptance criterion | text | *
+c perf_samples | Samples | integer | * min=1
+c perf_passed | Passed | integer | * min=0
+c perf_date | Test date | date
+c perf_lab | Laboratory | text
+c perf_ok | OK | calc | {IF(perf_passed >= perf_samples, "OK", "NOT OK")}
+rule perf_rows.perf_ok | equals | NOT OK | #FDE7E9 | bold
+f perf_not_ok | Tests not OK | calc | {COUNTIF(perf_rows.perf_ok, "NOT OK")}
+f perf_reports | Test reports | attachment
+use ppap_signatures
+end
+
+template ppap-initial-process-study | Initial Process Study | PPAP
+packs automotive
+tags PPAP, capability, Cpk, Ppk, initial process study
+purpose Record the initial capability of the process for each special characteristic, from a significant production run, against the capability the customer and the organization require.
+scope Special characteristics identified on the design record or in the control plan.
+instructions Enter the specification limits and the measured values for each characteristic. Indices are calculated live. Results below the required index need a containment and improvement plan agreed with the customer.
+workflow Data collected, indices calculated, reviewed, approved.
+retention Keep with the submission package.
+landscape
+use ppap_header
+section ips_basis | Study basis | 3
+f ips_run_qty | Production run quantity | integer | * min=1
+f ips_run_date | Run date | date | *
+f ips_required_index | Required index | number | * dec=2 min=0
+f ips_index_type | Index required | choice | * [Ppk; Cpk]
+section ips_characteristics | Characteristics | 1
+table ips_rows | Characteristics | 1
+c ips_char | Characteristic | text | *
+c ips_lsl | Lower limit | number | * dec=4
+c ips_usl | Upper limit | number | * dec=4
+c ips_mean | Mean | number | * dec=4
+c ips_sd | Standard deviation | number | * dec=5 min=0
+c ips_n | Values | integer | min=1
+c ips_cp | Cp / Pp | calc | {IF(ips_sd > 0, (ips_usl - ips_lsl) / (6 * ips_sd), "")} dec=2
+c ips_cpk | Cpk / Ppk | calc | {IF(ips_sd > 0, MIN(ips_usl - ips_mean, ips_mean - ips_lsl) / (3 * ips_sd), "")} dec=2
+c ips_ok | Meets requirement | calc | {IF(AND(ISNUMBER(ips_cpk), ips_cpk >= ips_required_index), "Yes", "No")}
+rule ips_rows.ips_ok | equals | No | #FDE7E9 | bold
+f ips_not_ok | Characteristics below requirement | calc | {COUNTIF(ips_rows.ips_ok, "No")}
+f ips_plan | Improvement plan for characteristics below requirement | longtext | | Required by the approver when any characteristic is below the required index.
+f ips_data | Study data | attachment
+use ppap_signatures
+end
+
+template ppap-lab-documentation | Qualified Laboratory Documentation | PPAP
+packs automotive
+tags PPAP, laboratory, accreditation
+purpose Record the laboratories that performed tests for the submission and the evidence that each is qualified for the tests performed.
+scope Internal and external laboratories used for submission tests.
+instructions List each laboratory with its scope and the evidence of qualification. The scope must cover every test performed.
+workflow Listed, evidence verified, approved.
+retention Keep with the submission package.
+use ppap_header
+section labs | Laboratories | 1
+table lab_rows | Laboratories | 1
+c lab_name | Laboratory | text | *
+c lab_type | Type | choice | * [Internal; External; Customer]
+c lab_accreditation | Accreditation or qualification | text | *
+c lab_scope | Scope covers the tests | boolean | *
+c lab_expires | Accreditation expires | date
+c lab_supplier | Supplier | supplier
+c lab_evidence | Evidence | text
+rule lab_rows.lab_scope | equals | false | #FDE7E9 | bold
+use ppap_signatures
+end
+
+template ppap-appearance-approval | Appearance Approval | PPAP
+packs automotive
+tags PPAP, appearance, colour, texture
+purpose Record the evaluation of appearance items (colour, grain, gloss, texture and finish) against the customer's masters and the customer's disposition.
+scope Parts with appearance requirements on the design record.
+instructions Record the evaluation conditions and each attribute with the master it was compared with. Submit samples with the record where the customer requires.
+workflow Evaluated, submitted, customer disposition recorded.
+retention Keep with the submission package.
+use ppap_header
+section appearance_basis | Evaluation | 3
+f aa_reason | Reason | choice | * [Initial submission; Engineering change; Tooling change; Source change; Other]
+f aa_light_source | Light source | text
+f aa_evaluator | Evaluated by | user | *
+f aa_eval_date | Evaluation date | date | *
+f aa_material_source | Material or paint source | supplier
+section appearance_attrs | Attributes | 1
+table aa_rows | Attributes | 0
+rows Colour; Gloss; Grain or texture; Metallic brilliance; Finish; Other
+c aa_master | Master reference | text
+c aa_result | Result | choice | [Matches; Light; Dark; Not applicable; Other]
+c aa_comment | Comment | text
+rule aa_rows.aa_result | in | Light,Dark,Other | #FFF4D6
+use ppap_package_decision, ppap_signatures
+end
+
+template ppap-sample-product | Sample Product Record | PPAP
+packs automotive
+tags PPAP, samples
+purpose Record the sample parts sent with the submission: quantity, identification, production source and shipment.
+scope Submissions where the customer requests sample parts.
+instructions Identify each sample by its production source. Label samples as the customer requires.
+workflow Samples selected, labelled, shipped, receipt confirmed.
+retention Keep with the submission package.
+use ppap_header
+section samples | Samples | 1
+table sample_rows | Samples | 1
+c smp_id | Sample identification | text | *
+c smp_qty | Quantity | integer | * min=1
+c smp_source | Process, cavity or die | text
+c smp_date | Produced on | date
+c smp_shipped | Shipped on | date
+c smp_tracking | Shipment reference | text
+total smp_qty | sum | Total samples
+use ppap_signatures
+end
+
+template ppap-master-sample | Master Sample Record | PPAP
+packs automotive
+tags PPAP, master sample
+purpose Record the master sample retained from the approved submission, its identification, its storage and its retention period.
+scope Parts where the customer requires a master sample to be retained.
+instructions Retain the sample for the same period as the submission record. Identify it with the customer approval date and keep it where it is protected and retrievable.
+workflow Retained, identified, verified at each review.
+retention Keep for the life of the part, or replace with customer agreement.
+use ppap_header
+section master | Master sample | 2
+f ms_identification | Identification | text | *
+f ms_approval_date | Customer approval date | date
+f ms_location | Storage location | text | *
+f ms_custodian | Custodian | user | *
+f ms_condition | Condition at last check | choice | [Good; Degraded; Replaced]
+f ms_last_check | Last checked | date
+f ms_photos | Photos | photo
+use ppap_signatures
+end
+
+template ppap-checking-aids | Checking Aid Record | PPAP
+packs automotive
+tags PPAP, checking aids, fixtures
+purpose List the part-specific checking aids used for the submission, with their identification, measurement system study and calibration status.
+scope Fixtures, gauges, templates and models specific to the part.
+instructions List each aid. Link its equipment record so the calibration status is current. Confirm the aid matches the current design level.
+workflow Listed, verified, approved.
+retention Keep with the submission package.
+use ppap_header
+section aids | Checking aids | 1
+table aid_rows | Aids | 1
+c aid_equipment | Equipment | equipment | *
+c aid_description | Description | text | *
+c aid_level | Engineering level | text
+c aid_cal_due | Calibration due | date
+c aid_msa | Measurement study complete | boolean
+c aid_matches | Matches current design level | boolean | *
+rule aid_rows.aid_matches | equals | false | #FDE7E9 | bold
+use ppap_signatures
+end
+
+template ppap-csr-record | Customer-Specific Requirement Record | PPAP
+packs automotive
+tags PPAP, customer-specific requirements
+purpose Record how each customer-specific submission requirement has been met for this part.
+scope Customers with specific submission requirements.
+instructions List each customer-specific requirement that applies to the submission and the evidence that it is met.
+workflow Requirements listed, evidence linked, approved.
+retention Keep with the submission package.
+use ppap_header
+section csr | Requirements | 1
+table csr_rows | Requirements | 1
+c csr_ref | Requirement reference | text | *
+c csr_text | Requirement | longtext | *
+c csr_met | Met | choice | * [Yes; No; Not applicable]
+c csr_evidence | Evidence | text
+c csr_record | Record | record
+rule csr_rows.csr_met | equals | No | #FDE7E9 | bold
+use ppap_signatures
+end
+
+template ppap-warrant | Part Submission Warrant | PPAP
+packs automotive
+tags PPAP, warrant, PSW
+purpose Declare, for the organization, that the submitted parts were made with production tooling and processes and conform to the design record, and summarize the submission.
+scope Every part submission.
+instructions Complete the warrant only after every element of the package is complete. Weights are recorded to the precision the customer requires. The authorized person signs with re-authentication. The customer records its disposition.
+workflow Prepared, declaration signed by an authorized person, submitted, customer disposition recorded.
+retention Keep for the life of the part plus one calendar year after the part is no longer active.
+use ppap_header
+section warrant_org | Organization | 3
+f psw_org | Organization name | text | *
+f psw_org_code | Organization code | text
+f psw_address | Manufacturing address | longtext | *
+f psw_customer_name | Customer | customer | *
+f psw_buyer | Customer buyer or contact | text
+f psw_application | Application | text
+section warrant_results | Results | 3
+f psw_part_weight | Part weight | number | * dec=4 min=0 unit=kg
+f psw_samples_weighed | Parts weighed | integer | min=1
+f psw_dimensional_ok | Dimensional results meet requirements | boolean | *
+f psw_material_ok | Material and performance results meet requirements | boolean | *
+f psw_appearance_ok | Appearance requirements met | choice | [Yes; No; Not applicable]
+f psw_statistics_ok | Initial process studies meet requirements | boolean | *
+f psw_substances | Substances of concern reported where required | choice | [Yes; No; Not applicable]
+f psw_polymer_marking | Polymeric parts marked as required | choice | [Yes; No; Not applicable]
+f psw_all_ok | All results conform | calc | {IF(AND(psw_dimensional_ok, psw_material_ok, psw_statistics_ok), "Yes", "No")}
+rule psw_all_ok | equals | No | #FDE7E9 | bold
+section warrant_declaration | Declaration | 1
+note The authorized signature below declares that the samples represented by this warrant are representative of the parts made with production tooling and processes at the production rate, and that the results conform to the design record except where noted.
+f psw_exceptions | Exceptions or deviations | longtext
+f psw_production_rate | Production rate demonstrated (parts per hour) | number | min=0
+sign psw_authorized | Organization authorized signature | approved | I declare that the parts submitted represent production and conform to the design record except as noted. | apqp.approve
+sign psw_customer | Customer disposition | customer | The customer records its disposition of this submission. | | optional
+use ppap_package_decision
+end
+
+template ppap-rejection-resubmission | Rejection and Resubmission Record | PPAP
+packs automotive
+tags PPAP, rejection, resubmission
+purpose Record a rejected or interim submission, the reasons, the corrections made and the resubmission, so the history of the approval is complete.
+scope Every submission that is rejected or given interim approval.
+instructions Record the customer's reasons as received. Plan the correction of each reason and record the resubmission reference. Link a corrective action where the reason is systemic.
+workflow Rejection recorded, corrections planned and completed, resubmitted, closed on approval.
+retention Keep with the submission package.
+use ppap_header
+section rejection | Rejection | 2
+f rej_original_date | Original submission date | date | *
+f rej_decision | Customer decision | choice | * [Rejected; Interim approval]
+f rej_decision_date | Decision date | date | *
+f rej_capa | Corrective action | record
+section rej_reasons_section | Reasons and corrections | 1
+table rej_reasons | Reasons | 1
+c rr_reason | Reason given by the customer | longtext | *
+c rr_element | Element | text
+c rr_correction | Correction | longtext | *
+c rr_owner | Owner | user
+c rr_due | Due | date
+c rr_done | Complete | boolean
+section resubmission | Resubmission | 2
+f resub_date | Resubmission date | date
+f resub_reference | Resubmission reference | text
+f resub_outcome | Outcome | choice | [Awaiting decision; Full approval; Interim approval; Rejected]
+f reasons_open | Reasons not yet corrected | calc | {COUNTA(rej_reasons.rr_reason) - COUNTIF(rej_reasons.rr_done, TRUE)}
+use ppap_signatures
+end
+
+template ppap-run-at-rate | Run at Rate | PPAP
+packs automotive
+tags PPAP, run at rate, capacity, launch
+purpose Demonstrate that the production process, with production tooling, gauges, people and materials, produces conforming parts at the quoted rate over a defined run.
+scope New parts, capacity changes and process relocations where the customer or the organization requires a rate demonstration.
+instructions Agree the run duration and the quoted rate before the run. Record the output, the scrap and the downtime per period. The demonstrated rate and quality are calculated live; the run passes when both meet the targets.
+workflow Run planned, run executed and recorded, results reviewed, approved.
+retention Keep with the submission package.
+landscape
+use ppap_header
+section rar_plan | Run plan | 3
+f rar_line | Line or cell | text | *
+f rar_date | Run date | date | *
+f rar_quoted_rate | Quoted rate (parts per hour) | number | * min=0 dec=1
+f rar_planned_hours | Planned run hours | number | * min=0 dec=2
+f rar_target_quality | Target first-pass yield | percent | * min=0 max=100
+f rar_shifts | Shifts run | integer | min=1
+section rar_periods | Run record | 1
+table rar_rows | Periods | 1
+c rar_period | Period | text | *
+c rar_hours | Hours | number | * min=0 dec=2
+c rar_good | Good parts | integer | * min=0
+c rar_scrap | Scrap | integer | min=0
+c rar_rework | Rework | integer | min=0
+c rar_downtime | Downtime (minutes) | integer | min=0
+c rar_reason | Downtime reason | text
+total rar_hours | sum | Hours
+total rar_good | sum | Good
+total rar_scrap | sum | Scrap
+total rar_rework | sum | Rework
+total rar_downtime | sum | Downtime
+running rar_good
+section rar_result | Result | 3
+f rar_total_good | Good parts | calc | {SUM(rar_rows.rar_good)}
+f rar_total_all | Parts produced | calc | {SUM(rar_rows.rar_good) + SUM(rar_rows.rar_scrap) + SUM(rar_rows.rar_rework)}
+f rar_total_hours | Hours run | calc | {SUM(rar_rows.rar_hours)}
+f rar_demonstrated | Demonstrated rate (good parts per hour) | calc | {IF(rar_total_hours > 0, rar_total_good / rar_total_hours, 0)} dec=1
+f rar_fpy | First-pass yield | calc | {IF(rar_total_all > 0, rar_total_good / rar_total_all * 100, 0)} dec=1 unit=%
+f rar_outcome | Outcome | calc | {IF(AND(rar_demonstrated >= rar_quoted_rate, rar_fpy >= rar_target_quality), "PASS", "FAIL")}
+rule rar_outcome | equals | FAIL | #FDE7E9 | bold
+rule rar_outcome | equals | PASS | #E6F4EA | bold
+f rar_constraints | Constraints found and actions | longtext
+use ppap_signatures
+end

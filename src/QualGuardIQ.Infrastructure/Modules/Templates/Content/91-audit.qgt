@@ -1,0 +1,477 @@
+# Audit templates (TECH 4, FI 1 audit). Checklist questions are original prompts the organization edits to its own criteria.
+
+block audit_header
+section audit_id | Audit | 3
+f au_number | Audit reference | text
+f au_type | Audit type | choice | * [System; Process; Product; Supplier; Layered process; Regulatory; Compliance; Customer; Remote]
+f au_scope | Scope | longtext | *
+f au_criteria | Criteria (standards, procedures, contracts) | longtext | *
+f au_lead | Lead auditor | user | *
+f au_auditee | Auditee or process owner | user
+f au_start | Start date | date | *
+f au_end | End date | date
+f au_location | Location or remote | text
+check au_end | greaterOrEqual | au_start | The end date cannot be before the start date.
+end
+
+block audit_findings_table
+section findings_section | Findings | 1
+table au_findings | Findings | 0
+c fd_number | Finding | text | *
+c fd_type | Type | choice | * [Major nonconformity; Minor nonconformity; Observation; Opportunity for improvement; Positive practice]
+c fd_requirement | Requirement | text | *
+c fd_statement | Statement of finding | longtext | *
+c fd_evidence | Objective evidence | longtext | *
+c fd_owner | Owner | user
+c fd_due | Response due | date
+c fd_capa | Corrective action | record
+rule au_findings.fd_type | equals | Major nonconformity | #FDE7E9 | bold
+rule au_findings.fd_type | equals | Minor nonconformity | #FFF4D6 | bold
+f fd_major | Major nonconformities | calc | {COUNTIF(au_findings.fd_type, "Major nonconformity")}
+f fd_minor | Minor nonconformities | calc | {COUNTIF(au_findings.fd_type, "Minor nonconformity")}
+f fd_obs | Observations and opportunities | calc | {COUNTIF(au_findings.fd_type, "Observation") + COUNTIF(au_findings.fd_type, "Opportunity for improvement")}
+end
+
+block audit_checklist
+section checklist_section | Checklist | 1 | Answer each question with the evidence seen. Score: 2 conforms, 1 partly conforms, 0 does not conform. Questions marked not applicable are left out of the score.
+table au_checklist | Questions | 1
+c q_clause | Requirement or clause | text
+c q_question | Question | longtext | *
+c q_evidence | Evidence seen | longtext
+c q_result | Result | choice | * [Conforms; Partly conforms; Does not conform; Not applicable]
+c q_score | Score | calc | {IF(q_result = "Conforms", 2, IF(q_result = "Partly conforms", 1, IF(q_result = "Does not conform", 0, "")))}
+c q_finding | Finding | text
+rule au_checklist.q_result | equals | Does not conform | #FDE7E9 | bold
+rule au_checklist.q_result | equals | Partly conforms | #FFF4D6
+f q_answered | Questions scored | calc | {COUNT(au_checklist.q_score)}
+f q_points | Points | calc | {SUM(au_checklist.q_score)}
+f q_pct | Score | calc | {IF(q_answered > 0, q_points / (q_answered * 2) * 100, "")} dec=0 unit=%
+f q_nc | Questions not conforming | calc | {COUNTIF(au_checklist.q_result, "Does not conform")}
+rule q_pct | lessThan | 80 | #FFF4D6 | bold
+end
+
+block audit_signatures
+sign au_lead_sign | Lead auditor | prepared | I conducted this audit and the findings are supported by objective evidence.
+sign au_auditee_sign | Auditee | reviewed | I received the findings of this audit. | | optional
+sign au_approval | Approved by | approved | I approve this audit record. | audits.approve
+end
+
+template annual-audit-program | Annual Audit Program | AUDIT
+packs manufacturing, aerospace, medical-device, electronics
+tags audit programme, schedule, annual plan
+purpose Plan the audits of a year so every process, requirement, site and shift is covered at a frequency based on importance, risk, changes and past results.
+scope Internal system, process and product audits and supplier audits for the year.
+instructions Plan each audit by month with its type, subject and lead auditor. Raise the frequency for processes with high risk, recent changes, complaints or poor results. Record the status as audits are held.
+workflow Drafted, approved by management, updated monthly, reviewed at management review.
+retention Keep for the retention period set by the organization.
+landscape
+section program_basis | Basis | 2
+f ap_year | Year | integer | * min=2000 max=2100
+f ap_owner | Programme owner | user | *
+f ap_risk_basis | How importance, risk and past results were considered | longtext | *
+section program_plan | Plan | 1
+table ap_rows | Planned audits | 1
+groups Audit:4; Plan:3; Status:3
+c ap_type | Type | choice | * [System; Process; Product; Supplier; Layered process; Regulatory; Compliance]
+c ap_subject | Process, product or supplier | text | *
+c ap_criteria | Criteria | text
+c ap_risk | Risk | choice | [High; Medium; Low]
+c ap_month | Planned month | choice | * [January; February; March; April; May; June; July; August; September; October; November; December]
+c ap_lead | Lead auditor | user
+c ap_shift | Shift | text
+c ap_status | Status | choice | * [Planned; Scheduled; Held; Report issued; Postponed; Cancelled]
+c ap_audit | Audit record | record
+c ap_findings | Nonconformities | integer | min=0
+rule ap_rows.ap_status | in | Postponed,Cancelled | #FFF4D6 | bold
+rule ap_rows.ap_risk | equals | High | #FDE7E9
+total ap_findings | sum | Nonconformities
+f ap_planned | Audits planned | calc | {COUNTA(ap_rows.ap_subject)}
+f ap_held | Held or reported | calc | {COUNTIF(ap_rows.ap_status, "Held") + COUNTIF(ap_rows.ap_status, "Report issued")}
+f ap_completion | Completion | calc | {IF(ap_planned > 0, ap_held / ap_planned * 100, 0)} dec=0 unit=%
+use approval_trio
+end
+
+template audit-plan | Audit Plan | AUDIT
+packs manufacturing, aerospace, medical-device, electronics
+tags audit plan
+purpose Plan an individual audit: objectives, scope, criteria, team, the processes and areas to be audited, the documents to review and the logistics.
+scope Every audit in the programme.
+instructions Agree the plan with the auditee before the audit. Auditors must be independent of the work audited. Record any conflict of interest and how it was resolved.
+workflow Drafted by the lead auditor, agreed with the auditee, approved.
+retention Keep with the audit record.
+use audit_header
+section ap_objectives | Objectives | 1
+f apl_objectives | Objectives | longtext | *
+f apl_documents | Documents to review | longtext
+f apl_previous | Previous findings to follow up | longtext
+section ap_team | Audit team | 1
+table apl_team | Team | 1
+c at_member | Member | user | *
+c at_role | Role | choice | * [Lead auditor; Auditor; Technical expert; Observer; Auditor in training]
+c at_independent | Independent of the area audited | boolean | *
+c at_qualified | Qualified for this audit | boolean | *
+rule apl_team.at_independent | equals | false | #FDE7E9 | bold
+use audit_signatures
+end
+
+template audit-agenda | Audit Agenda | AUDIT
+packs manufacturing, aerospace, medical-device, electronics
+tags audit agenda, schedule
+purpose Set the timetable of an audit: opening and closing meetings, each process or area, the auditor and the people to interview.
+scope Every audit that lasts more than a short single-area review.
+instructions Send the agenda to the auditee in advance. Keep time for the auditor team meeting before the closing meeting.
+workflow Drafted, shared with the auditee, followed, adjusted on the day.
+retention Keep with the audit record.
+use audit_header
+section agenda | Agenda | 1
+table ag_rows | Sessions | 2
+c ag_date | Date | date | *
+c ag_from | From | time | *
+c ag_to | To | time | *
+c ag_session | Session | text | *
+c ag_auditor | Auditor | user
+c ag_interviewees | People to interview | text
+c ag_location | Location | text
+use audit_signatures
+end
+
+template audit-checklist | Audit Checklist | AUDIT
+packs manufacturing, aerospace, medical-device, electronics
+tags audit checklist, questions
+purpose Guide the auditor through the questions for the processes and requirements in scope, record the evidence seen and score conformance.
+scope Any audit; the organization keeps its own question sets for each process and requirement.
+instructions Prepare the questions from the criteria and the process. During the audit record what was seen, heard and read. The score is calculated from the answers.
+workflow Prepared, used during the audit, findings raised, attached to the report.
+retention Keep with the audit record.
+use audit_header, audit_checklist, audit_signatures
+end
+
+template audit-evidence-log | Audit Evidence Log | AUDIT
+packs manufacturing, aerospace, medical-device
+tags audit evidence, sampling
+purpose Log the objective evidence sampled during an audit (records, documents, products and observations) so each finding and each conclusion can be traced to what was seen.
+scope Every audit.
+instructions Record each sample with its identification. Link the evidence to the question or finding it supports.
+workflow Logged during the audit, reviewed by the lead auditor.
+retention Keep with the audit record.
+use audit_header
+section evidence | Evidence | 1
+table ev_rows | Evidence sampled | 1
+c ev_item | Item | text | *
+c ev_type | Type | choice | * [Record; Document; Product; Observation; Interview; System data]
+c ev_reference | Identification | text | *
+c ev_question | Question or finding | text
+c ev_conforms | Conforms | passfail
+c ev_file | File | attachment
+rule ev_rows.ev_conforms | equals | FAIL | #FDE7E9 | bold
+use audit_signatures
+end
+
+template audit-interview-record | Audit Interview Record | AUDIT
+packs manufacturing, aerospace, medical-device
+tags audit, interview
+purpose Record an audit interview: who was interviewed, the questions asked and the answers given, so findings based on interviews are supported.
+scope Interviews held during an audit.
+instructions Interview people who do the work. Record answers factually; confirm by records or observation where possible.
+workflow Recorded during the audit, reviewed by the lead auditor.
+retention Keep with the audit record.
+section interview | Interview | 3
+f ai_audit | Audit | record
+f ai_person | Person interviewed | user
+f ai_role | Role | text | *
+f ai_date | Date | date | *
+f ai_auditor | Auditor | user | *
+section interview_qa | Questions | 1
+table ai_rows | Questions and answers | 1
+c ai_question | Question | longtext | *
+c ai_answer | Answer | longtext | *
+c ai_confirmed | Confirmed by record or observation | boolean
+c ai_reference | Reference | text
+use audit_signatures
+end
+
+template audit-finding-record | Audit Finding | AUDIT
+packs manufacturing, aerospace, medical-device, electronics
+tags audit finding, nonconformity
+purpose Record one audit finding with the requirement, the statement, the evidence and its classification, and track the response to closure.
+scope Every nonconformity and observation raised by an audit.
+instructions State the requirement, then what was found that does not meet it, then the evidence. The auditee responds with correction, cause and corrective action by the due date.
+workflow Raised, accepted by the auditee, response submitted, response accepted, verified, closed.
+retention Keep with the audit record.
+section af | Finding | 2
+f af_audit | Audit | record | *
+f af_type | Classification | choice | * [Major nonconformity; Minor nonconformity; Observation; Opportunity for improvement]
+f af_requirement | Requirement | longtext | *
+f af_statement | Statement of finding | longtext | *
+f af_evidence | Objective evidence | longtext | *
+f af_process | Process | text
+f af_owner | Owner | user | *
+f af_due | Response due | date | *
+rule af_type | equals | Major nonconformity | #FDE7E9 | bold
+section af_response | Response | 2
+f af_correction | Correction | longtext
+f af_cause | Root cause | longtext
+f af_action | Corrective action | longtext
+f af_capa | Corrective action record | record
+f af_response_ok | Response accepted | passfail
+section af_verify | Verification | 2
+f af_verified_on | Verified on | date
+f af_effective | Action effective | passfail
+f af_verification_note | Verification evidence | longtext
+use audit_signatures
+end
+
+template audit-report | Audit Report | AUDIT
+packs manufacturing, aerospace, medical-device, electronics
+tags audit report
+purpose Report the results of an audit: scope, criteria, team, summary, findings and conclusion on the effectiveness of what was audited.
+scope Every audit.
+instructions Issue the report within the time the programme sets. The conclusion states whether the system or process conforms and is effective within the scope audited.
+workflow Drafted, reviewed by the team, issued to the auditee, approved.
+retention Keep for the retention period set by the organization.
+use audit_header
+section report_summary | Summary | 1
+f ar_summary | Executive summary | longtext | *
+f ar_strengths | Strengths | longtext
+f ar_sampling | Sampling and limitations | longtext
+use audit_findings_table
+section report_conclusion | Conclusion | 2
+f ar_conclusion | Conclusion | choice | * [Conforming and effective; Conforming with improvement needed; Not conforming in part; Not conforming]
+f ar_conclusion_text | Conclusion statement | longtext | *
+f ar_follow_up | Follow-up audit needed | calc | {IF(fd_major > 0, "Yes", "No")}
+rule ar_conclusion | in | Not conforming in part,Not conforming | #FDE7E9 | bold
+use audit_signatures
+end
+
+template audit-corrective-follow-up | Corrective Action Follow-Up | AUDIT
+packs manufacturing, aerospace, medical-device
+tags audit, follow-up, corrective action
+purpose Follow up each audit finding's corrective action to verify it was implemented and is effective, and record the evidence.
+scope Findings from internal, supplier and external audits.
+instructions List each finding with its response and due date. Verify on objective evidence after implementation. Findings not effective are reopened.
+workflow Follow-up scheduled, evidence verified, closed or reopened.
+retention Keep with the audit record.
+section fu | Audit | 3
+f fu_audit | Audit | record | *
+f fu_date | Follow-up date | date | *
+f fu_by | Follow-up by | user | *
+section fu_items | Findings | 1
+table fu_rows | Findings | 1
+c fu_finding | Finding | text | *
+c fu_action | Action taken | longtext
+c fu_due | Due | date
+c fu_done | Implemented on | date
+c fu_late | Days late | calc | {IF(AND(ISNUMBER(DAYS(fu_done, fu_due)), DAYS(fu_done, fu_due) > 0), DAYS(fu_done, fu_due), 0)}
+c fu_effective | Effective | choice | [Effective; Not effective; Not yet verifiable]
+c fu_evidence | Evidence | text
+rule fu_rows.fu_effective | equals | Not effective | #FDE7E9 | bold
+f fu_open | Not effective or not verifiable | calc | {COUNTIF(fu_rows.fu_effective, "Not effective") + COUNTIF(fu_rows.fu_effective, "Not yet verifiable")}
+use audit_signatures
+end
+
+template audit-closure | Audit Closure | AUDIT
+packs manufacturing, aerospace, medical-device
+tags audit closure
+purpose Close an audit when every finding is resolved, the report is issued and the results are fed into the programme and management review.
+scope Every audit.
+instructions Confirm each closure condition. An audit with open major findings cannot be closed.
+workflow Conditions confirmed, closed.
+retention Keep with the audit record.
+section ac | Closure | 2
+f ac_audit | Audit | record | *
+f ac_report_issued | Report issued | boolean | *
+f ac_findings_closed | All findings closed | boolean | *
+f ac_major_open | Major findings open | integer | * min=0
+f ac_programme_updated | Programme updated with the results | boolean
+f ac_mr_input | Reported to management review | boolean
+f ac_can_close | Can be closed | calc | {IF(AND(ac_report_issued, ac_findings_closed, ac_major_open = 0), "Yes", "No")}
+rule ac_can_close | equals | No | #FDE7E9 | bold
+use audit_signatures
+end
+
+template supplier-audit-record | Supplier Audit | AUDIT
+packs manufacturing, aerospace, medical-device, electronics
+tags supplier audit, second party
+purpose Audit a supplier's ability to meet the organization's requirements: management system, process control, product conformity, change control and sub-tier control.
+scope Suppliers selected by risk, performance or the approval process.
+instructions Score each question from the evidence seen at the supplier. The overall score and findings feed the supplier's approval status and risk.
+workflow Planned with the supplier, held, reported, supplier responds, closed.
+retention Keep for the period the supplier is used plus the retention period set by the organization.
+use audit_header
+section sa_supplier | Supplier | 3
+f sa_supplier_ref | Supplier | supplier | *
+f sa_commodity | Commodity or process | text
+f sa_contact | Supplier contact | text
+use audit_checklist, audit_findings_table
+section sa_result | Result | 2
+f sa_rating | Rating | calc | {IF(q_pct >= 90, "Approved", IF(q_pct >= 75, "Approved with conditions", "Not approved"))}
+f sa_recommendation | Recommendation | longtext | *
+rule sa_rating | equals | Not approved | #FDE7E9 | bold
+use audit_signatures
+end
+
+template process-audit-record | Process Audit | AUDIT
+packs manufacturing, aerospace, electronics
+tags process audit
+purpose Audit a manufacturing or business process against its documented method, inputs, outputs, controls, resources and performance indicators.
+scope Processes selected by the audit programme.
+instructions Follow the process from input to output. Check the method is followed, the controls work and the indicators are met. Score each question.
+workflow Planned, held at the process, reported, followed up.
+retention Keep with the audit record.
+use audit_header
+section pa_process | Process | 3
+f pa_name | Process | text | *
+f pa_owner | Process owner | user
+f pa_kpi | Performance indicator and target | text
+f pa_kpi_actual | Actual performance | text
+use audit_checklist, audit_findings_table, audit_signatures
+end
+
+template product-audit-record | Product Audit | AUDIT
+packs manufacturing, aerospace, electronics
+tags product audit
+purpose Audit finished product, ready for shipment, against every requirement of its specification, packaging and labelling, independently of routine inspection.
+scope Products selected by the audit programme.
+instructions Take samples after final inspection. Check every characteristic, the packaging and labels. Any defect found is a finding against the inspection process too.
+workflow Planned, samples taken, audited, reported.
+retention Keep with the audit record.
+use audit_header
+section pr_sample | Sample | 3
+f pr_part | Part | part | *
+f pr_lot | Lot | text | *
+f pr_samples | Samples | integer | * min=1
+section pr_checks | Characteristics | 1
+table pr_rows | Characteristics | 1
+c pr_char | Characteristic | text | *
+c pr_requirement | Requirement | text | *
+c pr_checked | Checked | integer | min=0
+c pr_defects | Defects | integer | min=0
+c pr_result | Result | calc | {IF(pr_defects > 0, "FAIL", "PASS")}
+rule pr_rows.pr_result | equals | FAIL | #FDE7E9 | bold
+total pr_defects | sum | Defects
+f pr_total_defects | Defects found | calc | {SUM(pr_rows.pr_defects)}
+use audit_findings_table, audit_signatures
+end
+
+template system-audit-record | System Audit | AUDIT
+packs manufacturing, aerospace, medical-device, electronics
+tags system audit, management system
+purpose Audit the management system as a whole, or a group of its requirements, for conformance to the organization's criteria and effectiveness.
+scope Management system requirements in the audit programme.
+instructions Sample across processes and functions. Score each question. The conclusion states the effectiveness of the system within the scope.
+workflow Planned, held, reported, followed up.
+retention Keep with the audit record.
+use audit_header, audit_checklist, audit_findings_table, audit_signatures
+end
+
+template layered-process-audit | Layered Process Audit | AUDIT
+packs manufacturing, electronics
+tags layered process audit, LPA
+purpose Check frequently, at several management layers, that the critical process controls at a workstation are in place and followed.
+scope Workstations and processes in the layered audit plan.
+instructions Answer each question at the workstation. Correct what can be corrected on the spot and record it. Answers of No that cannot be corrected immediately get an action.
+workflow Held at the frequency for the layer, corrections recorded, actions tracked.
+retention Keep for the retention period set by the organization.
+section lpa | Audit | 3
+f lp_area | Area or workstation | text | *
+f lp_layer | Layer | choice | * [Team leader; Supervisor; Area manager; Plant manager; Executive]
+f lp_auditor | Auditor | user | *
+f lp_date | Date | date | *
+f lp_shift | Shift | choice | [Day; Afternoon; Night]
+section lpa_questions | Questions | 1
+table lpa_rows | Questions | 0
+rows The current work instruction is at the station and followed; Set-up and first-piece approval is recorded; Gauges are in calibration and used as instructed; Control charts or checks are up to date; Reaction plans were followed for out-of-control points; Nonconforming product is identified and segregated; Error-proofing devices were verified this shift; Operator is trained for this operation; Safety and personal protective equipment rules are followed; Workplace organization meets the standard
+c lpa_answer | Answer | choice | * [Yes; No; Not applicable]
+c lpa_corrected | Corrected on the spot | boolean
+c lpa_action | Action | text
+c lpa_owner | Owner | user
+rule lpa_rows.lpa_answer | equals | No | #FDE7E9 | bold
+section lpa_result | Result | 3
+f lp_yes | Yes | calc | {COUNTIF(lpa_rows.lpa_answer, "Yes")}
+f lp_no | No | calc | {COUNTIF(lpa_rows.lpa_answer, "No")}
+f lp_score | Conformance | calc | {IF(lp_yes + lp_no > 0, lp_yes / (lp_yes + lp_no) * 100, "")} dec=0 unit=%
+rule lp_score | lessThan | 90 | #FFF4D6 | bold
+sign lp_auditor_sign | Auditor | performed | I held this audit at the workstation and recorded what I found.
+end
+
+template regulatory-audit-record | Regulatory Audit | AUDIT
+packs medical-device, aerospace
+tags regulatory audit, inspection, authority
+purpose Record an audit or inspection by a regulatory authority or a notified body: the scope, the people involved, the requests made and the observations received.
+scope Visits by authorities, notified bodies and registrars.
+instructions Log every request and the document supplied. Record observations exactly as given. Responses are tracked to the authority's deadline.
+workflow Visit logged, observations recorded, responses submitted, closed by the authority.
+retention Keep for the retention period set by the organization or the regulation, whichever is longer.
+confidential
+use audit_header
+section reg_authority | Authority | 3
+f ra_authority | Authority or body | text | *
+f ra_inspectors | Inspectors | text | *
+f ra_reference | Authority reference | text
+f ra_host | Host | user | *
+section reg_requests | Requests | 1
+table ra_requests | Requests and documents supplied | 1
+c rr_time | Time | datetime
+c rr_request | Request | longtext | *
+c rr_supplied | Document or record supplied | text
+c rr_by | Supplied by | user
+use audit_findings_table
+section reg_response | Response | 2
+f ra_response_due | Response due | date
+f ra_response_sent | Response sent | date
+f ra_outcome | Outcome | choice | [No observations; Observations - response accepted; Observations - open; Enforcement action]
+rule ra_outcome | equals | Enforcement action | #FDE7E9 | bold
+use audit_signatures
+end
+
+template compliance-audit-record | Compliance Audit | AUDIT
+packs manufacturing, medical-device, aerospace, electronics
+tags compliance audit, legal, statutory
+purpose Audit compliance with legal, statutory, regulatory and contractual obligations that apply to the organization and its products.
+scope Obligations in the organization's compliance register.
+instructions List each obligation, the evidence of compliance and the result. Gaps are raised as findings with an owner.
+workflow Planned, held, reported, followed up.
+retention Keep for the retention period set by the organization.
+use audit_header
+section obligations | Obligations | 1
+table co_rows | Obligations | 1
+c co_obligation | Obligation | text | *
+c co_source | Source | choice | [Law; Regulation; Permit; Contract; Customer requirement; Industry code]
+c co_evidence | Evidence of compliance | longtext
+c co_result | Result | choice | * [Compliant; Partly compliant; Not compliant; Not applicable]
+rule co_rows.co_result | equals | Not compliant | #FDE7E9 | bold
+f co_not | Not compliant | calc | {COUNTIF(co_rows.co_result, "Not compliant")}
+use audit_findings_table, audit_signatures
+end
+
+template compliance-assessment | Compliance Assessment | AUDIT
+packs manufacturing, medical-device, aerospace, electronics
+tags compliance assessment, gap analysis
+purpose Assess the organization's position against a set of requirements (a standard, a regulation or a customer requirement) and plan the work to close the gaps.
+scope New or changed requirements, and periodic reassessment.
+instructions List each requirement with the current state and the gap. Each gap gets an owner and a date. The degree of compliance is calculated.
+workflow Assessed, gaps planned, reviewed, re-assessed.
+retention Keep for the retention period set by the organization.
+section ca_basis | Basis | 2
+f ca_requirement_set | Requirement set | text | *
+f ca_edition | Edition or revision | text
+f ca_assessor | Assessor | user | *
+f ca_date | Assessment date | date | *
+section ca_items | Requirements | 1
+table ca_rows | Requirements | 1
+c ca_ref | Reference | text | *
+c ca_summary | Requirement (own summary) | text | *
+c ca_state | Current state | longtext
+c ca_level | Level | choice | * [Fully met; Partly met; Not met; Not applicable]
+c ca_gap_action | Action to close the gap | text
+c ca_owner | Owner | user
+c ca_due | Due | date
+rule ca_rows.ca_level | equals | Not met | #FDE7E9 | bold
+rule ca_rows.ca_level | equals | Partly met | #FFF4D6
+section ca_result | Result | 3
+f ca_full | Fully met | calc | {COUNTIF(ca_rows.ca_level, "Fully met")}
+f ca_partly | Partly met | calc | {COUNTIF(ca_rows.ca_level, "Partly met")}
+f ca_not | Not met | calc | {COUNTIF(ca_rows.ca_level, "Not met")}
+f ca_index | Compliance index | calc | {IF(ca_full + ca_partly + ca_not > 0, (ca_full + ca_partly / 2) / (ca_full + ca_partly + ca_not) * 100, "")} dec=0 unit=%
+use approval_trio
+end
