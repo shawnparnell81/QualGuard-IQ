@@ -72,6 +72,7 @@ public static class DependencyInjection
         services.AddScoped<FormDefinitionProjector>();
         services.AddScoped<TemplateCatalogService>();
         services.AddScoped<Modules.Imports.ImportCenterService>();
+        services.AddSingleton<Modules.Imports.ILegacyOfficeConverter, Modules.Imports.HeadlessOfficeConverter>();
         services.AddScoped<Modules.Imports.IImportTarget, Modules.Imports.FormRecordImportTarget>();
         services.AddScoped<QualGuardIQ.Infrastructure.Modules.Quality.FormValueIndexer>();
         services.AddScoped<DocumentTypeService>();

@@ -78,6 +78,9 @@ public sealed class ImportsController(ImportCenterService imports, AppDbContext 
     }
 
     [HttpPut("{id:guid}/settings")] public async Task<IActionResult> Settings(Guid id, CsvSettingsRequest req, CancellationToken ct) { await imports.UpdateSettingsAsync(id, req, ct); return NoContent(); }
+    [HttpPut("{id:guid}/excel-settings")] public async Task<IActionResult> ExcelSettings(Guid id, ExcelSettingsRequest req, CancellationToken ct) { await imports.UpdateExcelSettingsAsync(id, req, ct); return NoContent(); }
+    /// <summary>Secured grid preview of one worksheet of the preserved original (values, formula, validation and named-range indicators; nothing is run).</summary>
+    [HttpGet("{id:guid}/workbook")] public Task<QualGuardIQ.Infrastructure.Modules.Imports.Excel.GridPreview> Workbook(Guid id, [FromQuery] string? sheet, CancellationToken ct) => imports.WorkbookGridAsync(id, sheet, ct);
     [HttpPut("{id:guid}/mapping")] public async Task<IActionResult> Mapping(Guid id, MappingRequest req, CancellationToken ct) { await imports.UpdateMappingAsync(id, req, ct); return NoContent(); }
     [HttpPost("{id:guid}/validate")] public Task<DryRunSummary> Validate(Guid id, CancellationToken ct) => imports.ValidateAsync(id, ct);
     [HttpPost("{id:guid}/submit")] public async Task<IActionResult> Submit(Guid id, SubmitRequest req, CancellationToken ct) { await imports.SubmitAsync(id, req.SkipInvalidRows, ct); return NoContent(); }

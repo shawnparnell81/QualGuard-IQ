@@ -14,6 +14,7 @@ using QualGuardIQ.Domain.Shared;
 using QualGuardIQ.Infrastructure.Persistence;
 using QualGuardIQ.Infrastructure.Services;
 using QualGuardIQ.Infrastructure.Storage;
+using QualGuardIQ.Infrastructure.Modules.Imports.Excel;
 
 namespace QualGuardIQ.Infrastructure.Modules.Imports;
 
@@ -30,8 +31,8 @@ public sealed record DryRunSummary(int Rows, int Valid, int Invalid, int Duplica
 /// validation with duplicate detection, preview and dry run, approval by another person, transactional import, summary, error-row export,
 /// rollback and audited state transitions. Large files are advanced by the background worker instead of inside the request.
 /// </summary>
-public sealed class ImportCenterService(AppDbContext db, IAccessService access, ICurrentUser current, IFileStorage storage, IMalwareScanner scanner,
-    INumberingService numbers, IEnumerable<IImportTarget> targets, IClock clock, IConfiguration config)
+public sealed partial class ImportCenterService(AppDbContext db, IAccessService access, ICurrentUser current, IFileStorage storage, IMalwareScanner scanner,
+    INumberingService numbers, IEnumerable<IImportTarget> targets, IClock clock, IConfiguration config, Documents.DocumentService docs, ILegacyOfficeConverter legacy)
 {
     public const string RecordType = "ImportJob";
     public static readonly HashSet<string> Supported = [".csv", ".txt", ".tsv", ".xlsx", ".xlsm", ".xls", ".docx", ".doc", ".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff"];
@@ -117,6 +118,11 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
         if (req.DepartmentId is { } d && !await db.Departments.AnyAsync(x => x.Id == d && x.SiteId == req.SiteId, ct)) throw new AppException("The department does not belong to the site.");
         if (!Modes.Contains(req.Mode)) throw new AppException("Choose an import mode.");
         if (req.TargetModule is not null) _ = Target(req.TargetModule);
+        if (req.Mode is "template" or "document")
+        {
+            var (_, edit, _) = Documents.DocumentRecordTypes.Perms(req.Mode == "template" ? DocumentKind.FormTemplate : DocumentKind.Document);
+            if (!await access.CanAccessAsync(Me, edit, req.SiteId, req.DepartmentId, ct)) throw new ForbiddenException();
+        }
         var name = Path.GetFileName(req.FileName ?? "").Trim();
         if (name.Length is 0 or > 255) throw new AppException("A file name of up to 255 characters is required.");
         var ext = Path.GetExtension(name).ToLowerInvariant();
@@ -288,9 +294,9 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
         if (job.Status == ImportJobStatus.Inspecting)
         {
             job.StartedAt ??= clock.UtcNow;
-            if (job.FileType != "csv")
+            if (job.FileType != "csv" && !IsWorkbook(job))
             {
-                // Excel, Word and PDF parsers attach here (later phases); until then the job waits for that parser.
+                // Word and PDF parsers attach here (later phases); until then the job waits for that parser.
                 Event(job, "Inspected", $"{job.FileType.ToUpperInvariant()} file waiting for its parser.");
                 await db.SaveChangesAsync(ct);
                 return;
@@ -298,6 +304,17 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
             Transition(job, ImportJobStatus.Parsing);
         }
         if (job.Status != ImportJobStatus.Parsing) return;
+        if (IsWorkbook(job))
+        {
+            try { await ParseWorkbookAsync(job, ct); }
+            catch (Exception e) when (e is not OperationCanceledException and not DbUpdateException)
+            {
+                AddIssue(job, "file", null, ImportIssueSeverity.Error, "PARSE", e.Message, "Check the file and its settings.");
+                Transition(job, ImportJobStatus.Failed, "The workbook could not be read.");
+            }
+            await db.SaveChangesAsync(ct);
+            return;
+        }
         try
         {
             await using var s = await OpenOriginalAsync(job, ct);
@@ -309,7 +326,7 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
             await ClearIssuesAsync(job, "SHAPE", "EMPTY");
             foreach (var w in a.Warnings) AddIssue(job, "file", null, ImportIssueSeverity.Warning, "SHAPE", w, "Check the delimiter and header settings.");
             if (a.TotalRows == 0) AddIssue(job, "file", null, ImportIssueSeverity.Error, "EMPTY", "The file has no data rows.", null);
-            await SuggestMappingsAsync(job, a, ct);
+            await SuggestMappingsAsync(job, a.Columns, ct);
             Transition(job, ImportJobStatus.MappingRequired, $"{a.TotalRows} rows, {a.Columns.Count} columns, {a.Encoding}, delimiter '{(a.Delimiter == '\t' ? "tab" : a.Delimiter.ToString())}'");
         }
         catch (Exception e) when (e is not OperationCanceledException)
@@ -324,13 +341,13 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
 
     static string Norm(string s) => new(s.ToLowerInvariant().Where(char.IsLetterOrDigit).ToArray());
 
-    async Task SuggestMappingsAsync(ImportJob job, CsvAnalysis a, CancellationToken ct)
+    async Task SuggestMappingsAsync(ImportJob job, IReadOnlyList<CsvColumn> columns, CancellationToken ct)
     {
         var existing = await db.ImportMappings.Where(m => m.ImportJobId == job.Id).ToListAsync(ct);
         IReadOnlyList<TargetField> fields = [];
         if (job.TargetModule is not null) { try { fields = await Target(job.TargetModule).FieldsAsync(job, ct); } catch (AppException) { } }
         var seq = 0;
-        foreach (var c in a.Columns)
+        foreach (var c in columns)
         {
             var m = existing.FirstOrDefault(x => x.SourceLocation == c.Location);
             if (m is null) { m = new ImportMapping { ImportJobId = job.Id, SourceLocation = c.Location }; db.ImportMappings.Add(m); }
@@ -342,7 +359,7 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
             m.TargetField = near?.Key; m.TargetType = near?.Type;
             m.MappingConfidence = exact is not null ? MappingConfidence.High : near is not null ? MappingConfidence.Medium : MappingConfidence.Unmapped;
         }
-        foreach (var gone in existing.Where(x => a.Columns.All(c => c.Location != x.SourceLocation))) db.ImportMappings.Remove(gone);
+        foreach (var gone in existing.Where(x => columns.All(c => c.Location != x.SourceLocation))) db.ImportMappings.Remove(gone);
     }
 
     public async Task UpdateSettingsAsync(Guid id, CsvSettingsRequest req, CancellationToken ct)
@@ -370,6 +387,7 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
     {
         var job = await LoadAsync(id, Permissions.ImportsEdit, ct);
         if (job.Status is not (ImportJobStatus.MappingRequired or ImportJobStatus.PreviewReady or ImportJobStatus.ValidationFailed)) throw new ConflictException("The mapping can be changed before the import is submitted.");
+        if (WholeFile(job)) throw new AppException("This import keeps or converts the whole file; it has no column mapping.");
         db.Entry(job).Property(j => j.RowVersion).OriginalValue = req.RowVersion;
         if (req.TargetModule is not null) { job.TargetModule = Target(req.TargetModule).Info.Key; }
         if (req.TargetTemplateId is not null) job.TargetTemplateId = req.TargetTemplateId;
@@ -467,10 +485,20 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
         return (vals, problems);
     }
 
+    /// <summary>Row options: the CSV settings, or the fixed options for worksheet rows (values arrive typed and ISO-formatted).</summary>
+    static CsvOptions Opts(ImportJob job) => IsWorkbook(job) ? new CsvOptions() : Options(job) ?? throw new AppException("The file has not been analyzed.");
+
     public static int ColumnIndex(string letters) { var n = 0; foreach (var ch in letters) n = n * 26 + (ch - 'A' + 1); return n - 1; }
 
     async IAsyncEnumerable<(int Row, string[] Cells)> RowsAsync(ImportJob job, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken ct)
     {
+        if (IsWorkbook(job))
+        {
+            var es = ExcelSettings(job);
+            var t = WorkbookIntake.Table(await LoadWorkbookAsync(job, ct), es.Sheet, es.HeaderRow);
+            foreach (var r in t.Rows) { ct.ThrowIfCancellationRequested(); yield return r; }
+            yield break;
+        }
         var o = Options(job) ?? throw new AppException("The file has not been analyzed.");
         await using var s = await OpenOriginalAsync(job, ct);
         using var reader = new StreamReader(s, CsvParser.EncodingFor(o.Encoding), true, 65536);
@@ -490,6 +518,14 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
     {
         var job = await LoadAsync(id, Permissions.ImportsEdit, ct);
         if (job.Status is not (ImportJobStatus.MappingRequired or ImportJobStatus.PreviewReady or ImportJobStatus.ValidationFailed)) throw new ConflictException("Only an import that is being mapped can be validated.");
+        if (WholeFile(job))
+        {
+            var whole = ValidateWholeFile(job);
+            job.Summary = JsonSerializer.Serialize(new { dryRun = whole, at = clock.UtcNow }, JsonOpts);
+            Transition(job, ImportJobStatus.PreviewReady, job.ImportMode == "template" ? "Converted form checked" : "Workbook checked");
+            await db.SaveChangesAsync(ct);
+            return whole;
+        }
         var summary = await DryRunAsync(job, ct);
         Transition(job, summary.Invalid > 0 || summary.Rows == 0 ? ImportJobStatus.ValidationFailed : ImportJobStatus.PreviewReady,
             $"Dry run: {summary.Valid} of {summary.Rows} rows ready, {summary.Invalid} with problems, {summary.Duplicates + summary.ExistingDuplicates} duplicates");
@@ -507,7 +543,7 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
         await ClearIssuesAsync(job, "ROW", "DUPLICATE_ROW", "DUPLICATE_EXISTING", "UNMAPPED_REQUIRED");
         foreach (var f in fields.Where(f => f.Required && maps.All(m => m.TargetField != f.Key)))
             AddIssue(job, "mapping", null, ImportIssueSeverity.Error, "UNMAPPED_REQUIRED", $"The required field '{f.Label}' has no column.", "Map a column to it or set a default.");
-        var o = Options(job)!;
+        var o = Opts(job);
         var keys = await target.DuplicateKeysAsync(job, ct);
         var seen = new Dictionary<string, int>();
         int rows = 0, valid = 0, invalid = 0, dups = 0, existing = 0;
@@ -574,7 +610,12 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
         if (job.Status != ImportJobStatus.AwaitingApproval) throw new ConflictException("Only an import awaiting approval can be approved.");
         if (job.SubmittedById == Me) throw new AppException("Someone other than the person who uploaded the file must approve the import.");
         // the submitter needed the target module's edit permission to map and validate; approval needs the import approval permission
-        _ = Target(job.TargetModule);
+        if (!WholeFile(job)) _ = Target(job.TargetModule);
+        else
+        {
+            var (_, edit, _) = Documents.DocumentRecordTypes.Perms(job.ImportMode == "template" ? DocumentKind.FormTemplate : DocumentKind.Document);
+            if (!await access.CanAccessAsync(Me, edit, job.SiteId, job.DepartmentId, ct)) throw new ForbiddenException();
+        }
         job.ApprovedById = Me; job.ApprovedAt = clock.UtcNow;
         Transition(job, ImportJobStatus.Importing, "Approved");
         await db.SaveChangesAsync(ct);
@@ -585,9 +626,10 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
     public async Task RunImportAsync(ImportJob job, CancellationToken ct)
     {
         if (job.Status != ImportJobStatus.Importing) return;
+        if (WholeFile(job)) { await RunWholeFileAsync(job, ct); return; }
         var target = Target(job.TargetModule);
         var maps = await db.ImportMappings.AsNoTracking().Where(m => m.ImportJobId == job.Id).OrderBy(m => m.Sequence).ToListAsync(ct);
-        var o = Options(job)!;
+        var o = Opts(job);
         var skipInvalid = JsonDocument.Parse(job.Settings).RootElement.TryGetProperty("skipInvalidRows", out var sk) && sk.ValueKind == JsonValueKind.True;
         var keys = await target.DuplicateKeysAsync(job, ct);
         int created = 0, skipped = 0, dupSkipped = 0;
@@ -662,13 +704,13 @@ public sealed class ImportCenterService(AppDbContext db, IAccessService access, 
         var job = await LoadAsync(id, Permissions.ImportsApprove, ct);
         if (string.IsNullOrWhiteSpace(reason)) throw new AppException("A reason is required.");
         if (!CanMove(job.Status, ImportJobStatus.RolledBack)) throw new ConflictException("Only a completed import can be rolled back.");
-        var target = Target(job.TargetModule);
+        var target = WholeFile(job) ? null : Target(job.TargetModule);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var items = await db.ImportedItems.Where(i => i.ImportJobId == job.Id && !i.RolledBack).ToListAsync(ct);
         var blocked = new List<string>();
         foreach (var it in items)
         {
-            var why = await target.RollbackAsync(job, it.TargetId, ct);
+            var why = target is null ? await RollbackDocumentAsync(it.TargetId, reason.Trim(), ct) : await target.RollbackAsync(job, it.TargetId, ct);
             if (why is not null) blocked.Add(why); else it.RolledBack = true;
         }
         if (blocked.Count > 0)

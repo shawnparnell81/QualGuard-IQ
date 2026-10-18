@@ -58,7 +58,8 @@ public sealed class DocumentService(
         var rev = string.IsNullOrWhiteSpace(req.InitialRevision) ? "A" : req.InitialRevision.Trim().ToUpperInvariant();
         if (rev.Length > 10) throw new AppException("Revision labels are limited to 10 characters.");
 
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        // joins the caller's transaction when there is one (for example an approved import)
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
         var doc = new ControlledDocument
         {
             Kind = req.Kind, Number = await numbers.NextAsync(DocumentRecordTypes.ForDocument(req.Kind), req.SiteId, ct),
@@ -70,7 +71,7 @@ public sealed class DocumentService(
         db.Documents.Add(doc);
         await db.SaveChangesAsync(ct);
         await IndexAsync(doc, ct);
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         return doc;
     }
 
