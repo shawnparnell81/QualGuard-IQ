@@ -53,6 +53,7 @@ public sealed partial class ImportCenterService
         var ws = WordSettings(job);
         await ClearIssuesAsync(job, "SHAPE", "EMPTY", "FIDELITY", "DOCUMENT_SECURITY", "CONVERSION", "REVIEW", "PROFILE");
         foreach (var w in summary.Security.Take(100)) AddIssue(job, "document", null, ImportIssueSeverity.Warning, "DOCUMENT_SECURITY", w, "Nothing active is run or retrieved; review the item in the original document.");
+        await LogActiveContentAsync(job, summary.Security, ct);
         var analysis = new JsonObject { ["document"] = JsonSerializer.SerializeToNode(summary, JsonOpts) };
         job.Progress = 30;
         switch (job.ImportMode)

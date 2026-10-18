@@ -174,6 +174,7 @@ public sealed partial class ImportCenterService
         var a = Reviewed(job, m, ocrUsed);
         await ClearIssuesAsync(job, "SHAPE", "EMPTY", "FIDELITY", "DOCUMENT_SECURITY", "CONVERSION", "OCR", "REVIEW", "PROFILE");
         foreach (var w in m.Security.Take(50)) AddIssue(job, "document", null, ImportIssueSeverity.Warning, "DOCUMENT_SECURITY", w, "Nothing active is run or retrieved; review the item in the original PDF.");
+        await LogActiveContentAsync(job, m.Security, ct);
         foreach (var p in m.Pages.Where(p => p.Status is "needs-ocr" or "ocr-failed"))
             AddIssue(job, $"Page {p.Number}", null, job.ImportMode == "document" ? ImportIssueSeverity.Info : ImportIssueSeverity.Warning, "OCR", p.StatusDetail ?? "The page has no text layer.",
                 ocr.Configured ? "Check the page image; it may be blank or unreadable." : "Keep the file as a controlled document, or ask an administrator to configure an OCR provider.");
