@@ -72,7 +72,7 @@ test.describe('Forms B8: PDF and scanned form intake', () => {
     await page.getByRole('combobox', { name: 'Import mode' }).click();
     await page.getByRole('option', { name: 'Convert to an electronic form' }).click();
     await page.getByRole('button', { name: 'Upload and inspect' }).click();
-    await expect(page.getByText('Preview ready')).toBeVisible();
+    await expect(page.getByText('Preview ready').first()).toBeVisible();
     await page.getByRole('tab', { name: 'Pages' }).click();
     await expect(page.getByRole('table', { name: 'Pages' }).getByText('Needs OCR')).toBeVisible();
     await expect(page.getByText(/OCR is not configured on this server, so pages without a text layer were not recognized/)).toBeVisible();
