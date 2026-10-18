@@ -55,7 +55,6 @@ public abstract class MasterListImportTarget<T>(AppDbContext db, ModuleSupport m
         var probe = New(job);
         if (existing is { } id) { var cur = await Set.AsNoTracking().FirstAsync(x => x.Id == id, ct); probe = cur; }
         await ApplyAsync(job, probe, row, existing is null, problems, ct);
-        db.ChangeTracker.Clear();
         return problems;
     }
 
@@ -212,10 +211,10 @@ public abstract class MasterListImportTarget<T>(AppDbContext db, ModuleSupport m
         return d ?? job.DepartmentId;
     }
 
-    protected async Task<Guid> OwnerAsync(IReadOnlyDictionary<string, string?> row, Guid current, List<string> problems, CancellationToken ct, string key = "owner")
+    protected async Task<Guid> OwnerAsync(ImportJob job, IReadOnlyDictionary<string, string?> row, Guid current, List<string> problems, CancellationToken ct, string key = "owner")
     {
         var o = Ref(row, key, null);
-        if (o is null) return current == Guid.Empty ? m.UserId : current;
+        if (o is null) return current == Guid.Empty ? job.SubmittedById : current; // the person who uploaded the list owns rows that name no owner
         if (!await db.Users.AnyAsync(u => u.Id == o && u.IsActive, ct)) { problems.Add("The owner must be an active user."); return current; }
         return o.Value;
     }
@@ -268,7 +267,7 @@ public sealed class EquipmentListImportTarget(AppDbContext db, ModuleSupport m, 
         e.LimitedUse = Bool(r, "limited", e.LimitedUse, p, "Limited use"); e.LimitedUseNote = Text(r, "limitedNote", e.LimitedUseNote, 500, p, "Limited-use restriction");
         if (e.LimitedUse && string.IsNullOrWhiteSpace(e.LimitedUseNote)) p.Add("Limited use needs the restriction (what the equipment may still be used for).");
         e.DepartmentId = await DepartmentAsync(job, r, e.DepartmentId, p, ct);
-        e.OwnerId = await OwnerAsync(r, e.OwnerId, p, ct);
+        e.OwnerId = await OwnerAsync(job, r, e.OwnerId, p, ct);
         if (e.Status == EquipmentStatus.Active && e.RequiresCalibration && e.NextDueOn is { } due && due < await M.TodayAsync(job.SiteId, ct))
             p.Add($"Equipment {e.Number} is overdue for calibration ({D(due)}) and cannot be listed as active; import it as quarantined or out of service.");
     }
@@ -328,7 +327,7 @@ public abstract class DocumentListImportTarget(AppDbContext db, ModuleSupport m,
             if (id is null) p.Add($"Retention rule '{rr}' is not a configured retention policy."); else d.RetentionPolicyId = id;
         }
         d.DepartmentId = await DepartmentAsync(job, r, d.DepartmentId, p, ct);
-        d.OwnerId = await OwnerAsync(r, d.OwnerId, p, ct);
+        d.OwnerId = await OwnerAsync(job, r, d.OwnerId, p, ct);
         if (d.ExpiresOn is { } x && d.NextReviewDue is { } rv && x < rv) p.Add("The expiration date is before the review date.");
         var rev = (Text(r, "revision", null, 10, p, "Revision") ?? "A").ToUpperInvariant();
         var eff = Date(r, "effective", null, p, "Effective date");
@@ -402,7 +401,7 @@ public sealed class SupplierListImportTarget(AppDbContext db, ModuleSupport m) :
             else p.Add($"{s.Code} is {s.Status}; its status changes through the supplier record, not an import.");
         }
         s.DepartmentId = await DepartmentAsync(job, r, s.DepartmentId, p, ct);
-        s.OwnerId = await OwnerAsync(r, s.OwnerId, p, ct);
+        s.OwnerId = await OwnerAsync(job, r, s.OwnerId, p, ct);
     }
     protected override async Task<string?> CanRemoveAsync(Supplier s, CancellationToken ct) =>
         await Db.SupplierCertifications.AnyAsync(c => c.SupplierId == s.Id, ct) ? $"{s.Code} has certifications." : null;
@@ -618,7 +617,7 @@ public sealed class RiskRegisterImportTarget(AppDbContext db, ModuleSupport m, I
             try { var (score, band) = RiskService.Rate(s, x.Probability, x.Severity, x.Detectability); x.InitialScore = score; x.InitialBand = band.Label; if (band.Escalate) x.Escalated = true; }
             catch (AppException e) { p.Add(e.Message); }
         }
-        x.OwnerId = await OwnerAsync(r, x.OwnerId, p, ct);
+        x.OwnerId = await OwnerAsync(job, r, x.OwnerId, p, ct);
         x.DepartmentId = await DepartmentAsync(job, r, x.DepartmentId, p, ct);
     }
     protected override async Task BeforeAddAsync(ImportJob job, RiskItem x, CancellationToken ct)

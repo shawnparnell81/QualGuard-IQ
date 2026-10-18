@@ -14,7 +14,11 @@ using QualGuardIQ.Infrastructure.Services;
 namespace QualGuardIQ.Infrastructure.Modules.Imports;
 
 public sealed record TargetField(string Key, string Label, string Type, bool Required, IReadOnlyList<string>? Options = null);
-public sealed record TargetInfo(string Key, string Name, string EditPermission, bool NeedsTemplate);
+public sealed record TargetInfo(string Key, string Name, string EditPermission, bool NeedsTemplate)
+{
+    /// <summary>Master list migration targets (Excel mode D) are chosen with the "master list" purpose; the others take records.</summary>
+    public bool MasterList => Key.StartsWith("master-", StringComparison.Ordinal);
+}
 
 /// <summary>A module that rows can be imported into. Create runs inside the import transaction; Rollback undoes one created record.</summary>
 public interface IImportTarget

@@ -44,6 +44,13 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
 
     private Guid Me => current.UserId ?? throw new ForbiddenException();
     public IReadOnlyList<TargetInfo> Targets => targets.Select(t => t.Info).ToList();
+    /// <summary>Master lists take the master list targets; records take the others.</summary>
+    static void CheckTarget(string mode, IImportTarget t)
+    {
+        if (mode == "master-list" && !t.Info.MasterList) throw new AppException($"{t.Info.Name} is not a master list; choose records as the purpose.");
+        if (mode == "records" && t.Info.MasterList) throw new AppException($"{t.Info.Name} is a master list; choose master list as the purpose.");
+    }
+
     private IImportTarget Target(string? key) => targets.FirstOrDefault(t => t.Info.Key == key) ?? throw new AppException("Choose what to import into.");
 
     // ---------------------------------------------------------------- state machine
@@ -118,7 +125,8 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         if (!await db.Sites.AnyAsync(s => s.Id == req.SiteId && !s.IsArchived, ct)) throw new AppException("Select an active site.");
         if (req.DepartmentId is { } d && !await db.Departments.AnyAsync(x => x.Id == d && x.SiteId == req.SiteId, ct)) throw new AppException("The department does not belong to the site.");
         if (!Modes.Contains(req.Mode)) throw new AppException("Choose an import mode.");
-        if (req.TargetModule is not null) _ = Target(req.TargetModule);
+        if (req.TargetModule is not null) CheckTarget(req.Mode, Target(req.TargetModule));
+        else if (req.Mode == "master-list") throw new AppException("Choose the master list the file migrates into.");
         if (req.Mode is "template" or "document")
         {
             var (_, edit, _) = Documents.DocumentRecordTypes.Perms(req.Mode == "template" ? DocumentKind.FormTemplate : DocumentKind.Document);
@@ -642,7 +650,12 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         if (job.SubmittedById == Me) throw new AppException("Someone other than the person who uploaded the file must approve the import.");
         if (job.ImportMode == "template" && !acceptFidelityReport) throw new AppException("Review and accept the fidelity report to approve this conversion.");
         // the submitter needed the target module's edit permission to map and validate; approval needs the import approval permission
-        if (!WholeFile(job)) _ = Target(job.TargetModule);
+        if (!WholeFile(job))
+        {
+            var t = Target(job.TargetModule);
+            if (!await access.CanAccessAsync(job.SubmittedById, t.Info.EditPermission, job.SiteId, job.DepartmentId, ct))
+                throw new AppException($"The person who uploaded the file can no longer edit {t.Info.Name}.");
+        }
         else if (job.ImportMode == "attachment")
         {
             // the file goes onto an existing record: the uploader must still be able to edit that record
