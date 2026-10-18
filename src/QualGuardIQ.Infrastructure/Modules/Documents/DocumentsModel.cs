@@ -21,6 +21,8 @@ public partial class AppDbContext
     public DbSet<FormRecordValue> FormRecordValues => Set<FormRecordValue>();
     public DbSet<TemplateFavorite> TemplateFavorites => Set<TemplateFavorite>();
     public DbSet<SavedListView> SavedListViews => Set<SavedListView>();
+    public DbSet<TemplatePackage> TemplatePackages => Set<TemplatePackage>();
+    public DbSet<TemplatePackageItem> TemplatePackageItems => Set<TemplatePackageItem>();
 
     private static void ConfigureDocuments(ModelBuilder b)
     {
@@ -199,6 +201,39 @@ public partial class AppDbContext
             e.HasIndex(x => new { x.UserId, x.ListKey, x.Name }).IsUnique();
             e.HasIndex(x => new { x.UserId, x.ListKey }).IsUnique().HasFilter("\"IsDefault\"").HasDatabaseName("ux_saved_list_views_default");
             e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        b.Entity<TemplatePackage>(e =>
+        {
+            e.ToTable("template_packages");
+            e.Property(x => x.PackageKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Version).HasMaxLength(40).IsRequired();
+            e.Property(x => x.Name).HasMaxLength(250).IsRequired();
+            e.Property(x => x.Description).HasMaxLength(2000);
+            e.Property(x => x.IndustryPackKey).HasMaxLength(100);
+            e.Property(x => x.Manifest).HasColumnType("jsonb").IsRequired();
+            e.Property(x => x.FileSha256).HasMaxLength(64);
+            e.HasIndex(x => new { x.PackageKey, x.Version, x.Origin }).IsUnique();
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.InstalledById).OnDelete(DeleteBehavior.Restrict);
+            e.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.PackageId).OnDelete(DeleteBehavior.Cascade);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_tpkg_origin", "\"Origin\" BETWEEN 0 AND 2");
+                t.HasCheckConstraint("ck_tpkg_key", "\"PackageKey\" ~ '^[a-z][a-z0-9-]{1,99}$'");
+            });
+        });
+        b.Entity<TemplatePackageItem>(e =>
+        {
+            e.ToTable("template_package_items");
+            e.Property(x => x.TemplateKey).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Title).HasMaxLength(300).IsRequired();
+            e.Property(x => x.CategoryCode).HasMaxLength(60).IsRequired();
+            e.Property(x => x.ModuleKey).HasMaxLength(100);
+            e.Property(x => x.DefinitionSha256).HasMaxLength(64).IsRequired();
+            e.Property(x => x.Definition).HasColumnType("jsonb");
+            e.HasIndex(x => new { x.PackageId, x.TemplateKey }).IsUnique();
+            e.HasIndex(x => x.TemplateKey);
+            e.HasOne<ControlledDocument>().WithMany().HasForeignKey(x => x.DocumentId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.InstalledById).OnDelete(DeleteBehavior.Restrict);
         });
     }
 

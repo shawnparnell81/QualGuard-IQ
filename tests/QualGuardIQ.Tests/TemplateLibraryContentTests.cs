@@ -86,6 +86,17 @@ public class TemplateLibraryContentTests
     }
 
     [Fact]
+    public void Signature_permissions_exist_and_no_role_names_are_hardcoded()
+    {
+        foreach (var t in TemplateLibrary.Templates)
+            foreach (var sg in t.Definition.Signatures)
+            {
+                if (sg.RequiredPermission is { } p) Assert.Contains(p, QualGuardIQ.Domain.Security.Permissions.All);
+                Assert.Contains(sg.Role, new[] { "prepared", "performed", "reviewed", "verified", "approved", "witness", "customer", "supplier" });
+            }
+    }
+
+    [Fact]
     public void Template_text_is_original_and_neutral()
     {
         foreach (var t in TemplateLibrary.Templates)

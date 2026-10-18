@@ -1068,6 +1068,163 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Documents.TemplatePackage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("FileSha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("IndustryPackKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset?>("InstalledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("InstalledById")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Integrity")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Manifest")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(250)
+                        .HasColumnType("character varying(250)");
+
+                    b.Property<int>("Origin")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("PackageKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InstalledById");
+
+                    b.HasIndex("PackageKey", "Version", "Origin")
+                        .IsUnique();
+
+                    b.ToTable("template_packages", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_tpkg_key", "\"PackageKey\" ~ '^[a-z][a-z0-9-]{1,99}$'");
+
+                            t.HasCheckConstraint("ck_tpkg_origin", "\"Origin\" BETWEEN 0 AND 2");
+                        });
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Documents.TemplatePackageItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CategoryCode")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Definition")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("DefinitionSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<Guid?>("DocumentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("InstalledAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("InstalledById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ModuleKey")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("PackageId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<string>("TemplateKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("InstalledById");
+
+                    b.HasIndex("TemplateKey");
+
+                    b.HasIndex("PackageId", "TemplateKey")
+                        .IsUnique();
+
+                    b.ToTable("template_package_items", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Enterprise.AccessReview", b =>
                 {
                     b.Property<Guid>("Id")
@@ -21035,6 +21192,33 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Documents.TemplatePackage", b =>
+                {
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("InstalledById")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Documents.TemplatePackageItem", b =>
+                {
+                    b.HasOne("QualGuardIQ.Domain.Documents.ControlledDocument", null)
+                        .WithMany()
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("InstalledById")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("QualGuardIQ.Domain.Documents.TemplatePackage", null)
+                        .WithMany("Items")
+                        .HasForeignKey("PackageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Enterprise.AccessReview", b =>
                 {
                     b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
@@ -24842,6 +25026,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
             modelBuilder.Entity("QualGuardIQ.Domain.Documents.ControlledDocument", b =>
                 {
                     b.Navigation("Revisions");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Documents.TemplatePackage", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Organization.Site", b =>
