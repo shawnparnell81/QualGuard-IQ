@@ -266,10 +266,13 @@ public sealed class TemplatePackageService(AppDbContext db, IAccessService acces
     {
         var me = Me;
         await RequireAnyAsync(Permissions.TemplatesExport, ct);
-        if (!KeyPattern.IsMatch(req.PackageKey ?? "")) throw new AppException("The package key must be 2–100 lowercase letters, numbers or hyphens, starting with a letter.");
-        if (!VersionPattern.IsMatch(req.Version ?? "")) throw new AppException("The version must be 1–40 letters, numbers, dots or hyphens.");
-        if (string.IsNullOrWhiteSpace(req.Name) || req.Name.Length > 250) throw new AppException("Give the package a name of up to 250 characters.");
-        if (TemplateLibrary.Packs.Any(p => p.Key == req.PackageKey) || req.PackageKey == "library") throw new AppException("That key belongs to a built-in package. Choose another.");
+        var packageKey = req.PackageKey ?? throw new AppException("The package key is required.");
+        var version = req.Version ?? throw new AppException("The version is required.");
+        var name = req.Name ?? throw new AppException("Give the package a name of up to 250 characters.");
+        if (!KeyPattern.IsMatch(packageKey)) throw new AppException("The package key must be 2–100 lowercase letters, numbers or hyphens, starting with a letter.");
+        if (!VersionPattern.IsMatch(version)) throw new AppException("The version must be 1–40 letters, numbers, dots or hyphens.");
+        if (string.IsNullOrWhiteSpace(name) || name.Length > 250) throw new AppException("Give the package a name of up to 250 characters.");
+        if (TemplateLibrary.Packs.Any(p => p.Key == packageKey) || packageKey == "library") throw new AppException("That key belongs to a built-in package. Choose another.");
         if (req.DocumentIds is not { Count: > 0 } ids || ids.Count > 500) throw new AppException("Choose between 1 and 500 form templates to export.");
 
         var scope = await access.GetScopeAsync(me, Permissions.FormsView, ct);
@@ -306,7 +309,7 @@ public sealed class TemplatePackageService(AppDbContext db, IAccessService acces
             }
             var manifest = new JsonObject
             {
-                ["formatVersion"] = FormatVersion, ["packageKey"] = req.PackageKey, ["version"] = req.Version, ["name"] = req.Name.Trim(), ["description"] = req.Description?.Trim(),
+                ["formatVersion"] = FormatVersion, ["packageKey"] = packageKey, ["version"] = version, ["name"] = name.Trim(), ["description"] = req.Description?.Trim(),
                 ["exportedAt"] = now.ToString("O"), ["exportedBy"] = current.UserName, ["templates"] = entries,
             };
             var m = zip.CreateEntry("manifest.json", CompressionLevel.Optimal);
@@ -314,16 +317,16 @@ public sealed class TemplatePackageService(AppDbContext db, IAccessService acces
         }
         var bytes = ms.ToArray();
         var fileSha = Convert.ToHexStringLower(SHA256.HashData(bytes));
-        var pkg = await db.TemplatePackages.Include(p => p.Items).FirstOrDefaultAsync(p => p.Origin == TemplatePackageOrigin.Exported && p.PackageKey == req.PackageKey && p.Version == req.Version, ct);
+        var pkg = await db.TemplatePackages.Include(p => p.Items).FirstOrDefaultAsync(p => p.Origin == TemplatePackageOrigin.Exported && p.PackageKey == packageKey && p.Version == version, ct);
         if (pkg is not null) throw new ConflictException("A package with this key and version was already exported. Use a new version.");
-        pkg = new TemplatePackage { PackageKey = req.PackageKey, Version = req.Version, Name = req.Name.Trim(), Description = req.Description?.Trim(), Origin = TemplatePackageOrigin.Exported,
+        pkg = new TemplatePackage { PackageKey = packageKey, Version = version, Name = name.Trim(), Description = req.Description?.Trim(), Origin = TemplatePackageOrigin.Exported,
             Integrity = TemplatePackageIntegrity.HashesVerified, FileSha256 = fileSha, Manifest = new JsonObject { ["formatVersion"] = FormatVersion, ["templates"] = entries.DeepClone() }.ToJsonString() };
         foreach (var i in items) { i.PackageId = pkg.Id; pkg.Items.Add(i); }
         db.TemplatePackages.Add(pkg);
         db.AuditEntries.Add(new AuditEntry { OccurredAt = now, UserId = me, UserName = current.UserName, Action = "Exported", EntityType = nameof(TemplatePackage), EntityId = pkg.Id,
-            Description = $"Exported {items.Count} form template{(items.Count == 1 ? "" : "s")} as package {req.PackageKey} {req.Version} (SHA-256 {fileSha[..12]})", CorrelationId = current.CorrelationId });
+            Description = $"Exported {items.Count} form template{(items.Count == 1 ? "" : "s")} as package {packageKey} {version} (SHA-256 {fileSha[..12]})", CorrelationId = current.CorrelationId });
         await db.SaveChangesAsync(ct);
-        return new PackageFile($"{req.PackageKey}-{req.Version}.qgpkg", bytes);
+        return new PackageFile($"{packageKey}-{version}.qgpkg", bytes);
     }
 
     // ------------------------------------------------------------------ import

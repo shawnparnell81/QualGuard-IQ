@@ -199,7 +199,7 @@ public sealed class InventoryWarehouseTests(TestApp app)
         Assert.Equal(10m, (await db.InventoryTransactions.AsNoTracking().SingleAsync(x => x.Id == tx.Id)).Quantity);
 
         // idempotent offline replay with the same client request id
-        var body = new { partId = w.PartId, lotId = (Guid?)lotId, serialId = (Guid?)null, fromLocationId = w.Loc["A1"], toLocationId = w.Loc["B1"], quantity = 4m, status = (int?)null, reason = "Re-slot", clientRequestId = "offline-" + w.Tag };
+        var body = new { partId = w.PartId, lotId = (Guid?)lotId, serialId = (Guid?)null, fromLocationId = w.Loc["A1"], toLocationId = w.Loc["B1"], quantity = 4m, status = (int?)null, reason = "Re-slot", clientRequestId = (string?)("offline-" + w.Tag) };
         var a = await (await w.Eng.PostOkAsync("/api/warehouse/moves", body)).JsonAsync();
         var b = await (await w.Eng.PostOkAsync("/api/warehouse/moves", body)).JsonAsync();
         Assert.Equal(a.Id(), b.Id());

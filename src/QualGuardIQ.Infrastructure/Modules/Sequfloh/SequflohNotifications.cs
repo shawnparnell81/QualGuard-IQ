@@ -1,10 +1,8 @@
-using Microsoft.EntityFrameworkCore;
 using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Application.Records;
 using QualGuardIQ.Application.Security;
 using QualGuardIQ.Domain.Security;
 using QualGuardIQ.Domain.Sequfloh;
-using QualGuardIQ.Infrastructure.Persistence;
 
 namespace QualGuardIQ.Infrastructure.Modules.Sequfloh;
 
@@ -14,7 +12,7 @@ namespace QualGuardIQ.Infrastructure.Modules.Sequfloh;
 /// is notified only while they still have SEQUFLOH access to the record's site and department. Overdue and approaching-due reminders come from the daily
 /// reminder job.
 /// </summary>
-public sealed class SequflohNotifications(AppDbContext db, INotifier notifier, IAccessService access, ICurrentUser current, SequflohFoundationService f)
+public sealed class SequflohNotifications(INotifier notifier, IAccessService access, ICurrentUser current, SequflohFoundationService f)
 {
     public const string WiType = SequflohInstructionService.EntityType;
     public const string TrackingType = SequflohTrackingService.EntityType;

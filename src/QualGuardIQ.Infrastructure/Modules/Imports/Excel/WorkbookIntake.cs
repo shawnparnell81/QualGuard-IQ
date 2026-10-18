@@ -131,11 +131,11 @@ public static class WorkbookIntake
         return new SheetTable(sh.Name, hr, cols, rows);
     }
 
-    static string Type(XlSheet sh, int hr, int c, List<string?> values)
+    static string Type(XlSheet sh, int hr, int c, List<string> values)
     {
         var kinds = Enumerable.Range(hr + 1, Math.Max(0, Math.Min(sh.LastRow, hr + 200) - hr)).Select(r => sh.At(r, c)).Where(x => x is not null && x.Kind != "blank").Select(x => x!.Kind).Distinct().ToList();
-        if (kinds.Count == 1) return kinds[0] switch { "number" => "number", "date" => "date", "bool" => "boolean", _ => CsvParser.Infer(values.Where(v => v is not null)!, '.', null) };
-        return CsvParser.Infer(values.Where(v => v is not null)!, '.', null);
+        if (kinds.Count == 1) return kinds[0] switch { "number" => "number", "date" => "date", "bool" => "boolean", _ => CsvParser.Infer(values, '.', null) };
+        return CsvParser.Infer(values, '.', null);
     }
 
     static bool Blank(XlCell? c) => c is null || c.Kind == "blank" || (c.Kind == "text" && string.IsNullOrWhiteSpace(c.Text));

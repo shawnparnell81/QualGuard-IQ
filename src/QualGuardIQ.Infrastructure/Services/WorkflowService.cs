@@ -1,11 +1,9 @@
-using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Application.Records;
 using QualGuardIQ.Application.Rules;
 using QualGuardIQ.Application.Security;
 using QualGuardIQ.Domain.Shared;
-using QualGuardIQ.Infrastructure.Identity;
 using QualGuardIQ.Infrastructure.Persistence;
 using QualGuardIQ.Infrastructure.Security;
 
@@ -17,7 +15,7 @@ namespace QualGuardIQ.Infrastructure.Services;
 /// </summary>
 public sealed class WorkflowService(
     AppDbContext db, IRecordRegistry records, IAccessService access, ICurrentUser current, INotifier notifier,
-    UserManager<ApplicationUser> users, IEnumerable<IApprovalHandler> handlers, IClock clock, ISecurityEventLogger security, QualGuardIQ.Infrastructure.Modules.Enterprise.QualificationService qualifications, RecordConditions conditions, QualGuardIQ.Infrastructure.Modules.Platform.RuleEngine rules, SignerVerification signer)
+    IEnumerable<IApprovalHandler> handlers, IClock clock, QualGuardIQ.Infrastructure.Modules.Enterprise.QualificationService qualifications, RecordConditions conditions, QualGuardIQ.Infrastructure.Modules.Platform.RuleEngine rules, SignerVerification signer)
 {
     public async Task<ApprovalRequest> SubmitAsync(string recordType, Guid recordId, CancellationToken ct)
     {

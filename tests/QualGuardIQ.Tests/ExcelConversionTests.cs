@@ -80,7 +80,7 @@ public class ExcelConversionTests
         Assert.Equal("choice", disp.Type); Assert.Equal(["Pass", "Fail", "Hold"], disp.Options);
         Assert.Contains(d.Fields, f => f.Type == "boolean" && f.Label == "First article");
         var sample = Assert.Single(d.Fields, f => f.Key == "sample_size");
-        Assert.Equal("calc", sample.Type); Assert.Equal("IF(lot_qty>500,32,IF(lot_qty>90,13,5))", sample.Formula.Replace(" ", ""));
+        Assert.Equal("calc", sample.Type); Assert.NotNull(sample.Formula); Assert.Equal("IF(lot_qty>500,32,IF(lot_qty>90,13,5))", sample.Formula.Replace(" ", ""));
         Assert.Equal("=IF(B4>500,32,IF(B4>90,13,5))", sample.SourceFormula);
 
         var t = Assert.Single(d.Tables);

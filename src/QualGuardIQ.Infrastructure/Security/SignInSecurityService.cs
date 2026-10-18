@@ -106,7 +106,8 @@ public sealed class SignInSecurityService(AppDbContext db, UserManager<Applicati
         var secret = Base32.Decode(key);
         var issuer = Issuer(appName);
         var uri = Totp.OtpAuthUri(issuer, user.Email ?? user.UserName ?? "account", secret);
-        return new MfaSetupInfo(key, Base32.Grouped(key), uri, BarcodeService.Svg(BarcodeSymbology.Qr, uri, 220, 220), issuer, user.Email ?? "", user.MfaPendingExpiresAt.Value);
+        var expires = user.MfaPendingExpiresAt ?? throw new AppException("Two-step set-up could not be started. Try again.", 409);
+        return new MfaSetupInfo(key, Base32.Grouped(key), uri, BarcodeService.Svg(BarcodeSymbology.Qr, uri, 220, 220), issuer, user.Email ?? "", expires);
     }
 
     string? PendingKey(ApplicationUser user)

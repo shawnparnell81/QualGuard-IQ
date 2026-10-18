@@ -31,7 +31,7 @@ public sealed partial class WordFormConverter
     /// <summary>A piece of a paragraph or cell after placeholder detection.</summary>
     sealed record Piece(string Kind, string Text, WControl? Control = null, WStyle? Style = null, int Length = 0);
     /// <summary>One layout cell's worth of content: optional text and optional binding.</summary>
-    sealed class Unit { public string Text = ""; public string? Bind; public string Kind = "text"; public Piece? Source; public string? Label; public WStyle? Style; public bool CheckAfter; }
+    sealed class Unit { public string Text = ""; public string? Bind; public string Kind = "text"; public Piece? Source; public string? Label; public WStyle? Style; }
 
     readonly DocModel doc;
     readonly WordConversionOptions opt;
