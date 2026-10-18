@@ -22990,6 +22990,56 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/imports/{id}/word-settings':
+    put:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/WordSettingsRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/WordSettingsRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/WordSettingsRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/imports/{id}/original-preview':
+    get:
+      tags:
+        - Imports
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/imports/{id}/workbook':
     get:
       tags:
@@ -23126,6 +23176,23 @@ paths:
           schema:
             type: string
             format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/ApproveImportRequest'
+          text/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/ApproveImportRequest'
+          application/*+json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/ApproveImportRequest'
       responses:
         '200':
           description: OK
@@ -40349,6 +40416,13 @@ components:
         - Rejected
         - Returned
         - Canceled
+    ApproveImportRequest:
+      required:
+        - acceptFidelityReport
+      type: object
+      properties:
+        acceptFidelityReport:
+          type: boolean
     ApproveRevisionInput:
       required:
         - notes
@@ -69155,6 +69229,33 @@ components:
             - 'null'
             - string
           format: date-time
+    WordSettingsRequest:
+      required:
+        - fillable
+        - table
+        - title
+        - documentType
+      type: object
+      properties:
+        fillable:
+          type:
+            - 'null'
+            - boolean
+        table:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - 'null'
+            - integer
+            - string
+          format: int32
+        title:
+          type:
+            - 'null'
+            - string
+        documentType:
+          type:
+            - 'null'
+            - string
     WorkflowAction:
       required:
         - comment

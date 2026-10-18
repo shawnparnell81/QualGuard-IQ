@@ -129,10 +129,9 @@ public sealed class DocxBuilder
         b.Add(P(Run("Result: ☐ Accept   ☐ Reject   ☐ Accept with deviation")));
         b.Add(P(Run("Material certificate attached ") + LegacyCheck("CertAttached")));
         b.Add(Text("Approval", "Heading1"));
-        b.Add(Table([160, 200, 140],
-            Row(Cell("Inspected by", 160) + Cell("", 200) + Cell("Date", 140)),
-            Row(Cell("Approved by", 160, vmerge: "restart") + Cell("", 200) + Cell("Date", 140)),
-            Row(Cell("", 160, vmerge: "continue") + Cell("Quality manager", 200) + Cell("", 140))));
+        b.Add(Table([70, 120, 150, 50, 110],
+            Row(Cell("Sign-off", 70, vmerge: "restart", fill: "F2F2F2", bold: true) + Cell("Inspected by", 120) + Cell("", 150) + Cell("Date", 50) + Cell("", 110), heightPt: 28),
+            Row(Cell("", 70, vmerge: "continue") + Cell("Approved by", 120) + Cell("", 150) + Cell("Date", 50) + Cell("", 110), heightPt: 28)));
         b.Add(P("<w:r><w:drawing><wp:inline><wp:extent cx=\"914400\" cy=\"457200\"/><wp:docPr id=\"1\" name=\"Logo\" descr=\"Company logo\"/></wp:inline></w:drawing></w:r>"));
         b.Add(P(Run("Notes are on the next page."), "<w:sectPr><w:pgSz w:w=\"12240\" w:h=\"15840\"/><w:pgMar w:top=\"1440\" w:right=\"1080\" w:bottom=\"1440\" w:left=\"1080\"/></w:sectPr>"));
         b.Add(Text("Appendix: deviation notes", "Heading1"));

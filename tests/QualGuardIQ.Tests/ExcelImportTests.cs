@@ -36,7 +36,7 @@ public sealed class ExcelImportTests(TestApp app)
         return await r.Content.ReadFromJsonAsync<Guid>();
     }
 
-    async Task<(Guid Site, ApiClient Author, ApiClient Approver)> UsersAsync()
+    internal static async Task<(Guid Site, ApiClient Author, ApiClient Approver)> UsersAsync(TestApp app)
     {
         var site = await app.CreateSiteAsync();
         var (_, author) = await app.CreateUserAsync([Permissions.FormsView, Permissions.FormsEdit, Permissions.DocumentsView, Permissions.DocumentsEdit, Permissions.ImportsView, Permissions.ImportsEdit], site);
@@ -49,7 +49,7 @@ public sealed class ExcelImportTests(TestApp app)
     [Fact]
     public async Task Workbook_converts_to_a_draft_form_template_after_preview_and_approval_and_can_be_rolled_back()
     {
-        var (site, author, approver) = await UsersAsync();
+        var (site, author, approver) = await UsersAsync(app);
         var id = await UploadAsync(author, site, "Receiving inspection.xlsx", Bytes(ExcelConversionTests.InspectionWorkbook()), "template");
         var job = await author.GetElAsync($"/api/imports/{id}");
         Assert.Equal((int)ImportJobStatus.PreviewReady, job.GetProperty("status").GetInt32());
@@ -78,7 +78,8 @@ public sealed class ExcelImportTests(TestApp app)
         Assert.Equal(HttpStatusCode.OK, (await author.PostAsync($"/api/imports/{id}/validate")).StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, (await author.PostAsync($"/api/imports/{id}/submit", new { skipInvalidRows = false })).StatusCode);
         Assert.Equal(HttpStatusCode.Forbidden, (await author.PostAsync($"/api/imports/{id}/approve")).StatusCode);
-        Assert.Equal(HttpStatusCode.NoContent, (await approver.PostAsync($"/api/imports/{id}/approve")).StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, (await approver.PostAsync($"/api/imports/{id}/approve")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await approver.PostAsync($"/api/imports/{id}/approve", new { acceptFidelityReport = true })).StatusCode);
         job = await author.GetElAsync($"/api/imports/{id}");
         Assert.Equal((int)ImportJobStatus.CompletedWithWarnings, job.GetProperty("status").GetInt32());
         var docId = Guid.Parse(job.GetProperty("summary").GetProperty("documentId").GetString()!);
@@ -126,7 +127,7 @@ public sealed class ExcelImportTests(TestApp app)
         using var ms = new MemoryStream(); wb.SaveAs(ms); return ms.ToArray();
     }
 
-    async Task<Guid> TemplateAsync(ApiClient author, ApiClient approver, Guid site)
+    internal static async Task<Guid> TemplateAsync(ApiClient author, ApiClient approver, Guid site)
     {
         var tplId = await author.CreateDocumentAsync(site, kind: 2, title: "Torque log " + Guid.NewGuid().ToString("N")[..6]);
         var tpl = await author.GetDocumentAsync(tplId);
@@ -150,7 +151,7 @@ public sealed class ExcelImportTests(TestApp app)
     [Fact]
     public async Task Worksheet_rows_import_into_form_records_with_the_header_row_detected()
     {
-        var (site, author, approver) = await UsersAsync();
+        var (site, author, approver) = await UsersAsync(app);
         var tpl = await TemplateAsync(author, approver, site);
         var id = await UploadAsync(author, site, "torque.xlsx", CalibrationLog(), "records", "form-records", tpl);
         var job = await author.GetElAsync($"/api/imports/{id}");
@@ -180,7 +181,7 @@ public sealed class ExcelImportTests(TestApp app)
     [Fact]
     public async Task Workbook_is_kept_as_a_controlled_document_in_preserve_mode()
     {
-        var (site, author, approver) = await UsersAsync();
+        var (site, author, approver) = await UsersAsync(app);
         var id = await UploadAsync(author, site, "Gauge register.xlsx", CalibrationLog(), "document");
         var job = await author.GetElAsync($"/api/imports/{id}");
         Assert.Equal((int)ImportJobStatus.PreviewReady, job.GetProperty("status").GetInt32());
@@ -233,7 +234,7 @@ public sealed class ExcelImportTests(TestApp app)
         var xls = await legacy.ConvertAsync(new MemoryStream(CalibrationLog()), "xlsx", "xls", default);
         var bytes = ((MemoryStream)xls).ToArray();
         Assert.Equal(0xD0, bytes[0]);
-        var (site, author, approver) = await UsersAsync();
+        var (site, author, approver) = await UsersAsync(app);
         var tpl = await TemplateAsync(author, approver, site);
         var id = await UploadAsync(author, site, "torque.xls", bytes, "records", "form-records", tpl, "application/vnd.ms-excel");
         Assert.Equal(HttpStatusCode.NoContent, (await author.PutAsync($"/api/imports/{id}/excel-settings", new { sheet = "Checks" })).StatusCode);

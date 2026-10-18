@@ -294,9 +294,9 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         if (job.Status == ImportJobStatus.Inspecting)
         {
             job.StartedAt ??= clock.UtcNow;
-            if (job.FileType != "csv" && !IsWorkbook(job))
+            if (job.FileType != "csv" && !IsStructured(job))
             {
-                // Word and PDF parsers attach here (later phases); until then the job waits for that parser.
+                // the PDF and image parsers attach here (later phases); until then the job waits for that parser.
                 Event(job, "Inspected", $"{job.FileType.ToUpperInvariant()} file waiting for its parser.");
                 await db.SaveChangesAsync(ct);
                 return;
@@ -304,13 +304,13 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             Transition(job, ImportJobStatus.Parsing);
         }
         if (job.Status != ImportJobStatus.Parsing) return;
-        if (IsWorkbook(job))
+        if (IsStructured(job))
         {
-            try { await ParseWorkbookAsync(job, ct); }
+            try { if (IsWorkbook(job)) await ParseWorkbookAsync(job, ct); else await ParseDocumentAsync(job, ct); }
             catch (Exception e) when (e is not OperationCanceledException and not DbUpdateException)
             {
                 AddIssue(job, "file", null, ImportIssueSeverity.Error, "PARSE", e.Message, "Check the file and its settings.");
-                Transition(job, ImportJobStatus.Failed, "The workbook could not be read.");
+                Transition(job, ImportJobStatus.Failed, IsWorkbook(job) ? "The workbook could not be read." : "The document could not be read.");
             }
             await db.SaveChangesAsync(ct);
             return;
@@ -486,7 +486,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
     }
 
     /// <summary>Row options: the CSV settings, or the fixed options for worksheet rows (values arrive typed and ISO-formatted).</summary>
-    static CsvOptions Opts(ImportJob job) => IsWorkbook(job) ? new CsvOptions() : Options(job) ?? throw new AppException("The file has not been analyzed.");
+    static CsvOptions Opts(ImportJob job) => IsStructured(job) ? new CsvOptions() : Options(job) ?? throw new AppException("The file has not been analyzed.");
 
     public static int ColumnIndex(string letters) { var n = 0; foreach (var ch in letters) n = n * 26 + (ch - 'A' + 1); return n - 1; }
 
@@ -497,6 +497,11 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             var es = ExcelSettings(job);
             var t = WorkbookIntake.Table(await LoadWorkbookAsync(job, ct), es.Sheet, es.HeaderRow);
             foreach (var r in t.Rows) { ct.ThrowIfCancellationRequested(); yield return r; }
+            yield break;
+        }
+        if (IsDocument(job))
+        {
+            await foreach (var r in DocumentRowsAsync(job, ct)) yield return r;
             yield break;
         }
         var o = Options(job) ?? throw new AppException("The file has not been analyzed.");
@@ -604,11 +609,13 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
     }
 
     /// <summary>Approval by someone other than the submitter, then the transactional import (inline for small files, worker for large ones).</summary>
-    public async Task ApproveAsync(Guid id, CancellationToken ct)
+    /// <param name="acceptFidelityReport">A conversion to a form template is approved only when the approver accepts its fidelity report.</param>
+    public async Task ApproveAsync(Guid id, CancellationToken ct, bool acceptFidelityReport = false)
     {
         var job = await LoadAsync(id, Permissions.ImportsApprove, ct);
         if (job.Status != ImportJobStatus.AwaitingApproval) throw new ConflictException("Only an import awaiting approval can be approved.");
         if (job.SubmittedById == Me) throw new AppException("Someone other than the person who uploaded the file must approve the import.");
+        if (job.ImportMode == "template" && !acceptFidelityReport) throw new AppException("Review and accept the fidelity report to approve this conversion.");
         // the submitter needed the target module's edit permission to map and validate; approval needs the import approval permission
         if (!WholeFile(job)) _ = Target(job.TargetModule);
         else
@@ -620,6 +627,11 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
                 throw new AppException("The person who uploaded the file can no longer create this kind of document.");
         }
         job.ApprovedById = Me; job.ApprovedAt = clock.UtcNow;
+        if (job.ImportMode == "template")
+        {
+            var counts = Obj(job.Analysis)["conversion"]?["report"]?["counts"]?.ToJsonString() ?? "{}";
+            Event(job, "FidelityAccepted", $"Fidelity report accepted by the approver ({counts}).");
+        }
         Transition(job, ImportJobStatus.Importing, "Approved");
         await db.SaveChangesAsync(ct);
         if (job.FileSize <= InlineBytes) await RunImportAsync(job, ct);
