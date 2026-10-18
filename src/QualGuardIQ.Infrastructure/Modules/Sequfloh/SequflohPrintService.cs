@@ -12,7 +12,7 @@ namespace QualGuardIQ.Infrastructure.Modules.Sequfloh;
 /// Controlled printed layouts for SEQUFLOH (Prompt 1 section 23, Prompt 2 section 20): Validation, Validation / FAI, FAI, Repair Test and Repair Work Instructions,
 /// built from the designer schema so every printed section matches the designer. Each print is audited.
 /// </summary>
-public sealed class SequflohPrintService(AppDbContext db, ModuleSupport m, ICurrentUser current, SequflohInstructionService wi, SequflohFoundationService f)
+public sealed class SequflohPrintService(AppDbContext db, ModuleSupport m, ICurrentUser current, SequflohInstructionService wi, SequflohFoundationService f, SequflohTrackingService tracking)
 {
     public async Task<string> OrganizationAsync(CancellationToken ct) => await db.OrganizationSettings.AsNoTracking().Select(s => s.OrganizationName).FirstOrDefaultAsync(ct) ?? "QualGuard IQ";
 
@@ -121,5 +121,95 @@ public sealed class SequflohPrintService(AppDbContext db, ModuleSupport m, ICurr
         f.Audit("WorkInstructionPrinted", SequflohInstructionService.EntityType, x.Id, $"Printed {x.Number} rev {x.Revision} ({Words(x.Status).ToLowerInvariant()})", x.SiteId);
         await db.SaveChangesAsync(ct);
         return (pdf, $"{x.Number}-rev-{x.Revision}.pdf");
+    }
+
+    static string W(object? s) => s is null ? "" : System.Text.RegularExpressions.Regex.Replace(s.ToString()!, "([a-z])([A-Z])", "$1 $2");
+    static string Min(long sec) => $"{sec / 3600}h {sec % 3600 / 60:00}m";
+
+    /// <summary>Printed tracking record: identity, references, timing, results, steps, characteristics, parts, signoffs, reviews and the task event history.</summary>
+    public async Task<(byte[] Pdf, string FileName)> TrackingAsync(Guid id, CancellationToken ct)
+    {
+        var x = await tracking.LoadAsync(id, false, ct);
+        var settings = await f.GetSettingsAsync(ct);
+        var (printed, local) = await ClockAsync(x.SiteId, ct);
+        var ids = new[] { x.OwnerId, x.AssignedUserId, x.CompletedById, x.QualityReviewedById, x.EngineeringReviewedById }.Where(u => u is not null).Select(u => u!.Value).Distinct().ToList();
+        var names = await db.Users.AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, ct);
+        string? N(Guid? u) => u is { } g && names.TryGetValue(g, out var n) ? n : null;
+        var site = await db.Sites.AsNoTracking().Where(s => s.Id == x.SiteId).Select(s => s.Code + " · " + s.Name).FirstOrDefaultAsync(ct);
+        var typeTitle = x.Type switch { TrackingType.Fai => "FAI Tracking Record", TrackingType.Repair => "Repair Tracking Record", TrackingType.Production => "Production Task", _ => "Validation Tracking Record" };
+        var blocks = new List<PrintBlock>
+        {
+            new PrintHeading("Record"),
+            new PrintFields([("Tracking number", x.Number), ("Type", typeTitle), ("Status", W(x.Status)), ("Result", W(x.Result)), ("Approval status", W(x.ApprovalStatus)), ("Priority", x.Priority),
+                ("Work instruction", $"{x.WorkInstructionNumber} rev {x.WorkInstructionRevision}"), ("Instruction title", x.WorkInstructionTitle), ("Site", site), ("Owner", N(x.OwnerId)), ("Assigned", N(x.AssignedUserId))]),
+            new PrintHeading("References"),
+            new PrintFields([("Part number", x.PartNumber), ("Part description", x.PartDescription), ("Serial number", x.SerialNumber), ("Lot number", x.LotNumber), ("Work order", x.WorkOrder),
+                ("Repair order", x.RepairOrder), ("Customer return", x.CustomerReturnReference), ("Project", x.Project), ("Operation", x.Operation), ("FAI type", x.FaiType)]),
+            new PrintHeading("Timing"),
+            new PrintFields([("Planned start", local(x.PlannedStart)), ("Due", local(x.DueAt)), ("Actual start", local(x.ActualStart)), ("Actual completion", local(x.ActualCompletion)),
+                ("Active time", Min(x.ActiveSeconds)), ("Paused time", Min(x.PausedSeconds)), ("On hold time", Min(x.HoldSeconds)),
+                ("Benchmark (minutes)", x.MinBenchmarkMinutes is null && x.MaxBenchmarkMinutes is null ? null : $"{x.MinBenchmarkMinutes:0.##} to {x.MaxBenchmarkMinutes:0.##}"),
+                ("Variance (minutes)", x.VarianceMinutes?.ToString("0.##", CultureInfo.InvariantCulture)), ("Variance reason", x.VarianceReason)]),
+            new PrintHeading("Conditions and comments"),
+            new PrintFields([("Reported condition", x.ReportedCondition), ("Observed condition", x.ObservedCondition), ("Repair description", x.RepairDescription), ("Final disposition", x.FinalDisposition),
+                ("Deviations", x.Deviations), ("Nonconformance references", x.NonconformanceReferences), ("Evidence", x.EvidenceReferences), ("Technician comments", x.TechnicianComments),
+                ("Quality comments", x.QualityComments), ("Engineering comments", x.EngineeringComments), ("Engineering conclusion", x.EngineeringConclusion),
+                ("Pause reason", x.PauseReason), ("Hold reason", x.HoldReason), ("Failure reason", x.FailureReason), ("Rejection reason", x.RejectionReason), ("Cancel reason", x.CancelReason)]),
+        };
+        var steps = JsonNode.Parse(x.Steps)!.AsArray();
+        blocks.Add(new PrintHeading("Steps"));
+        blocks.Add(steps.Count == 0 ? new PrintParagraph("No steps.") : new PrintTable([("Seq", 0.5), ("Step", 2.6), ("Result", 0.9), ("Actual", 1), ("Comment", 2)],
+            steps.Select(st => new[] { V(st?["sequence"]), V(st?["title"]), V(st?["result"]), V(st?["actualResult"]) ?? V(st?["actual"]), V(st?["comment"]) }).ToList()));
+        var chars = JsonNode.Parse(x.Characteristics)!.AsArray();
+        if (chars.Count > 0)
+        {
+            blocks.Add(new PrintHeading("Characteristics"));
+            blocks.Add(new PrintTable([("No.", 0.6), ("Requirement", 2.4), ("Lower", 0.8), ("Upper", 0.8), ("Unit", 0.6), ("Actual", 1), ("Result", 0.9)],
+                chars.Select(c => new[] { V(c?["characteristicNumber"]), V(c?["requirement"]), V(c?["lowerLimit"]), V(c?["upperLimit"]), V(c?["unit"]), V(c?["actualResult"]), V(c?["result"]) }).ToList()));
+        }
+        var partsRows = JsonNode.Parse(x.PartsRows)!.AsArray();
+        if (partsRows.Count > 0)
+        {
+            blocks.Add(new PrintHeading("Parts"));
+            blocks.Add(new PrintTable([("Item", 0.5), ("Part number", 1.4), ("Description", 2.2), ("Qty", 0.6), ("Lot", 0.9), ("Serial", 0.9), ("Used", 0.6)],
+                partsRows.Select(pr => new[] { V(pr?["sequence"]), V(pr?["replacementPartNumber"]) ?? V(pr?["partNumber"]), V(pr?["description"]), V(pr?["quantity"]), V(pr?["lotNumber"]), V(pr?["serialNumber"]), V(pr?["usedQuantity"]) }).ToList()));
+        }
+        blocks.Add(new PrintHeading("Signoffs and reviews"));
+        var signs = JsonNode.Parse(x.Signoffs)!.AsArray();
+        blocks.Add(new PrintTable([("Role", 1), ("Signed by", 1.4), ("When", 1.4), ("Meaning", 2.2)],
+            signs.Select(sg => new[] { V(sg?["role"]), V(sg?["userName"]) ?? V(sg?["name"]), V(sg?["signedAt"]) is { } at && DateTimeOffset.TryParse(at, CultureInfo.InvariantCulture, DateTimeStyles.None, out var d) ? local(d) : null, V(sg?["meaning"]) }).ToList()));
+        blocks.Add(new PrintFields([("Completed by", N(x.CompletedById)), ("Quality review", x.QualityReviewedAt is null ? (x.QualityReviewRequired ? "Pending" : "Not required") : $"{N(x.QualityReviewedById)} · {local(x.QualityReviewedAt)}"),
+            ("Engineering review", x.EngineeringReviewedAt is null ? (x.EngineeringReviewRequired ? "Pending" : "Not required") : $"{N(x.EngineeringReviewedById)} · {local(x.EngineeringReviewedAt)}")]));
+        var events = await db.SequflohTaskEvents.AsNoTracking().Where(e => e.TrackingRecordId == x.Id).OrderBy(e => e.CreatedAt).ToListAsync(ct);
+        blocks.Add(new PrintHeading("Task events"));
+        blocks.Add(new PrintTable([("When", 1.3), ("Event", 1), ("From", 1), ("To", 1), ("User", 1.2), ("Reason / comment", 2.5)],
+            events.Select(e => new[] { local(e.CreatedAt), W(e.EventType), W(e.FromStatus), W(e.ToStatus), e.UserName, e.Reason ?? e.Comment }).ToList()));
+        var terminal = x.Status is TrackingStatus.Completed or TrackingStatus.Failed or TrackingStatus.Rejected or TrackingStatus.Canceled;
+        var header = new PrintHeader(await OrganizationAsync(ct), $"{typeTitle}: {x.WorkInstructionTitle}", x.Number, x.WorkInstructionRevision, W(x.Status), null,
+            x.PartNumber is null ? null : $"Part {x.PartNumber}{(x.PartDescription is null ? "" : " " + x.PartDescription)}", settings.WorkInstructions.PrintFooter, current.UserName, printed, terminal ? null : W(x.Status));
+        var pdf = SequflohPdfRenderer.Render(header, blocks);
+        f.Audit("TrackingRecordPrinted", SequflohTrackingService.EntityType, x.Id, $"Printed {x.Number} ({W(x.Status).ToLowerInvariant()})", x.SiteId);
+        await db.SaveChangesAsync(ct);
+        return (pdf, $"{x.Number}.pdf");
+    }
+
+    /// <summary>Printable audit record summary: the filtered audit events of one view (who, what, when, description), newest first.</summary>
+    public async Task<(byte[] Pdf, string FileName)> AuditSummaryAsync(string title, IReadOnlyList<Domain.Audit.AuditEntry> rows, IReadOnlyList<(string, string)> filters, CancellationToken ct)
+    {
+        var settings = await f.GetSettingsAsync(ct);
+        var (printed, local) = await ClockAsync(null, ct);
+        var blocks = new List<PrintBlock>
+        {
+            new PrintHeading("Summary"),
+            new PrintFields([("View", title), ("Events", rows.Count.ToString(CultureInfo.InvariantCulture)), ("Filters", filters.Count == 0 ? "None" : string.Join("; ", filters.Select(x => $"{x.Item1}: {x.Item2}")))]),
+            new PrintHeading("Audit events"),
+            new PrintTable([("When", 1.3), ("Who", 1.2), ("What", 1.3), ("Description", 4), ("Reason", 1.4)],
+                rows.Select(a => new[] { local(a.OccurredAt), a.UserName, W(a.Action), a.Description, a.Reason }).ToList()),
+        };
+        var header = new PrintHeader(await OrganizationAsync(ct), $"Audit Record Summary: {title}", "SEQUFLOH audit", null, "Record", null, null, settings.WorkInstructions.PrintFooter, current.UserName, printed, null);
+        var pdf = SequflohPdfRenderer.Render(header, blocks);
+        f.Audit("AuditSummaryPrinted", "SequflohAudit", Guid.Empty, $"Printed the {title} audit summary ({rows.Count} events)");
+        await db.SaveChangesAsync(ct);
+        return (pdf, "sequfloh-audit-summary.pdf");
     }
 }

@@ -52,12 +52,19 @@ public sealed partial class ReportService(AppDbContext db, ModuleSupport m, IAcc
     }
 
     /// <summary>Excel workbook of the report table: header row, typed cells (numbers, dates), text that starts like a formula is stored as text.</summary>
-    public static byte[] ToXlsx(ReportResult r, string title)
+    /// <param name="meta">Optional title block (label, value) written above the table, such as report title, organization, generated on and by, and filters.</param>
+    public static byte[] ToXlsx(ReportResult r, string title, IReadOnlyList<(string Label, string Value)>? meta = null)
     {
         using var wb = new ClosedXML.Excel.XLWorkbook();
         var name = new string(title.Select(ch => "[]:*?/\\".Contains(ch) ? '-' : ch).ToArray()); var ws = wb.Worksheets.Add(name.Length > 31 ? name[..31] : name);
-        for (var i = 0; i < r.Columns.Count; i++) { ws.Cell(1, i + 1).Value = r.Columns[i].Label; ws.Cell(1, i + 1).Style.Font.Bold = true; }
-        var rowNo = 2;
+        var head = 1;
+        if (meta is { Count: > 0 })
+        {
+            foreach (var (label, value) in meta) { ws.Cell(head, 1).Value = label; ws.Cell(head, 1).Style.Font.Bold = true; ws.Cell(head, 2).SetValue(value); ws.Cell(head, 2).Style.NumberFormat.Format = "@"; head++; }
+            head++;
+        }
+        for (var i = 0; i < r.Columns.Count; i++) { ws.Cell(head, i + 1).Value = r.Columns[i].Label; ws.Cell(head, i + 1).Style.Font.Bold = true; }
+        var rowNo = head + 1;
         foreach (var row in r.Rows)
         {
             for (var i = 0; i < r.Columns.Count; i++)
@@ -78,8 +85,8 @@ public sealed partial class ReportService(AppDbContext db, ModuleSupport m, IAcc
             }
             rowNo++;
         }
-        ws.SheetView.FreezeRows(1);
-        ws.Columns().AdjustToContents(1, Math.Min(rowNo, 200));
+        ws.SheetView.FreezeRows(head);
+        ws.Columns().AdjustToContents(head, Math.Min(rowNo, head + 200));
         using var ms = new MemoryStream();
         wb.SaveAs(ms);
         return ms.ToArray();

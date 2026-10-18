@@ -30,7 +30,8 @@ public sealed record SignoffInput(Guid OperationId, int StateVersion, string Rol
 /// legal transition, accumulates persisted timing from database timestamps, appends a task event with a unique operation ID and writes an audit entry.
 /// Repeating an operation ID returns the stored result without applying the change twice.
 /// </summary>
-public sealed class SequflohTrackingService(AppDbContext db, ModuleSupport m, INumberingService numbers, SequflohFoundationService f)
+public sealed class SequflohTrackingService(AppDbContext db, ModuleSupport m, INumberingService numbers, SequflohFoundationService f,
+    SequflohNotifications notify, QualGuardIQ.Application.Records.ISearchIndexer search)
 {
     public const string EntityType = nameof(SequflohTrackingRecord);
     public static readonly TrackingStatus[] Terminal = [TrackingStatus.Completed, TrackingStatus.Failed, TrackingStatus.Rejected, TrackingStatus.Canceled];
@@ -214,6 +215,8 @@ public sealed class SequflohTrackingService(AppDbContext db, ModuleSupport m, IN
             context: new { trackingType = r.Type.ToString(), workInstruction = wi.Number, revision = wi.Revision, part = rec.PartNumber });
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await IndexAsync(rec, ct);
+        await notify.TrackingChangedAsync(rec, "create", null, ct);
         return rec;
     }
 
@@ -310,6 +313,7 @@ public sealed class SequflohTrackingService(AppDbContext db, ModuleSupport m, IN
         f.Audit("TrackingRecordUpdated", EntityType, rec.Id, $"{rec.Number}: {string.Join(", ", changed)} recorded", rec.SiteId);
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await IndexAsync(rec, ct);
         return rec;
     }
 
@@ -615,8 +619,14 @@ public sealed class SequflohTrackingService(AppDbContext db, ModuleSupport m, IN
             new { operationId = r.OperationId, stateVersion = rec.StateVersion });
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+        await IndexAsync(rec, ct);
+        await notify.TrackingChangedAsync(rec, action, before, ct);
         return rec;
     }
+
+    /// <summary>Keeps the record in the shared application search (permission-filtered there by SEQUFLOH access and site).</summary>
+    Task IndexAsync(SequflohTrackingRecord r, CancellationToken ct) =>
+        search.IndexAsync(SequflohNotifications.Info(r), string.Join(" ", new[] { r.PartNumber, r.SerialNumber, r.LotNumber, r.WorkOrder, r.RepairOrder, r.Operation }.Where(x => !string.IsNullOrWhiteSpace(x))), ct);
 
     async Task RequireCompleteAsync(SequflohTrackingRecord rec, CancellationToken ct)
     {

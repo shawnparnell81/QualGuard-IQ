@@ -11,10 +11,10 @@ namespace QualGuardIQ.Infrastructure.Jobs;
 
 /// <summary>
 /// Daily due-date reminders across modules: actions, training, calibration, supplier certificates, supplier reviews,
-/// SCAR responses, document periodic reviews and risk reviews. Each reminder is sent once (tracked in ReminderLog);
+/// SCAR responses, document periodic reviews, risk reviews and SEQUFLOH tasks (overdue and approaching due, as configured in SEQUFLOH settings). Each reminder is sent once (tracked in ReminderLog);
 /// overdue items get a second, separate reminder.
 /// </summary>
-public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegistry registry, ISiteCalendar calendar, ILogger<ReminderJob> log)
+public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegistry registry, ISiteCalendar calendar, ILogger<ReminderJob> log, QualGuardIQ.Application.Security.IAccessService access)
 {
     public const int LeadDays = 14;
     public const int CertificateLeadDays = 30;
@@ -74,6 +74,8 @@ public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegi
                 items.Add(($"register-review:{g.Id}:{rv:yyyyMMdd}:{Phase(rv)}", g.OwnerId, $"Review of {g.Number} {g.Title} {(rv < today ? "is overdue" : $"is due {rv:yyyy-MM-dd}")}", Modules.QualityOps.RegisterService.RecordType, g.Id));
         }
 
+        items.AddRange(await SequflohAsync(ct));
+
         var escalateBefore = today.AddDays(-EscalationDays);
         var escalations = await db.ActionItems.Where(a => (a.Status == ActionStatus.Open || a.Status == ActionStatus.InProgress) && a.DueDate < escalateBefore && a.EscalatedAt == null && a.CreatedById != null).ToListAsync(ct);
         foreach (var a in escalations)
@@ -99,6 +101,32 @@ public sealed class ReminderJob(AppDbContext db, INotifier notifier, IRecordRegi
         }
         if (count > 0) log.LogInformation("Sent {Count} due-date reminders", count);
         return count;
+    }
+
+    /// <summary>SEQUFLOH open tasks past the overdue threshold or inside the approaching-due window, sent to the assignee (or owner) while they still have SEQUFLOH access.</summary>
+    async Task<List<(string Key, Guid User, string Title, string Type, Guid Id)>> SequflohAsync(CancellationToken ct)
+    {
+        var list = new List<(string, Guid, string, string, Guid)>();
+        var row = await db.SequflohSettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        if (row is null) return list;
+        var n = Modules.Sequfloh.SequflohJson.Read<Modules.Sequfloh.NotificationSettings>(row.Notifications);
+        var t = Modules.Sequfloh.SequflohJson.Read<Modules.Sequfloh.TrackingSettings>(row.Tracking);
+        if (!n.OverdueWork && !n.ApproachingDueDates) return list;
+        var now = DateTimeOffset.UtcNow;
+        var overdueAt = now.AddHours(-t.OverdueThresholdHours);
+        var soon = now.AddHours(Math.Max(0, t.ApproachingDueHours));
+        var open = Modules.Sequfloh.SequflohTrackingService.Open;
+        var recs = await db.SequflohTrackingRecords.AsNoTracking().Where(r => open.Contains(r.Status) && r.DueAt != null && r.DueAt <= soon && (r.AssignedUserId != null || r.OwnerId != null))
+            .Select(r => new { r.Id, r.Number, r.SiteId, r.DepartmentId, r.Operation, Due = r.DueAt!.Value, User = r.AssignedUserId ?? r.OwnerId!.Value }).ToListAsync(ct);
+        foreach (var r in recs)
+        {
+            var overdue = r.Due < overdueAt;
+            if (overdue ? !n.OverdueWork : !n.ApproachingDueDates || r.Due < now) continue;
+            if (!await access.CanAccessAsync(r.User, QualGuardIQ.Domain.Security.Permissions.SequflohAccess, r.SiteId, r.DepartmentId, ct)) continue;
+            list.Add(($"sequfloh:{r.Id}:{r.Due:yyyyMMddHHmm}:{(overdue ? "overdue" : "due")}", r.User,
+                $"SEQUFLOH task {r.Number}{(r.Operation is null ? "" : $" ({r.Operation})")} {(overdue ? "is overdue" : $"is due {r.Due:yyyy-MM-dd HH:mm} UTC")}", Modules.Sequfloh.SequflohTrackingService.EntityType, r.Id));
+        }
+        return list;
     }
 }
 
