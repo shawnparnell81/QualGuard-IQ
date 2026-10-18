@@ -102,7 +102,8 @@ public static class SequflohDesigner
     ];
     static readonly List<DesignerField> RepairSteps = Cols("Operation step", "Title", "Detailed repair action:m", "Tools required", "Parts consumed", "Quantity consumed:n", "Specification", "Torque value", "Minimum:n", "Maximum:n", "Unit",
         "Visual checkpoint", "Quality checkpoint", "Expected result", "Evidence requirement", "Warning", "Technician result required:b", "Pass or fail required:b", "Technician acknowledgement:b", "Inspector verification:b", "Notes");
-    static readonly List<DesignerField> PartsRowColumns = Cols("Replacement part number", "Description", "Quantity:n", "Unit", "Required:b", "Approved alternate", "Lot number required:b", "Serial number required:b");
+    static readonly List<DesignerField> PartsRowColumns = Cols("Replacement part number", "Description", "Quantity:n", "Unit", "Required:b", "Approved alternate", "Lot number required:b", "Serial number required:b",
+        "Issued quantity:n", "Used quantity:n", "Returned quantity:n", "Scrap quantity:n");
 
     static IReadOnlyList<DesignerSection> Merge(IEnumerable<DesignerSection> specific, IEnumerable<DesignerSection>? common = null)
     {

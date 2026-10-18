@@ -107,6 +107,7 @@ function RowActions({ row }: { row: WiRow }) {
     ['Duplicate', async () => { setAnchor(null); try { const r = await post<{ id: string }>(`${S}/instructions/${row.id}/duplicate`); nav(`/sequfloh/instruction/${r.id}`); } catch (e) { setErr((e as Error).message); } },
       can('sequfloh.create_work_instruction')],
     ['Create revision', () => { setAnchor(null); setDlg('revise'); }, row.status === 'Released' && can('sequfloh.revise_work_instruction')],
+    ['Print', () => { setAnchor(null); window.open(`${S}/instructions/${row.id}/print`, '_blank', 'noopener'); }, true],
     ['History', () => go(`/sequfloh/instruction/${row.id}?tab=history`), true],
     ['Archive', () => { setAnchor(null); setDlg('archive'); }, ['Draft', 'InDevelopment', 'ChangesRequested', 'Superseded', 'Obsolete'].includes(row.status) && can('sequfloh.archive_work_instruction')],
   ];
@@ -300,6 +301,7 @@ export function InstructionPage() {
         <SqfStatus status={doc.status} />
         {q.data.canEdit && <Button variant="contained" disabled={!dirty || busy} onClick={() => save()}>Save draft</Button>}
         {q.data.actions.map((a) => <Button key={a.action} variant="outlined" disabled={busy} color={['reject', 'obsolete', 'supersede'].includes(a.action) ? 'error' : 'primary'} onClick={() => setAct(a)}>{a.label}</Button>)}
+        <Button variant="outlined" href={`${S}/instructions/${id}/print`} target="_blank" rel="noopener" disabled={dirty}>Print</Button>
         {q.data.canDuplicate && <Button disabled={busy} onClick={() => guard(() => withSave(async () => { const r = await post<{ id: string }>(`${S}/instructions/${id}/duplicate`); nav(`/sequfloh/instruction/${r.id}`); }, 'Duplicated.'))}>Duplicate</Button>}
       </Stack>}>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>{typeLabels[doc.type]} designer · {doc.site ?? ''}{doc.department ? ` · ${doc.department}` : ''}
