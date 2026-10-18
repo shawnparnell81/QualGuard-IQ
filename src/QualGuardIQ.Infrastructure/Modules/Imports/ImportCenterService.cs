@@ -642,6 +642,14 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         if (job.ImportMode == "template" && !acceptFidelityReport) throw new AppException("Review and accept the fidelity report to approve this conversion.");
         // the submitter needed the target module's edit permission to map and validate; approval needs the import approval permission
         if (!WholeFile(job)) _ = Target(job.TargetModule);
+        else if (job.ImportMode == "attachment")
+        {
+            // the file goes onto an existing record: the uploader must still be able to edit that record
+            var to = Obj(job.Settings)["attachTo"] ?? throw new AppException("Choose the record the file is attached to.");
+            var rec = await records.GetAsync(to["type"]!.GetValue<string>(), Guid.Parse(to["id"]!.GetValue<string>()), ct);
+            if (rec.IsLocked) throw new AppException($"{rec.Number} is locked; files cannot be added.");
+            if (!await access.CanAccessAsync(job.SubmittedById, rec.EditPermission, rec.SiteId, rec.DepartmentId, ct)) throw new AppException("The person who uploaded the file can no longer edit the record it is attached to.");
+        }
         else
         {
             // a new controlled document or template: the uploader needed its edit permission; the approver needs its approve permission

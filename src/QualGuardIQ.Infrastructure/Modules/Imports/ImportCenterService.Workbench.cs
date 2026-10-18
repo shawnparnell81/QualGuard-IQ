@@ -168,7 +168,7 @@ public sealed partial class ImportCenterService
         if (target is not null && !whole) try { fields = await target.FieldsAsync(job, ct); } catch (AppException) { }
         var status = job.Status;
         string Done(bool done, bool attention = false) => attention ? "attention" : done ? "done" : "pending";
-        var dry = summary["dryRun"];
+        var dry = summary["dryRun"] as JsonObject;
         var imported = status is ImportJobStatus.Imported or ImportJobStatus.PartiallyImported or ImportJobStatus.CompletedWithWarnings or ImportJobStatus.RolledBack;
 
         // 1 file review
