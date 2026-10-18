@@ -1,6 +1,6 @@
 # SEQUFLOH – requirements traceability
 
-Sources: `sequfloh-prompt-1.md` (27 sections, "P1") and `sequfloh-prompt-2.md` (32 sections, "P2"), both verbatim.
+Sources: requirements part 1 (27 sections, "P1") and part 2 (32 sections, "P2").
 Phases S1–S9. Status is updated at each phase boundary.
 
 | Requirement | Source | Phase | Implementation | Test | Status |
