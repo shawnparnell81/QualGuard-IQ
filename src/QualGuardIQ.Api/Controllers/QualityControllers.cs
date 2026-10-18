@@ -97,6 +97,23 @@ public sealed class FormsController(AppDbContext db, FormService forms, ModuleSu
         return File(r.Pdf, "application/pdf", r.FileName);
     }
 
+    /// <summary>Protected workbook of the template's effective revision for controlled offline completion (Excel round trip). Audited.</summary>
+    [HttpGet("templates/{templateId:guid}/workbook")]
+    public async Task<IActionResult> OfflineWorkbook(Guid templateId, [FromServices] FormWorkbookService books, CancellationToken ct)
+    {
+        var (bytes, name) = await books.ExportAsync(templateId, ct);
+        return File(bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", name);
+    }
+
+    /// <summary>Reimports a completed offline workbook as a draft form record (integrity, revision and structure checked; input cells only; recalculated; kept as evidence; one submission per copy).</summary>
+    [HttpPost("templates/{templateId:guid}/workbook")]
+    [RequestSizeLimit(55L * 1024 * 1024), RequestFormLimits(MultipartBodyLengthLimit = 55L * 1024 * 1024)]
+    public async Task<FormWorkbookService.Submission> SubmitOfflineWorkbook(Guid templateId, IFormFile file, [FromForm] Guid siteId, [FromForm] Guid? departmentId, [FromServices] FormWorkbookService books, CancellationToken ct)
+    {
+        await using var s = file.OpenReadStream();
+        return await books.ImportAsync(templateId, s, file.FileName, siteId, departmentId, ct);
+    }
+
     public sealed record PreviewRequest(string FieldSchema, string? Style, Dictionary<string, string?>? Values);
 
     /// <summary>Designer print preview of an unsaved definition (validated first). Returns a PDF watermarked PREVIEW.</summary>

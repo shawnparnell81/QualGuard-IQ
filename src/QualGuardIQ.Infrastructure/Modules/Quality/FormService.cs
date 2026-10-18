@@ -25,7 +25,7 @@ public sealed class FormService(AppDbContext db, ModuleSupport m, INumberingServ
         var tpl = await db.Documents.AsNoTracking().FirstOrDefaultAsync(d => d.Id == req.TemplateId && d.Kind == DocumentKind.FormTemplate, ct) ?? throw new NotFoundException("Form template");
         var rev = await db.DocumentRevisions.AsNoTracking().FirstOrDefaultAsync(r => r.DocumentId == tpl.Id && r.Status == RevisionStatus.Effective, ct)
             ?? throw new AppException("This form template has no effective revision.");
-        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        await using var tx = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(ct) : null;
         var rec = new FormRecord
         {
             Number = await numbers.NextAsync(RecordType, req.SiteId, ct), TemplateId = tpl.Id, TemplateRevisionId = rev.Id, TemplateNumber = tpl.Number,
@@ -35,7 +35,7 @@ public sealed class FormService(AppDbContext db, ModuleSupport m, INumberingServ
         db.FormRecords.Add(rec);
         await db.SaveChangesAsync(ct);
         await m.IndexAsync(RecordType, rec.Id, $"{tpl.Number} rev {rev.Revision}", ct);
-        await tx.CommitAsync(ct);
+        if (tx is not null) await tx.CommitAsync(ct);
         return rec;
     }
 
