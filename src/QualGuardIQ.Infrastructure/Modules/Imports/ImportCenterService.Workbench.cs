@@ -58,7 +58,8 @@ public sealed partial class ImportCenterService
         if (mode is "document" or "template" && !IsStructured(job)) throw new AppException("A CSV file cannot become a controlled document or form; import its rows instead.");
         if (mode is "records" or "master-list")
         {
-            var t = Target(req.TargetModule ?? job.TargetModule);
+            var t = Target(req.TargetModule ?? (mode == "master-list" && job.TargetModule is { } cur && !Target(cur).Info.MasterList ? null : job.TargetModule));
+            CheckTarget(mode, t);
             if (!await access.CanAccessAsync(Me, t.Info.EditPermission, job.SiteId, job.DepartmentId, ct)) throw new ForbiddenException();
             job.TargetModule = t.Info.Key;
             if (req.TargetTemplateId is not null) job.TargetTemplateId = req.TargetTemplateId;
