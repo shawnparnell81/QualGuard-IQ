@@ -107,8 +107,8 @@ public sealed class SequflohInstructionsController(AppDbContext db, ModuleSuppor
     public async Task<object> Create(InstructionCreateInput r, CancellationToken ct) { var x = await wi.CreateAsync(r, ct); return new { x.Id, x.Number }; }
     [HttpPut("{id:guid}")] [RequirePermission(Permissions.SequflohEditDraftWorkInstruction)]
     public async Task<IActionResult> Save(Guid id, InstructionSaveInput r, CancellationToken ct) { await wi.SaveAsync(id, r, ct); return NoContent(); }
-    [HttpPost("{id:guid}/actions/{action}")]
-    public async Task<object> Act(Guid id, string action, InstructionActionInput r, CancellationToken ct) { var x = await wi.ActAsync(id, action, r, ct); return new { x.Id, x.Status }; }
+    [HttpPost("{id:guid}/actions/{name}")]
+    public async Task<object> Act(Guid id, string name, InstructionActionInput r, CancellationToken ct) { var x = await wi.ActAsync(id, name, r, ct); return new { x.Id, x.Status }; }
     [HttpPost("{id:guid}/revise")] [RequirePermission(Permissions.SequflohReviseWorkInstruction)]
     public async Task<object> Revise(Guid id, ReviseInput r, CancellationToken ct) { var x = await wi.ReviseAsync(id, r, ct); return new { x.Id, x.Number, x.Revision }; }
     [HttpPost("{id:guid}/duplicate")] [RequirePermission(Permissions.SequflohCreateWorkInstruction)]
