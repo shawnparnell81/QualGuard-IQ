@@ -126,7 +126,7 @@ use apqp_signatures
 end
 
 template apqp-design-input-review | Design Input Review | APQP
-packs automotive, medical-device
+packs automotive
 tags design, inputs
 purpose Confirm that design inputs are complete, unambiguous, verifiable and not in conflict before design work proceeds.
 scope Product designs and design changes under the organization's design responsibility.
@@ -151,7 +151,7 @@ c comment | Comment or evidence | text
 end
 
 template apqp-design-output-review | Design Output Review | APQP
-packs automotive, medical-device
+packs automotive
 tags design, outputs
 purpose Confirm that design outputs meet the design inputs, give the information needed for purchasing, production and service, and identify the characteristics essential for safe and proper use.
 scope Design outputs released for verification, validation or production.
@@ -173,7 +173,7 @@ use review_outcome, apqp_signatures
 end
 
 template apqp-design-verification-plan | Design Verification Plan | APQP
-packs automotive, medical-device
+packs automotive
 tags design verification, DVP
 purpose Plan and report the tests and analyses that show the design outputs meet the design inputs, with sample sizes, acceptance criteria, timing and results.
 scope Products and changes requiring design verification.
@@ -202,7 +202,7 @@ use apqp_signatures
 end
 
 template apqp-design-validation-plan | Design Validation Plan | APQP
-packs automotive, medical-device
+packs automotive
 tags design validation
 purpose Plan and record the validation that the product meets user needs and intended uses under defined operating conditions, on production-equivalent units.
 scope Products and significant design changes.

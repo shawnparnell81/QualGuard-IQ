@@ -28,7 +28,6 @@ sign doc_approved | Approved by | approved | I approve this record. | documents.
 end
 
 template master-document-list | Master Document List | DOCUMENT_CONTROL
-packs manufacturing, medical-device, aerospace
 tags master list, documents, register
 purpose Keep a controlled list of every controlled document with its current revision, status, dates, owner, distribution, training requirement and retention rule, so that only current documents are used.
 scope All controlled documents of the organization or site: manuals, policies, procedures, work instructions, forms and specifications.
@@ -50,7 +49,6 @@ use doc_signatures
 end
 
 template master-record-list | Master Record List | DOCUMENT_CONTROL
-packs manufacturing, medical-device, aerospace
 tags master list, records, retention
 purpose List every type of quality record the organization keeps, with where it is stored, who owns it, how long it is kept, how it is protected and how it is disposed of.
 scope All quality records, electronic and paper.
@@ -74,7 +72,6 @@ use doc_signatures
 end
 
 template master-drawing-list | Master Drawing List | DOCUMENT_CONTROL
-packs manufacturing, aerospace
 tags master list, drawings, engineering
 purpose Keep a controlled list of engineering drawings with part number, size, sheets and current revision, so production and inspection use the released revision.
 scope Drawings released for manufacturing, inspection or purchasing.
@@ -94,7 +91,6 @@ use doc_signatures
 end
 
 template master-specification-list | Master Specification List | DOCUMENT_CONTROL
-packs manufacturing, aerospace, electronics
 tags master list, specifications
 purpose Keep a controlled list of internal, customer and industry specifications in use, with revisions and the products they apply to.
 scope Material, process, product, test and packaging specifications.
@@ -114,7 +110,6 @@ use doc_signatures
 end
 
 template master-form-list | Master Form List | DOCUMENT_CONTROL
-packs manufacturing, medical-device, aerospace, electronics
 tags master list, forms, templates
 purpose Keep a controlled list of form templates with their revision, owning module and the procedure that calls for each.
 scope Controlled forms and form templates, electronic and paper.
@@ -133,7 +128,6 @@ use doc_signatures
 end
 
 template master-procedure-list | Master Procedure List | DOCUMENT_CONTROL
-packs manufacturing, medical-device, aerospace, electronics
 tags master list, procedures, register
 purpose Keep a controlled list of procedures and policies with their revision, owner, process and the requirements each addresses.
 scope Policies and procedures of the management system.
@@ -152,7 +146,6 @@ use doc_signatures
 end
 
 template policy-register | Policy Register | DOCUMENT_CONTROL
-packs manufacturing
 tags register, policies
 purpose Register the policies of the organization with their approval authority, communication and review dates.
 scope Quality, safety, environmental, information security and other policies.
@@ -170,7 +163,6 @@ use doc_signatures
 end
 
 template procedure-register | Procedure Register | DOCUMENT_CONTROL
-packs manufacturing
 tags register, procedures
 purpose Register procedures with their owner, process, training requirement and review dates.
 scope Procedures of the management system.
@@ -188,7 +180,6 @@ use doc_signatures
 end
 
 template master-work-instruction-list | Master Work Instruction List | DOCUMENT_CONTROL
-packs manufacturing, electronics
 tags master list, work instructions, register
 purpose Keep a controlled list of work instructions with their operation, work centre, product and revision, so the instruction at each workstation can be checked against the list.
 scope Work instructions, visual aids and set-up sheets used at workstations.
@@ -208,7 +199,6 @@ use doc_signatures
 end
 
 template external-document-register | External Document Register | DOCUMENT_CONTROL
-packs manufacturing, aerospace, medical-device
 tags register, external documents, standards
 purpose Register documents of external origin (standards, regulations, customer documents) with their issuer, revision and how changes are monitored.
 scope External documents needed for planning and operation of the management system.
@@ -231,7 +221,6 @@ use register_signatures
 end
 
 template obsolete-document-register | Obsolete Document Register | DOCUMENT_CONTROL
-packs manufacturing, aerospace, medical-device
 tags register, obsolete, withdrawn
 purpose Record documents made obsolete, why, when, what replaced them and how copies were withdrawn, and identify any copy retained for reference.
 scope Every controlled document that is made obsolete or superseded.
@@ -255,7 +244,6 @@ use register_signatures
 end
 
 template document-change-request | Document Change Request | DOCUMENT_CONTROL
-packs manufacturing, medical-device, aerospace, electronics
 tags change request, documents, DCR
 purpose Request a new document, a change or withdrawal of a document, stating the change, the reason and the impact so the owner can decide.
 scope Every controlled document.
@@ -285,7 +273,6 @@ use doc_signatures
 end
 
 template document-review-record | Document Review Record | DOCUMENT_CONTROL
-packs manufacturing, medical-device
 tags review, periodic review, documents
 purpose Record the periodic review of a document: whether it is still accurate, needed and effective, and the outcome.
 scope Controlled documents due for periodic review.
@@ -311,7 +298,6 @@ use doc_signatures
 end
 
 template controlled-copy-register | Controlled Copy Register | DOCUMENT_CONTROL
-packs manufacturing, aerospace
 tags controlled copies, distribution, paper
 purpose Register every controlled paper copy issued, its holder and location, so every copy can be replaced or withdrawn when the document changes.
 scope Controlled paper copies; electronic access is controlled by the system.
@@ -335,7 +321,6 @@ use register_signatures
 end
 
 template document-distribution-list | Document Distribution List | DOCUMENT_CONTROL
-packs manufacturing
 tags distribution, documents
 purpose Define who must receive or have access to a document and how, so distribution can be repeated for every revision.
 scope Documents distributed beyond their owner's function.
@@ -357,7 +342,6 @@ use doc_signatures
 end
 
 template document-acknowledgment-register | Document Acknowledgment Register | DOCUMENT_CONTROL
-packs manufacturing, medical-device
 tags acknowledgment, read and understood
 purpose Record that each person who must read a document revision has read and understood it, by the due date.
 scope Document revisions that require acknowledgment.
@@ -383,7 +367,6 @@ use register_signatures
 end
 
 template document-retention-schedule | Document Retention Schedule | DOCUMENT_CONTROL
-packs manufacturing, medical-device, aerospace
 tags retention, schedule, disposal, legal hold
 purpose Set the retention period and disposal method for each category of document and record, with the requirement that sets it.
 scope All documents and records of the organization.

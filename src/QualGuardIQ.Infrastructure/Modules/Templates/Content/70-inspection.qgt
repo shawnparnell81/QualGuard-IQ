@@ -68,7 +68,6 @@ sign insp_approved | Approved by | approved | I approve the disposition of this 
 end
 
 template receiving-inspection | Receiving Inspection | INSPECTION
-packs manufacturing
 tags inspection, receiving, incoming, AQL
 purpose Inspect purchased material and parts on receipt against the purchase order, the specification and the inspection plan, and decide whether the lot is released to stock.
 scope Purchased material, parts and services that the inspection plan requires to be inspected on receipt.
@@ -96,7 +95,6 @@ use insp_sampling, insp_characteristics, insp_disposition, insp_signatures
 end
 
 template in-process-inspection | In-Process Inspection | INSPECTION
-packs manufacturing
 tags inspection, in-process, patrol
 purpose Check product at defined operations during production so that nonconforming work is stopped before it moves on.
 scope Operations where the control plan specifies an in-process check.
@@ -120,7 +118,6 @@ use insp_signatures
 end
 
 template final-inspection | Final Inspection | INSPECTION
-packs manufacturing
 tags inspection, final, release
 purpose Confirm that finished product meets every requirement before it is released for shipment, including the evidence that all planned inspections were completed.
 scope Finished product before release.
@@ -138,7 +135,6 @@ use insp_sampling, insp_characteristics, insp_disposition, insp_signatures
 end
 
 template first-piece-inspection | First-Piece Inspection | INSPECTION
-packs manufacturing
 tags inspection, first piece, set-up approval
 purpose Approve the first part produced after a set-up, tool change, material change or long stoppage before the run continues.
 scope Every set-up and change the control plan names.
@@ -162,7 +158,6 @@ use insp_signatures
 end
 
 template dock-audit | Dock Audit | INSPECTION
-packs manufacturing
 tags inspection, dock audit, outgoing
 purpose Audit packed product at the shipping dock from the customer's point of view: right part, right quantity, right labels, right packaging and right documents.
 scope Shipments selected by the dock audit plan.
@@ -189,7 +184,6 @@ use insp_signatures
 end
 
 template packaging-inspection | Packaging Inspection | INSPECTION
-packs manufacturing
 tags inspection, packaging, labelling
 purpose Verify that packaging and labelling meet the packaging specification before product is packed or shipped.
 scope Packaging lines and packed product as the plan requires.
@@ -213,7 +207,6 @@ use insp_disposition, insp_signatures
 end
 
 template sample-inspection | Sample Inspection | INSPECTION
-packs manufacturing
 tags inspection, sampling, AQL, sampling inspection
 purpose Inspect a sample drawn from a lot to the organization's approved sampling plan and decide the lot from the number of defectives found.
 scope Lots inspected by sampling rather than 100 percent.
@@ -224,7 +217,6 @@ use insp_header, insp_sampling, insp_characteristics, insp_disposition, insp_sig
 end
 
 template lot-acceptance-inspection | Lot Acceptance Inspection | INSPECTION
-packs manufacturing
 tags inspection, lot acceptance, lot inspection, AQL
 purpose Decide whether a lot is accepted, rejected or sorted, on the basis of a sample inspection and the lot's documentation, and record the decision with its authority.
 scope Lots presented for acceptance: purchased, produced or returned.
@@ -242,7 +234,6 @@ use insp_disposition, insp_signatures
 end
 
 template skip-lot-inspection | Skip-Lot Inspection | INSPECTION
-packs manufacturing
 tags inspection, skip lot
 purpose Record a lot received under skip-lot status: whether the lot was selected for inspection or skipped, and the result when inspected.
 scope Part and supplier combinations qualified for skip-lot inspection.
@@ -260,7 +251,6 @@ use insp_sampling, insp_characteristics, insp_disposition, insp_signatures
 end
 
 template skip-lot-review | Skip-Lot Review | INSPECTION
-packs manufacturing
 tags inspection, skip lot, qualification
 purpose Decide whether a part and supplier combination qualifies for, stays on, or leaves skip-lot inspection, from its recent lot history.
 scope Part and supplier combinations considered for reduced inspection.
@@ -288,7 +278,6 @@ f slr_next_review | Next review | date
 end
 
 template inspection-plan-template | Inspection Plan | INSPECTION
-packs manufacturing
 tags inspection plan, characteristics, sampling
 purpose Define what is inspected for a part at each inspection point: characteristics, methods, equipment, sample size, frequency and reaction.
 scope Parts that need receiving, in-process or final inspection.
@@ -322,7 +311,6 @@ use approval_trio
 end
 
 template characteristic-results | Characteristic Results | INSPECTION
-packs manufacturing
 tags inspection, results, variables
 purpose Record variable measurements for characteristics, with summary statistics calculated live for each characteristic.
 scope Inspections that record measured values.
@@ -352,7 +340,6 @@ use insp_signatures
 end
 
 template defect-summary | Defect Summary | INSPECTION
-packs manufacturing
 tags inspection, defects, Pareto
 purpose Summarize the defects found over a period by type, with counts, share and cumulative share for Pareto analysis.
 scope Any inspection point or product over a reporting period.
@@ -380,7 +367,6 @@ use approval_trio
 end
 
 template lot-disposition | Lot Disposition | INSPECTION
-packs manufacturing
 tags inspection, lot disposition, hold, release
 purpose Record the authorized disposition of a lot that is held: the reason, the decision, the quantities in each outcome and the authority.
 scope Lots held by inspection, by a nonconformance, or by a customer or supplier notice.

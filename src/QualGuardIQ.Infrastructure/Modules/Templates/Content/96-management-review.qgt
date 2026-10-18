@@ -1,0 +1,293 @@
+# Management review templates (TECH 4).
+
+block mr_header
+section mr_meeting | Review | 3
+f mrv_title | Review | text | *
+f mrv_date | Date | date | *
+f mrv_chair | Chair | user | *
+f mrv_period | Period reviewed | text | *
+f mrv_site | Site | site
+f mrv_record | Management review record | record
+end
+
+block mr_signatures
+sign mr_prepared | Prepared by | prepared | I prepared this record and the information in it is complete.
+sign mr_approved | Approved by | approved | I approve this management review record. | reviews.approve
+end
+
+block mr_kpi_table
+table kpi_rows | Indicators | 1
+c kpi_name | Indicator | text | *
+c kpi_target | Target | number | * dec=2
+c kpi_actual | Actual | number | * dec=2
+c kpi_previous | Previous period | number | dec=2
+c kpi_higher_better | Higher is better | boolean
+c kpi_met | Target met | calc | {IF(kpi_higher_better, IF(kpi_actual >= kpi_target, "Yes", "No"), IF(kpi_actual <= kpi_target, "Yes", "No"))}
+c kpi_trend | Trend | calc | {IF(ISNUMBER(kpi_previous), IF(kpi_actual = kpi_previous, "Flat", IF(kpi_higher_better, IF(kpi_actual > kpi_previous, "Better", "Worse"), IF(kpi_actual < kpi_previous, "Better", "Worse"))), "")}
+c kpi_comment | Comment | text
+rule kpi_rows.kpi_met | equals | No | #FDE7E9 | bold
+rule kpi_rows.kpi_trend | equals | Worse | #FFF4D6
+f kpi_missed | Indicators below target | calc | {COUNTIF(kpi_rows.kpi_met, "No")}
+f kpi_worse | Indicators getting worse | calc | {COUNTIF(kpi_rows.kpi_trend, "Worse")}
+end
+
+block mr_conclusion
+section mr_conclusion_section | Conclusions | 1
+f mrc_conclusion | Conclusion | longtext | *
+f mrc_actions_needed | Actions needed | longtext
+end
+
+template mr-agenda | Agenda | MANAGEMENT_REVIEW
+tags management review, agenda
+purpose Set the agenda of a management review so every required input is covered, with the presenter and the time for each item.
+scope Every management review meeting.
+instructions Include every input the organization's procedure requires. Send the agenda and the input package before the meeting.
+workflow Drafted, issued, followed.
+retention Keep with the management review record.
+use mr_header
+section mr_agenda_items | Agenda | 1
+table mra_rows | Items | 0
+rows Actions from previous reviews; Changes in external and internal issues; Customer satisfaction and feedback; Quality objectives; Process performance and product conformity; Nonconformities and corrective actions; Monitoring and measurement results; Audit results; Supplier performance; Adequacy of resources; Effectiveness of actions on risks and opportunities; Opportunities for improvement
+c mra_presenter | Presenter | user
+c mra_minutes | Minutes | integer | min=0
+c mra_input | Input record | record
+total mra_minutes | sum | Total minutes
+use mr_signatures
+end
+
+template mr-attendance | Attendance | MANAGEMENT_REVIEW
+tags management review, attendance
+purpose Record who attended a management review, in what role, and confirm that top management was present.
+scope Every management review meeting.
+instructions List each attendee and absentee. The review needs the members of top management the procedure names.
+workflow Recorded at the meeting.
+retention Keep with the management review record.
+use mr_header
+section mr_people | Attendance | 1
+table mat_rows | People | 2
+c mat_person | Person | user | *
+c mat_role | Role | text | *
+c mat_top | Top management | boolean
+c mat_present | Present | choice | * [Present; Absent; Delegate sent]
+rule mat_rows.mat_present | equals | Absent | #FFF4D6
+f mat_present_count | Present | calc | {COUNTIF(mat_rows.mat_present, "Present")}
+f mat_top_count | Top management members listed | calc | {COUNTIF(mat_rows.mat_top, TRUE)}
+use mr_signatures
+end
+
+template mr-input-package | Input Package | MANAGEMENT_REVIEW
+tags management review, inputs
+purpose Collect every management review input in one controlled package, with its owner, the data source and a summary of the result.
+scope Every management review.
+instructions Each input owner adds a short summary and links the evidence before the meeting. Missing inputs are shown.
+workflow Inputs collected, package issued, reviewed at the meeting.
+retention Keep with the management review record.
+use mr_header
+section mip | Inputs | 1
+table mip_rows | Inputs | 0
+rows Status of actions from previous reviews; Changes in external and internal issues; Customer satisfaction and feedback; Extent to which quality objectives were met; Process performance and product conformity; Nonconformities and corrective actions; Monitoring and measurement results; Audit results; Performance of external providers; Adequacy of resources; Effectiveness of actions on risks and opportunities; Opportunities for improvement
+c mip_owner | Owner | user
+c mip_summary | Summary | longtext
+c mip_evidence | Evidence | record
+c mip_status | Status | choice | * [Ready; Missing; Not applicable]
+rule mip_rows.mip_status | equals | Missing | #FDE7E9 | bold
+f mip_missing | Inputs missing | calc | {COUNTIF(mip_rows.mip_status, "Missing")}
+use mr_signatures
+end
+
+template mr-kpi-review | KPI Review | MANAGEMENT_REVIEW
+tags management review, KPI, objectives
+purpose Review the key performance indicators and quality objectives against their targets and trends, and decide where action is needed.
+scope Indicators and objectives reported to management review.
+instructions Enter each indicator with its target, actual and previous result. Whether the target is met and the trend are calculated.
+workflow Compiled, reviewed at the meeting, actions assigned.
+retention Keep with the management review record.
+use mr_header
+section mr_kpis | Indicators | 1
+use mr_kpi_table, mr_conclusion, mr_signatures
+end
+
+template mr-audit-review | Audit Review | MANAGEMENT_REVIEW
+tags management review, audit results
+purpose Review the results of internal and external audits in the period: programme completion, findings by type and process, and the status of their actions.
+scope Audits completed in the review period.
+instructions Summarize each audit and its findings. Highlight repeat findings and overdue actions.
+workflow Compiled, reviewed, actions assigned.
+retention Keep with the management review record.
+use mr_header
+section mar | Audits | 1
+table mar_rows | Audits | 1
+c ma_audit | Audit | record
+c ma_type | Type | choice | [Internal; Customer; Certification; Regulatory; Supplier]
+c ma_major | Major | integer | min=0
+c ma_minor | Minor | integer | min=0
+c ma_obs | Observations | integer | min=0
+c ma_open | Actions open | integer | min=0
+c ma_overdue | Actions overdue | integer | min=0
+total ma_major | sum | Major
+total ma_minor | sum | Minor
+total ma_overdue | sum | Overdue
+f mar_programme | Programme completion | percent | min=0 max=100
+use mr_conclusion, mr_signatures
+end
+
+template mr-complaint-review | Complaint Review | MANAGEMENT_REVIEW
+tags management review, complaints
+purpose Review customer complaints in the period by category, customer and product, with trends and the status of investigations.
+scope Complaints received or closed in the review period.
+instructions Summarize by category. Compare with the previous period. Highlight safety-related and repeat complaints.
+workflow Compiled, reviewed, actions assigned.
+retention Keep with the management review record.
+use mr_header
+section mcr | Complaints | 1
+table mcr_rows | Categories | 1
+c mc_category | Category | text | *
+c mc_count | This period | integer | * min=0
+c mc_previous | Previous period | integer | min=0
+c mc_change | Change | calc | {IF(ISNUMBER(mc_previous), mc_count - mc_previous, "")}
+c mc_open | Open | integer | min=0
+rule mcr_rows.mc_change | greaterThan | 0 | #FFF4D6 | bold
+total mc_count | sum | Total
+total mc_open | sum | Open
+f mcr_safety | Safety-related complaints | integer | min=0
+rule mcr_safety | greaterThan | 0 | #FDE7E9 | bold
+use mr_conclusion, mr_signatures
+end
+
+template mr-supplier-review | Supplier Review | MANAGEMENT_REVIEW
+tags management review, supplier performance
+purpose Review the performance of external providers in the period: ratings, quality, delivery, corrective actions and changes in approval status.
+scope Suppliers in the supplier performance programme.
+instructions Summarize the supplier ratings and list the suppliers below target with their development status.
+workflow Compiled, reviewed, actions assigned.
+retention Keep with the management review record.
+use mr_header
+section msr | Suppliers | 1
+table msr_rows | Suppliers below target or of note | 1
+c ms_supplier | Supplier | supplier | *
+c ms_rating | Rating | choice | [A; B; C; D]
+c ms_ppm | PPM | number | min=0 dec=0
+c ms_otd | On-time % | percent | min=0 max=100
+c ms_status | Development status | text
+rule msr_rows.ms_rating | equals | D | #FDE7E9 | bold
+f msr_count_d | Suppliers rated D | calc | {COUNTIF(msr_rows.ms_rating, "D")}
+use mr_conclusion, mr_signatures
+end
+
+template mr-risk-review | Risk Review | MANAGEMENT_REVIEW
+tags management review, risks, opportunities
+purpose Review the effectiveness of actions on risks and opportunities, and the changes to the top risks since the last review.
+scope The organization's risk and opportunity registers.
+instructions List the top risks with their current and previous scores. Confirm whether the actions taken were effective.
+workflow Compiled, reviewed, decisions recorded.
+retention Keep with the management review record.
+use mr_header
+section mrr | Risks | 1
+table mrr_rows | Top risks | 1
+c mk_risk | Risk | text | *
+c mk_score | Current score | integer | * min=1 max=25
+c mk_previous | Previous score | integer | min=1 max=25
+c mk_change | Change | calc | {IF(ISNUMBER(mk_previous), mk_score - mk_previous, "")}
+c mk_effective | Actions effective | choice | [Yes; Partly; No; No actions]
+rule mrr_rows.mk_score | greaterOrEqual | 15 | #FDE7E9 | bold
+rule mrr_rows.mk_effective | equals | No | #FFF4D6 | bold
+use mr_conclusion, mr_signatures
+end
+
+template mr-resource-review | Resource Review | MANAGEMENT_REVIEW
+tags management review, resources
+purpose Review whether resources (people, infrastructure, environment, measurement, knowledge) are adequate for the plans ahead, and record the decisions.
+scope Resources needed for the management system and the planned work.
+instructions For each area state whether resources are adequate and what is needed.
+workflow Compiled, reviewed, decisions recorded.
+retention Keep with the management review record.
+use mr_header
+section mres | Resources | 1
+table mres_rows | Areas | 0
+rows People and competence; Infrastructure and equipment; Work environment; Monitoring and measuring resources; Organizational knowledge; Information systems; Budget
+c mre_adequate | Adequate | choice | * [Yes; Partly; No]
+c mre_need | What is needed | text
+c mre_decision | Decision | text
+rule mres_rows.mre_adequate | equals | No | #FDE7E9 | bold
+use mr_signatures
+end
+
+template mr-decisions | Decisions | MANAGEMENT_REVIEW
+tags management review, decisions, outputs
+purpose Record the decisions of a management review on improvement, changes needed to the management system and resource needs.
+scope Every management review.
+instructions Record each decision with its category, owner and the action or record that implements it.
+workflow Recorded at the meeting, approved, actions tracked.
+retention Keep with the management review record.
+use mr_header
+section mdec | Decisions | 1
+table mdec_rows | Decisions | 1
+c md_decision | Decision | longtext | *
+c md_category | Category | choice | * [Improvement opportunity; Change to the management system; Resource need; Objective change; Other]
+c md_owner | Owner | user | *
+c md_due | Due | date
+c md_record | Action or record | record
+use mr_signatures
+end
+
+template mr-action-register | Action Register | MANAGEMENT_REVIEW
+tags management review, actions
+purpose Track every action from management reviews to completion, including actions carried forward from previous reviews.
+scope Actions arising from management reviews.
+instructions Carry open actions forward to each review. Overdue actions are shown and discussed first at the next review.
+workflow Maintained, reviewed at each management review.
+retention Keep with the management review records.
+section mar_as_of | Register | 2
+f mra_as_of | As of | date | *
+f mra_owner | Maintained by | user | *
+section mar_actions | Actions | 1
+table mact_rows | Actions | 1
+c mx_review | From review | text | *
+c mx_action | Action | longtext | *
+c mx_owner | Owner | user | *
+c mx_due | Due | date | *
+c mx_done | Done | date
+c mx_status | Status | calc | {IF(ISNUMBER(DAYS(mx_done, mx_due)), "Closed", IF(DAYS(mx_due, mra_as_of) < 0, "Overdue", "Open"))}
+rule mact_rows.mx_status | equals | Overdue | #FDE7E9 | bold
+f mx_open | Open | calc | {COUNTIF(mact_rows.mx_status, "Open")}
+f mx_overdue | Overdue | calc | {COUNTIF(mact_rows.mx_status, "Overdue")}
+use mr_signatures
+end
+
+template mr-minutes | Minutes | MANAGEMENT_REVIEW
+tags management review, minutes
+purpose Record the discussion and conclusions of a management review for each agenda item.
+scope Every management review meeting.
+instructions Record the main points, the conclusion and any decision for each item. Decisions and actions are also recorded in the decisions record and the action register.
+workflow Drafted after the meeting, reviewed by the attendees, approved.
+retention Keep with the management review record.
+use mr_header
+section mins | Minutes | 1
+table min_rows | Items | 1
+c mn_item | Agenda item | text | *
+c mn_discussion | Discussion | longtext | *
+c mn_conclusion | Conclusion | longtext
+c mn_decision | Decision or action | text
+use mr_conclusion, mr_signatures
+end
+
+template mr-approval | Approval | MANAGEMENT_REVIEW
+tags management review, approval, sign-off
+purpose Approve the management review record as complete: every input reviewed, every output recorded and the conclusion on the suitability, adequacy and effectiveness of the management system.
+scope Every management review.
+instructions Confirm each condition. Top management signs the conclusion.
+workflow Conditions confirmed, signed by top management.
+retention Keep with the management review record.
+use mr_header
+section mapp | Approval | 2
+f mp_inputs | Every required input reviewed | boolean | *
+f mp_outputs | Decisions and actions recorded | boolean | *
+f mp_suitable | Management system is suitable | choice | * [Yes; With improvements; No]
+f mp_adequate | Management system is adequate | choice | * [Yes; With improvements; No]
+f mp_effective | Management system is effective | choice | * [Yes; With improvements; No]
+f mp_statement | Conclusion statement | longtext | *
+f mp_next | Next review | date | *
+rule mp_effective | equals | No | #FDE7E9 | bold
+sign mp_chair | Chair | approved | I approve this management review and its conclusion. | reviews.approve
+sign mp_top | Top management | approved | I agree with the conclusion of this management review. | reviews.approve | optional
+end

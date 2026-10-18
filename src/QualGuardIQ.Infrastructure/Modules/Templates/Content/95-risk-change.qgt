@@ -1,0 +1,322 @@
+# Risk and change templates (TECH 4).
+
+block risk_scoring_table
+c rk_likelihood | Likelihood (1 to 5) | integer | * min=1 max=5
+c rk_impact | Impact (1 to 5) | integer | * min=1 max=5
+c rk_score | Score | calc | {rk_likelihood * rk_impact}
+c rk_level | Level | calc | {IF(rk_likelihood * rk_impact >= 15, "High", IF(rk_likelihood * rk_impact >= 8, "Medium", "Low"))}
+c rk_control | Controls or actions | text
+c rk_owner | Owner | user
+c rk_residual_l | Residual likelihood | integer | min=1 max=5
+c rk_residual_i | Residual impact | integer | min=1 max=5
+c rk_residual | Residual score | calc | {IF(AND(ISNUMBER(rk_residual_l), ISNUMBER(rk_residual_i)), rk_residual_l * rk_residual_i, "")}
+end
+
+block change_header
+section change_id | Change | 2
+f ch_title | Change | text | *
+f ch_type | Type | choice | * [Product design; Process; Material; Supplier; Equipment or tooling; Facility; Software or system; Organization; Document]
+f ch_description | Description | longtext | *
+f ch_reason | Reason | longtext | *
+f ch_requested_by | Requested by | user | *
+f ch_requested_on | Requested on | date | *
+f ch_target | Target implementation date | date
+f ch_record | Change record | record
+end
+
+block change_signatures
+sign ch_prepared | Prepared by | prepared | I prepared this record and the information in it is complete.
+sign ch_reviewed | Reviewed by | reviewed | I reviewed this change and its assessment. | changes.edit
+sign ch_approved | Approved by | approved | I approve this change as recorded. | changes.approve
+end
+
+block risk_signatures
+sign rk_prepared | Prepared by | prepared | I prepared this assessment with the people who know the process or product.
+sign rk_reviewed | Reviewed by | reviewed | I reviewed this assessment. | risks.edit
+sign rk_approved | Approved by | approved | I approve this assessment and the controls. | risks.approve
+end
+
+template risk-register | Risk Register | RISK_CHANGE
+tags risk register, risks
+purpose Keep the register of risks to the organization's objectives, products and processes, scored before and after controls, with owners and review dates.
+scope Risks identified by processes, functions and sites.
+instructions Score each risk on the organization's scales. High risks need controls with an owner. Review each risk at its review date or when something changes.
+workflow Maintained by risk owners, reviewed quarterly, reported to management review.
+retention Keep each revision for the retention period set by the organization.
+landscape
+section rr | Risks | 1
+table rr_rows | Risks | 1
+c rr_risk | Risk | text | *
+c rr_category | Category | choice | * [Strategic; Operational; Product; Supplier; Compliance; Financial; Health and safety; Information security]
+c rr_process | Process | text
+use risk_scoring_table
+c rr_review | Review due | date
+rule rr_rows.rk_level | equals | High | #FDE7E9 | bold
+rule rr_rows.rk_level | equals | Medium | #FFF4D6
+f rr_count | Risks | calc | {COUNTA(rr_rows.rr_risk)}
+f rr_high | High | calc | {COUNTIF(rr_rows.rk_level, "High")}
+f rr_medium | Medium | calc | {COUNTIF(rr_rows.rk_level, "Medium")}
+use risk_signatures
+end
+
+template opportunity-register | Opportunity Register | RISK_CHANGE
+tags opportunity register, improvement
+purpose Register opportunities to improve, with their expected benefit, effort and priority, so the best ones are pursued.
+scope Opportunities identified anywhere in the organization.
+instructions Rate benefit and effort. Priority is calculated: high benefit with low effort comes first.
+workflow Maintained, reviewed quarterly, selected opportunities become projects or actions.
+retention Keep each revision for the retention period set by the organization.
+landscape
+section orr | Opportunities | 1
+table or_rows | Opportunities | 1
+c op_opportunity | Opportunity | text | *
+c op_source | Source | choice | [Suggestion; Audit; Data analysis; Customer; Supplier; Benchmarking; Risk assessment]
+c op_benefit | Benefit (1 to 5) | integer | * min=1 max=5
+c op_effort | Effort (1 to 5) | integer | * min=1 max=5
+c op_priority | Priority | calc | {op_benefit * (6 - op_effort)}
+c op_owner | Owner | user
+c op_status | Status | choice | [Proposed; Approved; In progress; Realized; Rejected]
+c op_value | Estimated annual value | currency | min=0
+rule or_rows.op_priority | greaterOrEqual | 15 | #E6F4EA | bold
+total op_value | sum | Estimated value
+use risk_signatures
+end
+
+template product-risk-assessment | Product Risk Assessment | RISK_CHANGE
+tags product risk, hazard analysis
+purpose Identify hazards a product can present across its life, estimate risk before and after controls, and confirm the residual risk is acceptable.
+scope Products under design, change or post-market review.
+instructions List hazards, the sequences of events and the harms. Score each before and after controls. Record how each control is verified. The overall residual risk is accepted by the authorized person.
+workflow Drafted, reviewed by the team, controls verified, accepted, updated from field data.
+retention Keep for the life of the product plus the retention period set by the organization.
+landscape
+section pra_scope | Product | 3
+f pra_product | Product | product | *
+f pra_revision | Design revision | text
+f pra_intended_use | Intended use | longtext | *
+section pra_hazards | Hazards | 1
+table pra_rows | Hazards | 1
+c ph_hazard | Hazard | text | *
+c ph_sequence | Sequence of events | text
+c ph_harm | Harm | text | *
+use risk_scoring_table
+c ph_verification | Control verification | text
+rule pra_rows.rk_level | equals | High | #FDE7E9 | bold
+section pra_result | Result | 2
+f pra_high_residual | Hazards with residual score of 15 or more | calc | {COUNTIF(pra_rows.rk_residual, ">=15")}
+f pra_acceptable | Overall residual risk acceptable | choice | * [Yes; No - benefit-risk review needed]
+f pra_rationale | Rationale | longtext | *
+use risk_signatures
+end
+
+template process-risk-assessment | Process Risk Assessment | RISK_CHANGE
+tags process risk, risk assessment
+purpose Assess the risks in a process (to output quality, safety, delivery and compliance) and the controls that keep them acceptable.
+scope Processes in the process map and new or changed processes.
+instructions Walk through the process with the people who run it. Score each risk before and after controls. Link the PFMEA where one exists.
+workflow Assessed, controls agreed, approved, reviewed on change.
+retention Keep for the retention period set by the organization.
+section pr_scope | Process | 3
+f prs_process | Process | text | *
+f prs_owner | Process owner | user | *
+f prs_pfmea | PFMEA | record
+section pr_risks | Risks | 1
+table prs_rows | Risks | 1
+c pr_step | Step | text | *
+c pr_risk | Risk | text | *
+use risk_scoring_table
+rule prs_rows.rk_level | equals | High | #FDE7E9 | bold
+f prs_high | High risks | calc | {COUNTIF(prs_rows.rk_level, "High")}
+use risk_signatures
+end
+
+template supply-risk-assessment | Supplier Risk Assessment | RISK_CHANGE
+tags supplier risk, risk register
+purpose Record supply-chain risks in the risk register: for each supplier or commodity, the risk, its score, the mitigation and the owner.
+scope Suppliers and commodities that the organization depends on.
+instructions Score each risk. Mitigations include second sources, safety stock, audits and contracts. This register entry links to the supplier quality risk assessment where one exists.
+workflow Assessed, mitigations agreed, approved, reviewed quarterly.
+retention Keep for the retention period set by the organization.
+landscape
+section srr | Supply risks | 1
+table srr_rows | Risks | 1
+c sx_supplier | Supplier | supplier
+c sx_commodity | Commodity | text | *
+c sx_risk | Risk | text | *
+use risk_scoring_table
+c sx_assessment | Supplier risk assessment | record
+rule srr_rows.rk_level | equals | High | #FDE7E9 | bold
+use risk_signatures
+end
+
+template change-request | Change Request | RISK_CHANGE
+tags change request, change control
+purpose Request a change to a product, process, material, supplier, equipment, facility or system, so it can be assessed before it is made.
+scope Every change that may affect product conformity, customers or the management system.
+instructions Describe what changes and why. The change is not made until it is assessed and approved; customer approval is obtained where required.
+workflow Requested, screened, assessed, approved or rejected.
+retention Keep for the life of the product plus the retention period set by the organization.
+use change_header
+section cr_screen | Screening | 2
+f crq_classification | Classification | choice | * [Minor; Major; Emergency]
+f crq_customer_notice | Customer notification or approval required | boolean | *
+f crq_regulatory | Regulatory notification required | boolean
+f crq_cost | Estimated cost | currency | min=0
+f crq_benefit | Expected benefit | longtext
+rule crq_classification | equals | Emergency | #FDE7E9 | bold
+use change_signatures
+end
+
+template change-impact-assessment | Change Impact Assessment | RISK_CHANGE
+tags change impact, assessment
+purpose Assess everything a change touches (documents, records, training, product already made, suppliers, customers, validation and regulatory filings) before it is approved.
+scope Every change request assessed for approval.
+instructions Answer each area. For each area affected, record what must be done and who does it. Affected areas become tasks in the implementation plan.
+workflow Assessed by each function, reviewed, approved.
+retention Keep for the life of the product plus the retention period set by the organization.
+use change_header
+section cia_areas | Impact areas | 1
+table cia_rows | Areas | 0
+rows Drawings and specifications; Procedures and work instructions; Forms and records; PFMEA and control plan; Training; Inventory and work in process; Product already shipped; Tooling and equipment; Measurement and test; Suppliers; Customers and approvals; Validation and verification; Regulatory filings; Software and systems; Health, safety and environment; Cost and capacity
+c cia_affected | Affected | choice | * [Yes; No; To be determined]
+c cia_what | What must be done | text
+c cia_owner | Owner | user
+c cia_due | Due | date
+rule cia_rows.cia_affected | equals | Yes | #FFF4D6 | bold
+rule cia_rows.cia_affected | equals | To be determined | #FDE7E9
+section cia_result | Result | 3
+f cia_yes | Areas affected | calc | {COUNTIF(cia_rows.cia_affected, "Yes")}
+f cia_tbd | Areas to be determined | calc | {COUNTIF(cia_rows.cia_affected, "To be determined")}
+f cia_ready | Ready for approval | calc | {IF(cia_tbd = 0, "Yes", "No")}
+use change_signatures
+end
+
+template change-risk-assessment | Change Risk Assessment | RISK_CHANGE
+tags change risk
+purpose Assess the risks the change introduces and the risks of not making it, with the controls that make the change safe to implement.
+scope Major and emergency changes, and minor changes the screening flags.
+instructions List each risk of the change and its controls. Include the risk of making no change. High residual risks need higher approval.
+workflow Assessed, controls agreed, approved.
+retention Keep for the life of the product plus the retention period set by the organization.
+use change_header
+section cra | Risks | 1
+table cra_rows | Risks | 1
+c cx_risk | Risk | text | *
+c cx_when | When | choice | [During implementation; After implementation; If not implemented]
+use risk_scoring_table
+rule cra_rows.rk_level | equals | High | #FDE7E9 | bold
+f cra_high_residual | High residual risks | calc | {COUNTIF(cra_rows.rk_residual, ">=15")}
+use change_signatures
+end
+
+template implementation-plan | Implementation Plan | RISK_CHANGE
+tags implementation plan, change tasks
+purpose Plan and track the tasks that implement an approved change, with the effective point (date, lot or serial) and the verification before release.
+scope Approved changes.
+instructions Every area affected in the impact assessment has at least one task. Set the effective point. The change is released only when every task is complete and verified.
+workflow Planned, tasks executed, verified, released.
+retention Keep for the life of the product plus the retention period set by the organization.
+use change_header
+section ip_effectivity | Effective point | 3
+f ipl_effective_type | Effective by | choice | * [Date; Lot; Serial number; Work order; Stock exhaustion]
+f ipl_effective_value | Effective date, lot or serial | text | *
+f ipl_old_stock | Old stock handling | choice | [Use up; Rework; Scrap; Return to supplier; Not applicable]
+section ip_tasks | Tasks | 1
+table ipl_tasks | Tasks | 1
+c it_task | Task | text | *
+c it_area | Area | text
+c it_owner | Owner | user | *
+c it_due | Due | date | *
+c it_done | Done | date
+c it_verified | Verified | boolean
+c it_status | Status | calc | {IF(it_verified, "Verified", IF(ISNUMBER(DAYS(it_done, it_due)), "Done", "Open"))}
+rule ipl_tasks.it_status | equals | Open | #FFF4D6
+section ip_progress | Progress | 3
+f it_total | Tasks | calc | {COUNTA(ipl_tasks.it_task)}
+f it_verified_count | Verified | calc | {COUNTIF(ipl_tasks.it_status, "Verified")}
+f it_ready | Ready to release | calc | {IF(AND(it_total > 0, it_verified_count = it_total), "Yes", "No")}
+use change_signatures
+end
+
+template post-implementation-review | Post-Implementation Review | RISK_CHANGE
+tags post-implementation review, change verification
+purpose Review a change after it is implemented to confirm it achieved its purpose, caused no unwanted effects and that every record was updated.
+scope Implemented changes, at the review date set at approval.
+instructions Compare the results with the expected benefit. Check for unwanted effects in quality, delivery and cost data. Confirm documents and records are updated.
+workflow Review due, reviewed, closed or new change raised.
+retention Keep for the life of the product plus the retention period set by the organization.
+use change_header
+section pir | Review | 1
+table pir_rows | Questions | 0
+rows The change achieved its purpose; No unwanted effects on quality; No unwanted effects on delivery or cost; Documents and records are updated; Training was completed; Customers and suppliers were informed as required; Old material was handled as planned
+c pq_answer | Answer | choice | * [Yes; No; Not applicable]
+c pq_evidence | Evidence | text
+rule pir_rows.pq_answer | equals | No | #FDE7E9 | bold
+section pir_result | Result | 2
+f pir_no | Answers No | calc | {COUNTIF(pir_rows.pq_answer, "No")}
+f pir_decision | Decision | choice | * [Close change; Close with actions; Raise new change]
+use change_signatures
+end
+
+template temporary-deviation | Temporary Deviation | RISK_CHANGE
+tags deviation, temporary, waiver
+purpose Authorize a temporary departure from a documented requirement because of an unexpected condition, limited in time or quantity, with the controls applied.
+scope Unplanned departures from drawings, specifications, procedures or processes.
+instructions State the requirement, the departure and the limits. Add controls that protect the customer. The deviation ends at its limit; it cannot be extended without a new approval.
+workflow Requested, risk assessed, approved, limits tracked, closed.
+retention Keep for the life of the product plus the retention period set by the organization.
+section td | Deviation | 2
+f td_requirement | Requirement departed from | longtext | *
+f td_departure | Departure | longtext | *
+f td_reason | Reason | longtext | *
+f td_from | Valid from | date | *
+f td_to | Valid to | date | *
+f td_qty_limit | Quantity limit | integer | min=1
+f td_days | Duration (days) | calc | {DAYS(td_to, td_from)}
+f td_controls | Controls applied | longtext | *
+f td_customer_approval | Customer approval reference | text
+f td_identification | How affected product is identified | text | *
+check td_to | greaterOrEqual | td_from | The end date cannot be before the start date.
+rule td_days | greaterThan | 30 | #FFF4D6 | bold
+use change_signatures
+end
+
+template planned-deviation | Planned Deviation | RISK_CHANGE
+tags deviation, planned
+purpose Authorize in advance a planned, one-time departure from a requirement (for a trial, a qualification run or a transition), with its scope and its return to standard.
+scope Planned trials and transitions that cannot follow the current documents.
+instructions Plan the departure, its controls and how product made under it is evaluated. Return to the standard method is confirmed at the end.
+workflow Planned, approved, executed, evaluated, closed.
+retention Keep for the life of the product plus the retention period set by the organization.
+section pd | Deviation | 2
+f pd_purpose | Purpose | longtext | *
+f pd_requirement | Requirement departed from | longtext | *
+f pd_planned_method | Planned method | longtext | *
+f pd_scope | Lots, orders or quantity | text | *
+f pd_start | Planned start | date | *
+f pd_end | Planned end | date | *
+f pd_evaluation | How product will be evaluated | longtext | *
+f pd_returned | Returned to standard method on | date
+check pd_end | greaterOrEqual | pd_start | The end date cannot be before the start date.
+use change_signatures
+end
+
+template emergency-change | Emergency Change | RISK_CHANGE
+tags emergency change
+purpose Record a change made urgently to protect safety, the customer or supply, before full assessment, and complete the assessment and approval afterwards within the set time.
+scope Changes that cannot wait for the normal change process.
+instructions Record who authorized the change and why it could not wait. Complete the impact and risk assessments within the time the organization sets; the change is reversed if they are not approved.
+workflow Authorized verbally, implemented, recorded, assessed after the fact, approved or reversed.
+retention Keep for the life of the product plus the retention period set by the organization.
+use change_header
+section ec | Emergency | 2
+f ec_why_urgent | Why it could not wait | longtext | *
+f ec_authorized_by | Authorized by | user | *
+f ec_authorized_at | Authorized at | datetime | *
+f ec_implemented_at | Implemented at | datetime
+f ec_assessment_due | Full assessment due | date | *
+f ec_impact | Impact assessment | record
+f ec_risk | Risk assessment | record
+f ec_outcome | Outcome | choice | [Approved after assessment; Reversed]
+use change_signatures
+end

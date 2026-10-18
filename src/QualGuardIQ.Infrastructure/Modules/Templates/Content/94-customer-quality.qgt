@@ -1,0 +1,273 @@
+# Customer quality templates (TECH 4).
+
+block customer_header
+section cust_id | Customer and product | 3
+f cq_customer | Customer | customer | *
+f cq_customer_ref | Customer reference | text
+f cq_contact | Customer contact | text
+f cq_part | Part | part
+f cq_product | Product | product
+f cq_lot | Lot, serial or date code | text
+f cq_received | Received on | date | *
+f cq_owner | Owner | user | *
+end
+
+block customer_signatures
+sign cq_prepared | Prepared by | prepared | I prepared this record and the information in it is complete.
+sign cq_reviewed | Reviewed by | reviewed | I reviewed this record. | complaints.edit
+sign cq_approved | Approved by | approved | I approve this record. | complaints.approve
+end
+
+template complaint-intake | Complaint Intake | CUSTOMER_QUALITY
+tags complaint, intake, customer feedback
+purpose Capture a customer complaint completely at first contact: who, what, where, when, how many, the evidence and what the customer expects, and decide how it is handled.
+scope Every complaint about product, service or delivery, received by any channel.
+instructions Record the customer's words. Ask for samples, photos and lot information. Assess safety and reportability at intake; urgent complaints are escalated the same day.
+workflow Received, triaged, assigned, acknowledged to the customer.
+retention Keep for the life of the product plus the retention period set by the organization.
+use customer_header
+section intake | Complaint | 2
+f ci_channel | Received by | choice | * [E-mail; Phone; Portal; Sales; Field service; Social media; Regulator]
+f ci_description | Complaint in the customer's words | longtext | *
+f ci_category | Category | choice | * [Product quality; Function or performance; Delivery; Packaging or labelling; Documentation; Service; Safety]
+f ci_qty | Quantity affected | integer | min=0
+f ci_expectation | What the customer expects | longtext
+f ci_samples | Samples to be returned | boolean
+f ci_evidence | Photos and evidence | attachment
+section triage | Triage | 3
+f ci_safety | Safety concern | boolean | *
+f ci_reportable | Possibly reportable to a regulator | boolean | *
+f ci_severity | Severity | choice | * [Critical; Major; Minor]
+f ci_priority | Priority | calc | {IF(OR(ci_safety, ci_reportable, ci_severity = "Critical"), "Urgent", IF(ci_severity = "Major", "High", "Normal"))}
+f ci_ack_due | Acknowledge by | date
+f ci_route | Handled as | choice | [Complaint investigation; Return; Warranty; Information only]
+rule ci_priority | equals | Urgent | #FDE7E9 | bold
+rule ci_priority | equals | High | #FFF4D6 | bold
+use customer_signatures
+end
+
+template return-authorization | Return Authorization | CUSTOMER_QUALITY
+tags RMA, return, authorization
+purpose Authorize the return of product from a customer: the reason, the quantity, the shipping instructions and how the returned product will be handled.
+scope Returns for evaluation, credit, repair or replacement.
+instructions Give the customer the authorization number and the shipping instructions. Returned product is received into quarantine until evaluated.
+workflow Requested, authorized, shipped by customer, received, evaluated, closed.
+retention Keep for the retention period set by the organization.
+use customer_header
+section rma | Return | 2
+f rma_number | Return authorization number | text
+f rma_reason | Reason | choice | * [Defective; Wrong part; Damaged in transit; Excess stock; Warranty; Evaluation requested]
+f rma_complaint | Related complaint | record
+f rma_qty | Quantity authorized | integer | * min=1
+f rma_qty_received | Quantity received | integer | min=0
+f rma_instructions | Shipping instructions | longtext
+f rma_disposition | Planned handling | choice | [Evaluate; Credit; Replace; Repair and return; Scrap at customer]
+f rma_expires | Authorization valid until | date
+f rma_qty_check | Received matches authorized | calc | {IF(ISNUMBER(rma_qty_received), IF(rma_qty_received = rma_qty, "Yes", "No"), "")}
+rule rma_qty_check | equals | No | #FFF4D6 | bold
+use customer_signatures
+end
+
+template returned-product-evaluation | Returned Product Evaluation | CUSTOMER_QUALITY
+tags returned product, failure analysis, evaluation
+purpose Evaluate returned product to confirm or not the reported failure, find the failure mode and decide the outcome for each unit.
+scope Product returned for evaluation.
+instructions Record the condition as received before testing. Test each unit. A failure that cannot be reproduced is recorded as no fault found, with the tests done.
+workflow Received, evaluated, outcome decided, results shared with the customer.
+retention Keep for the life of the product plus the retention period set by the organization.
+use customer_header
+section rpe_receipt | Receipt | 2
+f rpe_rma | Return authorization | record
+f rpe_condition | Condition as received | longtext | *
+f rpe_photos | Photos as received | photo
+section rpe_units | Units evaluated | 1
+table rpe_rows | Units | 1
+c ru_serial | Serial or identification | text | *
+c ru_reported | Reported failure | text
+c ru_tests | Tests performed | text | *
+c ru_confirmed | Failure confirmed | choice | * [Confirmed; Not confirmed - no fault found; Different failure found]
+c ru_mode | Failure mode | text
+c ru_cause | Cause category | choice | [Design; Manufacturing; Supplier; Handling; Misuse; Wear; Unknown]
+c ru_outcome | Outcome | choice | [Repair; Replace; Credit; Scrap; Return as is]
+rule rpe_rows.ru_confirmed | equals | Confirmed | #FDE7E9 | bold
+section rpe_summary | Summary | 3
+f rpe_total | Units evaluated | calc | {COUNTA(rpe_rows.ru_serial)}
+f rpe_confirmed_count | Failures confirmed | calc | {COUNTIF(rpe_rows.ru_confirmed, "Confirmed")}
+f rpe_nff | No fault found | calc | {COUNTIF(rpe_rows.ru_confirmed, "Not confirmed - no fault found")}
+f rpe_capa | Corrective action | record
+use customer_signatures
+end
+
+template customer-investigation | Customer Investigation | CUSTOMER_QUALITY
+tags complaint investigation, root cause
+purpose Investigate a customer complaint: contain, find the cause, decide the correction and corrective action, and assess whether other customers or products are affected.
+scope Complaints that need investigation.
+instructions Contain first, then investigate. Record whether other lots, products or customers are affected. Link a corrective action when the cause is systemic.
+workflow Opened, contained, investigated, actions decided, response sent, closed.
+retention Keep for the life of the product plus the retention period set by the organization.
+use customer_header
+section inv_containment | Containment | 2
+f cvi_complaint | Complaint | record | *
+f cvi_containment | Containment actions | longtext | *
+f cvi_stock_checked | Stock and work in process checked | boolean
+f cvi_other_customers | Other customers possibly affected | boolean
+section inv_cause | Investigation | 2
+f cvi_method | Method | multichoice | [Five whys; Fishbone; Is and is not; Data analysis; Failure analysis; Process review]
+f cvi_occurrence | Cause of occurrence | longtext | *
+f cvi_escape | Cause of escape | longtext
+f cvi_confirmed | Cause confirmed | boolean
+f cvi_capa | Corrective action | record
+use action_plan, customer_signatures
+end
+
+template customer-response | Customer Response | CUSTOMER_QUALITY
+tags customer response, complaint closure, letter
+purpose Prepare the organization's formal response to a customer complaint: what was found, what was done and what will prevent recurrence.
+scope Complaints that need a formal response.
+instructions Answer in plain terms. State the containment, the cause and the actions with dates. Responses are approved before they are sent.
+workflow Drafted, approved, sent, customer acceptance recorded.
+retention Keep for the life of the product plus the retention period set by the organization.
+use customer_header
+section resp | Response | 1
+f cr_complaint | Complaint | record | *
+f cr_summary | Summary of the complaint | longtext | *
+f cr_findings | What we found | longtext | *
+f cr_containment | Containment | longtext | *
+f cr_actions | Corrective actions and dates | longtext | *
+f cr_due | Response due | date
+f cr_sent | Sent on | date
+f cr_on_time | Sent on time | calc | {IF(AND(ISNUMBER(DAYS(cr_sent, cr_due))), IF(DAYS(cr_sent, cr_due) <= 0, "Yes", "No"), "")}
+f cr_customer_accepts | Customer accepted the response | choice | [Awaiting; Accepted; Not accepted]
+rule cr_on_time | equals | No | #FFF4D6 | bold
+use customer_signatures
+end
+
+template warranty-evaluation | Warranty Evaluation | CUSTOMER_QUALITY
+tags warranty, claim evaluation
+purpose Evaluate a warranty claim against the warranty terms and the evidence, decide acceptance and record the cost and any recovery.
+scope Warranty claims from customers and dealers.
+instructions Check coverage first (period, use and terms), then the failure. Record the cost. Supplier-caused failures are charged back where agreed.
+workflow Claim received, coverage checked, failure evaluated, decision approved, settled.
+retention Keep for the warranty period plus the retention period set by the organization.
+use customer_header
+section wty | Claim | 3
+f we_claim | Claim number | text | *
+f we_in_service | In service since | date
+f we_failed_on | Failed on | date | *
+f we_period_months | Warranty period (months) | integer | * min=0
+f we_age_days | Age at failure (days) | calc | {DAYS(we_failed_on, we_in_service)}
+f we_in_period | Within warranty period | calc | {IF(ISNUMBER(we_age_days), IF(we_age_days <= we_period_months * 30.4, "Yes", "No"), "")}
+f we_usage | Usage at failure | text
+rule we_in_period | equals | No | #FFF4D6 | bold
+section wty_decision | Decision | 3
+f we_failure | Failure confirmed | choice | [Confirmed; Not confirmed; Not evaluated]
+f we_cause | Cause | choice | [Manufacturing; Design; Supplier; Misuse; Wear; Unknown]
+f we_decision | Decision | choice | * [Accepted; Accepted as goodwill; Rejected]
+f we_parts_cost | Parts | currency | min=0
+f we_labour_cost | Labour | currency | min=0
+f we_other_cost | Other | currency | min=0
+f we_total | Total cost | calc | {we_parts_cost + we_labour_cost + we_other_cost} dec=2
+f we_recovery | Recoverable from supplier | currency | min=0
+f we_net | Net cost | calc | {we_total - we_recovery} dec=2
+use customer_signatures
+end
+
+template field-failure | Field Failure | CUSTOMER_QUALITY
+tags field failure, reliability
+purpose Record a failure of product in use: the conditions, the failure mode, the effect on the user and the analysis, and feed reliability and design data.
+scope Failures in service reported by customers, service or monitoring.
+instructions Record the operating conditions and hours or cycles. Assess the effect on safety. Trends across field failures are reviewed for recall assessment.
+workflow Reported, analysed, actions decided, closed.
+retention Keep for the life of the product plus the retention period set by the organization.
+use customer_header
+section ff | Failure | 3
+f ff_hours | Hours or cycles at failure | number | min=0
+f ff_environment | Operating environment | text
+f ff_mode | Failure mode | text | *
+f ff_effect | Effect on the user | longtext | *
+f ff_safety | Safety effect | boolean | *
+f ff_injury | Injury or damage reported | boolean
+f ff_analysis | Analysis | longtext
+f ff_cause | Cause | text
+f ff_recall_review | Recall assessment needed | calc | {IF(OR(ff_safety, ff_injury), "Yes", "No")}
+rule ff_recall_review | equals | Yes | #FDE7E9 | bold
+use customer_signatures
+end
+
+template recall-assessment | Recall Assessment | CUSTOMER_QUALITY
+tags recall, field action, health hazard
+purpose Assess whether a field problem needs a recall or field action: the hazard, the population affected, the likelihood and the decision, with the notifications required.
+scope Problems with product in the field that may affect safety, compliance or performance.
+instructions Define the affected population by lot, serial and date. Assess severity and probability. The decision and the notifications are approved by the people the organization authorizes.
+workflow Opened, population defined, risk assessed, decision approved, notifications made.
+retention Keep for the life of the product plus the retention period set by the organization, or longer where regulation requires.
+confidential
+section ra_problem | Problem | 2
+f rc_problem | Problem | longtext | *
+f rc_source | Source records | record
+f rc_product | Product | product | *
+f rc_population | Affected population (lots, serials, dates) | longtext | *
+f rc_units_shipped | Units shipped | integer | * min=0
+f rc_units_field | Units estimated in use | integer | min=0
+section ra_risk | Risk | 3
+f rc_severity | Severity (1 to 5) | integer | * min=1 max=5
+f rc_probability | Probability (1 to 5) | integer | * min=1 max=5
+f rc_score | Risk score | calc | {rc_severity * rc_probability}
+f rc_level | Risk level | calc | {IF(rc_score >= 15, "High", IF(rc_score >= 8, "Medium", "Low"))}
+rule rc_level | equals | High | #FDE7E9 | bold
+section ra_decision | Decision | 2
+f rc_decision | Decision | choice | * [No action; Monitor; Field correction; Recall; Stop shipment]
+f rc_rationale | Rationale | longtext | *
+f rc_regulator | Regulator notification required | boolean
+f rc_customers | Customer notification required | boolean
+f rc_recall_record | Recall record | record
+use customer_signatures
+end
+
+template csr-register | Customer-Specific Requirement Register | CUSTOMER_QUALITY
+tags customer-specific requirements, CSR, register
+purpose Register each customer's specific requirements, where each is addressed in the management system and who owns it, and track revisions.
+scope Customers with specific requirements.
+instructions List each requirement with its source document and revision. Record where it is addressed (procedure, form, plan). Review when the customer issues a new revision.
+workflow Maintained, reviewed at each customer revision, approved.
+retention Keep each revision for the retention period set by the organization.
+landscape
+section csrr | Register | 2
+f csrg_customer | Customer | customer | *
+f csrg_source | Source document and revision | text | *
+f csrg_checked | Last checked for new revision | date
+section csrr_rows | Requirements | 1
+table csrg_rows | Requirements | 1
+c cg_ref | Reference | text | *
+c cg_summary | Requirement (own summary) | longtext | *
+c cg_where | Addressed in | text | *
+c cg_owner | Owner | user
+c cg_status | Status | choice | * [Addressed; Partly addressed; Not addressed; Not applicable]
+rule csrg_rows.cg_status | equals | Not addressed | #FDE7E9 | bold
+f cg_open | Not addressed | calc | {COUNTIF(csrg_rows.cg_status, "Not addressed") + COUNTIF(csrg_rows.cg_status, "Partly addressed")}
+use customer_signatures
+end
+
+template customer-satisfaction-review | Customer Satisfaction Review | CUSTOMER_QUALITY
+tags customer satisfaction, perception, scorecards
+purpose Review the customer's perception of performance from scorecards, surveys, complaints and delivery data, and decide improvement actions.
+scope Customers reviewed at the frequency the organization sets.
+instructions Enter each source with its result and the target. Results below target need an action.
+workflow Compiled, reviewed, actions assigned, input to management review.
+retention Keep for the retention period set by the organization.
+section csr_scope | Scope | 3
+f cs_customer | Customer | customer | *
+f cs_period | Period | text | *
+f cs_reviewer | Reviewer | user | *
+section csr_sources | Sources | 1
+table cs_rows | Measures | 1
+c cs_source | Source | choice | * [Customer scorecard; Survey; Complaints; Delivery performance; Returns; Visits and meetings]
+c cs_measure | Measure | text | *
+c cs_result | Result | number | dec=2
+c cs_target | Target | number | dec=2
+c cs_higher_better | Higher is better | boolean
+c cs_met | Target met | calc | {IF(AND(ISNUMBER(cs_result), ISNUMBER(cs_target)), IF(cs_higher_better, IF(cs_result >= cs_target, "Yes", "No"), IF(cs_result <= cs_target, "Yes", "No")), "")}
+rule cs_rows.cs_met | equals | No | #FDE7E9 | bold
+f cs_missed | Targets missed | calc | {COUNTIF(cs_rows.cs_met, "No")}
+use action_plan, customer_signatures
+end
