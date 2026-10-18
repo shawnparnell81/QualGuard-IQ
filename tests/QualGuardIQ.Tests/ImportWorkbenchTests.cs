@@ -82,7 +82,7 @@ public sealed class ImportWorkbenchTests(TestApp app)
         Assert.Equal(1, dry.GetProperty("valid").GetInt32());
         Assert.Equal(1, dry.GetProperty("inError").GetInt32());
         Assert.Equal(1, dry.GetProperty("toCreate").GetInt32());
-        Assert.Equal(site.ToString(), dry.GetProperty("preview")[0].GetProperty("values").GetProperty("plant").GetString());
+        Assert.Equal(code, dry.GetProperty("preview")[0].GetProperty("values").GetProperty("plant").GetString());
         Assert.Contains("missing reference", dry.GetProperty("preview")[1].GetProperty("problems")[0].GetString());
         var steps = (await author.GetElAsync($"/api/imports/{first}/workbench")).EnumerateArray().ToList();
         Assert.Equal(11, steps.Count);

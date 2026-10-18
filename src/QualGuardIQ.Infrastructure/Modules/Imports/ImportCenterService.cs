@@ -571,6 +571,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         {
             rows++;
             var (vals, problems) = Transform(cells, maps, o);
+            var shown = new Dictionary<string, string?>(vals); // the preview shows references as the file gives them
             if (problems.Count == 0) await ResolveReferencesAsync(job, vals, byKey, problems, ct);
             if (problems.Count == 0) problems.AddRange(await target.ValidateAsync(job, vals, ct));
             var dup = false; string action = "create"; IReadOnlyDictionary<string, string?>? before = null;
@@ -595,7 +596,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             if (problems.Count > 0) { invalid++; if (invalid <= 1000) AddIssue(job, $"row {line}", line, ImportIssueSeverity.Error, "ROW", string.Join(" ", problems), "Correct the row in the file or change the mapping."); }
             else if (!dup) valid++;
             if (problems.Count > 0) action = "error"; else if (dup) action = "skip";
-            if (preview.Count < 20) preview.Add(new ImportRow(line, vals, problems, dup, action, before));
+            if (preview.Count < 20) preview.Add(new ImportRow(line, shown, problems, dup, action, before));
             if (rows % 500 == 0) job.Progress = Math.Min(60, 30 + (int)(30.0 * rows / Math.Max(1, job.TotalRows)));
         }
         job.Progress = 60;
