@@ -301,6 +301,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
             e.ToTable("approval_decisions");
             e.Property(x => x.StepName).HasMaxLength(100).IsRequired();
             e.Property(x => x.SignerName).HasMaxLength(200).IsRequired();
+            e.Property(x => x.OnBehalfOfName).HasMaxLength(200);
             e.Property(x => x.Meaning).HasMaxLength(100).IsRequired();
             e.Property(x => x.Verification).HasMaxLength(30);
             e.Property(x => x.SignatureHash).HasMaxLength(64);

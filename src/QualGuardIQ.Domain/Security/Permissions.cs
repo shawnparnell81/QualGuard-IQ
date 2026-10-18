@@ -192,6 +192,14 @@ public static class Permissions
     /// <summary>Approve board report editions for distribution.</summary>
     public const string ReportsApprove = "reports.approve";
 
+    /// <summary>Quality events, deviations, investigations, release decisions, registers and quality reviews.</summary>
+    public const string QualityOpsView = "qualityops.view";
+    public const string QualityOpsEdit = "qualityops.edit";
+    /// <summary>Approve deviations and quality reviews, and sign product and batch release decisions.</summary>
+    public const string QualityOpsApprove = "qualityops.approve";
+    /// <summary>Report a quality event (shop floor, mobile and integration intake) without other quality operations access.</summary>
+    public const string QualityEventsReport = "qualityevents.report";
+
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
         .Where(f => f.IsLiteral && f.FieldType == typeof(string))

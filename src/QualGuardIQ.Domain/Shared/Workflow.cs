@@ -78,6 +78,9 @@ public class ApprovalDecision
     public string StepName { get; set; } = "";
     public Guid SignerId { get; set; }
     public string SignerName { get; set; } = "";
+    /// <summary>Set when the signer acted under an approval delegation from this person.</summary>
+    public Guid? OnBehalfOfId { get; set; }
+    public string? OnBehalfOfName { get; set; }
     public bool Approved { get; set; }
     public string Meaning { get; set; } = "";
     public string? Comment { get; set; }
