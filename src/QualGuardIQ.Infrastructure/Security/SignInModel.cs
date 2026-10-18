@@ -11,6 +11,7 @@ public partial class AppDbContext
     public DbSet<TrustedDevice> TrustedDevices => Set<TrustedDevice>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
     public DbSet<PasswordHistoryEntry> PasswordHistory => Set<PasswordHistoryEntry>();
+    public DbSet<RevokedSession> RevokedSessions => Set<RevokedSession>();
 
     private static void ConfigureSignInSecurity(ModelBuilder b)
     {
@@ -49,6 +50,11 @@ public partial class AppDbContext
             e.ToTable("password_history"); e.Property(x => x.PasswordHash).HasMaxLength(500).IsRequired();
             e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.UserId, x.CreatedAt });
+        });
+        b.Entity<RevokedSession>(e =>
+        {
+            e.ToTable("revoked_sessions"); e.HasKey(x => x.SessionId); e.Property(x => x.SessionId).HasMaxLength(64);
+            e.HasIndex(x => x.ExpiresAt);
         });
     }
 }

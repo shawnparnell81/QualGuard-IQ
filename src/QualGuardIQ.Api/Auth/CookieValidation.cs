@@ -8,7 +8,8 @@ namespace QualGuardIQ.Api.Auth;
 
 /// <summary>
 /// Validates the session on every request: disabled users and users whose security stamp changed
-/// (password reset, forced sign-out, role change) are rejected immediately.
+/// (password reset, forced sign-out, role change) are rejected immediately, as are signed-out sessions and sessions older than the
+/// maximum session length.
 /// </summary>
 public static class CookieValidation
 {
@@ -18,7 +19,8 @@ public static class CookieValidation
         var id = ctx.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
         var stamp = ctx.Principal?.FindFirstValue("AspNet.Identity.SecurityStamp");
         var user = id is null ? null : await users.FindByIdAsync(id);
-        if (user is null || !user.IsActive || user.SecurityStamp != stamp)
+        if (user is null || !user.IsActive || user.SecurityStamp != stamp
+            || await ctx.HttpContext.RequestServices.GetRequiredService<QualGuardIQ.Infrastructure.Security.SessionRevocation>().RejectReasonAsync(ctx.Principal!) is not null)
         {
             ctx.RejectPrincipal();
             await ctx.HttpContext.SignOutAsync(IdentityConstants.ApplicationScheme);

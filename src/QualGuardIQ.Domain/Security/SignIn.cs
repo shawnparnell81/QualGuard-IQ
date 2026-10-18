@@ -69,3 +69,12 @@ public class PasswordHistoryEntry
     public string PasswordHash { get; set; } = "";
     public DateTimeOffset CreatedAt { get; set; }
 }
+
+/// <summary>A signed-out browser session or access token. Requests carrying its session id are refused until it would have expired anyway.</summary>
+public class RevokedSession
+{
+    public string SessionId { get; set; } = "";
+    public Guid UserId { get; set; }
+    public DateTimeOffset RevokedAt { get; set; }
+    public DateTimeOffset ExpiresAt { get; set; }
+}

@@ -8,6 +8,8 @@ public sealed class AuthOptions
     public int ChallengeMinutes { get; set; } = 5;
     /// <summary>Upper limit for the organization's "trust this browser" period.</summary>
     public int TrustedDeviceMaxDays { get; set; } = 30;
+    /// <summary>Longest a browser session lasts from sign-in, however active it is. The 8-hour idle timeout still applies inside it.</summary>
+    public int SessionAbsoluteHours { get; set; } = 12;
     public MfaSettings Mfa { get; set; } = new();
     public PasswordSettings Password { get; set; } = new();
     public LockoutSettings Lockout { get; set; } = new();
