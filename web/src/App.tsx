@@ -226,6 +226,10 @@ const SqfLists = lazy(() => import('./sequfloh/Parts').then((m) => ({ default: m
 const SqfList = lazy(() => import('./sequfloh/Parts').then((m) => ({ default: m.PartsListDetailPage })));
 const SqfSteps = lazy(() => import('./sequfloh/Parts').then((m) => ({ default: m.OperationStepsPage })));
 const SqfRevisions = lazy(() => import('./sequfloh/Parts').then((m) => ({ default: m.RevisionHistoryPage })));
+const SqfWiFolder = lazy(() => import('./sequfloh/Instructions').then((m) => ({ default: m.InstructionsFolderPage })));
+const SqfWiNew = lazy(() => import('./sequfloh/Instructions').then((m) => ({ default: m.NewInstructionPage })));
+const SqfWi = lazy(() => import('./sequfloh/Instructions').then((m) => ({ default: m.InstructionPage })));
+const SqfWiTemplates = lazy(() => import('./sequfloh/Instructions').then((m) => ({ default: m.TemplatesPage })));
 const RiskList = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskList })));
 const RiskNew = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskNew })));
 const RiskDetail = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskDetail })));
@@ -403,6 +407,10 @@ export function App() {
               <Route path="/sequfloh/parts-lists/:id" element={<SqfList />} />
               <Route path="/sequfloh/operation-steps" element={<SqfSteps />} />
               <Route path="/sequfloh/revision-history" element={<SqfRevisions />} />
+              <Route path="/sequfloh/instructions/new" element={<SqfWiNew />} />
+              <Route path="/sequfloh/instructions/templates" element={<SqfWiTemplates />} />
+              <Route path="/sequfloh/instructions/:folder" element={<SqfWiFolder />} />
+              <Route path="/sequfloh/instruction/:id" element={<SqfWi />} />
               <Route path="/risks" element={<RiskList />} />
               <Route path="/risks/new" element={<RiskNew />} />
               <Route path="/risks/matrix" element={<RiskMatrix />} />
