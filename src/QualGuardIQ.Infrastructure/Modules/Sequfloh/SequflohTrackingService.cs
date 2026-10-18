@@ -124,6 +124,20 @@ public sealed class SequflohTrackingService(AppDbContext db, ModuleSupport m, IN
         return list;
     }
 
+    /// <summary>The next required action shown on the Active Station, derived from the stored state and the completion rules.</summary>
+    public static string NextAction(SequflohTrackingRecord r, IReadOnlyList<string> problems) => r.Status switch
+    {
+        TrackingStatus.NotStarted => "Dispatch the task to a user.",
+        TrackingStatus.Assigned => "Start the task.",
+        TrackingStatus.Paused => $"Resume the task (paused: {r.PauseReason ?? "no reason"}).",
+        TrackingStatus.OnHold => $"Resolve the hold and resume (hold: {r.HoldReason ?? "no reason"}).",
+        TrackingStatus.InProgress or TrackingStatus.PendingInspection when problems.Count > 0 => problems[0],
+        TrackingStatus.InProgress or TrackingStatus.PendingInspection => r.QualityReviewRequired || r.EngineeringReviewRequired ? "Submit for review." : "Complete the task.",
+        TrackingStatus.PendingReview => r.QualityReviewRequired && r.QualityReviewedAt is null ? "Quality review of the results." : "Engineering review of the results.",
+        TrackingStatus.Failed or TrackingStatus.Rejected => "Restart for rework when authorized.",
+        _ => "No action required."
+    };
+
     // ------------------------------------------------------------------ create
     public async Task<SequflohTrackingRecord> CreateAsync(TrackingCreateInput r, CancellationToken ct)
     {
