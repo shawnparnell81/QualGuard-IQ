@@ -45,6 +45,8 @@ public interface IImportTarget
     Task<(string? Before, string? Refused)> UpdateAsync(ImportJob job, Guid id, IReadOnlyDictionary<string, string?> row, CancellationToken ct) => Task.FromResult<(string?, string?)>((null, "Records of this kind are not updated by imports."));
     /// <summary>Puts back the values an import replaced; returns a reason when that is no longer possible.</summary>
     Task<string?> RevertAsync(ImportJob job, Guid id, string before, CancellationToken ct) => Task.FromResult<string?>("Updates of this kind cannot be undone.");
+    /// <summary>Called once after the last row, inside the import transaction, before it commits (for example to hand back reserved numbers).</summary>
+    Task CompleteAsync(ImportJob job, CancellationToken ct) => Task.CompletedTask;
 }
 
 /// <summary>Rows become draft form records of an effective form template; columns map to the template's fields.</summary>
@@ -125,7 +127,7 @@ public sealed class FormRecordImportTarget(AppDbContext db, INumberingService nu
         var title = row.GetValueOrDefault("__title");
         var rec = new FormRecord
         {
-            Number = await numbers.NextAsync(RecordType, job.SiteId, ct), TemplateId = doc.Id, TemplateRevisionId = rev.Id, TemplateNumber = doc.Number, TemplateRevision = rev.Revision,
+            Number = await NextNumberAsync(job, ct), TemplateId = doc.Id, TemplateRevisionId = rev.Id, TemplateNumber = doc.Number, TemplateRevision = rev.Revision,
             Title = string.IsNullOrWhiteSpace(title) ? doc.Title : title.Trim()[..Math.Min(title.Trim().Length, 300)], SiteId = job.SiteId, DepartmentId = job.DepartmentId,
             Status = FormRecordStatus.Draft, ValuesJson = JsonSerializer.Serialize(values),
         };
@@ -134,6 +136,30 @@ public sealed class FormRecordImportTarget(AppDbContext db, INumberingService nu
         await db.SaveChangesAsync(ct);
         await m.IndexAsync(RecordType, rec.Id, $"{doc.Number} rev {rev.Revision}", ct);
         return rec.Id;
+    }
+
+    // a bulk import takes its numbers in blocks: one sequence update per block instead of one per row (repeated updates of the same row
+    // inside one transaction slow down with every update); the unused end of the last block is handed back before the import commits
+    NumberBlock? block;
+    object? blockOwner;
+    int taken;
+
+    private async Task<string> NextNumberAsync(ImportJob job, CancellationToken ct)
+    {
+        // a block belongs to one job's transaction; after a rollback its numbers are no longer reserved
+        var owner = (job.Id, db.Database.CurrentTransaction);
+        if (!Equals(blockOwner, owner)) { block = null; taken = 0; blockOwner = owner; }
+        if (block is null || block.IsEmpty)
+            block = await numbers.ReserveAsync(RecordType, job.SiteId, Math.Clamp(job.TotalRows - taken, 1, 500), ct);
+        block.TryTake(out var number);
+        taken++;
+        return number;
+    }
+
+    public async Task CompleteAsync(ImportJob job, CancellationToken ct)
+    {
+        if (block is not null && Equals(blockOwner, (job.Id, db.Database.CurrentTransaction))) await numbers.ReturnUnusedAsync(block, ct);
+        block = null; blockOwner = null; taken = 0;
     }
 
     public bool CanUpdate => true;

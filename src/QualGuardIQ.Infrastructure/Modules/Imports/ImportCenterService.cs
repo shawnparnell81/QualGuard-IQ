@@ -792,16 +792,21 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
                     await KeepCompletedPdfAsync(job, target.RecordType, newId, ct);
                     db.ImportedItems.Add(new ImportedItem { ImportJobId = job.Id, RowNumber = line, TargetType = target.RecordType, TargetId = newId });
                     created++;
+                    if (created % 20 == 0)
+                    {
+                        // rows already written are not needed again; letting go of them keeps each save as quick as the first
+                        await db.SaveChangesAsync(ct);
+                        foreach (var entry in db.ChangeTracker.Entries().Where(e => e.State == EntityState.Unchanged && !ReferenceEquals(e.Entity, job)).ToList()) entry.State = EntityState.Detached;
+                    }
                     if (created % 200 == 0)
                     {
                         job.Progress = Math.Min(99, 60 + (int)(40.0 * created / Math.Max(1, job.TotalRows)));
                         await db.SaveChangesAsync(ct);
-                        // rows already written are not needed again; letting go of them keeps each save as quick as the first
-                        foreach (var entry in db.ChangeTracker.Entries().Where(e => e.State == EntityState.Unchanged && !ReferenceEquals(e.Entity, job)).ToList()) entry.State = EntityState.Detached;
                         live.Set(job.Id, job.Progress, created + updated);
                         if (await CancelRequestedAsync(job, ct)) throw new ImportCanceled();
                     }
                 }
+                await target.CompleteAsync(job, ct);
                 job.ImportedRows = created + updated;
                 job.Progress = 100;
                 job.CompletedAt = clock.UtcNow;
