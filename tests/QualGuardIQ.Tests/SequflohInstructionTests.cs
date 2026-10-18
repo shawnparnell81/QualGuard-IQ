@@ -159,4 +159,40 @@ public sealed class SequflohInstructionTests(TestApp app)
         var cur = (await author.GetElAsync(furl)).GetProperty("instruction").GetProperty("rowVersion").GetUInt32();
         Assert.Equal(HttpStatusCode.Conflict, (await author.PutAsync(furl, Save(f, site, rowVersion: cur + 999))).StatusCode);
     }
+
+    [Fact]
+    public async Task Fai_characteristics_import_from_an_effective_inspection_plan_and_need_inspection_read_access()
+    {
+        var site = await app.CreateSiteAsync();
+        var (authorId, author) = await app.CreateUserAsync([.. AuthorPerms, Permissions.InspectionView], site);
+        var (_, blind) = await app.CreateUserAsync(AuthorPerms, site);
+        var planId = Guid.NewGuid();
+        using (var scope = app.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var rev = new Domain.Quality.InspectionPlanRevision { PlanId = planId, PlanNumber = "IP-T-" + planId.ToString("N")[..6], Revision = "B", Status = Domain.Quality.PlanRevisionStatus.Effective, SiteId = site,
+                Characteristics = [new() { Sequence = 1, Name = "Bore diameter", Target = 6.0m, LowerLimit = 5.9m, UpperLimit = 6.1m, Unit = "mm", Method = "Bore gauge", SampleSize = 5 },
+                                   new() { Sequence = 2, Name = "Surface finish", Specification = "Ra 1.6 max", IsCritical = true }] };
+            db.InspectionPlans.Add(new Domain.Quality.InspectionPlan { Id = planId, Number = rev.PlanNumber, Title = "Housing receiving", SiteId = site, OwnerId = authorId, EffectiveRevisionId = rev.Id });
+            db.InspectionPlanRevisions.Add(rev);
+            await db.SaveChangesAsync();
+        }
+        var wi = await PostEl(author, "/api/sequfloh/instructions", new { type = "Fai", title = "Housing FAI", siteId = site });
+        var url = $"/api/sequfloh/instructions/{wi.Str("id")}";
+        var sources = await author.GetElAsync($"{url}/characteristic-sources");
+        Assert.Contains(sources.EnumerateArray(), x => x.Str("id") == planId.ToString() && x.GetProperty("count").GetInt32() == 2);
+        Assert.Equal(0, (await blind.GetElAsync($"{url}/characteristic-sources")).GetArrayLength());
+        Assert.Equal(HttpStatusCode.Forbidden, (await blind.PostAsync($"{url}/import-characteristics", new { inspectionPlanId = planId })).StatusCode);
+        var r = await PostEl(author, $"{url}/import-characteristics", new { inspectionPlanId = planId });
+        Assert.Equal(2, r.GetProperty("copied").GetInt32());
+        var chars = (await author.GetElAsync(url)).GetProperty("instruction").GetProperty("characteristics").EnumerateArray().ToList();
+        Assert.Equal(["1", "2"], chars.Select(c => c.Str("characteristicNumber")).ToArray());
+        Assert.Equal("Bore diameter", chars[0].Str("requirement"));
+        Assert.Equal(5.9m, chars[0].GetProperty("lowerLimit").GetDecimal());
+        Assert.Contains("(critical)", chars[1].Str("notes"));
+        await PostEl(author, $"{url}/import-characteristics", new { inspectionPlanId = planId });
+        var again = (await author.GetElAsync(url)).GetProperty("instruction").GetProperty("characteristics").EnumerateArray().Select(c => c.Str("characteristicNumber")).ToList();
+        Assert.Equal(4, again.Count);
+        Assert.Equal(again.Count, again.Distinct().Count());
+    }
 }

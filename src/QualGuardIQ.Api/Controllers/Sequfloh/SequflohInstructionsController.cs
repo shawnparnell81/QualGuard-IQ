@@ -14,7 +14,7 @@ namespace QualGuardIQ.Api.Controllers.Sequfloh;
 
 /// <summary>SEQUFLOH work instructions: designer schema, folders, designer load/save, lifecycle actions, revisions, library copies.</summary>
 [ApiController, Authorize, RequirePermission(Permissions.SequflohAccess), SequflohEnabled, Route("api/sequfloh/instructions")]
-public sealed class SequflohInstructionsController(AppDbContext db, ModuleSupport m, SequflohInstructionService wi, SequflohPartsService parts) : ControllerBase
+public sealed class SequflohInstructionsController(AppDbContext db, ModuleSupport m, SequflohInstructionService wi, SequflohPartsService parts, SequflohPrintService print) : ControllerBase
 {
     [HttpGet("schema")] public object Schema() => SequflohDesigner.Schemas.Values;
 
@@ -123,6 +123,14 @@ public sealed class SequflohInstructionsController(AppDbContext db, ModuleSuppor
     public Task<List<object>> CharacteristicSources(Guid id, CancellationToken ct) => wi.CharacteristicSourcesAsync(id, ct);
     [HttpPost("{id:guid}/import-characteristics")] [RequirePermission(Permissions.SequflohEditDraftWorkInstruction)]
     public async Task<object> ImportCharacteristics(Guid id, ImportCharacteristicsInput r, CancellationToken ct) => new { Copied = await wi.ImportCharacteristicsAsync(id, r, ct) };
+    /// <summary>Controlled printable layout (PDF from the application's renderer), opened inline in the browser for printing.</summary>
+    [HttpGet("{id:guid}/print")]
+    public async Task<IActionResult> Print(Guid id, CancellationToken ct)
+    {
+        var (pdf, name) = await print.InstructionAsync(id, ct);
+        Response.Headers.ContentDisposition = $"inline; filename=\"{name}\"";
+        return File(pdf, "application/pdf");
+    }
     [HttpGet("{id:guid}/history")]
     public async Task<object> History(Guid id, CancellationToken ct) { await wi.LoadAsync(id, false, ct); return await parts.HistoryAsync(SequflohInstructionService.EntityType, id, ct); }
 }
