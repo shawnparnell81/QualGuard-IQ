@@ -36,8 +36,8 @@ export function MyTraining() {
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'My training' }]} title="My training">
       <DataTable data={list.data ?? []} columns={cols} empty="No training assigned to you." />
       <StepDialog open={!!signing} title={`Sign off ${signing?.courseNumber ?? ''}`} intro="By signing you confirm that you have read and understood the training material. Your password is your electronic signature." confirm="Sign" onClose={() => setSigning(null)}
-        inputs={[{ name: 'password', label: 'Password', type: 'password' }, { name: 'notes', label: 'Notes (optional)' }]}
-        onConfirm={async (v) => { await post(`/api/training/assignments/${signing!.id}/complete`, { password: v.password, notes: v.notes || null }); qc.invalidateQueries({ queryKey: ['mytraining'] }); }} />
+        inputs={[{ name: 'password', label: 'Password', type: 'password' }, { name: 'mfaCode', label: 'Authenticator code (if your account uses one)' }, { name: 'notes', label: 'Notes (optional)' }]}
+        onConfirm={async (v) => { await post(`/api/training/assignments/${signing!.id}/complete`, { password: v.password, mfaCode: v.mfaCode?.trim() || null, notes: v.notes || null }); qc.invalidateQueries({ queryKey: ['mytraining'] }); }} />
     </ModuleWorkspace>
   );
 }

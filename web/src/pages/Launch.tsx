@@ -86,8 +86,8 @@ export function ProjectDetail() {
         </Stack>
       </Box>
       <StepDialog open={gate} onClose={() => setGate(false)} title={`Phase ${p.currentPhase} gate review`} confirm="Sign decision" intro="Go requires every deliverable of the phase to be done or not applicable. Signing re-enters your password."
-        inputs={[{ name: 'decision', label: 'Decision', type: 'select', options: [[0, 'Go'], [1, 'Conditional go'], [2, 'No-go']], initial: '0' }, { name: 'notes', label: 'Notes', type: 'multiline' }, { name: 'password', label: 'Password', type: 'password' }]}
-        onConfirm={async (v) => { await post(`/api/launch/projects/${id}/gate`, { decision: Number(v.decision), password: v.password, notes: v.notes || null }); qc.invalidateQueries({ queryKey: ['launch-project', id] }); }} />
+        inputs={[{ name: 'decision', label: 'Decision', type: 'select', options: [[0, 'Go'], [1, 'Conditional go'], [2, 'No-go']], initial: '0' }, { name: 'notes', label: 'Notes', type: 'multiline' }, { name: 'password', label: 'Password', type: 'password' }, { name: 'mfaCode', label: 'Authenticator code (if your account uses one)' }]}
+        onConfirm={async (v) => { await post(`/api/launch/projects/${id}/gate`, { decision: Number(v.decision), password: v.password, mfaCode: v.mfaCode?.trim() || null, notes: v.notes || null }); qc.invalidateQueries({ queryKey: ['launch-project', id] }); }} />
     </ModuleWorkspace>
   );
 }
@@ -207,8 +207,8 @@ export function PpapDetail() {
         inputs={[{ name: 'status', label: 'Status', type: 'select', options: [[1, 'Ready'], [2, 'Not applicable'], [0, 'Missing']], initial: '1' }, { name: 'notes', label: 'Evidence / notes', type: 'multiline' }]}
         onConfirm={async (v) => { await put(`/api/launch/ppap/${id}/elements/${el.code}`, { status: Number(v.status), linkedType: null, linkedId: null, notes: v.notes || null }); qc.invalidateQueries({ queryKey: ['ppap', id] }); }} />
       <StepDialog open={dec} onClose={() => setDec(false)} title="Customer decision" confirm="Sign" intro="Approval completes the project's PPAP deliverable."
-        inputs={[{ name: 'decision', label: 'Decision', type: 'select', options: [[2, 'Approved'], [3, 'Interim approval'], [4, 'Rejected']], initial: '2' }, { name: 'customer', label: 'Customer representative' }, { name: 'on', label: 'Decided on', type: 'date' }, { name: 'comments', label: 'Comments', type: 'multiline' }, { name: 'password', label: 'Your password', type: 'password' }]}
-        onConfirm={async (v) => { await post(`/api/launch/ppap/${id}/customer-decision`, { decision: Number(v.decision), customerName: v.customer, decidedOn: v.on, comments: v.comments || null, password: v.password }); qc.invalidateQueries({ queryKey: ['ppap', id] }); }} />
+        inputs={[{ name: 'decision', label: 'Decision', type: 'select', options: [[2, 'Approved'], [3, 'Interim approval'], [4, 'Rejected']], initial: '2' }, { name: 'customer', label: 'Customer representative' }, { name: 'on', label: 'Decided on', type: 'date' }, { name: 'comments', label: 'Comments', type: 'multiline' }, { name: 'password', label: 'Your password', type: 'password' }, { name: 'mfaCode', label: 'Authenticator code (if your account uses one)' }]}
+        onConfirm={async (v) => { await post(`/api/launch/ppap/${id}/customer-decision`, { decision: Number(v.decision), customerName: v.customer, decidedOn: v.on, comments: v.comments || null, password: v.password, mfaCode: v.mfaCode?.trim() || null }); qc.invalidateQueries({ queryKey: ['ppap', id] }); }} />
     </ModuleWorkspace>
   );
 }
