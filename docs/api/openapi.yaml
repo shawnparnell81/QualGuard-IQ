@@ -46826,6 +46826,241 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/sequfloh/dashboard:
+    get:
+      tags:
+        - SequflohDashboard
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.view_dashboard` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/quality/dashboard:
+    get:
+      tags:
+        - SequflohDashboard
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.view_quality_folder` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/engineering/dashboard:
+    get:
+      tags:
+        - SequflohDashboard
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.view_engineering_folder` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/{area}/review-queue':
+    get:
+      tags:
+        - SequflohDashboard
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: area
+          in: path
+          required: true
+          schema:
+            pattern: ^(quality|engineering)$
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: kind
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/execution/queue/{view}':
+    get:
+      tags:
+        - SequflohExecution
+      description: 'Requires permission: `sequfloh.view_live_execution` (site/department scoped).'
+      parameters:
+        - name: view
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: status
+          in: query
+          schema:
+            $ref: '#/components/schemas/TrackingStatus'
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/TrackingType'
+        - name: assigned
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: part
+          in: query
+          schema:
+            type: string
+        - name: department
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: site
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: dateField
+          in: query
+          schema:
+            type: string
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: priority
+          in: query
+          schema:
+            type: string
+        - name: result
+          in: query
+          schema:
+            type: string
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 25
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/execution/counts:
+    get:
+      tags:
+        - SequflohExecution
+      description: 'Requires permission: `sequfloh.view_live_execution` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/sequfloh/execution/events:
+    get:
+      tags:
+        - SequflohExecution
+      description: 'Requires permission: `sequfloh.view_live_execution` (site/department scoped).'
+      parameters:
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: eventType
+          in: query
+          schema:
+            type: string
+        - name: user
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/TrackingType'
+        - name: site
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: sort
+          in: query
+          schema:
+            type: string
+        - name: page
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            pattern: '^-?(?:0|[1-9]\d*)$'
+            type:
+              - integer
+              - string
+            format: int32
+            default: 25
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/sequfloh/context:
     get:
       tags:
@@ -47489,6 +47724,37 @@ paths:
           application/*+json:
             schema:
               $ref: '#/components/schemas/InstructionSaveInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/development':
+    put:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_engineering_folder` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DevelopmentInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/DevelopmentInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/DevelopmentInput'
         required: true
       responses:
         '200':
@@ -56735,6 +57001,35 @@ components:
             - 'null'
             - string
           format: uuid
+    DevelopmentInput:
+      type: object
+      properties:
+        assignedEngineerId:
+          type:
+            - 'null'
+            - string
+          format: uuid
+        targetCompletionDate:
+          type:
+            - 'null'
+            - string
+          format: date
+        project:
+          type:
+            - 'null'
+            - string
+        engineeringNotes:
+          type:
+            - 'null'
+            - string
+        developmentStatus:
+          type:
+            - 'null'
+            - string
+        recommendRelease:
+          type:
+            - 'null'
+            - boolean
     DeviationInput:
       required:
         - testId
@@ -82755,6 +83050,8 @@ tags:
   - name: Shipping
   - name: CarrierIntegration
   - name: ShippingDocument
+  - name: SequflohDashboard
+  - name: SequflohExecution
   - name: SequflohFoundation
   - name: SequflohInstructions
   - name: SequflohParts

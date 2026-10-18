@@ -373,7 +373,7 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
             else { wi.ReleaseRecommendedAt = null; wi.ReleaseRecommendedById = null; changed.Add("release recommendation withdrawn"); }
         }
         if (changed.Count == 0) return wi;
-        f.Audit("WorkInstructionDevelopmentUpdated", EntityType, wi.Id, $"{wi.Number} rev {wi.Revision}: {string.Join(", ", changed)}", wi.SiteId);
+        f.Audit("DevelopmentUpdated", EntityType, wi.Id, $"{wi.Number} rev {wi.Revision}: {string.Join(", ", changed)}", wi.SiteId);
         await db.SaveChangesAsync(ct);
         return wi;
     }
