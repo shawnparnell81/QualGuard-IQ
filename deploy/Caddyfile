@@ -1,0 +1,26 @@
+# Optional HTTPS front end (docker compose profile "https"). Set QG_DOMAIN in .env to the name people type, e.g.
+# qms.example.com. Caddy gets and renews a free Let's Encrypt certificate on its own; the name must point at this
+# computer and ports 80 and 443 must be reachable from the internet.
+# For a server only reachable inside the company network, set QG_TLS=tls internal: Caddy then makes its own certificate,
+# which each browser has to trust once (see the deployment guide).
+{$QG_DOMAIN} {
+	{$QG_TLS}
+	encode gzip
+	request_body {
+		max_size 1100MB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+	# The API gets the real client address and https from Caddy directly.
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+	handle /health/* {
+		reverse_proxy api:8080
+	}
+	handle {
+		reverse_proxy web:80
+	}
+}

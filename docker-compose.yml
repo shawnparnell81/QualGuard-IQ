@@ -4,6 +4,9 @@
 # host, so they never clash with a PostgreSQL server or other services already installed on the computer.
 # File storage: MinIO in a container by default (COMPOSE_PROFILES=minio). For Cloudflare R2, Amazon S3 or another
 # S3-compatible service, set COMPOSE_PROFILES empty and fill in the STORAGE_* values in .env.
+# HTTPS for a server reached by name (optional): add https to COMPOSE_PROFILES and set QG_DOMAIN (see deploy/Caddyfile).
+# Logins: the "migrate" step runs first with the database owner login, updates the database and sets up the limited app login
+# (qgiq_app) that the API and worker use. With MinIO, "minio-init" creates a login that can only use the file bucket.
 
 x-storage: &storage
   Storage__Provider: S3
@@ -11,11 +14,11 @@ x-storage: &storage
   Storage__Bucket: ${STORAGE_BUCKET:-qms-files}
   Storage__Region: ${STORAGE_REGION:-us-east-1}
   Storage__ForcePathStyle: ${STORAGE_FORCE_PATH_STYLE:-true}
-  Storage__AccessKey: ${STORAGE_ACCESS_KEY:-${MINIO_ROOT_USER:-}}
-  Storage__SecretKey: ${STORAGE_SECRET_KEY:-${MINIO_ROOT_PASSWORD:-}}
+  # With the bundled MinIO the app uses the bucket-only login made by minio-init, never the MinIO root login.
+  Storage__AccessKey: ${STORAGE_ACCESS_KEY:-${MINIO_APP_USER:-qgiq-app}}
+  Storage__SecretKey: ${STORAGE_SECRET_KEY:-${MINIO_APP_PASSWORD:-}}
 
-x-app: &app
-  ConnectionStrings__Default: Host=postgres;Database=qgiq;Username=qgiq;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+x-common: &common
   App__BaseUrl: ${APP_BASE_URL:-http://localhost:8081}
   Seed__TimeZone: ${TIME_ZONE:-America/New_York}
   DataProtection__KeyPath: /keys
@@ -23,6 +26,20 @@ x-app: &app
   # Virus scanning is optional: set MALWARE_SCANNER=ClamAV and add clamav to COMPOSE_PROFILES (Intel/AMD computers only).
   MalwareScanning__Provider: ${MALWARE_SCANNER:-None}
   MalwareScanning__ClamAV__Host: clamav
+  # Only the web server and the optional HTTPS front end inside the compose network may report the real client address.
+  ForwardedHeaders__KnownNetworks: ${TRUSTED_PROXY_NETWORKS:-172.16.0.0/12,192.168.0.0/16,10.0.0.0/8}
+
+x-app: &app
+  <<: *common
+  # Day-to-day login: reads and writes data, can't change tables or edit the audit trail.
+  ConnectionStrings__Default: Host=postgres;Database=qgiq;Username=qgiq_app;Password=${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD in .env}
+
+x-seed: &seed
+  Seed__ApplicationName: ${APP_NAME:-QualGuard IQ}
+  Seed__OrganizationName: ${ORGANIZATION_NAME:-Your Organization}
+  Seed__AdminEmail: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
+  Seed__AdminPassword: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
+  Seed__AdminName: ${ADMIN_NAME:-Administrator}
 
 services:
   postgres:
@@ -68,21 +85,50 @@ services:
       interval: 10s
       retries: 10
 
+  minio-init:
+    # Runs once on each start: makes the file bucket and the bucket-only app login. Safe to repeat.
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
+    profiles: [minio]
+    restart: "no"
+    entrypoint: ["/bin/sh", "/init/minio-init.sh"]
+    environment:
+      MINIO_URL: http://minio:9000
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-qgiqminio}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-}
+      APP_ACCESS_KEY: ${MINIO_APP_USER:-qgiq-app}
+      APP_SECRET_KEY: ${MINIO_APP_PASSWORD:-}
+      BUCKET: ${STORAGE_BUCKET:-qms-files}
+    volumes: ["./deploy/minio-init.sh:/init/minio-init.sh:ro"]
+    depends_on:
+      minio: { condition: service_healthy }
+
+  migrate:
+    # Runs once on each start, then exits: database updates, first-run set-up and the app login. Only this step holds the
+    # owner password.
+    build: { context: ., dockerfile: deploy/Dockerfile.api }
+    restart: "no"
+    command: ["migrate"]
+    environment:
+      <<: [*common, *storage, *seed]
+      ConnectionStrings__Default: Host=postgres;Database=qgiq;Username=qgiq;Password=${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      Database__AppRole: qgiq_app
+      Database__AppRolePassword: ${POSTGRES_APP_PASSWORD:?set POSTGRES_APP_PASSWORD in .env}
+    volumes: [dpkeys:/keys]
+    depends_on:
+      postgres: { condition: service_healthy }
+      minio-init: { condition: service_completed_successfully, required: false }
+
   api:
     build: { context: ., dockerfile: deploy/Dockerfile.api }
     restart: unless-stopped
     environment:
       <<: [*app, *storage]
-      Database__MigrateOnStartup: "true"
-      Seed__ApplicationName: ${APP_NAME:-QualGuard IQ}
-      Seed__OrganizationName: ${ORGANIZATION_NAME:-Your Organization}
-      Seed__AdminEmail: ${ADMIN_EMAIL:?set ADMIN_EMAIL in .env}
-      Seed__AdminPassword: ${ADMIN_PASSWORD:?set ADMIN_PASSWORD in .env}
-      Seed__AdminName: ${ADMIN_NAME:-Administrator}
     volumes: [dpkeys:/keys]
     depends_on:
       postgres: { condition: service_healthy }
+      migrate: { condition: service_completed_successfully }
       minio: { condition: service_healthy, required: false }
+      minio-init: { condition: service_completed_successfully, required: false }
       clamav: { condition: service_healthy, required: false }
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health/ready || exit 1"]
@@ -106,8 +152,28 @@ services:
     depends_on:
       api: { condition: service_healthy }
 
+  caddy:
+    # Optional HTTPS front end for a server people reach by name: COMPOSE_PROFILES=...,https and QG_DOMAIN in .env.
+    # Gets and renews a free Let's Encrypt certificate (ports 80 and 443 must reach this computer). Not needed on a laptop:
+    # http://localhost:${WEB_PORT:-8081} keeps working either way.
+    image: caddy:2.11.7-alpine@sha256:d8542f48d34a9cf4e4c11a478865229840e87e4c96ea3f439101f31a5d35f75f
+    profiles: [https]
+    restart: unless-stopped
+    ports: ["80:80", "443:443"]
+    environment:
+      QG_DOMAIN: ${QG_DOMAIN:-localhost}
+      QG_TLS: ${QG_TLS:-}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+    depends_on:
+      web: { condition: service_started }
+
 volumes:
   pgdata:
   miniodata:
   clamdb:
   dpkeys:
+  caddydata:
+  caddyconfig:

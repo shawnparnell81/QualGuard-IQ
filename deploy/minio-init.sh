@@ -2,12 +2,17 @@
 # One-time set-up for the bundled MinIO, run by docker compose on every start (safe to repeat):
 # creates the file bucket and a login that can use only that bucket, so the app never holds the MinIO root keys.
 set -eu
-: "${MINIO_ROOT_USER:?}" "${MINIO_ROOT_PASSWORD:?}" "${APP_ACCESS_KEY:?}" "${APP_SECRET_KEY:?}" "${BUCKET:?}"
+: "${MINIO_ROOT_USER:?set MINIO_ROOT_USER in .env}" "${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD in .env}"
+: "${APP_ACCESS_KEY:?set MINIO_APP_USER in .env}" "${APP_SECRET_KEY:?set MINIO_APP_PASSWORD in .env}" "${BUCKET:?}"
 MINIO_URL=${MINIO_URL:-http://minio:9000}
 MC=${MC:-mc}
 export MC_CONFIG_DIR=${MC_CONFIG_DIR:-/tmp/.mc}
 if [ "$APP_ACCESS_KEY" = "$MINIO_ROOT_USER" ]; then
-  echo "The app storage key must differ from MINIO_ROOT_USER." >&2
+  echo "MINIO_APP_USER must differ from MINIO_ROOT_USER." >&2
+  exit 1
+fi
+if [ "$APP_SECRET_KEY" = "$MINIO_ROOT_PASSWORD" ] || [ ${#APP_SECRET_KEY} -lt 8 ]; then
+  echo "MINIO_APP_PASSWORD must be at least 8 characters and differ from MINIO_ROOT_PASSWORD." >&2
   exit 1
 fi
 "$MC" alias set qgiq "$MINIO_URL" "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null

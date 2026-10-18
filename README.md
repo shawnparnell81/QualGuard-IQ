@@ -55,9 +55,14 @@ npm run dev        # http://localhost:5173, proxies /api to QGIQ_API_URL (defaul
 ## Run with Docker
 
 Copy `.env.example` to `.env`, fill in the values, then `docker compose up -d --build` and open http://localhost:8081.
-Compose includes a ClamAV daemon; the API scans every upload with it. Files go to MinIO in a container by default
-(`COMPOSE_PROFILES=minio`); for Cloudflare R2 or Amazon S3 leave `COMPOSE_PROFILES` empty and fill in the `STORAGE_*` values.
-PostgreSQL is not published on the host. Step-by-step Windows instructions: [docs/guides/laptop-setup.md](docs/guides/laptop-setup.md).
+Virus scanning is off by default: uploads are stored and marked "Not scanned", and administrators see a notice in Admin.
+To scan every upload with ClamAV (Intel/AMD computers only; there is no ARM image), set `MALWARE_SCANNER=ClamAV` and add
+`clamav` to `COMPOSE_PROFILES`. Files go to MinIO in a container by default (`COMPOSE_PROFILES=minio`), using a login that
+can only reach the file bucket; for Cloudflare R2 or Amazon S3 leave `minio` out of `COMPOSE_PROFILES` and fill in the
+`STORAGE_*` values. A one-time `migrate` step updates the database with the owner login; the API and worker use a limited
+login (`POSTGRES_APP_PASSWORD`) that can't change tables or edit the audit trail. PostgreSQL is not published on the host.
+For HTTPS on a server, add `https` to `COMPOSE_PROFILES` and set `QG_DOMAIN` (Caddy with a free Let's Encrypt certificate,
+see `deploy/Caddyfile`). Step-by-step Windows instructions: [docs/guides/laptop-setup.md](docs/guides/laptop-setup.md).
 
 ## File storage and malware scanning
 
