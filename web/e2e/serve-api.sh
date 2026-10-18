@@ -18,6 +18,8 @@ export Email__PickupDirectory=${E2E_MAIL_DIR:-/tmp/qgiq-e2e-mail} Email__From=no
 rm -rf "${E2E_MAIL_DIR:-/tmp/qgiq-e2e-mail}"
 # single sign-on tests use a local fake provider on http://127.0.0.1
 export Sso__AllowHttp=true
+# fake webhook, messaging, carrier and printer servers run on this machine
+export Outbound__AllowedNetworks=127.0.0.0/8,::1
 export RateLimits__LoginPerMinute=1000 RateLimits__RequestsPerMinute=100000 RateLimits__ProcessingPerMinute=100000
 export Storage__ServiceUrl=${E2E_S3_URL:-http://localhost:9000} Storage__AccessKey=${E2E_S3_KEY:-qgiqminio} Storage__SecretKey=${E2E_S3_SECRET:-qgiqminio-local-dev} Storage__Bucket=qms-e2e
 exec dotnet run --project src/QualGuardIQ.Api --no-launch-profile
