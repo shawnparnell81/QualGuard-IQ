@@ -25,27 +25,39 @@ export function useTypeLabel() {
 }
 export const useUsers = () => useQuery({ queryKey: ['userlookup'], queryFn: () => get<{ id: string; displayName: string }[]>('/api/users/lookup') });
 
-/** Label/value list used in record side panels. */
+/** Label/value list used in record side panels: a ruled two-column sheet with labels on the left. */
 export function Facts({ items, children }: { items: [string, ReactNode][]; children?: ReactNode }) {
   return (
-    <Paper sx={{ p: 2, alignSelf: 'start' }}>
-      <Typography variant="overline" color="text.secondary">Details</Typography>
-      {items.map(([k, v]) => (
-        <Box key={k} sx={{ py: 0.75, borderTop: 1, borderColor: 'divider' }}>
-          <Typography variant="caption" color="text.secondary">{k}</Typography>
-          <Typography variant="body2" component="div" sx={{ whiteSpace: 'pre-wrap' }}>{v ?? '—'}</Typography>
-        </Box>
-      ))}
-      {children}
+    <Paper sx={{ alignSelf: 'start', overflow: 'hidden' }}>
+      <PanelHead title="Details" />
+      <Box component="dl" sx={{ m: 0, display: 'grid', gridTemplateColumns: 'minmax(96px, 38%) 1fr' }}>
+        {items.map(([k, v]) => (
+          <Box key={k} sx={{ display: 'contents', '& > *': { px: 2, py: 0.9, borderTop: 1, borderColor: 'divider' } }}>
+            <Typography component="dt" variant="caption" color="text.secondary" sx={{ fontWeight: 600, bgcolor: 'background.band' }}>{k}</Typography>
+            <Typography component="dd" variant="body2" sx={{ m: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{v ?? '—'}</Typography>
+          </Box>
+        ))}
+      </Box>
+      {children && <Box sx={{ px: 2, pb: 2 }}>{children}</Box>}
     </Paper>
+  );
+}
+
+/** Panel header band: small uppercase label on a tinted strip with a rule underneath, optional action on the right. */
+export function PanelHead({ title, action }: { title: ReactNode; action?: ReactNode }) {
+  return (
+    <Stack direction="row" alignItems="center" gap={1} sx={{ px: 2, minHeight: 38, bgcolor: 'background.band', borderBottom: 1, borderColor: 'divider' }}>
+      <Typography variant="overline" component="h3" color="text.secondary" sx={{ flex: 1 }}>{title}</Typography>
+      {action}
+    </Stack>
   );
 }
 
 export function Section({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
   return (
-    <Paper sx={{ p: 2.5 }}>
-      <Stack direction="row" alignItems="center" sx={{ mb: 1.5 }}><Typography variant="h3" sx={{ flex: 1 }}>{title}</Typography>{action}</Stack>
-      {children}
+    <Paper sx={{ overflow: 'hidden' }}>
+      <PanelHead title={title} action={action} />
+      <Box sx={{ p: 2 }}>{children}</Box>
     </Paper>
   );
 }
