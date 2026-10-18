@@ -4399,8 +4399,18 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
 
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("created");
+
                     b.Property<Guid>("ImportJobId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("PreviousValues")
+                        .HasColumnType("jsonb");
 
                     b.Property<bool>("RolledBack")
                         .HasColumnType("boolean");
@@ -4422,7 +4432,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TargetType", "TargetId");
 
-                    b.ToTable("imported_items", "qms");
+                    b.ToTable("imported_items", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_imported_items_action", "\"Action\" IN ('created','updated')");
+                        });
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Integration.ErpChange", b =>

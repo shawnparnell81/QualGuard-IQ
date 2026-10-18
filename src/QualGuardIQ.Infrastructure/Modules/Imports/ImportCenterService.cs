@@ -23,8 +23,8 @@ public sealed record CsvSettingsRequest(string? Encoding, string? Delimiter, boo
 public sealed record MappingInput(string SourceLocation, string? TargetField, string? TransformationRule, string? DefaultValue, bool RequiredValue);
 public sealed record MappingRequest(string? TargetModule, Guid? TargetTemplateId, List<MappingInput> Mappings, uint RowVersion);
 public sealed record ResolveIssueRequest(string Resolution);
-public sealed record ImportRow(int Row, Dictionary<string, string?> Values, List<string> Problems, bool Duplicate);
-public sealed record DryRunSummary(int Rows, int Valid, int Invalid, int Duplicates, int ExistingDuplicates, IReadOnlyList<ImportRow> Preview);
+public sealed record ImportRow(int Row, Dictionary<string, string?> Values, List<string> Problems, bool Duplicate, string Action = "create", IReadOnlyDictionary<string, string?>? Before = null);
+public sealed record DryRunSummary(int Rows, int Valid, int Invalid, int Duplicates, int ExistingDuplicates, IReadOnlyList<ImportRow> Preview, int ToCreate = 0, int ToUpdate = 0, int ToSkip = 0, int InError = 0);
 
 /// <summary>
 /// Import Center (TECH 1/2/7, FI 3/7): intake with security inspection and original-file preservation, inspection and parsing, mapping,
@@ -33,11 +33,11 @@ public sealed record DryRunSummary(int Rows, int Valid, int Invalid, int Duplica
 /// </summary>
 public sealed partial class ImportCenterService(AppDbContext db, IAccessService access, ICurrentUser current, IFileStorage storage, IMalwareScanner scanner,
     INumberingService numbers, IEnumerable<IImportTarget> targets, IClock clock, IConfiguration config, Documents.DocumentService docs, ILegacyOfficeConverter legacy,
-    Pdf.IOcrEngine ocr, Pdf.IPdfPageRenderer pdfPages)
+    Pdf.IOcrEngine ocr, Pdf.IPdfPageRenderer pdfPages, ReferenceResolver refs, Services.AttachmentService attachments, Application.Records.IRecordRegistry records)
 {
     public const string RecordType = "ImportJob";
     public static readonly HashSet<string> Supported = [".csv", ".txt", ".tsv", ".xlsx", ".xlsm", ".xls", ".docx", ".doc", ".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff"];
-    public static readonly string[] Modes = ["records", "template", "document", "master-list"];
+    public static readonly string[] Modes = ["records", "template", "document", "master-list", "attachment"];
     private long MaxBytes => config.GetValue("Imports:MaxFileBytes", 200L * 1024 * 1024);
     /// <summary>Files up to this size are inspected and imported inside the request; larger ones go to the background worker.</summary>
     public long InlineBytes => config.GetValue("Imports:InlineBytes", 5L * 1024 * 1024);
@@ -310,6 +310,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             Transition(job, ImportJobStatus.Parsing);
         }
         if (job.Status != ImportJobStatus.Parsing) return;
+        if (job.ImportMode == "attachment") { await ParseAttachmentAsync(job); await db.SaveChangesAsync(ct); return; }
         if (IsStructured(job))
         {
             try { if (IsWorkbook(job)) await ParseWorkbookAsync(job, ct); else if (IsDocument(job)) await ParseDocumentAsync(job, ct); else await ParsePdfAsync(job, ct); }
@@ -561,15 +562,18 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             AddIssue(job, "mapping", null, ImportIssueSeverity.Error, "UNMAPPED_REQUIRED", $"The required field '{f.Label}' has no column.", "Map a column to it or set a default.");
         var o = Opts(job);
         var keys = await target.DuplicateKeysAsync(job, ct);
+        var byKey = fields.ToDictionary(f => f.Key);
+        var update = ExistingRecordsMode(job) == "update" && target.CanUpdate;
         var seen = new Dictionary<string, int>();
-        int rows = 0, valid = 0, invalid = 0, dups = 0, existing = 0;
+        int rows = 0, valid = 0, invalid = 0, dups = 0, existing = 0, toUpdate = 0;
         var preview = new List<ImportRow>();
         await foreach (var (line, cells) in RowsAsync(job, ct))
         {
             rows++;
             var (vals, problems) = Transform(cells, maps, o);
+            if (problems.Count == 0) await ResolveReferencesAsync(job, vals, byKey, problems, ct);
             if (problems.Count == 0) problems.AddRange(await target.ValidateAsync(job, vals, ct));
-            var dup = false;
+            var dup = false; string action = "create"; IReadOnlyDictionary<string, string?>? before = null;
             if (keys.Count > 0 && problems.Count == 0)
             {
                 var k = string.Join("\u001f", keys.Select(x => vals.GetValueOrDefault(x)?.Trim().ToLowerInvariant()));
@@ -577,18 +581,26 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
                 else
                 {
                     seen[k] = line;
-                    if (await target.ExistsAsync(job, keys.ToDictionary(x => x, x => vals.GetValueOrDefault(x)), ct))
+                    var keyVals = keys.ToDictionary(x => x, x => vals.GetValueOrDefault(x));
+                    if (update && await target.FindAsync(job, keyVals, ct) is { } match)
+                    {
+                        action = "update"; toUpdate++;
+                        var cur = await target.CurrentAsync(job, match, ct);
+                        before = vals.Keys.ToDictionary(k => k, k => cur.GetValueOrDefault(k));
+                    }
+                    else if (await target.ExistsAsync(job, keyVals, ct))
                     { dup = true; existing++; AddIssue(job, $"row {line}", line, ImportIssueSeverity.Warning, "DUPLICATE_EXISTING", $"Row {line} matches an existing record ({string.Join(", ", keys)}).", "It is skipped."); }
                 }
             }
             if (problems.Count > 0) { invalid++; if (invalid <= 1000) AddIssue(job, $"row {line}", line, ImportIssueSeverity.Error, "ROW", string.Join(" ", problems), "Correct the row in the file or change the mapping."); }
             else if (!dup) valid++;
-            if (preview.Count < 20) preview.Add(new ImportRow(line, vals, problems, dup));
+            if (problems.Count > 0) action = "error"; else if (dup) action = "skip";
+            if (preview.Count < 20) preview.Add(new ImportRow(line, vals, problems, dup, action, before));
             if (rows % 500 == 0) job.Progress = Math.Min(60, 30 + (int)(30.0 * rows / Math.Max(1, job.TotalRows)));
         }
         job.Progress = 60;
         if (fields.Any(f => f.Required && maps.All(m => m.TargetField != f.Key)) && invalid == 0) invalid = rows; // nothing can be imported without a required column
-        var summary = new DryRunSummary(rows, valid, invalid, dups, existing, preview);
+        var summary = new DryRunSummary(rows, valid, invalid, dups, existing, preview, Math.Max(0, valid - toUpdate), toUpdate, dups + existing, invalid);
         job.Summary = JsonSerializer.Serialize(new { dryRun = summary, at = clock.UtcNow }, JsonOpts);
         return summary;
     }
@@ -659,16 +671,19 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         var o = Opts(job);
         var skipInvalid = JsonDocument.Parse(job.Settings).RootElement.TryGetProperty("skipInvalidRows", out var sk) && sk.ValueKind == JsonValueKind.True;
         var keys = await target.DuplicateKeysAsync(job, ct);
-        int created = 0, skipped = 0, dupSkipped = 0;
+        var update = ExistingRecordsMode(job) == "update" && target.CanUpdate;
+        int created = 0, skipped = 0, dupSkipped = 0, updated = 0;
         string? failure = null;
         await using (var tx = await db.Database.BeginTransactionAsync(ct))
         {
             try
             {
                 var seen = new HashSet<string>();
+                var byKey = (await target.FieldsAsync(job, ct)).ToDictionary(f => f.Key);
                 await foreach (var (line, cells) in RowsAsync(job, ct))
                 {
                     var (vals, problems) = Transform(cells, maps, o);
+                    if (problems.Count == 0) await ResolveReferencesAsync(job, vals, byKey, problems, ct);
                     if (problems.Count == 0) problems.AddRange(await target.ValidateAsync(job, vals, ct));
                     if (problems.Count > 0)
                     {
@@ -678,7 +693,17 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
                     if (keys.Count > 0)
                     {
                         var k = string.Join("\u001f", keys.Select(x => vals.GetValueOrDefault(x)?.Trim().ToLowerInvariant()));
-                        if (!seen.Add(k) || await target.ExistsAsync(job, keys.ToDictionary(x => x, x => vals.GetValueOrDefault(x)), ct)) { dupSkipped++; continue; }
+                        if (!seen.Add(k)) { dupSkipped++; continue; }
+                        var keyVals = keys.ToDictionary(x => x, x => vals.GetValueOrDefault(x));
+                        if (update && await target.FindAsync(job, keyVals, ct) is { } match)
+                        {
+                            var (before, refused) = await target.UpdateAsync(job, match, vals, ct);
+                            if (refused is not null) { if (!skipInvalid) throw new AppException($"Row {line}: {refused}"); skipped++; continue; }
+                            db.ImportedItems.Add(new ImportedItem { ImportJobId = job.Id, RowNumber = line, TargetType = target.RecordType, TargetId = match, Action = "updated", PreviousValues = before });
+                            updated++;
+                            continue;
+                        }
+                        if (await target.ExistsAsync(job, keyVals, ct)) { dupSkipped++; continue; }
                     }
                     var newId = await target.CreateAsync(job, vals, ct);
                     await KeepCompletedPdfAsync(job, target.RecordType, newId, ct);
@@ -686,12 +711,12 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
                     created++;
                     if (created % 200 == 0) { job.Progress = Math.Min(99, 60 + (int)(40.0 * created / Math.Max(1, job.TotalRows))); await db.SaveChangesAsync(ct); }
                 }
-                job.ImportedRows = created;
+                job.ImportedRows = created + updated;
                 job.Progress = 100;
                 job.CompletedAt = clock.UtcNow;
-                job.Summary = JsonSerializer.Serialize(new { imported = created, skippedInvalid = skipped, skippedDuplicates = dupSkipped, rows = created + skipped + dupSkipped, at = clock.UtcNow }, JsonOpts);
+                job.Summary = JsonSerializer.Serialize(new { imported = created, updated, skippedInvalid = skipped, skippedDuplicates = dupSkipped, rows = created + updated + skipped + dupSkipped, at = clock.UtcNow }, JsonOpts);
                 var end = skipped > 0 ? ImportJobStatus.PartiallyImported : job.WarningCount > 0 || dupSkipped > 0 ? ImportJobStatus.CompletedWithWarnings : ImportJobStatus.Imported;
-                Transition(job, end, $"{created} records created{(skipped > 0 ? $", {skipped} rows skipped" : "")}{(dupSkipped > 0 ? $", {dupSkipped} duplicates skipped" : "")}");
+                Transition(job, end, $"{created} records created{(updated > 0 ? $", {updated} updated" : "")}{(skipped > 0 ? $", {skipped} rows skipped" : "")}{(dupSkipped > 0 ? $", {dupSkipped} duplicates skipped" : "")}");
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
             }
@@ -738,7 +763,11 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         var blocked = new List<string>();
         foreach (var it in items)
         {
-            var why = target is null ? await RollbackDocumentAsync(it.TargetId, reason.Trim(), ct) : await target.RollbackAsync(job, it.TargetId, ct);
+            var why = it.TargetType == "Attachment" ? await RollbackAttachmentAsync(it.TargetId, ct)
+                : it.TargetType.EndsWith("Revision", StringComparison.Ordinal) ? await RollbackRevisionAsync(it.TargetId, reason.Trim(), ct)
+                : target is null ? await RollbackDocumentAsync(it.TargetId, reason.Trim(), ct)
+                : it.Action == "updated" ? await target.RevertAsync(job, it.TargetId, it.PreviousValues ?? "{}", ct)
+                : await target.RollbackAsync(job, it.TargetId, ct);
             if (why is not null) blocked.Add(why); else it.RolledBack = true;
         }
         if (blocked.Count > 0)
@@ -746,7 +775,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             await tx.RollbackAsync(ct);
             throw new ConflictException($"The import cannot be rolled back: {string.Join(" ", blocked.Take(5))}{(blocked.Count > 5 ? $" (and {blocked.Count - 5} more)" : "")}");
         }
-        Transition(job, ImportJobStatus.RolledBack, $"{items.Count} records removed: {reason.Trim()}");
+        Transition(job, ImportJobStatus.RolledBack, $"{items.Count(i => i.Action == "created")} records removed{(items.Any(i => i.Action == "updated") ? $", {items.Count(i => i.Action == "updated")} restored" : "")}: {reason.Trim()}");
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
     }

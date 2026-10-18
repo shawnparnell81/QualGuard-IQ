@@ -111,4 +111,8 @@ public class ImportedItem
     public string TargetType { get; set; } = "";
     public Guid TargetId { get; set; }
     public bool RolledBack { get; set; }
+    /// <summary>created or updated.</summary>
+    public string Action { get; set; } = "created";
+    /// <summary>For an update: the record's values before the import (JSON), so a rollback can put them back.</summary>
+    public string? PreviousValues { get; set; }
 }

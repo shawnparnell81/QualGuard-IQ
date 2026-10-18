@@ -140,7 +140,7 @@ public sealed partial class ImportCenterService
         return new DryRunSummary(1, 1, 0, 0, 0, []);
     }
 
-    static bool WholeFile(ImportJob job) => job.ImportMode is "template" or "document";
+    static bool WholeFile(ImportJob job) => job.ImportMode is "template" or "document" or "attachment";
 
     async Task<Guid> CreateFromFileAsync(ImportJob job, CancellationToken ct)
     {
@@ -195,12 +195,21 @@ public sealed partial class ImportCenterService
         {
             try
             {
-                var id = await CreateFromFileAsync(job, ct);
+                if (job.ImportMode == "attachment")
+                {
+                    await RunAttachmentAsync(job, ct);
+                    job.ImportedRows = 1; job.Progress = 100; job.CompletedAt = clock.UtcNow;
+                    Transition(job, ImportJobStatus.Imported, $"File attached to {Obj(job.Settings)["attachTo"]?["number"]}");
+                    await db.SaveChangesAsync(ct);
+                    await tx.CommitAsync(ct);
+                    return;
+                }
+                var id = job.ImportMode == "template" && TemplateRevisionMode(job) == "new-revision" ? await ReviseFromFileAsync(job, ct) : await CreateFromFileAsync(job, ct);
                 var number = await db.Documents.Where(d => d.Id == id).Select(d => d.Number).FirstAsync(ct);
                 job.ImportedRows = 1; job.Progress = 100; job.CompletedAt = clock.UtcNow;
                 var report = Obj(job.Analysis)["conversion"]?["report"];
                 job.Summary = new JsonObject { ["imported"] = 1, ["documentId"] = id.ToString(), ["documentNumber"] = number, ["kind"] = job.ImportMode, ["report"] = report?.DeepClone(), ["at"] = clock.UtcNow.ToString("O") }.ToJsonString();
-                Transition(job, job.WarningCount > 0 ? ImportJobStatus.CompletedWithWarnings : ImportJobStatus.Imported, job.ImportMode == "template" ? $"Draft form template {number} created" : $"Controlled document {number} created with the {(IsDocument(job) ? "document" : "workbook")}");
+                Transition(job, job.WarningCount > 0 ? ImportJobStatus.CompletedWithWarnings : ImportJobStatus.Imported, job.ImportMode == "template" ? (TemplateRevisionMode(job) == "new-revision" ? $"New draft revision of {number} created" : $"Draft form template {number} created") : $"Controlled document {number} created with the {(IsDocument(job) ? "document" : "workbook")}");
                 await db.SaveChangesAsync(ct);
                 await tx.CommitAsync(ct);
             }
@@ -219,6 +228,49 @@ public sealed partial class ImportCenterService
             Transition(fresh, ImportJobStatus.Failed, "Nothing was imported");
             await db.SaveChangesAsync(ct);
         }
+    }
+
+    /// <summary>A converted form as a new draft revision of an existing template (workbench target: existing template, new revision). The original travels with the revision.</summary>
+    async Task<Guid> ReviseFromFileAsync(ImportJob job, CancellationToken ct)
+    {
+        var tid = job.TargetTemplateId ?? throw new AppException("Choose the template that gets the new revision.");
+        var def = ConvertedDefinition(job) ?? throw new AppException("The file has not been converted yet.");
+        var rev = await docs.ReviseAsync(tid, null, $"Converted from {job.OriginalFileName} ({job.Number})", ct);
+        await docs.UpdateRevisionAsync(rev.Id, new UpdateRevisionRequest(rev.ChangeSummary, null, rev.TrainingRequired, rev.RowVersion, FormDefinitions.Serialize(def)), ct, preAuthorized: true);
+        var src = await db.Attachments.AsNoTracking().FirstAsync(a => a.Id == job.SourceFileId, ct);
+        var copy = new Attachment
+        {
+            OwnerType = DocumentRecordTypes.ForRevision(DocumentKind.FormTemplate), OwnerId = rev.Id, SiteId = job.SiteId, DepartmentId = job.DepartmentId, ViewPermission = DocumentRecordTypes.Perms(DocumentKind.FormTemplate).View,
+            FileName = src.FileName, ContentType = src.ContentType, SizeBytes = src.SizeBytes, Sha256 = src.Sha256, Category = "Import original", IsLocked = true, ScanStatus = src.ScanStatus,
+        };
+        copy.LineageId = copy.Id;
+        copy.StorageKey = $"{DocumentRecordTypes.ForRevision(DocumentKind.FormTemplate).ToLowerInvariant()}/{rev.Id:N}/{copy.Id:N}";
+        await using (var s = await OpenOriginalAsync(job, ct)) await storage.PutAsync(copy.StorageKey, s, copy.ContentType, ct);
+        db.Attachments.Add(copy);
+        var tracked = await db.DocumentRevisions.FirstAsync(r => r.Id == rev.Id, ct);
+        tracked.SourceType = job.FileType switch { "xlsx" or "xlsm" or "xls" => TemplateSource.Excel, "docx" or "doc" => TemplateSource.Word, _ => TemplateSource.Pdf };
+        tracked.SourceFileId = copy.Id; tracked.NativeFileId = copy.Id;
+        db.ImportedItems.Add(new ImportedItem { ImportJobId = job.Id, RowNumber = 1, TargetType = DocumentRecordTypes.ForRevision(DocumentKind.FormTemplate), TargetId = rev.Id });
+        return tid;
+    }
+
+    /// <summary>Rolls back a revision an import added: allowed while it is still an unsubmitted draft.</summary>
+    async Task<string?> RollbackRevisionAsync(Guid revId, string reason, CancellationToken ct)
+    {
+        var rev = await db.DocumentRevisions.Include(r => r.Document).FirstOrDefaultAsync(r => r.Id == revId, ct);
+        if (rev is null) return null;
+        if (rev.Status != RevisionStatus.Draft) return $"{rev.Document!.Number} revision {rev.Revision} has been submitted or approved since the import.";
+        rev.Status = RevisionStatus.Obsolete; rev.ObsoletedAt = clock.UtcNow; rev.ObsoleteReason = $"Import rolled back: {reason}";
+        return null;
+    }
+
+    /// <summary>Rolls back an attached file: it is archived (kept for the audit trail, no longer current).</summary>
+    async Task<string?> RollbackAttachmentAsync(Guid id, CancellationToken ct)
+    {
+        var a = await db.Attachments.FirstOrDefaultAsync(x => x.Id == id, ct);
+        if (a is null || a.IsArchived) return null;
+        a.IsArchived = true; a.ArchivedAt = clock.UtcNow;
+        return null;
     }
 
     /// <summary>Rolls back a created document or template: allowed while its only revision is still an unsubmitted draft and no records use it.</summary>

@@ -83,8 +83,10 @@ public partial class AppDbContext
         });
         b.Entity<ImportedItem>(e =>
         {
-            e.ToTable("imported_items");
+            e.ToTable("imported_items", t => t.HasCheckConstraint("ck_imported_items_action", "\"Action\" IN ('created','updated')"));
             e.Property(x => x.TargetType).HasMaxLength(60).IsRequired();
+            e.Property(x => x.Action).HasMaxLength(20).IsRequired().HasDefaultValue("created");
+            e.Property(x => x.PreviousValues).HasColumnType("jsonb");
             e.HasIndex(x => new { x.ImportJobId, x.RowNumber });
             e.HasIndex(x => new { x.TargetType, x.TargetId });
             e.HasOne<ImportJob>().WithMany().HasForeignKey(x => x.ImportJobId).OnDelete(DeleteBehavior.Restrict);

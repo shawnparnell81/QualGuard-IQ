@@ -30,6 +30,17 @@ public interface IImportTarget
     /// <summary>Removes a record the import created; returns a reason when it can no longer be removed (for example it was changed or submitted).</summary>
     Task<string?> RollbackAsync(ImportJob job, Guid id, CancellationToken ct);
     string RecordType { get; }
+
+    /// <summary>True when existing records can be updated through an import (matched on the duplicate keys).</summary>
+    bool CanUpdate => false;
+    /// <summary>The existing record matching these key values, for an update.</summary>
+    Task<Guid?> FindAsync(ImportJob job, IReadOnlyDictionary<string, string?> key, CancellationToken ct) => Task.FromResult<Guid?>(null);
+    /// <summary>The record's current values for the mapped fields (the "before" of the preview).</summary>
+    Task<IReadOnlyDictionary<string, string?>> CurrentAsync(ImportJob job, Guid id, CancellationToken ct) => Task.FromResult<IReadOnlyDictionary<string, string?>>(new Dictionary<string, string?>());
+    /// <summary>Updates a record with the row's values; returns the values before the update (JSON) for rollback, or a reason it cannot be updated.</summary>
+    Task<(string? Before, string? Refused)> UpdateAsync(ImportJob job, Guid id, IReadOnlyDictionary<string, string?> row, CancellationToken ct) => Task.FromResult<(string?, string?)>((null, "Records of this kind are not updated by imports."));
+    /// <summary>Puts back the values an import replaced; returns a reason when that is no longer possible.</summary>
+    Task<string?> RevertAsync(ImportJob job, Guid id, string before, CancellationToken ct) => Task.FromResult<string?>("Updates of this kind cannot be undone.");
 }
 
 /// <summary>Rows become draft form records of an effective form template; columns map to the template's fields.</summary>
@@ -98,6 +109,64 @@ public sealed class FormRecordImportTarget(AppDbContext db, INumberingService nu
         await db.SaveChangesAsync(ct);
         await m.IndexAsync(RecordType, rec.Id, $"{doc.Number} rev {rev.Revision}", ct);
         return rec.Id;
+    }
+
+    public bool CanUpdate => true;
+
+    public async Task<Guid?> FindAsync(ImportJob job, IReadOnlyDictionary<string, string?> key, CancellationToken ct)
+    {
+        if (key.Count == 0) return null;
+        var candidates = await db.FormRecords.AsNoTracking().Where(r => r.TemplateId == job.TargetTemplateId && r.SiteId == job.SiteId).Select(r => new { r.Id, r.ValuesJson }).ToListAsync(ct);
+        return candidates.FirstOrDefault(c =>
+        {
+            var v = JsonSerializer.Deserialize<Dictionary<string, string?>>(c.ValuesJson) ?? [];
+            return key.All(k => string.Equals(v.GetValueOrDefault(k.Key)?.Trim(), k.Value?.Trim(), StringComparison.OrdinalIgnoreCase));
+        })?.Id;
+    }
+
+    public async Task<IReadOnlyDictionary<string, string?>> CurrentAsync(ImportJob job, Guid id, CancellationToken ct)
+    {
+        var rec = await db.FormRecords.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, ct);
+        if (rec is null) return new Dictionary<string, string?>();
+        var v = JsonSerializer.Deserialize<Dictionary<string, string?>>(rec.ValuesJson) ?? [];
+        v["__title"] = rec.Title;
+        return v;
+    }
+
+    /// <summary>Only draft records that nobody has signed are updated; the update is checked against the record's own template revision.</summary>
+    public async Task<(string? Before, string? Refused)> UpdateAsync(ImportJob job, Guid id, IReadOnlyDictionary<string, string?> row, CancellationToken ct)
+    {
+        var rec = await db.FormRecords.FirstOrDefaultAsync(r => r.Id == id, ct);
+        if (rec is null) return (null, "The record no longer exists.");
+        if (rec.Status != FormRecordStatus.Draft) return (null, $"{rec.Number} has been submitted.");
+        if (await db.FormSignatures.AnyAsync(s => s.FormRecordId == id, ct)) return (null, $"{rec.Number} has been signed.");
+        var rev = await db.DocumentRevisions.AsNoTracking().FirstAsync(r => r.Id == rec.TemplateRevisionId, ct);
+        var def = FormDefinitions.Parse(rev.FieldSchema!);
+        var before = rec.ValuesJson;
+        var merged = JsonSerializer.Deserialize<Dictionary<string, string?>>(rec.ValuesJson) ?? [];
+        foreach (var (k, v) in row) if (k != "__title" && v is not null) merged[k] = v;
+        var values = FormDefinitions.Apply(def, merged, requireComplete: false);
+        rec.ValuesJson = JsonSerializer.Serialize(values);
+        if (row.GetValueOrDefault("__title") is { Length: > 0 } t) rec.Title = t.Trim()[..Math.Min(t.Trim().Length, 300)];
+        await db.SaveChangesAsync(ct);
+        await indexer.IndexAsync(rec, values, ct);
+        await db.SaveChangesAsync(ct);
+        return (JsonSerializer.Serialize(new { values = before }), null);
+    }
+
+    public async Task<string?> RevertAsync(ImportJob job, Guid id, string before, CancellationToken ct)
+    {
+        var rec = await db.FormRecords.FirstOrDefaultAsync(r => r.Id == id, ct);
+        if (rec is null) return "The record no longer exists.";
+        if (rec.Status != FormRecordStatus.Draft) return $"{rec.Number} has been submitted since the import.";
+        if (await db.FormSignatures.AnyAsync(s => s.FormRecordId == id, ct)) return $"{rec.Number} has been signed since the import.";
+        var prev = JsonDocument.Parse(before).RootElement.GetProperty("values").GetString() ?? "{}";
+        rec.ValuesJson = prev;
+        await db.SaveChangesAsync(ct);
+        var values = JsonSerializer.Deserialize<Dictionary<string, string?>>(prev) ?? [];
+        await indexer.IndexAsync(rec, values, ct);
+        await db.SaveChangesAsync(ct);
+        return null;
     }
 
     public async Task<string?> RollbackAsync(ImportJob job, Guid id, CancellationToken ct)
