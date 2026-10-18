@@ -233,6 +233,9 @@ const SqfWiTemplates = lazy(() => import('./sequfloh/Instructions').then((m) => 
 const SqfTrFolder = lazy(() => import('./sequfloh/Tracking').then((m) => ({ default: m.TrackingFolderPage })));
 const SqfTrNew = lazy(() => import('./sequfloh/Tracking').then((m) => ({ default: m.NewTrackingPage })));
 const SqfTr = lazy(() => import('./sequfloh/Tracking').then((m) => ({ default: m.TrackingRecordPage })));
+const SqfExQueue = lazy(() => import('./sequfloh/Execution').then((m) => ({ default: m.ExecutionQueuePage })));
+const SqfExStation = lazy(() => import('./sequfloh/Execution').then((m) => ({ default: m.ActiveStationPage })));
+const SqfExHistory = lazy(() => import('./sequfloh/Execution').then((m) => ({ default: m.WorkHistoryPage })));
 const RiskList = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskList })));
 const RiskNew = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskNew })));
 const RiskDetail = lazy(() => import('./pages/Risks').then((m) => ({ default: m.RiskDetail })));
@@ -417,6 +420,9 @@ export function App() {
               <Route path="/sequfloh/tracking/new" element={<SqfTrNew />} />
               <Route path="/sequfloh/tracking/:folder" element={<SqfTrFolder />} />
               <Route path="/sequfloh/record/:id" element={<SqfTr />} />
+              <Route path="/sequfloh/execution/active" element={<SqfExStation />} />
+              <Route path="/sequfloh/execution/history" element={<SqfExHistory />} />
+              <Route path="/sequfloh/execution/:view" element={<SqfExQueue />} />
               <Route path="/risks" element={<RiskList />} />
               <Route path="/risks/new" element={<RiskNew />} />
               <Route path="/risks/matrix" element={<RiskMatrix />} />

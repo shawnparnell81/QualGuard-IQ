@@ -18,8 +18,8 @@ export function SequflohHome() {
     ['New work instruction', '/sequfloh/instructions/new', 'sequfloh.create_work_instruction'],
     ['Active Station', '/sequfloh/execution/active', 'sequfloh.view_live_execution'],
     ['Dispatch Queue', '/sequfloh/execution/dispatch', 'sequfloh.view_live_execution'],
-    ['New production task', '/sequfloh/tracking/production/new', 'sequfloh.create_production_task'],
-    ['New repair record', '/sequfloh/tracking/repair/new', 'sequfloh.create_repair_record'],
+    ['New production task', '/sequfloh/tracking/new?type=Production', 'sequfloh.create_production_task'],
+    ['New repair record', '/sequfloh/tracking/new?type=Repair', 'sequfloh.create_repair_record'],
     ['Parts Lists', '/sequfloh/parts-lists', 'sequfloh.access'],
     ['Reports', '/sequfloh/reports/task-performance', 'sequfloh.view_reports'],
   ];
