@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, choose, dialog, signIn, state, unique, users } from './support';
+import { Api, choose, dialog, signIn, state, unique, users, localDate } from './support';
 
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
 async function shot(page: Page, name: string) {
@@ -50,7 +50,7 @@ test.describe('E2E 11: engineering, Quality OS and knowledge (Prompt 7)', () => 
     await button(page, 'Add').click();
     await expect(page.getByText('Port wall thickness below minimum')).toBeVisible();
     await button(page, 'Record meeting').click();
-    await dialog(page).getByLabel('Held on').fill(new Date().toISOString().slice(0, 10));
+    await dialog(page).getByLabel('Held on').fill(localDate());
     await dialog(page).getByLabel('Decision').fill('Proceed after wall thickness fix');
     await button(page, 'Save').click();
     await button(page, 'Submit for approval').click();
@@ -100,7 +100,7 @@ test.describe('E2E 11: engineering, Quality OS and knowledge (Prompt 7)', () => 
     await api.post('/api/knowledge/playbooks', { title: unique('Customer escape'), trigger: 1, steps: [{ title: 'Contain', guidance: 'Quarantine stock', dueDays: 1 }, { title: '8D', guidance: 'Open 8D', dueDays: 10 }] });
     const code = `P${Date.now().toString(36).slice(-4).toUpperCase()}`;
     const proc = await api.post<{ id: string }>('/api/processes', { code, name: 'Purchasing', purpose: 'Buy conforming product', siteId: state().siteId, reviewIntervalDays: 365 });
-    await api.post('/api/maturity', { subject: 1, subjectId: proc.id, assessedOn: new Date().toISOString().slice(0, 10), scores: [{ area: 'Leadership', level: 3 }, { area: 'Process control', level: 4 }] });
+    await api.post('/api/maturity', { subject: 1, subjectId: proc.id, assessedOn: localDate(), scores: [{ area: 'Leadership', level: 3 }, { area: 'Process control', level: 4 }] });
     await signIn(page, users.author);
     await page.goto('/knowledge/playbooks');
     await expect(page.getByTestId('playbook').first()).toBeVisible();

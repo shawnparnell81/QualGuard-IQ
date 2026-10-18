@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, choose, dialog, signIn, state, unique, users } from './support';
+import { Api, choose, dialog, signIn, state, unique, users, localDate } from './support';
 
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
 async function shot(page: Page, name: string) {
@@ -10,7 +10,7 @@ test.describe('E2E 12: platform services (Prompt 8)', () => {
   test('my workspace, activity stream and calendar show my work', async ({ page }) => {
     const api = await Api.as(users.author);
     const title = unique('Platform NCR');
-    const created = await api.post('/api/ncrs', { title, description: 'Burr', source: 'In-process', siteId: state().siteId, detectedOn: new Date().toISOString().slice(0, 10), severity: 1 });
+    const created = await api.post('/api/ncrs', { title, description: 'Burr', source: 'In-process', siteId: state().siteId, detectedOn: localDate(), severity: 1 });
     const ncr = await api.get(`/api/ncrs/${created.id}`);
     await (await Api.as(users.admin)).post('/api/platform/events/pump', {});
     await signIn(page, users.author);

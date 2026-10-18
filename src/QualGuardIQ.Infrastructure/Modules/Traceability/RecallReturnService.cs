@@ -355,7 +355,7 @@ public sealed class ReturnService(AppDbContext db, ModuleSupport m, INumberingSe
     public async Task<WarrantyMetrics> MetricsAsync(DateOnly from, DateOnly to, CancellationToken ct)
     {
         var claims = await (await m.ScopeAsync(db.WarrantyClaims.AsNoTracking(), Permissions.ReturnsView, ct)).Where(x => x.ClaimedOn >= from && x.ClaimedOn <= to && x.Status != WarrantyClaimStatus.Rejected).ToListAsync(ct);
-        var start = new DateTimeOffset(from.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero); var end = new DateTimeOffset(to.ToDateTime(TimeOnly.MaxValue), TimeSpan.Zero);
+        var (start, endExclusive) = await m.DayRangeAsync(null, from, to, ct); var end = endExclusive.AddTicks(-1);
         var ships = await (await m.ScopeAsync(db.TraceEvents.AsNoTracking(), Permissions.ReturnsView, ct)).Where(e => e.Kind == TraceEventKind.Shipment && e.OccurredAt >= start && e.OccurredAt <= end).Select(e => new { e.OccurredAt, e.Quantity }).ToListAsync(ct);
         var shipped = ships.Sum(s => s.Quantity ?? 0);
         decimal Ppm(decimal q, decimal s) => s == 0 ? 0 : Math.Round(q / s * 1_000_000m, 1);

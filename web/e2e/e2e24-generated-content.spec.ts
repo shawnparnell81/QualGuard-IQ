@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { Api, choose, signIn, state, users, shot } from './support';
+import { Api, choose, signIn, state, users, shot, localDate } from './support';
 
 /** Gap 28: generated drafts are off by default; an administrator enables a tested provider for one function; the draft is labelled, cited and reviewed; the request log records it. */
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name });
@@ -10,7 +10,7 @@ test.describe('E2E 24: generated content', () => {
     const admin = await Api.as(users.admin);
     await admin.put('/api/generation/settings', settings(0));
     const t = Date.now().toString(36).toUpperCase();
-    const ncr = await admin.post('/api/ncrs', { title: `Burr on bracket ${t}`, description: 'Edge burr', source: 'In-process', siteId: state().siteId, detectedOn: new Date().toISOString().slice(0, 10), severity: 1 });
+    const ncr = await admin.post('/api/ncrs', { title: `Burr on bracket ${t}`, description: 'Edge burr', source: 'In-process', siteId: state().siteId, detectedOn: localDate(), severity: 1 });
     try {
       await signIn(page, users.admin);
       await page.goto(`/ncr/${ncr.id}`);

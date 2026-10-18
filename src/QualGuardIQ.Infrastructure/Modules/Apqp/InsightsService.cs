@@ -55,7 +55,7 @@ public sealed class InsightsService(AppDbContext db, ModuleSupport m, IAccessSer
     public async Task<decimal> VolumeAsync(DenominatorSource src, bool scoped, Guid? siteId, DateOnly f, DateOnly t, CancellationToken ct)
     {
         var s = new Scoper(m, scoped, siteId);
-        var fTs = new DateTimeOffset(f.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero); var tTs = new DateTimeOffset(t.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var (fTs, tTs) = await m.DayRangeAsync(siteId, f, t, ct);
         switch (src)
         {
             case DenominatorSource.Produced or DenominatorSource.ErpProduction or DenominatorSource.MesProduction:
@@ -162,7 +162,7 @@ public sealed class InsightsService(AppDbContext db, ModuleSupport m, IAccessSer
     {
         var today = await m.TodayAsync(siteId, ct);
         var t = to ?? today; var f = from ?? t.AddMonths(-3).AddDays(1);
-        var fTs = new DateTimeOffset(f.ToDateTime(TimeOnly.MinValue), TimeSpan.Zero); var tTs = new DateTimeOffset(t.AddDays(1).ToDateTime(TimeOnly.MinValue), TimeSpan.Zero);
+        var (fTs, tTs) = await m.DayRangeAsync(siteId, f, t, ct);
         var s = new Scoper(m, scoped, siteId);
         var list = new List<Metric>();
         string Qs(string path) => $"{path}?from={f:yyyy-MM-dd}&to={t:yyyy-MM-dd}" + (siteId is { } x ? $"&siteId={x}" : "");
