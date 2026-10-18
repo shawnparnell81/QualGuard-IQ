@@ -21,6 +21,6 @@ export default defineConfig({
   },
   webServer: [
     { command: './e2e/serve-api.sh', url: `${api}/health/ready`, timeout: 240_000, reuseExistingServer: false, env: { E2E_API_URL: api } },
-    { command: 'npx vite --port 5174 --strictPort --host 127.0.0.1', url: web, timeout: 60_000, reuseExistingServer: false, env: { QGIQ_API_URL: api } },
+    { command: `npx vite --port ${new URL(web).port} --strictPort --host 127.0.0.1`, url: web, timeout: 60_000, reuseExistingServer: false, env: { QGIQ_API_URL: api } },
   ],
 });
