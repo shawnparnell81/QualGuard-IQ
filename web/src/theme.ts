@@ -181,8 +181,10 @@ export const makeTheme = (primary?: string | null, mode: PaletteMode = 'light', 
         styleOverrides: {
           root: { borderRadius: 999, fontWeight: 700, paddingLeft: 18, paddingRight: 18 },
           containedPrimary: custom ? {} : {
-            background: qg.gradient, boxShadow: `0 6px 16px ${alpha(main, dark ? 0.35 : 0.3)}`,
-            '&:hover': { background: dark ? `linear-gradient(135deg, #7AAEF5 0%, #7FDCAA 100%)` : `linear-gradient(135deg, ${brand.blueHover} 0%, #0D7547 100%)` },
+            background: dark ? 'linear-gradient(135deg, #2F6FD0 0%, #1E8A57 100%)' : qg.gradient, color: '#FFFFFF',
+            textShadow: '0 1px 1px rgba(0,0,0,0.25)', boxShadow: `0 6px 16px ${alpha(main, dark ? 0.35 : 0.3)}`,
+            '&:hover': { color: '#FFFFFF', background: dark ? 'linear-gradient(135deg, #3A7DE0 0%, #24995F 100%)' : `linear-gradient(135deg, ${brand.blueHover} 0%, #0D7547 100%)` },
+            '&.Mui-disabled': { color: 'rgba(255,255,255,0.92)', background: dark ? 'linear-gradient(135deg, #2F6FD0 0%, #1E8A57 100%)' : qg.gradient, opacity: 0.55, boxShadow: 'none' },
           },
           outlined: { backgroundColor: dark ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.7)', borderColor: alpha(main, dark ? 0.45 : 0.3) },
         },
