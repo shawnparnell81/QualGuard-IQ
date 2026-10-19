@@ -120,7 +120,7 @@ export function FormRecordDetail() {
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {saved && !error && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSaved(false)}>Draft saved. Calculated fields were updated.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '260px minmax(0, 1fr)' }, gap: { xs: 2, md: 3 } }}>
         <Facts items={[['Template', `${d.templateNumber} revision ${d.templateRevision}`], ['Status', formStatus[d.status]], ['Submitted', fmtDateTime(d.submittedAt)]]} />
         <Box sx={{ minWidth: 0 }}>
           {tab === 'form' && <Paper sx={{ p: 3 }}><FormView def={def} values={values} onChange={setValues} readOnly={!d.canEdit} recordType="FormRecord" recordId={d.id} siteId={d.siteId}
