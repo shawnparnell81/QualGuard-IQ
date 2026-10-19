@@ -74,6 +74,12 @@ public interface IMalwareScanner
     Task<Domain.Shared.ScanStatus> ScanAsync(Stream content, string fileName, CancellationToken ct);
 }
 
+/// <summary>A scanner that can say whether its engine answers right now, for the health check and the admin notice.</summary>
+public interface IMalwareScannerProbe
+{
+    Task<bool> IsReachableAsync(CancellationToken ct);
+}
+
 public sealed class NoMalwareScanner : IMalwareScanner
 {
     public Task<Domain.Shared.ScanStatus> ScanAsync(Stream content, string fileName, CancellationToken ct) =>

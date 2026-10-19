@@ -12,7 +12,7 @@ namespace QualGuardIQ.Infrastructure.Storage;
 /// Enable with MalwareScanning:Provider = "ClamAV". When the daemon cannot be reached the result is Failed and
 /// the upload is rejected unless MalwareScanning:AllowWhenUnavailable is true.
 /// </summary>
-public sealed class ClamAvScanner(IConfiguration config, ILogger<ClamAvScanner> log) : IMalwareScanner
+public sealed class ClamAvScanner(IConfiguration config, ILogger<ClamAvScanner> log) : IMalwareScanner, IMalwareScannerProbe
 {
     private const int ChunkSize = 64 * 1024;
     private readonly string? _socket = config["MalwareScanning:ClamAV:Socket"];
@@ -20,17 +20,47 @@ public sealed class ClamAvScanner(IConfiguration config, ILogger<ClamAvScanner> 
     private readonly int _port = config.GetValue("MalwareScanning:ClamAV:Port", 3310);
     private readonly TimeSpan _timeout = TimeSpan.FromSeconds(config.GetValue("MalwareScanning:ClamAV:TimeoutSeconds", 60));
 
+    async Task<Socket> ConnectAsync(CancellationToken ct)
+    {
+        var socket = _socket is { Length: > 0 }
+            ? new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified)
+            : new Socket(SocketType.Stream, ProtocolType.Tcp);
+        try
+        {
+            if (_socket is { Length: > 0 }) await socket.ConnectAsync(new UnixDomainSocketEndPoint(_socket), ct);
+            else await socket.ConnectAsync(_host, _port, ct);
+            return socket;
+        }
+        catch { socket.Dispose(); throw; }
+    }
+
+    /// <summary>Sends clamd a PING and expects PONG within a few seconds.</summary>
+    public async Task<bool> IsReachableAsync(CancellationToken ct)
+    {
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(3));
+        try
+        {
+            using var socket = await ConnectAsync(cts.Token);
+            await using var net = new NetworkStream(socket, ownsSocket: false);
+            await net.WriteAsync("zPING\0"u8.ToArray(), cts.Token);
+            using var reply = new MemoryStream();
+            await net.CopyToAsync(reply, cts.Token);
+            return Encoding.ASCII.GetString(reply.ToArray()).TrimEnd('\0', '\n', ' ') == "PONG";
+        }
+        catch (Exception ex) when (ex is SocketException or IOException or OperationCanceledException && !ct.IsCancellationRequested)
+        {
+            return false;
+        }
+    }
+
     public async Task<ScanStatus> ScanAsync(Stream content, string fileName, CancellationToken ct)
     {
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         cts.CancelAfter(_timeout);
         try
         {
-            using var socket = _socket is { Length: > 0 }
-                ? new Socket(AddressFamily.Unix, SocketType.Stream, ProtocolType.Unspecified)
-                : new Socket(SocketType.Stream, ProtocolType.Tcp);
-            if (_socket is { Length: > 0 }) await socket.ConnectAsync(new UnixDomainSocketEndPoint(_socket), cts.Token);
-            else await socket.ConnectAsync(_host, _port, cts.Token);
+            using var socket = await ConnectAsync(cts.Token);
             await using var net = new NetworkStream(socket, ownsSocket: false);
             await net.WriteAsync("zINSTREAM\0"u8.ToArray(), cts.Token);
             var buffer = new byte[ChunkSize];

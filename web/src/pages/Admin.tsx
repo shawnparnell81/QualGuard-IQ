@@ -21,10 +21,13 @@ interface Site { id: string; code: string; name: string; address?: string | null
 interface Role { id: string; name: string; description: string | null; isSystem: boolean; requiresMfa: boolean; permissions: string[]; rowVersion: number }
 interface User { id: string; email: string; displayName: string; isActive: boolean; isLockedOut: boolean; lastSignInAt: string | null; mfaEnabled: boolean; mustChangePassword: boolean; passwordChangedAt: string | null; roles: { id: string; roleId: string; roleName: string; siteId: string | null; departmentId: string | null }[] }
 
-/** Shown while uploads are not virus-scanned (MalwareScanning:Provider is None), so nobody assumes they are. */
+/** Shown while uploads are not virus-scanned (scanning is off, or on but the scanner isn't answering), so nobody assumes they are. */
 function UploadScanningNotice() {
-  const q = useQuery({ queryKey: ['upload-scanning'], queryFn: () => get<{ enabled: boolean; provider: string }>('/api/admin/upload-scanning'), retry: false });
-  if (!q.data || q.data.enabled) return null;
+  const q = useQuery({ queryKey: ['upload-scanning'], queryFn: () => get<{ enabled: boolean; provider: string; reachable: boolean | null; message: string | null }>('/api/admin/upload-scanning'), retry: false });
+  if (!q.data) return null;
+  if (q.data.enabled && q.data.reachable === false)
+    return <Alert severity="error" sx={{ mb: 2 }} data-testid="scanning-unavailable">{q.data.message} Check that the clamav container is running (docker compose ps) and has finished downloading its virus definitions.</Alert>;
+  if (q.data.enabled) return null;
   return <Alert severity="warning" sx={{ mb: 2 }} data-testid="scanning-off">Uploaded files are not virus-scanned on this installation. To turn scanning on, set MALWARE_SCANNER=ClamAV and add clamav to COMPOSE_PROFILES (Intel/AMD computers), or point MalwareScanning at a ClamAV server.</Alert>;
 }
 

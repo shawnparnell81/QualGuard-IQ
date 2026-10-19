@@ -76072,12 +76072,25 @@ components:
       required:
         - enabled
         - provider
+        - reachable
+        - allowWhenUnavailable
+        - message
       type: object
       properties:
         enabled:
           type: boolean
         provider:
           type: string
+        reachable:
+          type:
+            - 'null'
+            - boolean
+        allowWhenUnavailable:
+          type: boolean
+        message:
+          type:
+            - 'null'
+            - string
     ScanRequest:
       required:
         - code
