@@ -83,7 +83,7 @@ public class TraceEvent : Entity, IAudited, ISiteScoped
 
 public enum RecallStatus { Open = 0, Investigation = 1, Containment = 2, Notification = 3, PendingClosure = 4, Closed = 5, Cancelled = 6 }
 
-public class Recall : Entity, IAudited, ISiteScoped
+public class Recall : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -138,7 +138,7 @@ public enum ReturnStatus { Authorized = 0, Received = 1, Inspected = 2, Disposit
 public enum ReturnDisposition { None = 0, Restock = 1, Rework = 2, Repair = 3, Scrap = 4, ReturnToCustomer = 5, Replace = 6, Credit = 7 }
 
 /// <summary>Customer return (RMA). Links the physical return to the complaint, NCR, CAPA and warranty claim.</summary>
-public class CustomerReturn : Entity, IAudited, ISiteScoped
+public class CustomerReturn : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public Guid CustomerId { get; set; }
@@ -171,7 +171,7 @@ public class CustomerReturn : Entity, IAudited, ISiteScoped
 
 public enum WarrantyClaimStatus { Submitted = 0, UnderReview = 1, Approved = 2, Rejected = 3, Paid = 4, Closed = 5 }
 
-public class WarrantyClaim : Entity, IAudited, ISiteScoped
+public class WarrantyClaim : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public Guid CustomerId { get; set; }

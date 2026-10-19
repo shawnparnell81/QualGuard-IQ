@@ -95,6 +95,7 @@ public sealed class QualityRecordProvider<T>(AppDbContext db, string type, strin
     where T : Entity, ISiteScoped
 {
     public string Type => type;
+    public Type? EntityType => typeof(T);
     public async Task<RecordInfo?> FindAsync(Guid id, CancellationToken ct)
     {
         var e = await db.Set<T>().AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);

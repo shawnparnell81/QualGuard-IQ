@@ -218,6 +218,91 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("audit_entries", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Common.DeletedRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DeletePermission")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("DeletedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DeletedByName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("DepartmentId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("RecordId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RecordType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("RestoreReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset?>("RestoredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("RestoredById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RestoredByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid>("SiteId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<bool>("WasLocked")
+                        .HasColumnType("boolean");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeletedAt");
+
+                    b.HasIndex("RecordId")
+                        .IsUnique()
+                        .HasDatabaseName("ux_deleted_records_open")
+                        .HasFilter("\"RestoredAt\" IS NULL");
+
+                    b.HasIndex("RecordType", "RecordId");
+
+                    b.ToTable("deleted_records", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Common.NumberSequence", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6830,6 +6915,65 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("messaging_subscriptions", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Organization.AppearanceSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccentColor")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FormPalettes")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Mode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("PrimaryColor")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "UserId" }, "ux_appearance_user")
+                        .IsUnique();
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex(new[] { "UserId" }, "ux_appearance_user"), false);
+
+                    b.ToTable("appearance_settings", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_appearance_accent", "\"AccentColor\" IS NULL OR \"AccentColor\" ~ '^#[0-9A-Fa-f]{6}$'");
+
+                            t.HasCheckConstraint("ck_appearance_mode", "\"Mode\" IS NULL OR \"Mode\" IN ('light', 'dark', 'system')");
+
+                            t.HasCheckConstraint("ck_appearance_primary", "\"PrimaryColor\" IS NULL OR \"PrimaryColor\" ~ '^#[0-9A-Fa-f]{6}$'");
+                        });
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Organization.Department", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6896,11 +7040,30 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("DateFormat")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("auto");
+
+                    b.Property<bool>("EmailNotificationsEnabled")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
                     b.Property<bool>("LoginHistoryEnabled")
                         .HasColumnType("boolean");
 
                     b.Property<Guid?>("LogoAttachmentId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("LogoContentType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<byte[]>("LogoImage")
+                        .HasColumnType("bytea");
 
                     b.Property<string>("OrganizationName")
                         .IsRequired()
@@ -7007,6 +7170,49 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("sites", "qms");
+                });
+
+            modelBuilder.Entity("QualGuardIQ.Domain.Organization.UserPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("DateFormat")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<bool>("EmailNotifications")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(true);
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("user_preferences", "qms");
                 });
 
             modelBuilder.Entity("QualGuardIQ.Domain.Platform.BackupRecord", b =>

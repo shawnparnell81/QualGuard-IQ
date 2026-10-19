@@ -1,4 +1,5 @@
-import { Chip } from '@mui/material';
+import { Box, Chip } from '@mui/material';
+import { alpha, useTheme } from '@mui/material/styles';
 
 const colors: Record<string, 'default' | 'success' | 'warning' | 'error' | 'info' | 'primary' | 'secondary'> = {
   Draft: 'default', InReview: 'warning', Approved: 'info', Effective: 'success', Active: 'success', Superseded: 'default', Obsolete: 'error',
@@ -10,16 +11,44 @@ const colors: Record<string, 'default' | 'success' | 'warning' | 'error' | 'info
 const labels: Record<string, string> = { InReview: 'In review', InProgress: 'In progress', DispositionPending: 'Disposition pending', DispositionApproved: 'Disposition approved',
   EffectivenessCheck: 'Effectiveness check', ActionPlanned: 'Action planned', OutOfService: 'Out of service', PassAfterAdjustment: 'Pass after adjustment', OutOfTolerance: 'Out of tolerance', PendingApproval: 'Pending approval' };
 
-export const StatusChip = ({ status }: { status: string }) => (
-  <Chip size="small" variant={status === 'Effective' || status === 'Active' ? 'filled' : 'outlined'} color={colors[status] ?? 'default'} label={labels[status] ?? status} />
-);
+/** Soft tinted status pill with a dot in the status colour. */
+export const StatusChip = ({ status }: { status: string }) => {
+  const t = useTheme();
+  const c = colors[status] ?? 'default';
+  const dark = t.palette.mode === 'dark';
+  const tone = c === 'default' ? (dark ? '#A8B3C2' : '#6B7790') : t.palette[c].main;
+  // text one step darker (lighter in dark mode) than the dot so it stays readable on the tint
+  const ink = c === 'default' ? (dark ? '#C2CBD8' : '#556179') : dark ? t.palette[c].light : t.palette[c].dark;
+  return <Chip size="small" label={labels[status] ?? status} icon={<Box component="span" sx={{ width: 7, height: 7, borderRadius: '50%', bgcolor: tone, ml: '8px !important' }} />}
+    sx={{ bgcolor: alpha(tone, 0.12), color: ink, border: `1px solid ${alpha(tone, 0.2)}`, fontWeight: 700 }} />;
+};
 
 export const docStatus = ['Draft', 'Active', 'Obsolete'];
 export const revStatus = ['Draft', 'InReview', 'Approved', 'Effective', 'Superseded', 'Obsolete'];
 export const actionStatus = ['Open', 'InProgress', 'Completed', 'Verified', 'Cancelled'];
 export const approvalStatus = ['Pending', 'Approved', 'Rejected', 'Cancelled'];
-export const fmtDate = (d?: string | null) => (d ? new Date(d.length === 10 ? d + 'T00:00:00' : d).toLocaleDateString() : '—');
-export const fmtDateTime = (d?: string | null) => (d ? new Date(d).toLocaleString() : '—');
+/** The date format chosen in settings ("auto" follows the browser). Set once preferences load. */
+let dateFormat = (() => { try { return localStorage.getItem('qg.dateFormat') ?? 'auto'; } catch { return 'auto'; } })();
+export const setDateFormat = (f: string) => { dateFormat = f || 'auto'; try { localStorage.setItem('qg.dateFormat', dateFormat); } catch { /* private mode */ } };
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const two = (n: number) => String(n).padStart(2, '0');
+const dayText = (x: Date) => {
+  const y = x.getFullYear(), m = x.getMonth(), d = x.getDate();
+  switch (dateFormat) {
+    case 'yyyy-MM-dd': return `${y}-${two(m + 1)}-${two(d)}`;
+    case 'MM/dd/yyyy': return `${two(m + 1)}/${two(d)}/${y}`;
+    case 'dd/MM/yyyy': return `${two(d)}/${two(m + 1)}/${y}`;
+    case 'dd-MMM-yyyy': return `${two(d)}-${months[m]}-${y}`;
+    case 'dd.MM.yyyy': return `${two(d)}.${two(m + 1)}.${y}`;
+    default: return x.toLocaleDateString();
+  }
+};
+export const fmtDate = (d?: string | null) => (d ? dayText(new Date(d.length === 10 ? d + 'T00:00:00' : d)) : '—');
+export const fmtDateTime = (d?: string | null) => {
+  if (!d) return '—';
+  const x = new Date(d);
+  return dateFormat === 'auto' ? x.toLocaleString() : `${dayText(x)} ${x.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+};
 export const formStatus = ['Draft', 'Submitted', 'Approved', 'Rejected'];
 export const ncrStatus = ['Open', 'Contained', 'DispositionPending', 'DispositionApproved', 'Closed', 'Cancelled'];
 export const severity = ['Minor', 'Major', 'Critical'];

@@ -282,6 +282,7 @@ public sealed class DocumentService(
 public sealed class DocumentRecordProvider(AppDbContext db, string type, DocumentKind kind) : IRecordTypeProvider
 {
     public string Type => type;
+    public Type? EntityType => typeof(ControlledDocument);
     public async Task<RecordInfo?> FindAsync(Guid id, CancellationToken ct)
     {
         var d = await db.Documents.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id && x.Kind == kind, ct);

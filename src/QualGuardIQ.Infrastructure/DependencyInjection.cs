@@ -29,7 +29,9 @@ public static class DependencyInjection
         services.AddScoped<AuditInterceptor>();
         services.AddDbContext<AppDbContext>((sp, o) =>
             o.UseNpgsql(cs, n => n.MigrationsHistoryTable("__ef_migrations", "qms"))
-             .AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
+             .AddInterceptors(sp.GetRequiredService<AuditInterceptor>())
+             // A deleted record hides its child rows too (revisions of a deleted document, lines of a deleted NCR). That is intended.
+             .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning)));
         services.AddScoped<IAccessService, AccessService>();
         Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddScoped<ICallerRestriction, NoCallerRestriction>(services);
         services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
@@ -56,6 +58,8 @@ public static class DependencyInjection
 
         // Shared engines
         services.AddScoped<IRecordRegistry, RecordRegistry>();
+        services.AddScoped<RecordDeletionService>();
+        services.AddScoped<Services.Export.RecordExportService>();
         services.AddSingleton(new RecordTypeLabels(config.GetSection("RecordTypeLabels").GetChildren().Where(c => c.Value is not null).ToDictionary(c => c.Key, c => c.Value!)));
         services.AddScoped<ISearchIndexer, SearchIndexer>();
         services.AddScoped<SearchService>();
@@ -102,6 +106,9 @@ public static class DependencyInjection
         services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.TrainingCourseListImportTarget>();
         services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.SkillsMatrixImportTarget>();
         services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.RiskRegisterImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.NcrLogImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.CapaLogImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.TrainingRecordImportTarget>();
         services.AddScoped<QualGuardIQ.Infrastructure.Modules.Quality.FormValueIndexer>();
         services.AddScoped<DocumentTypeService>();
         foreach (var (kind, docType, revType) in new[]

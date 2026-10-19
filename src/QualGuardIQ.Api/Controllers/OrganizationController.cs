@@ -14,8 +14,9 @@ namespace QualGuardIQ.Api.Controllers;
 [Route("api/organization")]
 public sealed class OrganizationController(AppDbContext db, QualGuardIQ.Application.Security.IAccessService access, QualGuardIQ.Application.Abstractions.ICurrentUser current) : ControllerBase
 {
-    public sealed record BrandingDto(string ApplicationName, string OrganizationName, string? PrimaryColor);
-    public sealed record SettingsDto(string ApplicationName, string OrganizationName, string? PrimaryColor, string TimeZone, bool LoginHistoryEnabled, uint RowVersion);
+    public sealed record BrandingDto(string ApplicationName, string OrganizationName, string? PrimaryColor, bool HasLogo = false);
+    public sealed record SettingsDto(string ApplicationName, string OrganizationName, string? PrimaryColor, string TimeZone, bool LoginHistoryEnabled, uint RowVersion,
+        string? DateFormat = null, bool? EmailNotificationsEnabled = null, bool HasLogo = false);
     public sealed record SiteDto(Guid Id, string Code, string Name, string? Address, string TimeZone, bool IsArchived, IReadOnlyList<DepartmentDto> Departments);
     public sealed record DepartmentDto(Guid Id, string Code, string Name, bool IsArchived);
     public sealed record SaveSiteRequest(string Code, string Name, string? Address, string? TimeZone = null);
@@ -29,6 +30,7 @@ public sealed class OrganizationController(AppDbContext db, QualGuardIQ.Applicat
             RuleFor(x => x.OrganizationName).NotEmpty().MaximumLength(200);
             RuleFor(x => x.PrimaryColor).Matches("^#[0-9A-Fa-f]{6}$").When(x => x.PrimaryColor is not null);
             RuleFor(x => x.TimeZone).Must(tz => TimeZoneInfo.TryFindSystemTimeZoneById(tz, out _)).WithMessage("Unknown time zone.");
+            RuleFor(x => x.DateFormat).Must(f => f is null || DateFormats.All.Contains(f)).WithMessage("Unknown date format.");
         }
     }
 
@@ -43,13 +45,14 @@ public sealed class OrganizationController(AppDbContext db, QualGuardIQ.Applicat
         }
     }
 
-    /// <summary>Public branding for the sign-in page.</summary>
+    /// <summary>Public branding for the sign-in page. The primary colour is the organization Appearance colour when one is set.</summary>
     [HttpGet("branding")]
     [AllowAnonymous]
     public async Task<BrandingDto> Branding(CancellationToken ct)
     {
-        var s = await db.OrganizationSettings.AsNoTracking().FirstAsync(ct);
-        return new BrandingDto(s.ApplicationName, s.OrganizationName, s.PrimaryColor);
+        var b = await db.OrganizationSettings.AsNoTracking().Select(s => new BrandingDto(s.ApplicationName, s.OrganizationName, s.PrimaryColor, s.LogoImage != null)).FirstAsync(ct);
+        var primary = await db.AppearanceSettings.AsNoTracking().Where(x => x.UserId == null).Select(x => x.PrimaryColor).FirstOrDefaultAsync(ct);
+        return primary is null ? b : b with { PrimaryColor = primary };
     }
 
     [HttpGet("settings")]
@@ -57,7 +60,7 @@ public sealed class OrganizationController(AppDbContext db, QualGuardIQ.Applicat
     public async Task<SettingsDto> GetSettings(CancellationToken ct)
     {
         var s = await db.OrganizationSettings.AsNoTracking().FirstAsync(ct);
-        return new SettingsDto(s.ApplicationName, s.OrganizationName, s.PrimaryColor, s.TimeZone, s.LoginHistoryEnabled, s.RowVersion);
+        return new SettingsDto(s.ApplicationName, s.OrganizationName, s.PrimaryColor, s.TimeZone, s.LoginHistoryEnabled, s.RowVersion, s.DateFormat, s.EmailNotificationsEnabled, s.LogoImage != null);
     }
 
     [HttpPut("settings")]
@@ -72,6 +75,8 @@ public sealed class OrganizationController(AppDbContext db, QualGuardIQ.Applicat
         s.PrimaryColor = req.PrimaryColor;
         s.TimeZone = req.TimeZone;
         s.LoginHistoryEnabled = req.LoginHistoryEnabled;
+        if (req.DateFormat is not null) s.DateFormat = req.DateFormat;
+        if (req.EmailNotificationsEnabled is { } email) s.EmailNotificationsEnabled = email;
         await db.SaveChangesAsync(ct);
         return NoContent();
     }

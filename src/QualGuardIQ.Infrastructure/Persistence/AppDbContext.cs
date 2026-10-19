@@ -44,8 +44,10 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     {
         base.OnModelCreating(b);
         b.HasDefaultSchema("qms");
+        ConfigureAppearance(b);
         ConfigureShared(b);
         ConfigureModules(b);
+        ConfigureRecordDeletion(b);
 
         foreach (var et in b.Model.GetEntityTypes().Where(t => typeof(Entity).IsAssignableFrom(t.ClrType)))
         {

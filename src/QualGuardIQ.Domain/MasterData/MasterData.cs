@@ -19,7 +19,7 @@ public class ProductFamily : Entity, IAudited, IArchivable
     public string AuditLabel => $"Product family {Code}";
 }
 
-public class Product : Entity, IAudited, ISiteScoped
+public class Product : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Name { get; set; } = "";
@@ -35,7 +35,7 @@ public class Product : Entity, IAudited, ISiteScoped
 
 public enum PartType { Component = 0, Assembly = 1, Material = 2, Subassembly = 3, Consumable = 4, Packaging = 5, Other = 9 }
 
-public class Part : Entity, IAudited, ISiteScoped
+public class Part : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string PartNumber { get; set; } = "";
     public string Name { get; set; } = "";
@@ -70,7 +70,7 @@ public class PartRevision : Entity, IAudited
     public string AuditLabel => $"Part revision {Revision}";
 }
 
-public class Customer : Entity, IAudited, ISiteScoped
+public class Customer : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Code { get; set; } = "";
     public string Name { get; set; } = "";

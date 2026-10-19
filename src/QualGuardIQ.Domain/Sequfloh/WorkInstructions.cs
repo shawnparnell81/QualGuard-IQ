@@ -13,7 +13,7 @@ public enum WorkInstructionStatus { Draft = 0, InDevelopment = 1, PendingReview 
 /// Controlled SEQUFLOH work instruction (one row per revision). Document control and applicability are columns; the designer sections, steps,
 /// characteristics and parts rows are jsonb copies owned by this revision (copied library data never links back to the template).
 /// </summary>
-public class SequflohWorkInstruction : Entity, IAudited, ISiteScoped
+public class SequflohWorkInstruction : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public Guid FamilyId { get; set; }
     public Guid? PreviousRevisionId { get; set; }

@@ -9,7 +9,7 @@ public enum QualityEventSource { Manual = 0, Mobile = 1, Portal = 2, Environment
 public enum QualityEventStatus { New = 0, InTriage = 1, Classified = 2, Escalated = 3, Closed = 4, Rejected = 5 }
 
 /// <summary>A quality event reported from any channel, triaged, classified against the severity matrix and escalated to a module record.</summary>
-public class QualityEvent : Entity, IAudited, ISiteScoped
+public class QualityEvent : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public QualityEventSource Source { get; set; }
@@ -74,7 +74,7 @@ public enum DeviationKind { Planned = 0, Unplanned = 1, Temporary = 2 }
 public enum QualityDeviationStatus { Draft = 0, PendingApproval = 1, Approved = 2, Rejected = 3, Closed = 4, Cancelled = 5 }
 
 /// <summary>A planned, unplanned or temporary departure from a specified requirement, approved before (or, when unplanned, after) use.</summary>
-public class Deviation : Entity, IAudited, ISiteScoped
+public class Deviation : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public DeviationKind Kind { get; set; }
@@ -110,7 +110,7 @@ public enum InvestigationKind { CrossModule = 0, Laboratory = 1, Escalation = 2 
 public enum InvestigationStatus { Open = 0, InProgress = 1, Concluded = 2, Closed = 3, Cancelled = 4 }
 
 /// <summary>An investigation spanning several module records (linked through the shared record links) or a laboratory result.</summary>
-public class QualityInvestigation : Entity, IAudited, ISiteScoped
+public class QualityInvestigation : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public InvestigationKind Kind { get; set; }
@@ -192,7 +192,7 @@ public enum RegisterKind
 }
 
 /// <summary>An entry in one of the governed registers. Kind-specific fields live in Details (validated against the register definition).</summary>
-public class RegisterEntry : Entity, IAudited, ISiteScoped
+public class RegisterEntry : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public RegisterKind Kind { get; set; }
@@ -292,7 +292,7 @@ public enum QualityReviewKind { Product = 0, Annual = 1 }
 public enum QualityReviewStatus { Draft = 0, PendingApproval = 1, Approved = 2, Rejected = 3 }
 
 /// <summary>Product quality review or annual quality review: a computed snapshot of the period plus conclusions, approved through the route.</summary>
-public class QualityReview : Entity, IAudited, ISiteScoped
+public class QualityReview : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public QualityReviewKind Kind { get; set; }

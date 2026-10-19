@@ -7,7 +7,7 @@ public enum CharacteristicKind { Variable = 0, Attribute = 1 }
 public enum InspectionStatus { InProgress = 0, Passed = 1, Failed = 2, Released = 3, Rejected = 4, Cancelled = 5 }
 
 /// <summary>Revision-controlled inspection or test plan. Inspection types are free text so sites can add their own.</summary>
-public class InspectionPlan : Entity, IAudited, ISiteScoped
+public class InspectionPlan : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -61,7 +61,7 @@ public class InspectionCharacteristic : Entity, IAudited
 }
 
 /// <summary>A completed or in-progress inspection, permanently tied to the plan revision it used.</summary>
-public class Inspection : Entity, IAudited, ISiteScoped
+public class Inspection : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string InspectionType { get; set; } = "";

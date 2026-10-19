@@ -4,7 +4,7 @@ namespace QualGuardIQ.Domain.Quality;
 
 public enum AssignmentStatus { Assigned = 0, Completed = 1, Superseded = 2, Cancelled = 3 }
 
-public class TrainingCourse : Entity, IAudited, ISiteScoped, IArchivable
+public class TrainingCourse : Entity, IAudited, ISiteScoped, IArchivable, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";

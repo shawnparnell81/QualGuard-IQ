@@ -19,7 +19,7 @@ import { mono } from '../theme';
 import { FieldBuilder, SchemaPreview, parseFields, serializeFields, type FieldDef } from './FormBuilder';
 import { FormView } from '../forms/FormView';
 import { FormDesigner, cleanDefinition, upgradeToV2 } from '../forms/FormDesigner';
-import { isV2, parseDefinition, type FormDef } from '../forms/definition';
+import { isV2, parseDefinition, withFamily, type FormDef, type FormTheme } from '../forms/definition';
 
 type Kind = 0 | 1 | 2;
 const cfg = (kind: Kind) => kind === 2
@@ -33,7 +33,7 @@ const cfg = (kind: Kind) => kind === 2
 
 interface ListItem { id: string; number: string; title: string; documentType: string; status: number; currentRevision: string | null; effectiveDate: string | null; siteCode: string; partNumber: string | null; nextReviewDue: string | null; ownerName: string }
 interface Rev { id: string; revision: string; sequence: number; status: number; changeSummary: string; effectiveDate: string | null; supersededOn: string | null; approvedAt: string | null; trainingRequired: boolean; rowVersion: number; fieldSchema?: string | null; readyToSubmit: boolean }
-interface Detail { id: string; kind: Kind; number: string; title: string; documentType: string; status: number; siteId: string; ownerName: string; reviewIntervalMonths: number; nextReviewDue: string | null; partNumber: string | null; drawingSize: string | null; sheetCount: number | null; revisions: Rev[]; canEdit: boolean; canApprove: boolean; rowVersion: number }
+interface Detail { id: string; kind: Kind; number: string; title: string; documentType: string; status: number; siteId: string; ownerName: string; reviewIntervalMonths: number; nextReviewDue: string | null; partNumber: string | null; drawingSize: string | null; sheetCount: number | null; revisions: Rev[]; canEdit: boolean; canApprove: boolean; rowVersion: number; formFamily?: FormTheme | null }
 
 export function DocumentList({ kind }: { kind: Kind }) {
   const c = cfg(kind);
@@ -212,13 +212,13 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
           {tab === 'revisions' && (
             <Stack gap={2}>
               <DataTable data={d.revisions} columns={revCols} onRowClick={(r) => { setRevId(r.id); setTab('files'); }} />
-              {draftEditable && <DraftEditor rev={rev} onSaved={refresh} formTemplate={kind === 2} />}
+              {draftEditable && <DraftEditor rev={rev} onSaved={refresh} formTemplate={kind === 2} family={d.formFamily} />}
               {kind === 2 && rev.fieldSchema && <Stack direction="row" gap={1}>
                 <Button variant="outlined" size="small" href={`/api/forms/templates/revisions/${rev.id}/pdf?style=standardized`} target="_blank">Print rev {rev.revision}</Button>
                 {parseDefinition(rev.fieldSchema).layout && <Button variant="outlined" size="small" href={`/api/forms/templates/revisions/${rev.id}/pdf?style=original`} target="_blank">Print original look</Button>}
                 {rev.status === 3 && <OfflineWorkbook templateId={d.id} siteId={d.siteId} />}
               </Stack>}
-              {kind === 2 && !draftEditable && rev.fieldSchema && (isV2(rev.fieldSchema) ? <Paper sx={{ p: 3 }}><FormView def={parseDefinition(rev.fieldSchema)} values={{}} onChange={() => {}} readOnly /></Paper> : <SchemaPreview schema={rev.fieldSchema} />)}
+              {kind === 2 && !draftEditable && rev.fieldSchema && (isV2(rev.fieldSchema) ? <Paper sx={{ p: 3 }}><FormView def={withFamily(parseDefinition(rev.fieldSchema), d.formFamily)} values={{}} onChange={() => {}} readOnly /></Paper> : <SchemaPreview schema={rev.fieldSchema} />)}
             </Stack>
           )}
           {tab === 'files' && <FilesPanel type={c.revType} id={rev.id} canEdit={draftEditable} onChanged={refresh} />}
@@ -247,7 +247,7 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
   );
 }
 
-function DraftEditor({ rev, onSaved, formTemplate }: { rev: Rev; onSaved: () => void; formTemplate?: boolean }) {
+function DraftEditor({ rev, onSaved, formTemplate, family }: { rev: Rev; onSaved: () => void; formTemplate?: boolean; family?: FormTheme | null }) {
   const [designer, setDesigner] = useState(() => isV2(rev.fieldSchema));
   const [designing, setDesigning] = useState(false);
   const [def, setDef] = useState<FormDef>(() => upgradeToV2(parseDefinition(rev.fieldSchema)));
@@ -275,7 +275,7 @@ function DraftEditor({ rev, onSaved, formTemplate }: { rev: Rev; onSaved: () => 
         {formTemplate && designer && <>
           <Box><Button variant="contained" onClick={() => setDesigning(true)}>Open designer</Button>
             <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>{def.sections.length} sections, {def.fields.length} fields, {def.tables.length} tables, {def.signatures.length} signature blocks. Save the draft after designing.</Typography></Box>
-          {def.fields.length + def.tables.length > 0 && <Paper variant="outlined" sx={{ p: 2 }}><FormView def={def} values={{}} onChange={() => {}} readOnly /></Paper>}
+          {def.fields.length + def.tables.length > 0 && <Paper variant="outlined" sx={{ p: 2 }}><FormView def={withFamily(def, family)} values={{}} onChange={() => {}} readOnly /></Paper>}
           <Dialog open={designing} fullScreen onClose={() => setDesigning(false)} aria-labelledby="designer-title">
             <Stack direction="row" alignItems="center" gap={2} sx={{ px: 2, py: 1, borderBottom: 1, borderColor: 'divider' }}>
               <Typography id="designer-title" variant="h3" sx={{ flex: 1 }}>Form designer: revision {rev.revision}</Typography>

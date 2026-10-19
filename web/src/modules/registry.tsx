@@ -843,13 +843,15 @@ export const modules: ModuleDef[] = [
         { label: 'Single sign-on', path: '/admin/single-sign-on', permission: 'admin.users' },
       ] },
       { label: 'Organization', path: '/admin/organization', children: [
-        { label: 'Settings & branding', path: '/admin/organization', permission: 'admin.organization' },
+        { label: 'Settings', path: '/admin/organization', permission: 'admin.organization' },
         { label: 'Sites & departments', path: '/admin/sites', permission: 'admin.organization' },
         { label: 'Approval routes', path: '/admin/routes', permission: 'admin.organization' },
+        { label: 'Appearance', path: '/admin/appearance', permission: 'admin.organization' },
       ] },
       { label: 'Logs', path: '/admin/audit', children: [
         { label: 'Audit trail', path: '/admin/audit', permission: 'audittrail.view' },
         { label: 'Security events', path: '/admin/security', permission: 'securitylog.view' },
+        { label: 'Deleted records', path: '/admin/deleted-records' },
       ] },
       { label: 'Notifications', path: '/admin/alerts', permission: 'alerts.admin', children: [
         { label: 'Alert rules', path: '/admin/alerts', permission: 'alerts.admin' },

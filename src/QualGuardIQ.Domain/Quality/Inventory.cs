@@ -220,7 +220,7 @@ public enum MrbDisposition { None = 0, Accept = 1, Rework = 2, Repair = 3, Scrap
 public enum MrbStatus { Open = 0, PendingApproval = 1, Approved = 2, Rejected = 3, Executed = 4, Cancelled = 5 }
 
 /// <summary>Material Review Board case for held or rejected stock. The approved disposition is executed as ledger entries.</summary>
-public class MrbCase : Entity, IAudited, ISiteScoped
+public class MrbCase : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public MrbStatus Status { get; set; }
@@ -248,7 +248,7 @@ public class MrbCase : Entity, IAudited, ISiteScoped
 public enum SupplierReturnStatus { Open = 0, Shipped = 1, Credited = 2, Closed = 3, Cancelled = 4 }
 
 /// <summary>Return to vendor (RTV): material going back to the supplier, tracked to the supplier credit.</summary>
-public class SupplierReturn : Entity, IAudited, ISiteScoped
+public class SupplierReturn : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public Guid SupplierId { get; set; }
