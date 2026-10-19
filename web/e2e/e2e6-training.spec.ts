@@ -64,7 +64,10 @@ test.describe('E2E 6: training assignment and e-signed completion', () => {
     await signIn(viewer, users.viewer);
     await viewer.goto('/training/courses');
     await expect(viewer.getByRole('link', { name: 'New course' })).toHaveCount(0);
+    // wait for the course itself to load before looking for its heading
+    const courseLoaded = viewer.waitForResponse(r => r.url().endsWith(`/api/training/courses/${course.id}`) && r.request().method() === 'GET');
     await viewer.goto(`/training/courses/${course.id}`);
+    expect((await courseLoaded).ok()).toBeTruthy();
     await expect(viewer.getByRole('heading').getByText(title)).toBeVisible();
     await expect(viewer.getByText('Assign people')).toHaveCount(0);
 

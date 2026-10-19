@@ -121,6 +121,7 @@ public sealed class GapClosureVideoConversionTests(TestApp app)
         {
             var ncr = await NcrAsync(admin, await app.CreateSiteAsync());
             var junk = new byte[4096]; Random.Shared.NextBytes(junk);
+            new byte[] { 0, 0, 0, 0x18, (byte)'f', (byte)'t', (byte)'y', (byte)'p', (byte)'i', (byte)'s', (byte)'o', (byte)'m' }.CopyTo(junk, 0); // looks like an MP4 at the start, unreadable after that
             var id = await UploadAsync(admin, ncr, "broken.mp4", junk);
             for (var i = 0; i < 3; i++) { await RunAsync(); await DueNowAsync(); }
             var r = (await admin.GetElAsync($"/api/files/{id}/renditions")).GetProperty("renditions")[0];

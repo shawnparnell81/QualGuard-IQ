@@ -39,10 +39,10 @@ public class InspectionPlanRevision : Entity, IAudited, ISiteScoped, IContentLoc
     public bool IsLockedState(object? originalStatus) => originalStatus is PlanRevisionStatus st && st != PlanRevisionStatus.Draft;
     public string StatusProperty => nameof(Status);
     public IReadOnlyCollection<string> MutableWhenLocked => [nameof(Status), nameof(EffectiveAt)];
-    public string AuditLabel => $"inspection plan revision {Revision}";
+    public string AuditLabel => $"inspection plan {PlanNumber} revision {Revision}";
 }
 
-public class InspectionCharacteristic : Entity
+public class InspectionCharacteristic : Entity, IAudited
 {
     public Guid PlanRevisionId { get; set; }
     public int Sequence { get; set; }
@@ -57,6 +57,7 @@ public class InspectionCharacteristic : Entity
     public bool RequiresEquipment { get; set; }
     public int? SampleSize { get; set; }
     public bool IsCritical { get; set; }
+    public string AuditLabel => $"characteristic {Sequence} \"{Name}\" on {AuditRef.To(PlanRevisionId, "an inspection plan")}";
 }
 
 /// <summary>A completed or in-progress inspection, permanently tied to the plan revision it used.</summary>

@@ -164,7 +164,10 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
         var tag = await db.Tags.FirstOrDefaultAsync(t => t.Name.ToLower() == lower, ct);
         if (tag is null) { tag = new Tag { Name = name }; db.Tags.Add(tag); }
         if (!await db.RecordTags.AnyAsync(x => x.OwnerType == r.Type && x.OwnerId == r.Id && x.TagId == tag.Id, ct))
+        {
             db.RecordTags.Add(new RecordTag { OwnerType = r.Type, OwnerId = r.Id, TagId = tag.Id });
+            AuditLog.Add(db, current, DateTimeOffset.UtcNow, "TagAdded", r.Type, r.Id, r.SiteId, $"Added tag \"{tag.Name}\" to {r.Number}");
+        }
         await db.SaveChangesAsync(ct);
         return NoContent();
     }
@@ -174,10 +177,11 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
     {
         var r = await records.RequireEditAsync(type, id, ct);
         var lower = name.Trim().ToLowerInvariant();
-        var rt = await (from x in db.RecordTags join t in db.Tags on x.TagId equals t.Id
-                        where x.OwnerType == r.Type && x.OwnerId == r.Id && t.Name.ToLower() == lower select x).FirstOrDefaultAsync(ct)
+        var found = await (from x in db.RecordTags join t in db.Tags on x.TagId equals t.Id
+                           where x.OwnerType == r.Type && x.OwnerId == r.Id && t.Name.ToLower() == lower select new { x, t.Name }).FirstOrDefaultAsync(ct)
             ?? throw new NotFoundException("Tag");
-        db.RecordTags.Remove(rt);
+        db.RecordTags.Remove(found.x);
+        AuditLog.Add(db, current, DateTimeOffset.UtcNow, "TagRemoved", r.Type, r.Id, r.SiteId, $"Removed tag \"{found.Name}\" from {r.Number}");
         await db.SaveChangesAsync(ct);
         return NoContent();
     }
@@ -213,12 +217,16 @@ public sealed class RecordsController(AppDbContext db, IRecordRegistry records, 
             a.Decisions.OrderBy(d => d.SignedAt).Select(d => new DecisionDto(d.StepOrder, d.StepName, d.SignerName, d.Approved, d.Meaning, d.Comment, d.SignedAt)).ToList()));
     }
 
-    /// <summary>Record history. Anyone who can view the record can see its history.</summary>
+    /// <summary>Record history, including its files, comments, links and actions. Anyone who can view the record can see its history.</summary>
     [HttpGet("history")]
     public async Task<IActionResult> History(string type, Guid id, CancellationToken ct)
     {
         var r = await records.RequireViewAsync(type, id, ct);
-        var list = await db.AuditEntries.AsNoTracking().Where(a => a.EntityId == r.Id || (a.EntityType == "Attachment" && db.Attachments.Any(f => f.Id == a.EntityId && f.OwnerId == r.Id)))
+        var list = await db.AuditEntries.AsNoTracking().Where(a => a.EntityId == r.Id
+                || (a.EntityType == "Attachment" && db.Attachments.Any(f => f.Id == a.EntityId && f.OwnerId == r.Id))
+                || (a.EntityType == "Comment" && db.Comments.Any(c => c.Id == a.EntityId && c.OwnerId == r.Id))
+                || (a.EntityType == "RecordLink" && db.RecordLinks.Any(l => l.Id == a.EntityId && (l.FromId == r.Id || l.ToId == r.Id)))
+                || (a.EntityType == "ActionItem" && db.ActionItems.Any(x => x.Id == a.EntityId && x.SourceId == r.Id)))
             .OrderByDescending(a => a.Id).Take(500)
             .Select(a => new { a.OccurredAt, a.UserName, a.Action, a.Description, a.Changes, a.Reason }).ToListAsync(ct);
         return Ok(list);

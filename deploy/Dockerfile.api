@@ -1,9 +1,9 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0.402@sha256:0d99ebf1ccad15037b5c98c9fe8979d6b8dbac23812feae2277a0b277b5c5ffa AS build
 WORKDIR /src
 COPY . .
 RUN dotnet publish src/QualGuardIQ.Api -c Release -o /out
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.13@sha256:d5633778c754e89a386882eddf8dbee6942447a8a4b8267c19cf1e1158d0b0ac
 # wget for the compose health check; ffmpeg/ffprobe so the API reports video conversion status for this host;
 # headless office (no GUI) for legacy .doc/.xls intake and the original-document previews in the Import Center;
 # poppler-utils (pdftoppm) renders scanned PDF pages for OCR. OCR itself is optional: install and configure a provider (Ocr:Provider).

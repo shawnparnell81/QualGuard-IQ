@@ -34,6 +34,9 @@ public static class HistoryService
 
     private static string Val(JsonElement ch, string name)
     {
+        // readable enum name when the audit entry has one (entries written before names were stored show the number)
+        if (ch.ValueKind == JsonValueKind.Object && ch.TryGetProperty(name + "Name", out var n) && n.ValueKind == JsonValueKind.String)
+            return QualGuardIQ.Infrastructure.Persistence.AuditText.Words(n.GetString()!);
         if (ch.ValueKind == JsonValueKind.Object && ch.TryGetProperty(name, out var v)) return v.ToString();
         if (ch.ValueKind == JsonValueKind.Array && ch.GetArrayLength() == 2) return ch[name == "from" ? 0 : 1].ToString();
         return name == "to" ? ch.ToString() : "";

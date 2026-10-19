@@ -20881,6 +20881,28 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("password_reset_tokens", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Security.RevokedSession", b =>
+                {
+                    b.Property<string>("SessionId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("RevokedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("SessionId");
+
+                    b.HasIndex("ExpiresAt");
+
+                    b.ToTable("revoked_sessions", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Security.Role", b =>
                 {
                     b.Property<Guid>("Id")

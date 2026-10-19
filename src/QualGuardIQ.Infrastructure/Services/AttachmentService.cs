@@ -57,7 +57,7 @@ public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMa
     public async Task<Attachment> UploadAsync(string ownerType, Guid ownerId, UploadRequest req, CancellationToken ct, bool skipPermission = false)
     {
         var record = skipPermission ? await records.GetAsync(ownerType, ownerId, ct) : await records.RequireEditAsync(ownerType, ownerId, ct);
-        if (record.IsLocked && !skipPermission) throw new AppException("This record is locked; files cannot be added.");
+        if (record.IsLocked) throw new AppException("This record is locked; files cannot be added.");
         var name = Path.GetFileName(req.FileName ?? "").Trim();
         if (name.Length is 0 or > 255) throw new AppException("A file name of up to 255 characters is required.");
         var ext = Path.GetExtension(name).ToLowerInvariant();
@@ -79,6 +79,11 @@ public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMa
         }
         if (total == 0) throw new AppException("The file is empty.");
         buffer.Position = 0;
+        var head = new byte[FileSignatures.HeaderLength];
+        var headLength = await buffer.ReadAtLeastAsync(head, head.Length, throwOnEndOfStream: false, ct);
+        if (!FileSignatures.Matches(ext, head.AsSpan(0, headLength)))
+            throw new AppException($"'{name}' isn't a real {FileSignatures.Describe(ext)} file. Check the file and its extension.");
+        buffer.Position = 0;
         var scan = await scanner.ScanAsync(buffer, name, ct);
         buffer.Position = 0;
         if (scan == ScanStatus.Infected) throw new AppException("The file was rejected by the malware scanner.");
@@ -88,7 +93,7 @@ public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMa
         var a = new Attachment
         {
             OwnerType = record.Type, OwnerId = record.Id, SiteId = record.SiteId, DepartmentId = record.DepartmentId, ViewPermission = record.ViewPermission, FileName = name,
-            ContentType = isVideo ? FileKinds.VideoContentType(ext) : string.IsNullOrWhiteSpace(req.ContentType) ? "application/octet-stream" : req.ContentType,
+            ContentType = FileSignatures.ContentTypeFor(ext),
             SizeBytes = total, Sha256 = Convert.ToHexStringLower(sha.GetHashAndReset()),
             Category = req.Category, Description = req.Description, Classification = req.Classification, ScanStatus = scan
         };
@@ -127,6 +132,18 @@ public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMa
         var a = await db.Attachments.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct) ?? throw new NotFoundException("File");
         if (a.Classification == Classification.Restricted) await records.RequireEditAsync(a.OwnerType, a.OwnerId, ct);
         else await records.RequireViewAsync(a.OwnerType, a.OwnerId, ct);
+        var buffer = await ReadVerifiedAsync(a, ct);
+        if (a.Classification is Classification.Confidential or Classification.Restricted)
+            await security.LogAsync("FileOpened", true, current.UserId, current.UserName, $"{a.Classification} file {a.FileName} v{a.Version} ({a.Id}) on {a.OwnerType} {a.OwnerId}", ct);
+        return (a, buffer);
+    }
+
+    /// <summary>
+    /// Reads a stored file and checks it against the checksum taken at upload; quarantined files are refused. Callers check
+    /// permission first (staff through <see cref="OpenAsync"/>, portal users through their own record access).
+    /// </summary>
+    public async Task<Stream> ReadVerifiedAsync(Attachment a, CancellationToken ct)
+    {
         if (a.ScanStatus == ScanStatus.Infected) throw new AppException("This file is quarantined.", 403);
         Stream buffer = a.SizeBytes > MemoryLimit
             ? new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920, FileOptions.DeleteOnClose | FileOptions.Asynchronous)
@@ -142,10 +159,8 @@ public sealed class AttachmentService(AppDbContext db, IFileStorage storage, IMa
             if (Convert.ToHexStringLower(sha.GetHashAndReset()) != a.Sha256) throw new AppException("The stored file failed its integrity check. Contact an administrator.", 500);
         }
         catch { await buffer.DisposeAsync(); throw; }
-        if (a.Classification is Classification.Confidential or Classification.Restricted)
-            await security.LogAsync("FileOpened", true, current.UserId, current.UserName, $"{a.Classification} file {a.FileName} v{a.Version} ({a.Id}) on {a.OwnerType} {a.OwnerId}", ct);
         buffer.Position = 0;
-        return (a, buffer);
+        return buffer;
     }
 
     /// <summary>Sets or extends a file's retention date (governance.edit at the record's site). Retention can never be shortened here; every change is audited.</summary>

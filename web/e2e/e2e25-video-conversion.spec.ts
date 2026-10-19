@@ -7,7 +7,7 @@ test.describe('E2E 25: video playback copies', () => {
     const author = await Api.as(users.author);
     const ncr = await author.post('/api/ncrs', { title: unique('Video status NCR'), description: 'Setup', source: 'In-process', siteId: state().siteId, detectedOn: localDate(), severity: 1 });
     const name = `${unique('press-setup').replace(/\s+/g, '-')}.mov`;
-    await author.upload('Ncr', ncr.id, name, 'bytes of a phone recording '.repeat(40), 'video/quicktime');
+    await author.upload('Ncr', ncr.id, name, '\x00\x00\x00\x14ftypqt  \x00\x00\x02\x00qt  ' + 'bytes of a phone recording '.repeat(40), 'video/quicktime');
     const st = await author.get(`/api/files/search?kind=Video&q=${encodeURIComponent(name)}`);
     const id = st.items[0].id as string;
     const status = await author.get(`/api/files/${id}/renditions`);

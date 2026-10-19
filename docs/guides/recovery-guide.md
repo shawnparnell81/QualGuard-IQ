@@ -10,18 +10,20 @@ that is currently true and lists every gap.
 |---|---|
 | PostgreSQL database (all records, audit trail, signatures, job queue) | `scripts/backup.sh` (pg_dump custom format) |
 | Object storage bucket (attachments, document files) | `scripts/backup.sh` mirrors it when `QGIQ_S3_ALIAS` and `QGIQ_S3_BUCKET` are set (needs `mc`), or use the provider's own replication |
-| Configuration (`.env`, reverse proxy, certificates) | Your configuration management or secret store |
+| Data Protection key ring (sign-in sessions, two-step verification secrets, saved integration secrets) | `scripts/backup.sh` saves it by default: `docker compose run --rm backup` mounts the `dpkeys` volume, and on a host it finds the compose API container (or set `QGIQ_KEYS_CONTAINER` / `QGIQ_KEYS_DIR`). The backup stops if no keys are found, unless `QGIQ_SKIP_KEYS=1`. Without the keys, a restored database can't read authenticator keys or stored secrets |
+| Configuration (`.env`, reverse proxy, certificates, the key ring certificate if `DataProtection:CertificatePath` is used) | Your configuration management or secret store |
 
 ## Taking a backup
 
 ```
 export PGHOST=db PGPORT=5432 PGUSER=qgiq PGPASSWORD=... PGDATABASE=qgiq
 export QGIQ_S3_ALIAS=prod QGIQ_S3_BUCKET=qgiq-files          # optional
+export QGIQ_KEYS_CONTAINER=qualguard-iq-api-1                 # or QGIQ_KEYS_DIR=/path/to/keys
 export QGIQ_API_URL=https://qms.example.com QGIQ_TOKEN=...    # optional: registers the backup automatically
 scripts/backup.sh /backups
 ```
 
-The script writes `/backups/qgiq-<UTC timestamp>/` containing `database.dump`, an optional `files/` mirror and
+The script writes `/backups/qgiq-<UTC timestamp>/` containing `database.dump`, an optional `files/` mirror, `keys.tar.gz` (the key ring, readable only by its owner; store it as carefully as the database) and
 `manifest.json` with the SHA-256 checksum, size, times, the latest applied migration and row counts of key tables
 (audit trail, documents, revisions, NCRs, CAPAs, audits, approvals, users). If the API variables are not set, paste
 the manifest into **Register backup** in the Recovery center.
@@ -48,12 +50,13 @@ Restoring replaces a database. Only do it under an approved recovery procedure.
 scripts/restore.sh /backups/qgiq-20261017T080326Z qgiq --confirm
 ```
 
-The script refuses to run without `--confirm`, verifies the checksum first, then restores. Afterwards:
+The script refuses to run without `--confirm`, verifies the checksum first, then restores. Privileges are not copied from the backup; the `migrate` step sets up the app login again when the stack starts. With `QGIQ_KEYS_DIR` set, the key ring is checked and extracted there. Afterwards:
 
 1. Restore the object storage mirror to the bucket (`mc mirror <backup>/files <alias>/<bucket>`).
-2. Start the API and check `/health/ready`, then start the worker.
-3. Compare record counts with the manifest (the Recovery center's fingerprint view shows the live counts).
-4. Record the event under Governance › Business continuity, including the time taken and any data lost.
+2. Put the key ring back if the script didn't (extract `keys.tar.gz` into the `dpkeys` volume or the `DataProtection:KeyPath` folder) before the API starts.
+3. Start the stack (`docker compose up -d`): `migrate` runs first, then the API; check `/health/ready`, then start the worker.
+4. Compare record counts with the manifest (the Recovery center's fingerprint view shows the live counts).
+5. Record the event under Governance › Business continuity, including the time taken and any data lost.
 
 ## Recovery objectives and procedures
 
