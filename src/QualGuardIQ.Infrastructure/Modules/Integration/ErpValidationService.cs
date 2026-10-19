@@ -34,11 +34,13 @@ public sealed class ErpValidationService(AppDbContext db, ModuleSupport m, ErpAd
         [ErpSystem.Epicor] = "Recorded Epicor Kinetic responses: API key with Basic authentication and skip paging.",
         [ErpSystem.Infor] = "Recorded Infor responses: M3 reads through ION; Mongoose IDO loads.",
         [ErpSystem.Dynamics] = "Recorded Dynamics 365 Business Central responses: Entra token and next-link paging.",
-        [ErpSystem.NetSuite] = "Recorded NetSuite responses: PS256 signed assertion (RS256 refused) and error details reported.",
+        [ErpSystem.NetSuite] = "Recorded NetSuite responses: PS256 signed assertion (RS256 refused) and error details reported; token-based sign-in with a known HMAC-SHA256 signature through SuiteQL and the RESTlet.",
         [ErpSystem.Acumatica] = "Recorded Acumatica responses: password grant with the api scope and value-wrapped fields.",
         [ErpSystem.Plex] = "Recorded Plex responses: Connect API key and tenant headers.",
         [ErpSystem.DelmiaWorks] = "Recorded DELMIAworks responses: sign-in and the documented customers path.",
         [ErpSystem.BcManufacturing] = "Recorded Business Central manufacturing responses: extension API and web services pages, connection diagnostics, sync of production orders, order lines, machine centers and serials.",
+        [ErpSystem.QuickBooks] = "Recorded QuickBooks Online responses: refresh-token sign-in keeping the rotated refresh token, start-position paging and fault messages.",
+        [ErpSystem.SageIntacct] = "Recorded Sage Intacct responses: sender and user credentials, readMore paging and an unauthorized sender reported in plain words.",
         [ErpSystem.CustomRest] = "Recorded generic REST responses through the connector framework.",
         [ErpSystem.CsvExchange] = "CSV parsing with quotes, commas and line breaks; CSV import of master data.",
     };
@@ -84,6 +86,8 @@ public sealed class ErpValidationService(AppDbContext db, ModuleSupport m, ErpAd
         [ErpSystem.DelmiaWorks] = [new("DELMIAworks WebAPI", "Confirm the WebAPI is licensed, then set the login path, token header and every entity path from the licensed SDK help. Otherwise use a CSV exchange connection.", ErpValidationGate.Assumption)],
         [ErpSystem.BcManufacturing] = [new("Business Central manufacturing source", "Choose CustomApi only if a manufacturing extension with API pages is installed (enter its apiPublisher, apiGroup, apiVersion); otherwise choose WebServices and publish the standard pages on the Web Services page. Grant the Entra application read permission sets for production orders, routings, work and machine centers, item and capacity ledger entries and the output/consumption journals.", null),
             new("Business Central manufacturing mapping", "Run Test connection: it probes every entity in the entities option and lists unreachable pages and mapped fields missing from the sample row. Correct entitySet.<Entity>, idField.<Entity> and the field maps until the test passes, then confirm the assumptions.", ErpValidationGate.Assumption)],
+        [ErpSystem.QuickBooks] = [new("QuickBooks Online app", "Create the app in the Intuit Developer portal with the com.intuit.quickbooks.accounting scope, authorize it once against a sandbox company and paste the realm ID and refresh token.", null)],
+        [ErpSystem.SageIntacct] = [new("Sage Intacct Web Services", "Subscribe the company to Web Services, add the sender ID to the company's Web Services authorizations and use a dedicated Web Services user.", null)],
         [ErpSystem.CustomRest] = [new("Generic REST", "Set url.<Entity> and field maps from the customer's API documentation; confirm paging and the since parameter.", null)],
         [ErpSystem.CsvExchange] = [new("CSV", "Agree the column layout with the customer and upload a small sample file after enabling; the first accepted upload records the read gate.", ErpValidationGate.Read)],
     };
