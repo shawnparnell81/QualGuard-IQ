@@ -11,6 +11,7 @@ import { fmtDate, fmtDateTime } from '../components/Status';
 import { Confirm, Empty, ErrorState, Filters, Grid, Loading, Mono, Paged, PagedTable, S, SqfPage, SqfStatus, nul, qs, useOptions, useUnsaved, words } from './common';
 import { type AuditRow, HistoryTable, SimpleTable } from './Parts';
 import { DevelopmentPanel } from './Personnel';
+import { type Block, BlocksEditor, LayoutTemplates, TemplateActions, TemplatePicker } from './Blocks';
 import { type DSchema, FieldInput, ProblemList, type Row, RowsEditor, SectionCard, type Val, sequenceProblems, typeLabels, types, useSchemas } from './Designer';
 
 export const wiCrumbs = (label: string, folder?: { label: string; to: string }) =>
@@ -150,6 +151,7 @@ export function NewInstructionPage() {
   const [siteId, setSiteId] = useState('');
   const [departmentId, setDepartmentId] = useState('');
   const [part, setPart] = useState<PartOpt | null>(null);
+  const [templateId, setTemplateId] = useState('');
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   useEffect(() => { if (!siteId && sites.data?.length) setSiteId(sites.data[0].id); }, [sites.data, siteId]);
@@ -158,7 +160,7 @@ export function NewInstructionPage() {
   const create = async () => {
     setBusy(true); setErr(null);
     try {
-      const r = await post<{ id: string }>(`${S}/instructions`, { type, title, siteId, departmentId: nul(departmentId), partId: part?.id ?? null });
+      const r = await post<{ id: string }>(`${S}/instructions`, { type, title, siteId, departmentId: nul(departmentId), partId: part?.id ?? null, templateId: nul(templateId) });
       nav(`/sequfloh/instruction/${r.id}`, { replace: true });
     } catch (e) { setErr((e as Error).message); } finally { setBusy(false); }
   };
@@ -168,7 +170,7 @@ export function NewInstructionPage() {
       <Paper variant="outlined" sx={{ p: 3, maxWidth: 880 }}>
         {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
         <Typography variant="overline" component="h2" sx={{ fontWeight: 700 }}>WORK INSTRUCTION TYPE</Typography>
-        <TextField select fullWidth label="Work instruction type" value={type} onChange={(e) => setType(e.target.value)} sx={{ mb: 1, mt: 1 }}>
+        <TextField select fullWidth label="Work instruction type" value={type} onChange={(e) => { setType(e.target.value); setTemplateId(''); }} sx={{ mb: 1, mt: 1 }}>
           {types.map((t) => <MenuItem key={t} value={t}>{typeLabels[t]}</MenuItem>)}</TextField>
         {schema && <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Opens the {schema.title} designer: {schema.sections.map((s) => s.title).join(', ')}; {schema.stepsTitle.toLowerCase()}{schema.hasCharacteristics ? '; FAI characteristics' : ''}{schema.hasPartsRows ? '; repair parts list' : ''}.
@@ -179,6 +181,7 @@ export function NewInstructionPage() {
             {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}</TextField>
           <TextField select label="Department" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} disabled={!type}>
             <MenuItem value=""><em>None</em></MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}</TextField>
+          <Box sx={{ gridColumn: '1 / -1' }}><TemplatePicker type={type || undefined} value={templateId} onChange={setTemplateId} disabled={!type} /></Box>
           <Box sx={{ gridColumn: '1 / -1' }}><PartPicker label={type === 'RepairWork' ? 'Part being repaired' : 'Part (optional)'} value={part} onChange={setPart} disabled={!type} repairable={type === 'RepairWork'} /></Box>
         </Grid>
         <Stack direction="row" gap={1} sx={{ mt: 3 }}>
@@ -212,6 +215,7 @@ export function TemplatesPage() {
             {can('sequfloh.create_work_instruction') && <CardActions><Button size="small" component={RouterLink} to={`/sequfloh/instructions/new?type=${s.type}`}>Use template</Button></CardActions>}
           </Card>)}
         </Box>}
+      <LayoutTemplates typeLabels={typeLabels} />
       <Typography variant="h3" sx={{ mb: 1 }}>Released instructions</Typography>
       {released.isLoading ? <Loading /> : released.error ? <ErrorState error={released.error} /> : !released.data?.items.length ? <Empty text="No released instructions yet." /> :
         <SimpleTable head={['Instruction', 'Title', 'Type', 'Rev', '']} rows={released.data.items.map((r) => [
@@ -228,7 +232,7 @@ interface WiDoc {
   model?: string | null; variant?: string | null; process?: string | null; operation?: string | null; workstation?: string | null; location?: string | null; validationType?: string | null; faiType?: string | null;
   repairCategory?: string | null; repairType?: string | null; repairDescription?: string | null; sourcePartsListId?: string | null; resultStatus?: string | null; effectiveDate?: string | null;
   supersededAt?: string | null; obsoleteAt?: string | null; reviewedAt?: string | null; approvedAt?: string | null; releasedAt?: string | null; revisionReason?: string | null; createdAt: string; updatedAt: string;
-  rowVersion: number; content: Record<string, Record<string, Val>>; steps: Row[]; characteristics: Row[]; partsRows: Row[]; owner?: string; author?: string; reviewer?: string; approver?: string;
+  rowVersion: number; content: Record<string, Record<string, Val>>; steps: Row[]; characteristics: Row[]; partsRows: Row[]; blocks: Block[]; templateId?: string | null; template?: string | null; owner?: string; author?: string; reviewer?: string; approver?: string;
   reviewedBy?: string; approvedBy?: string; releasedBy?: string; createdBy?: string; updatedBy?: string; site?: string; department?: string;
   developmentStatus?: string | null; engineeringNotes?: string | null;
 }
@@ -241,6 +245,7 @@ const applicability: [keyof WiDoc, string][] = [['productFamily', 'Product famil
 const pick = (c: WiDoc['content'], ...paths: [string, string][]) => { for (const [s, f] of paths) { const v = c?.[s]?.[f]; if (v !== undefined && v !== null && v !== '') return String(v); } return null; };
 
 export function InstructionPage() {
+  const { can } = useAuth();
   const { id = '' } = useParams();
   const [sp, setSp] = useSearchParams();
   const tab = sp.get('tab') ?? 'control';
@@ -273,7 +278,7 @@ export function InstructionPage() {
     location: nul(d.location), validationType: pick(d.content, ['validationIdentity', 'validationType']), faiType: pick(d.content, ['faiIdentity', 'faiType']),
     repairCategory: pick(d.content, ['repairIdentity', 'repairCategory'], ['repairTest', 'repairCategory']), repairType: pick(d.content, ['repairIdentity', 'repairType']),
     repairDescription: nul(d.repairDescription), resultStatus: pick(d.content, ['results', 'resultStatus'], ['faiDisposition', 'finalDisposition']), effectiveDate: nul(d.effectiveDate),
-    content: d.content, steps: d.steps, characteristics: d.characteristics, partsRows: d.partsRows, rowVersion: d.rowVersion,
+    content: d.content, steps: d.steps, characteristics: d.characteristics, partsRows: d.partsRows, blocks: d.blocks ?? [], rowVersion: d.rowVersion,
   });
   const save = async (quiet = false) => {
     setBusy(true); setMsg(null);
@@ -293,7 +298,7 @@ export function InstructionPage() {
     await refresh(); setMsg({ sev: 'success', text: `${a.label}: done.` });
   };
   const seqIssues = [...sequenceProblems(doc.steps, 'step'), ...(schema.hasCharacteristics ? sequenceProblems(doc.characteristics, 'characteristic') : [])];
-  const tabs = [{ label: 'Document control', value: 'control' }, { label: 'Content', value: 'content' }, { label: schema.stepsTitle, value: 'steps' },
+  const tabs = [{ label: 'Document control', value: 'control' }, { label: 'Content', value: 'content' }, { label: 'Layout', value: 'layout' }, { label: schema.stepsTitle, value: 'steps' },
     ...(schema.hasCharacteristics ? [{ label: 'Characteristics', value: 'characteristics' }] : []), ...(schema.hasPartsRows ? [{ label: 'Repair parts', value: 'parts' }] : []),
     ...(q.data.canDevelop || doc.developmentStatus || doc.engineeringNotes ? [{ label: 'Development', value: 'development' }] : []),
     { label: 'History', value: 'history' }];
@@ -341,6 +346,15 @@ export function InstructionPage() {
       {tab === 'content' && <Stack gap={2}>
         {schema.sections.map((s) => <SectionCard key={s.key} section={s} values={doc.content[s.key] ?? {}} disabled={ro} onChange={(k, v) => setContent(s.key, k, v)}
           extra={s.key === 'repairDescription' ? <Box sx={{ mb: 2, maxWidth: 420 }}><RepairDescriptionSelect value={doc.repairDescription ?? null} disabled={ro} onChange={(v) => upd({ repairDescription: v })} /></Box> : undefined} />)}
+      </Stack>}
+
+      {tab === 'layout' && <Stack gap={2}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" flexWrap="wrap" gap={1}>
+          <Typography variant="body2" color="text.secondary">{doc.template ? `Started from template ${doc.template}. ` : ''}Build the page from blocks in the order the operator reads them.</Typography>
+          <TemplateActions id={id} type={doc.type} canApply={!ro} canSave={can('sequfloh.create_work_instruction') && (doc.blocks ?? []).length > 0}
+            beforeRun={async () => (dirty ? save(true) : true)} onApplied={refresh} />
+        </Stack>
+        <BlocksEditor blocks={doc.blocks ?? []} disabled={ro} onChange={(blocks) => upd({ blocks })} ownerType="SequflohWorkInstruction" ownerId={doc.id} />
       </Stack>}
 
       {tab === 'steps' && <Stack gap={2}>

@@ -119,6 +119,18 @@ public static class SequflohBlocks
         return a.ToJsonString();
     }
 
+    /// <summary>Attachment ids that image blocks point at.</summary>
+    public static List<Guid> ImageIds(string json) =>
+        (JsonNode.Parse(json) as JsonArray ?? []).OfType<JsonObject>().Select(b => b["attachmentId"] is JsonValue v && Guid.TryParse(v.ToString(), out var g) ? g : Guid.Empty).Where(g => g != Guid.Empty).ToList();
+
+    /// <summary>Removes the picture from image blocks, keeping the caption and description as a placeholder.</summary>
+    public static string WithoutImages(string json)
+    {
+        var a = JsonNode.Parse(json) as JsonArray ?? [];
+        foreach (var b in a.OfType<JsonObject>()) b.Remove("attachmentId");
+        return a.ToJsonString();
+    }
+
     /// <summary>Copies blocks with new ids so a template and the instructions made from it never share block ids.</summary>
     public static string Fresh(string json)
     {
@@ -195,7 +207,7 @@ public sealed class SequflohTemplateService(AppDbContext db, ModuleSupport m)
         if (await db.SequflohInstructionTemplates.AnyAsync(x => x.Name == name && x.Id != t.Id, ct)) throw new ConflictException($"A template named '{name}' already exists.");
         if (r.Description is { Length: > 2000 }) throw new AppException("The description is limited to 2000 characters.");
         t.Name = name; t.Description = string.IsNullOrWhiteSpace(r.Description) ? null : r.Description.Trim(); t.Type = r.Type;
-        t.Blocks = SequflohBlocks.Clean(r.Blocks);
+        t.Blocks = SequflohBlocks.WithoutImages(SequflohBlocks.Clean(r.Blocks)); // pictures stay with the instruction they were attached to
     }
 
     async Task<SequflohInstructionTemplate> ManageableAsync(Guid id, CancellationToken ct)
