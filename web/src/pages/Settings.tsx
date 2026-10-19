@@ -251,6 +251,7 @@ export function MySettingsPage() {
   const save = async (patch: Partial<Prefs>) => {
     if (!p) return;
     const next = { ...p, ...patch };
+    await qc.cancelQueries({ queryKey: ['preferences'] }); // a load still in flight would put the old value back
     qc.setQueryData(['preferences'], next);
     try {
       const r = await put<Prefs>('/api/account/preferences', { emailNotifications: next.emailNotifications, dateFormat: next.dateFormat, theme: next.theme });
