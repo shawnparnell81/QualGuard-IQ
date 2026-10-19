@@ -100,7 +100,10 @@ public sealed class FormPrefillService(AppDbContext db, ModuleSupport m, FormSer
         foreach (var t in def.Tables)
         {
             if (!fromCapa && OwnEntries.Contains(t.Key)) continue;
+            // "characteristics?char_type=Dimensional" copies only the rows whose char_type is Dimensional
             var from = t.Prefill ?? t.Key;
+            string? whereKey = null, whereValue = null;
+            if (from.IndexOf('?') is > 0 and var q && from[(q + 1)..].Split('=', 2) is [var wk, var wv]) { whereKey = wk; whereValue = wv.Replace('_', ' '); from = from[..q]; }
             if (!src.Tables.Contains(from) || !src.Values.TryGetValue(from, out var json) || json is null) continue;
             if (!overwrite && !Empty(t.Key)) continue;
             var rows = (JsonNode.Parse(json) is JsonObject o ? o["rows"] : JsonNode.Parse(json)) as JsonArray;
@@ -108,6 +111,7 @@ public sealed class FormPrefillService(AppDbContext db, ModuleSupport m, FormSer
             var copied = new JsonArray();
             foreach (var r in rows.OfType<JsonObject>())
             {
+                if (whereKey is not null && !string.Equals(r[whereKey]?.ToString(), whereValue, StringComparison.OrdinalIgnoreCase)) continue;
                 var row = new JsonObject();
                 foreach (var c in t.Columns.Where(c => c.Type is not "calc"))
                     if (r[c.Prefill ?? c.Key] is { } cell && cell.ToString() is { Length: > 0 }) row[c.Key] = cell.DeepClone();
