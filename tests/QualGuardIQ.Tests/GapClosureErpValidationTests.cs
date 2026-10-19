@@ -167,7 +167,7 @@ public sealed class GapClosureErpValidationTests(TestApp app)
     {
         using var scope = app.Services.CreateScope();
         var registry = scope.ServiceProvider.GetRequiredService<ErpAdapterRegistry>();
-        Assert.Equal(12, registry.All.Count());
+        Assert.Equal(14, registry.All.Count());
         foreach (var a in registry.All)
         {
             var steps = ErpValidationService.Checklist(a.System);
