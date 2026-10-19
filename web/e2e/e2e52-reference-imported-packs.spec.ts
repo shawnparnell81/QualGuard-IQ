@@ -83,8 +83,13 @@ test.describe('E2E 52: reference copies, read-only historical imports, industry 
     for (const k of ['automotive', 'aerospace', 'electronics', 'medical-device', 'manufacturing']) await expect(card.getByTestId(`pack-${k}`)).toBeVisible();
     await card.getByTestId('preview-aerospace').click();
     await expect(card.getByTestId('pack-aerospace').getByText('CAPA', { exact: false }).first()).toBeVisible();
-    await card.getByLabel('Choose Aerospace').check();
-    await card.getByLabel('Choose Medical device').check();
+    // other specs may already have installed some library forms; choose packs that still have forms to add
+    const author = await Api.as(users.author);
+    const open = ((await author.get('/api/industry-packs')).packs as { key: string; name: string; templateCount: number; installedCount: number }[])
+      .filter(p => p.installedCount < p.templateCount).slice(0, 2);
+    await author.dispose();
+    expect(open.length).toBeGreaterThan(0);
+    for (const p of open) await card.getByLabel(`Choose ${p.name}`).check();
     await capture(page, '09-first-run-industry-packs');
     await page.getByTestId('pack-site').click();
     await page.getByRole('option').first().click();
@@ -92,8 +97,8 @@ test.describe('E2E 52: reference copies, read-only historical imports, industry 
     await expect(page.getByTestId('setup-packs')).toHaveCount(0, { timeout: 60_000 });
 
     await page.goto('/admin/industry-packs');
-    await expect(page.getByTestId('pack-aerospace').getByText('Installed')).toBeVisible();
-    await expect(page.getByLabel('Choose Aerospace')).toBeDisabled();
+    await expect(page.getByTestId(`pack-${open[0].key}`).getByText('Installed')).toBeVisible();
+    await expect(page.getByLabel(`Choose ${open[0].name}`)).toBeDisabled();
     await capture(page, '10-admin-industry-packs');
 
     // someone without the install permission can look but not install
