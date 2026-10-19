@@ -388,3 +388,31 @@ f replacement_inspected | Replacement inspected and accepted | passfail
 sign return_requested | Requested by | prepared | I request the return of this material to the supplier.
 sign return_authorized | Authorized by | approved | I authorize the return. | suppliers.approve
 end
+
+template ncr-log | Nonconformance Log | NONCONFORMANCE
+tags nonconformance, log, register
+landscape
+purpose Keep one list of every nonconformance with its source, part, quantity, disposition, cost, owner, status and days open, so trends and overdue items are visible.
+scope Internal, supplier and customer nonconformances at the site.
+instructions Add a row when a nonconformance is raised and keep it current until it is closed. Days open counts to today until the closed date is entered.
+workflow Kept current; reviewed weekly and at management review.
+retention Keep for ten years after the last entry is closed.
+section ncr_log_section | Nonconformances | 1
+table ncr_entries | Nonconformances | 1
+c nl_number | NCR no. | text | *
+c nl_opened | Date raised | date | *
+c nl_source | Source | choice | [Receiving; In-process; Final inspection; Customer; Supplier; Audit; Other]
+c nl_part | Part | text
+c nl_description | Nonconformance | text | *
+c nl_qty | Quantity | integer | min=0
+c nl_disposition | Disposition | choice | [Pending; Use as is; Rework; Repair; Scrap; Return to supplier]
+c nl_cost | Cost | number | dec=2 min=0
+c nl_owner | Owner | user
+c nl_capa | CAPA | text
+c nl_status | Status | choice | [Open; Contained; Dispositioned; Closed]
+c nl_closed | Closed | date
+c nl_days_open | Days open | calc | {IF(ISBLANK(nl_opened), "", IF(ISBLANK(nl_closed), DAYS(TODAY(), nl_opened), DAYS(nl_closed, nl_opened)))}
+total nl_qty | sum | Total quantity
+total nl_cost | sum | Total cost
+f nl_open | Open | calc | {COUNTA(ncr_entries.nl_number) - COUNTIF(ncr_entries.nl_status, "Closed")}
+end

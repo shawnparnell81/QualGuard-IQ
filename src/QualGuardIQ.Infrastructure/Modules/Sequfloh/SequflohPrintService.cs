@@ -69,6 +69,42 @@ public sealed class SequflohPrintService(AppDbContext db, ModuleSupport m, ICurr
             blocks.Add(new PrintHeading(s.Title));
             blocks.Add(new PrintFields(items));
         }
+        var layout = JsonNode.Parse(x.Blocks) as JsonArray ?? [];
+        if (layout.Count > 0)
+        {
+            blocks.Add(new PrintHeading("Instruction"));
+            var files = SequflohBlocks.ImageIds(x.Blocks);
+            var fileNames = files.Count == 0 ? [] : await db.Attachments.AsNoTracking().Where(a => files.Contains(a.Id)).ToDictionaryAsync(a => a.Id, a => a.FileName, ct);
+            foreach (var b in layout.OfType<JsonObject>())
+            {
+                switch (V(b["kind"]))
+                {
+                    case "text":
+                        if (V(b["title"]) is { } tt) blocks.Add(new PrintFields([(tt, V(b["body"]))])); else blocks.Add(new PrintParagraph(V(b["body"]) ?? ""));
+                        break;
+                    case "step":
+                        blocks.Add(new PrintFields([($"Operation {V(b["operation"])}", V(b["title"])), ("Instructions", V(b["body"])), ("Tools and materials", V(b["tools"])), ("Expected result", V(b["expected"]))]));
+                        break;
+                    case "caution":
+                        blocks.Add(new PrintParagraph($"{(V(b["level"]) ?? "caution").ToUpperInvariant()}: {V(b["body"])}"));
+                        break;
+                    case "image":
+                        var file = Guid.TryParse(V(b["attachmentId"]), out var fid) && fileNames.TryGetValue(fid, out var fn) ? fn : null;
+                        blocks.Add(new PrintFields([("Visual aid", string.Join(" · ", new[] { V(b["caption"]), V(b["alt"]), file is null ? null : $"see attached file {file}" }.Where(v => v is not null)))]));
+                        break;
+                    case "table":
+                        var cols = (b["columns"] as JsonArray ?? []).Select(c => (V(c) ?? "", 1.0)).ToList();
+                        if (V(b["title"]) is { } title) blocks.Add(new PrintParagraph(title));
+                        blocks.Add(new PrintTable(cols, (b["rows"] as JsonArray ?? []).Select(r => (r as JsonArray ?? []).Select(V).ToArray()).ToList()));
+                        break;
+                    case "check":
+                        var signoff = V(b["check"]) == "signoff";
+                        blocks.Add(new PrintFields([($"{(signoff ? "Sign-off" : "Check")}{(b["required"] is JsonValue rq && rq.TryGetValue<bool>(out var req) && req ? " (required)" : "")}", V(b["label"])),
+                            (signoff ? $"Signed by {V(b["signer"]) ?? ""}".Trim() : "Result", "______________________   Date ____________")]));
+                        break;
+                }
+            }
+        }
         blocks.Add(new PrintHeading(schema.StepsTitle));
         var steps = JsonNode.Parse(x.Steps)!.AsArray();
         if (steps.Count == 0) blocks.Add(new PrintParagraph("No steps."));

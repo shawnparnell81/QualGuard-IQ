@@ -1,0 +1,246 @@
+# The CAPA set: report, action plan, root cause analysis worksheet, effectiveness check and master log. Every industry pack installs it.
+# Drop-down lists shared by the set:
+#   CAPA type:            Corrective Action; Preventive Action; Both
+#   Priority / risk:      Low; Medium; High; Critical
+#   Status:               Draft; Open; Investigation; Action in Progress; Pending Verification; Effectiveness Monitoring; Closed; Cancelled
+#   Source / trigger:     Internal Audit; External Audit; Customer Complaint; Supplier Issue; Nonconformance; Process Trend; Risk Assessment; Management Review; Regulatory Finding; Safety Incident; Other
+#   Action type:          Correction; Containment; Corrective Action; Preventive Action; Systemic Action
+#   Effectiveness result: Effective; Partially Effective; Not Effective; Pending
+# Risk scores run 1 to 5. Severity: Negligible, Minor, Moderate, Major, Critical. Occurrence: Remote, Low, Occasional, High, Frequent.
+# Detection: Very likely to detect, Likely to detect, Moderate detectability, Low detectability, Unlikely to detect.
+
+template capa-report | Corrective Action / Preventive Action (CAPA) Report | CAPA
+tags CAPA, corrective action, preventive action, report
+purpose Record one corrective or preventive action from the problem through containment, root cause, actions, change control and effectiveness to closure, on one controlled report.
+scope Every CAPA, whatever raised it: audits, complaints, supplier issues, nonconformances, trends, risk assessments, management review, regulatory findings and safety incidents.
+instructions Complete the fields in order and attach objective evidence as you go. Detail every action on the CAPA Action Plan and use the Root Cause Analysis Worksheet for the 5 Whys and cause categories. Define the effectiveness criteria before closure and close only after actions are complete, changes are implemented, evidence is attached and effectiveness is approved.
+workflow Draft, open, investigation, action in progress, pending verification, effectiveness monitoring, closed or cancelled.
+retention Keep for ten years after closure, or longer where a customer or regulation requires it.
+status Draft; Open; Investigation; Action in Progress; Pending Verification; Effectiveness Monitoring; Closed; Cancelled
+section identification | CAPA identification and control | 3
+relabel reference_no | CAPA number
+relabel due_on | Target closure date
+relabel owner | CAPA owner | Accountable for completing the CAPA and its actions.
+relabel department | Department
+relabel product | Process / product
+relabel closed_on | Closure date | Entered when the CAPA is closed.
+f capa_type | CAPA type | choice | * [Corrective Action; Preventive Action; Both]
+f priority_risk | Priority / risk | choice | * [Low; Medium; High; Critical]
+f source_trigger | Source / trigger | choice | * [Internal Audit; External Audit; Customer Complaint; Supplier Issue; Nonconformance; Process Trend; Risk Assessment; Management Review; Regulatory Finding; Safety Incident; Other]
+f source_reference | Source reference | text | | Number of the audit, complaint, NCR or other record that raised the CAPA.
+f process_name | Process | text
+f batch_lot | Part / batch / lot | text
+f initiated_by | Initiated by | user | *
+f quality_approver | Quality approver | user
+order reference_no; opened_on; due_on; capa_type; priority_risk; record_status; source_trigger; source_reference; site; department; process_name; product; part; batch_lot; customer; supplier; owner; initiated_by; quality_approver; record_title; closed_on
+section problem | Problem / potential problem description | 1
+note Use observable facts. Define what happened, where, when, who/what was affected, magnitude, requirement, and evidence.
+f requirement_expected | Requirement / expected condition | longtext | *
+f problem_statement | Problem statement (what, where, when, who, extent, evidence) | longtext | *
+f scope_boundaries | Scope and boundaries | longtext
+f evidence_references | Objective evidence / attachments / data references | longtext
+f evidence_files | Evidence files | attachment
+section initial_risk | Initial risk and impact assessment | 4 | Score each factor from 1 to 5 using the risk scoring guide.
+f initial_severity | Severity (1-5) | integer | * min=1 max=5 | 1 Negligible, 2 Minor, 3 Moderate, 4 Major, 5 Critical.
+f initial_occurrence | Occurrence (1-5) | integer | * min=1 max=5 | 1 Remote, 2 Low, 3 Occasional, 4 High, 5 Frequent.
+f initial_detection | Detection (1-5) | integer | * min=1 max=5 | 1 Very likely to detect, 2 Likely to detect, 3 Moderate detectability, 4 Low detectability, 5 Unlikely to detect.
+f initial_rpn | Initial RPN | calc | {IF(AND(ISNUMBER(initial_severity), ISNUMBER(initial_occurrence), ISNUMBER(initial_detection)), initial_severity * initial_occurrence * initial_detection, "")}
+f impact_customer | Customer / patient / safety impact | longtext | w=12
+f impact_compliance | Product / process / compliance impact | longtext | w=12
+f potential_extent | Potential extent (other products, lots, lines, sites, customers) | longtext | w=12
+section containment | Immediate correction and containment | 1
+note Protect customers and operations immediately. Record quantities, locations, dates, owners, and verification.
+table containment_actions | Containment and correction | 1
+c cont_action | Containment / correction | longtext | *
+c cont_owner | Owner | user | *
+c cont_implemented | Date implemented | date
+c cont_qty_reviewed | Qty reviewed | integer | min=0
+c cont_qty_contained | Qty contained | integer | min=0
+c cont_verification | Verification / evidence | text
+c cont_status | Status | text
+c cont_verified | Date verified | date
+total cont_qty_reviewed | sum | Total reviewed
+total cont_qty_contained | sum | Total contained
+section investigation | Investigation and root cause analysis | 1
+note Use evidence to establish the system or process cause. Avoid stopping at vague labels such as "operator error."
+f investigation_team | Investigation team / functions | longtext | *
+f investigation_methods | Investigation method(s) | multichoice | * [5 Whys; Fishbone; Is / Is Not; Fault Tree; Data Analysis; Other]
+f investigation_summary | Investigation summary and supporting evidence | longtext | *
+f root_causes_confirmed | Confirmed root cause(s) | longtext | *
+f contributing_causes | Contributing cause(s) | longtext
+f root_cause_verification | Root cause verification / rationale | longtext | *
+f root_cause_worksheet | Root cause analysis worksheet | record
+section action_summary | Action plan summary | 1 | Summarize the actions here; detail every action on the CAPA Action Plan.
+note Corrective action eliminates the confirmed cause of the detected nonconformity so it does not recur. Preventive / systemic action addresses similar products, processes, sites, controls, or potential failures identified through risk and trend review.
+table action_summary_rows | Actions | 1
+c sum_type | Type | choice | * [Correction; Containment; Corrective Action; Preventive Action; Systemic Action]
+c sum_action | Action summary | longtext | *
+c sum_root_cause | Root cause addressed | text
+c sum_owner | Owner | user | *
+c sum_due | Due date | date | *
+c sum_complete | Complete date | date
+c sum_status | Status | choice | [Draft; Open; Investigation; Action in Progress; Pending Verification; Effectiveness Monitoring; Closed; Cancelled]
+c sum_evidence | Evidence / record | text
+f action_plan_ref | CAPA action plan | record
+section change_control | Change control, communication, training, and validation | 1
+f docs_updated | Documents / specifications / control plans / FMEAs updated | longtext
+f training_communication | Training and communication completed | longtext
+f verification_validation | Verification / validation required and results | longtext
+f new_risks | Unintended consequences / new risks evaluated | longtext
+section effectiveness | Effectiveness verification and closure | 4
+note Define criteria before closure. Use objective results over an appropriate monitoring period and record the conclusion.
+f effectiveness_criteria | Effectiveness criteria (specific, measurable, acceptance threshold) | longtext | * w=12
+f monitoring_method | Monitoring method, sample size, and monitoring period | longtext | w=12
+f actual_results | Actual results / data reference | longtext | w=12
+f effectiveness_conclusion | Effectiveness conclusion and rationale | longtext | w=12
+f effectiveness_result | Effectiveness result | choice | [Effective; Partially Effective; Not Effective; Pending]
+f residual_severity | Residual severity | integer | min=1 max=5
+f residual_occurrence | Residual occurrence | integer | min=1 max=5
+f residual_detection | Residual detection | integer | min=1 max=5
+f residual_rpn | Residual RPN | calc | {IF(AND(ISNUMBER(residual_severity), ISNUMBER(residual_occurrence), ISNUMBER(residual_detection)), residual_severity * residual_occurrence * residual_detection, "")}
+f followup_required | Additional follow-up required? | boolean
+f followup_capa | Follow-up CAPA / ref. | record | when=followup_required=true reqwhen=followup_required=true
+f effectiveness_check_ref | Effectiveness check | record
+rule effectiveness_result | equals | Not Effective | #FDE7E9 | bold
+rule effectiveness_result | equals | Effective | #E6F4EA
+section disposition | Final disposition | 2 | Close only after actions are complete, changes are implemented, evidence is attached, and effectiveness is approved.
+f final_disposition | Final disposition | longtext | w=12
+f closed_by | Closed by | user
+sign capa_prepared | Prepared / owner | prepared | I prepared this CAPA report and the information in it is complete and accurate.
+sign capa_quality | Quality review | reviewed | I reviewed this CAPA and its evidence.
+sign capa_process_owner | Process owner | reviewed | I accept the actions for my process.
+sign capa_management | Management approval | approved | I approve the final disposition of this CAPA. | capa.approve
+end
+
+template capa-action-plan | CAPA Action Plan | CAPA
+tags CAPA, action plan
+layout worksheet
+landscape
+purpose Detail every action taken on a CAPA, with its type, the root cause or risk it addresses, owner, dates, status, priority, deliverable and verification.
+scope All actions raised on a CAPA report: correction, containment, corrective, preventive and systemic.
+instructions Give each action its own row and ID. Tie each corrective or systemic action to a confirmed root cause or risk from the CAPA report. Attach the deliverable or evidence and record how completion was verified.
+workflow Draft, open, action in progress, pending verification, closed.
+retention Keep with the CAPA report for ten years after closure.
+status Draft; Open; Investigation; Action in Progress; Pending Verification; Effectiveness Monitoring; Closed; Cancelled
+section plan_header | CAPA | 2
+f capa_report_ref | CAPA report | record | *
+f capa_number_ref | CAPA number | text
+section actions | Actions | 1
+note Corrective action eliminates the confirmed cause of the detected nonconformity so it does not recur. Preventive / systemic action addresses similar products, processes, sites, controls, or potential failures identified through risk and trend review.
+table plan_actions | Action plan | 1
+c action_id | Action ID | text | *
+c action_type | Action type | choice | * [Correction; Containment; Corrective Action; Preventive Action; Systemic Action]
+c action_description | Action description | longtext | *
+c action_root_cause | Root cause / risk addressed | text
+c action_owner | Owner | user | *
+c action_start | Start date | date
+c action_due | Due date | date | *
+c action_completed | Completion date | date
+c action_status | Status | choice | [Draft; Open; Investigation; Action in Progress; Pending Verification; Effectiveness Monitoring; Closed; Cancelled]
+c action_priority | Priority | choice | [Low; Medium; High; Critical]
+c action_deliverable | Deliverable / evidence | text
+c action_verification | Verification / comments | text
+rule plan_actions.action_priority | equals | Critical | #FDE7E9 | bold
+f actions_count | Actions | calc | {COUNTA(plan_actions.action_id)}
+f actions_closed | Closed | calc | {COUNTIF(plan_actions.action_status, "Closed")}
+f actions_open | Still open | calc | {actions_count - actions_closed - COUNTIF(plan_actions.action_status, "Cancelled")}
+end
+
+template capa-root-cause-worksheet | Root Cause Analysis Worksheet | CAPA
+tags CAPA, root cause, 5 whys, fishbone
+purpose Work a CAPA problem down to its confirmed root cause with the 5 Whys and the six cause categories, and record why existing controls did not prevent or detect it.
+scope Root cause analysis for any CAPA report, nonconformance or complaint.
+instructions State the problem as on the CAPA report. Ask why up to five times, recording the evidence for each answer and whether the cause was validated. List candidate causes under each category, then confirm the root cause with a test or evidence before writing the confirmed statement.
+workflow Problem stated, 5 Whys worked, causes listed by category, root cause confirmed, reviewed.
+retention Keep with the CAPA report for ten years after closure.
+section rca_problem | Problem statement | 1
+f rca_capa_ref | CAPA report | record
+f rca_problem_statement | Problem statement | longtext | *
+section five_whys | 5 Whys analysis | 1
+table whys | 5 Whys | 0
+rows Why 1; Why 2; Why 3; Why 4; Why 5
+c why_answer | Why did this happen? | longtext
+c why_evidence | Evidence / data | text
+c why_validated | Cause validated? | boolean
+c why_owner | Owner / source | text
+c why_notes | Notes | text
+section fishbone | Fishbone / cause categories | 1 | List candidate causes under each category, one per row.
+table cause_categories | Cause categories | 6
+c cat_people | People | text
+c cat_methods | Methods | text
+c cat_machines | Machines / equipment | text
+c cat_materials | Materials | text
+c cat_measurement | Measurement | text
+c cat_environment | Environment | text
+section rca_confirmation | Root cause confirmation | 1
+f candidate_root_cause | Candidate root cause | longtext | *
+f confirmation_evidence | Test / evidence used to confirm | longtext | *
+f confirmed_root_cause | Confirmed root cause statement | longtext | *
+f controls_failed | Why existing controls did not prevent / detect | longtext | *
+end
+
+template capa-effectiveness-check | CAPA Effectiveness Check | CAPA
+tags CAPA, effectiveness
+layout checklist
+purpose Plan and record the check that shows whether a CAPA's actions worked, against criteria set before closure, and recommend closure or further action.
+scope Every CAPA before closure.
+instructions Plan the check first: owner, date, monitoring period, acceptance criteria, data source and sample size. Record each result against its baseline and target, then state the overall result and the closure recommendation.
+workflow Planned, monitoring, results recorded, concluded.
+retention Keep with the CAPA report for ten years after closure.
+section eff_plan | Plan | 2
+f eff_capa_number | CAPA number | record | *
+f eff_owner | Verification owner | user | *
+f eff_planned_date | Planned check date | date | *
+f eff_period | Monitoring period | text | *
+f eff_criteria | Acceptance criteria | longtext | * w=12
+f eff_method | Data source / method | longtext | w=12
+f eff_sample | Sample size / rationale | longtext | w=12
+section eff_results | Results | 1
+table eff_checks | Results | 1
+c chk_date | Check date | date | *
+c chk_metric | Metric / attribute | text | *
+c chk_baseline | Baseline | text
+c chk_target | Target | text | *
+c chk_actual | Actual | text | *
+c chk_result | Pass / fail | passfail | *
+c chk_by | Verified by | user
+c chk_comments | Evidence / comments | text
+rule eff_checks.chk_result | equals | fail | #FDE7E9 | bold
+f eff_failed | Checks failed | calc | {COUNTIF(eff_checks.chk_result, "fail")}
+section eff_conclusion | Conclusion and disposition | 1
+f eff_overall | Overall effectiveness result | choice | * [Effective; Partially Effective; Not Effective; Pending]
+f eff_rationale | Conclusion / rationale | longtext | *
+f eff_escalation | Additional action / escalation | longtext | reqwhen=eff_overall~Partially_Effective/Not_Effective
+f eff_recommendation | Closure recommendation | longtext | *
+rule eff_overall | equals | Not Effective | #FDE7E9 | bold
+end
+
+template capa-log | CAPA Master Log | CAPA
+tags CAPA, log, register
+landscape
+purpose Keep one list of every CAPA with its source, owner, priority, dates, status, days open, overdue flag, risk before and after, and effectiveness result.
+scope All CAPAs at the site or across the organization.
+instructions Add a row when a CAPA is opened and keep it current as the CAPA moves. Days open counts to today until the actual close date is entered; a CAPA is overdue when its target close date has passed and it is not closed or cancelled.
+workflow Kept current; reviewed at management review.
+retention Keep for ten years after the last entry is closed.
+section log | CAPA log | 1
+table capa_entries | CAPAs | 1
+c log_number | CAPA no. | text | *
+c log_opened | Date opened | date | *
+c log_source | Source | choice | [Internal Audit; External Audit; Customer Complaint; Supplier Issue; Nonconformance; Process Trend; Risk Assessment; Management Review; Regulatory Finding; Safety Incident; Other]
+c log_department | Department | text
+c log_issue | Issue / potential issue | text | *
+c log_owner | Owner | user
+c log_priority | Priority | choice | [Low; Medium; High; Critical]
+c log_target | Target close | date
+c log_actual | Actual close | date
+c log_status | Status | choice | [Draft; Open; Investigation; Action in Progress; Pending Verification; Effectiveness Monitoring; Closed; Cancelled]
+c log_days_open | Days open | calc | {IF(ISBLANK(log_opened), "", IF(ISBLANK(log_actual), DAYS(TODAY(), log_opened), DAYS(log_actual, log_opened)))}
+c log_overdue | Overdue? | calc | {IF(OR(ISBLANK(log_target), log_status = "Closed", log_status = "Cancelled"), "", IF(DAYS(TODAY(), log_target) > 0, "YES", "NO"))}
+c log_initial_rpn | Initial RPN | integer | min=1 max=125
+c log_residual_rpn | Residual RPN | integer | min=1 max=125
+c log_effectiveness | Effectiveness result | choice | [Effective; Partially Effective; Not Effective; Pending]
+rule capa_entries.log_overdue | equals | YES | #FDE7E9 | bold
+f log_open_count | Open CAPAs | calc | {COUNTA(capa_entries.log_number) - COUNTIF(capa_entries.log_status, "Closed") - COUNTIF(capa_entries.log_status, "Cancelled")}
+f log_overdue_count | Overdue CAPAs | calc | {COUNTIF(capa_entries.log_overdue, "YES")}
+end

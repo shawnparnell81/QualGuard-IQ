@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Box, Button, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import type { ColumnDef } from '@tanstack/react-table';
 import { get, post, put } from '../api';
@@ -93,6 +93,8 @@ export function FormRecordDetail() {
   const [saved, setSaved] = useState(false);
   const [signing, setSigning] = useState(false);
   const [signBlock, setSignBlock] = useState<string | null>(null);
+  const [filling, setFilling] = useState(false);
+  const [filled, setFilled] = useState<number | null>(null);
   const rec = useQuery({ queryKey: ['formrecord', id], queryFn: () => get<FormDetail>(`/api/forms/records/${id}`) });
   const work = useWork();
   const refresh = () => { qc.invalidateQueries({ queryKey: ['formrecord', id] }); qc.invalidateQueries({ queryKey: ['work'] }); };
@@ -112,12 +114,13 @@ export function FormRecordDetail() {
         <Button variant="outlined" href={`/api/forms/records/${d.id}/pdf?style=standardized`} target="_blank">Print</Button>
         {def.layout && <Button variant="outlined" href={`/api/forms/records/${d.id}/pdf?style=original`} target="_blank">Print original look</Button>}
         {approval && <Button variant="contained" color="secondary" onClick={() => setSigning(true)}>Review and sign</Button>}
+        {d.canEdit && <Button variant="outlined" onClick={() => setFilling(true)}>Fill from record</Button>}
         {d.canEdit && <Button variant="outlined" onClick={() => run(async () => { const r = await put<{ values: Record<string, string | null> }>(`/api/forms/records/${d.id}`, { values, rowVersion: d.rowVersion }); setValues(r.values); setSaved(true); })}>Save draft</Button>}
         {d.canEdit && <Button variant="contained" onClick={() => run(async () => { await put(`/api/forms/records/${d.id}`, { values, rowVersion: d.rowVersion }); await post(`/api/forms/records/${d.id}/submit`); })}>Submit</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {saved && !error && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSaved(false)}>Draft saved. Calculated fields were updated.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '260px minmax(0, 1fr)' }, gap: { xs: 2, md: 3 } }}>
         <Facts items={[['Template', `${d.templateNumber} revision ${d.templateRevision}`], ['Status', formStatus[d.status]], ['Submitted', fmtDateTime(d.submittedAt)]]} />
         <Box sx={{ minWidth: 0 }}>
           {tab === 'form' && <Paper sx={{ p: 3 }}><FormView def={def} values={values} onChange={setValues} readOnly={!d.canEdit} recordType="FormRecord" recordId={d.id} siteId={d.siteId}
@@ -131,7 +134,43 @@ export function FormRecordDetail() {
         await post(`/api/forms/records/${d.id}/signatures/${block.key}`, { password, mfaCode, comment });
         refresh();
       }} />}
+      {filling && <FillFromDialog recordId={d.id} onClose={() => setFilling(false)} onFilled={(n) => { setFilling(false); refresh(); setFilled(n); }} dirty={dirty} />}
+      {filled !== null && <Alert severity={filled > 0 ? 'success' : 'info'} sx={{ mt: 2 }} onClose={() => setFilled(null)}>{filled > 0 ? `Filled ${filled} ${filled === 1 ? 'entry' : 'entries'} from the chosen record.` : 'Nothing to fill: the chosen record has no matching entries, or they are already filled in.'}</Alert>}
       {signing && approval && <SignDialog approvalId={approval.id} recordNumber={approval.recordNumber} stepName={approval.stepName} onClose={() => { setSigning(false); refresh(); }} />}
     </ModuleWorkspace>
+  );
+}
+
+/** Picks another form record (such as a PPAP common data page or a characteristics list) and copies its shared entries into this draft. */
+function FillFromDialog({ recordId, onClose, onFilled, dirty }: { recordId: string; onClose: () => void; onFilled: (n: number) => void; dirty: boolean }) {
+  const [q, setQ] = useState('');
+  const [source, setSource] = useState('');
+  const [overwrite, setOverwrite] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const list = useQuery({ queryKey: ['formrecords-fill', q], queryFn: () => get<{ items: RecordRow[] }>(`/api/forms/records?pageSize=50${q ? `&q=${encodeURIComponent(q)}` : ''}`) });
+  const options = (list.data?.items ?? []).filter((r) => r.id !== recordId);
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm" aria-labelledby="fill-title">
+      <DialogTitle id="fill-title">Fill from another record</DialogTitle>
+      <DialogContent>
+        <Stack gap={2} sx={{ mt: 1 }}>
+          <Typography variant="body2" color="text.secondary">Entries with the same name are copied into this draft, such as part, customer and supplier details from a PPAP common data page, or characteristic rows from a characteristics list. Each record keeps its own number, title, status and dates.</Typography>
+          {dirty && <Alert severity="warning">Save your changes first; filling reloads the draft.</Alert>}
+          <TextField size="small" label="Search records" value={q} onChange={(e) => setQ(e.target.value)} />
+          <TextField size="small" select label="Copy from" value={source} onChange={(e) => setSource(e.target.value)}>
+            {options.map((r) => <MenuItem key={r.id} value={r.id}>{r.number} · {r.title} ({r.templateNumber})</MenuItem>)}
+          </TextField>
+          <FormControlLabel control={<Checkbox checked={overwrite} onChange={(e) => setOverwrite(e.target.checked)} />} label="Replace entries that are already filled in" />
+          {err && <Alert severity="error">{err}</Alert>}
+        </Stack>
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose}>Cancel</Button>
+        <Button variant="contained" disabled={!source || dirty} onClick={async () => {
+          try { const r = await post<{ filled: number }>(`/api/forms/records/${recordId}/prefill`, { sourceType: 'FormRecord', sourceId: source, overwrite }); onFilled(r.filled); }
+          catch (e) { setErr((e as Error).message); }
+        }}>Fill</Button>
+      </DialogActions>
+    </Dialog>
   );
 }

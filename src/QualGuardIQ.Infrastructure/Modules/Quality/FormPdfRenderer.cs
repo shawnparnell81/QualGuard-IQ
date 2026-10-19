@@ -26,7 +26,18 @@ public sealed record PrintedSignature(string Key, string SignerName, string Sign
 public sealed class FormPdfRenderer
 {
     public const string Brand = "#1257C4";
-    const string Grey = "#666666", Rule = "#B0B7C3", HeadFill = "#E8EEF8";
+    const string Grey = "#666666", Rule = "#B0B7C3", HeadFill = "#E8EEF8", Ink = "#0B3F94", Charcoal = "#29333E", Copper = "#B4632A", Pass = "#2E7D4F";
+
+    /// <summary>The form's look (report, worksheet, checklist, certificate, investigation, register or plan).</summary>
+    string Theme => FormThemes.Of(_d);
+    /// <summary>Section style each look uses when a top-level section does not name its own.</summary>
+    string StyleOf(FormSection s, int depth) => s.Style is { Length: > 0 } st ? st : depth > 0 ? "standard" : Theme switch
+    {
+        "worksheet" => "panel", "checklist" => "checklist", "certificate" => "titleblock", "investigation" or "plan" => "steps", "register" => "ledger", _ => "standard",
+    };
+    /// <summary>Table header fill and text colour for the look: worksheets and registers print dark headers, the rest a light band.</summary>
+    (string Fill, string? Text) TableHead => Theme switch { "worksheet" => (Ink, "#FFFFFF"), "register" => (Charcoal, "#FFFFFF"), "investigation" => ("#FBF1E9", null), _ => (HeadFill, null) };
+    bool _boxed;
 
     readonly FormDefinition _d;
     readonly IReadOnlyDictionary<string, string?> _v;
@@ -179,7 +190,9 @@ public sealed class FormPdfRenderer
             var tables = _d.Tables.Where(t => t.Section == s.Key).ToList();
             var sigs = _d.Signatures.Where(b => b.Section == s.Key).OrderBy(b => b.Order).ToList();
             if (s.KeepTogether) Ensure(Math.Min(_bottom - _top, EstimateFields(fields, s.Columns) + 30));
-            SectionTitle($"{num}  {s.Title}", depth);
+            var style = StyleOf(s, depth);
+            SectionTitle(num, s.Title, depth, style);
+            _boxed = style == "titleblock";
             if (s.Instructions is { Length: > 0 } ins) Instructions(ins);
             if (s.Repeatable)
             {
@@ -196,6 +209,7 @@ public sealed class FormPdfRenderer
             else FieldGrid(fields, s.Columns, _v);
             foreach (var t in tables) Table(t, _v.GetValueOrDefault(t.Key), t.Title);
             if (sigs.Count > 0) SignatureBlocks(sigs);
+            _boxed = false;
         }
         var rest = _d.Signatures.Where(b => b.Section is null || _d.Sections.All(s => s.Key != b.Section)).OrderBy(b => b.Order).ToList();
         if (rest.Count > 0) { SectionTitle("Signatures and approval", 0); SignatureBlocks(rest); }
@@ -210,6 +224,51 @@ public sealed class FormPdfRenderer
     }
 
     bool Hidden(FormSection s) => s.VisibleWhen is { } vw && !QualGuardIQ.Application.Rules.Conditions.Matches(new(vw.Field, vw.Operator, vw.Value), _v.ToDictionary(k => k.Key, k => (object?)k.Value));
+
+    void SectionTitle(string num, string title, int depth, string style)
+    {
+        if (style == "standard" || depth > 0) { SectionTitle($"{num}  {title}", depth); return; }
+        Ensure(_fs * 4);
+        _y += 4;
+        var p = _pdf!; var h = _fs + 8;
+        switch (style)
+        {
+            case "panel":
+                p.Fill(_margin, _y - 2, Width, h, Ink);
+                p.Text(_margin + 5, _y + 1.5, _fs + 1, $"{num}   {title.ToUpperInvariant()}", new TextStyle(true, Colour: "#FFFFFF"));
+                _y += h + 4; break;
+            case "titleblock":
+                p.Rect(_margin, _y - 2, Width, h, false, 1.4);
+                p.Text(_margin + 5, _y + 1.5, _fs + 1, $"{num}   {title.ToUpperInvariant()}", new TextStyle(true, Colour: Theme == "certificate" ? Charcoal : Ink));
+                _y += h; break;
+            case "callout":
+                p.Fill(_margin, _y - 2, Width, h, "#F2F4F7"); p.Fill(_margin, _y - 2, 3, h, Theme == "investigation" ? Copper : Brand);
+                p.Text(_margin + 9, _y + 1.5, _fs + 0.5, $"{num}  {title}", new TextStyle(true, Colour: Charcoal));
+                _y += h + 4; break;
+            case "steps":
+                var badge = Theme == "plan" ? Copper : Brand;
+                p.Fill(_margin, _y - 3, h + 2, h + 2, badge);
+                p.TextAligned(_margin, _y + 1.5, _fs + 1, h + 2, num, new TextStyle(true, Colour: "#FFFFFF"), "center");
+                p.Text(_margin + h + 9, _y + 1.5, _fs + 1.5, title, new TextStyle(true, Colour: Charcoal));
+                p.Line(_margin + h + 9, _y + h + 1, _margin + Width, _y + h + 1, 0.6, badge);
+                _y += h + 7; break;
+            case "checklist":
+                p.Fill(_margin, _y - 2, 4, h, Pass);
+                p.Rect(_margin + 9, _y + 0.5, _fs, _fs, false, 0.8);
+                p.Text(_margin + 14 + _fs, _y + 1.5, _fs + 1, $"{num}  {title}", new TextStyle(true));
+                p.Line(_margin + 9, _y + h, _margin + Width, _y + h, 0.4, Rule);
+                _y += h + 5; break;
+            case "ledger":
+                p.Line(_margin, _y - 1, _margin + Width, _y - 1, 0.5, Rule);
+                p.Text(_margin, _y + 2, _fs - 1, $"{num}  {title.ToUpperInvariant()}", new TextStyle(true, Colour: Grey));
+                _y += _fs + 7; break;
+            case "signoff":
+                if (Theme == "certificate") { p.Line(_margin, _y - 2, _margin + Width, _y - 2, 1.2, Charcoal); p.Line(_margin, _y + 0.5, _margin + Width, _y + 0.5, 0.5, Charcoal); _y += 4; p.TextAligned(_margin, _y, _fs + 1.5, Width, title.ToUpperInvariant(), new TextStyle(true, Colour: Charcoal), "center"); _y += _fs + 8; }
+                else { p.Fill(_margin, _y - 2, Width, h, HeadFill); p.Text(_margin + 4, _y + 1, _fs + 1.5, $"{num}  {title}", new TextStyle(true, Colour: Brand)); _y += h + 3; }
+                break;
+            default: _y -= 4; SectionTitle($"{num}  {title}", depth); break;
+        }
+    }
 
     void SectionTitle(string title, int depth)
     {
@@ -237,13 +296,25 @@ public sealed class FormPdfRenderer
             if (f.Type == "instruction") { if (x > 0) { _y += rowH + 4; x = 0; rowH = 0; } Instructions(f.Help ?? f.Label); continue; }
             var span = f.Width is >= 1 and <= 12 ? f.Width.Value : f.Type is "longtext" or "signature" ? 12 : 12 / columns;
             if (x + span > 12) { _y += rowH + 4; x = 0; rowH = 0; }
-            var w = span * unit - 6;
+            var w = span * unit - (_boxed ? 0 : 6);
             var text = Show(f, values.GetValueOrDefault(f.Key));
             var lines = f.Type == "longtext" ? Math.Max(2, PdfCanvas.Wrap(text, _fs, w - 6).Count()) : 1;
             var h = _fs * 1.3 + lines * _fs * 1.3 + 7;
             if (x == 0 && Ensure(h)) { }
             var cx = _margin + x * unit;
             var label = f.Label + (f.Required ? " *" : "") + (f.Unit is { Length: > 0 } u ? $" ({u})" : "");
+            if (_boxed)
+            {
+                // title block: one ruled cell per field, label in the corner and the value below it
+                var ch = _fs * 1.1 + lines * _fs * 1.3 + 6;
+                _pdf!.Rect(cx, _y, w, ch, false, 0.7);
+                _pdf.TextAligned(cx + 2.5, _y + 1.5, _fs - 2.5, w - 5, label.ToUpperInvariant(), new TextStyle(Colour: Grey), "left");
+                var vy = _y + _fs * 1.05 + 2;
+                if (f.Type == "boolean") CheckBox(cx + 3, vy, _fs * 0.9, values.GetValueOrDefault(f.Key) == "true");
+                else if (f.Type == "longtext") foreach (var l in PdfCanvas.Wrap(text, _fs, w - 6)) { _pdf.Text(cx + 3, vy, _fs, l, new TextStyle()); vy += _fs * 1.3; }
+                else _pdf.TextAligned(cx + 3, vy, _fs, w - 6, text, new TextStyle(true), NumericType(f) ? "right" : "left");
+                rowH = Math.Max(rowH, ch - 4); x += span; continue;
+            }
             _pdf!.TextAligned(cx, _y, _fs - 1.5, w, label, new TextStyle(Colour: Grey), "left");
             var by = _y + _fs * 1.25;
             _pdf.Rect(cx, by, w, lines * _fs * 1.3 + 4, false, 0.5);
@@ -328,8 +399,8 @@ public sealed class FormPdfRenderer
                 {
                     var gw = 0.0; var dataCols = 0;
                     while (ci < cols.Count && dataCols < g.Span) { gw += widths[ci]; if (!cols[ci].Key.EndsWith("_running")) dataCols++; ci++; while (ci < cols.Count && cols[ci].Key.EndsWith("_running")) { gw += widths[ci]; ci++; } }
-                    _pdf!.Fill(x, _y, gw, rowH, HeadFill); _pdf.Rect(x, _y, gw, rowH, false, 0.5);
-                    _pdf.TextAligned(x + 2, _y + 3, _fs - 1, gw - 4, g.Label, new TextStyle(true), "center");
+                    _pdf!.Fill(x, _y, gw, rowH, TableHead.Fill); _pdf.Rect(x, _y, gw, rowH, false, 0.5);
+                    _pdf.TextAligned(x + 2, _y + 3, _fs - 1, gw - 4, g.Label, new TextStyle(true, Colour: TableHead.Text), "center");
                     x += gw;
                 }
                 _y += rowH;
@@ -337,8 +408,8 @@ public sealed class FormPdfRenderer
             var xx = x0;
             for (var i = 0; i < cols.Count; i++)
             {
-                _pdf!.Fill(xx, _y, widths[i], rowH, HeadFill); _pdf.Rect(xx, _y, widths[i], rowH, false, 0.5);
-                _pdf.TextAligned(xx + 2, _y + 3, _fs - 1, widths[i] - 4, cols[i].Label, new TextStyle(true), "center");
+                _pdf!.Fill(xx, _y, widths[i], rowH, TableHead.Fill); _pdf.Rect(xx, _y, widths[i], rowH, false, 0.5);
+                _pdf.TextAligned(xx + 2, _y + 3, _fs - 1, widths[i] - 4, cols[i].Label, new TextStyle(true, Colour: TableHead.Text), "center");
                 xx += widths[i];
             }
             _y += rowH;
@@ -391,6 +462,7 @@ public sealed class FormPdfRenderer
 
     void SignatureBlocks(List<SignatureBlock> blocks)
     {
+        if (Theme is "report" or "investigation" or "plan" or "register") { SignatureLines(blocks); return; }
         var perRow = _orientation == "landscape" ? 3 : 2;
         var w = (Width - (perRow - 1) * 10) / perRow;
         var h = _fs * 6.2;
@@ -416,6 +488,29 @@ public sealed class FormPdfRenderer
             }
             _y += h + 6;
         }
+    }
+
+    /// <summary>Reports, investigations, plans and registers sign on ruled lines: role, name, meaning and date across the page.</summary>
+    void SignatureLines(List<SignatureBlock> blocks)
+    {
+        var h = _fs * 3.4;
+        foreach (var b in blocks)
+        {
+            Ensure(h + 4);
+            var p = _pdf!; var x = _margin; var lineY = _y + _fs * 2;
+            p.TextAligned(x, _y + _fs * 0.7, _fs - 0.5, Width * 0.28, b.Label + (b.Required ? " *" : ""), new TextStyle(true), "left");
+            if (_sig.TryGetValue(b.Key, out var s))
+            {
+                p.Text(x + Width * 0.3, lineY - _fs * 1.35, _fs + 1, s.SignerName, new TextStyle(Italic: true, Family: "serif", Colour: Brand));
+                p.TextAligned(x + Width * 0.74, lineY - _fs * 1.2, _fs - 1.5, Width * 0.26, s.SignedAt, new TextStyle(), "left");
+            }
+            p.Line(x + Width * 0.3, lineY, x + Width * 0.7, lineY, 0.5);
+            p.Line(x + Width * 0.74, lineY, x + Width, lineY, 0.5);
+            p.Text(x + Width * 0.3, lineY + 2, _fs - 2.5, s is null ? $"Signature: {b.Meaning}" : $"Signed electronically ({s.Verification}): {b.Meaning}", new TextStyle(Colour: Grey));
+            p.Text(x + Width * 0.74, lineY + 2, _fs - 2.5, "Date", new TextStyle(Colour: Grey));
+            _y += h + 2;
+        }
+        _y += 4;
     }
 
     // ------------------------------------------------------------------ original-look output

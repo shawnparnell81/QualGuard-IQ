@@ -74,7 +74,27 @@ public class SequflohWorkInstruction : Entity, IAudited, ISiteScoped
     public string Characteristics { get; set; } = "[]";
     /// <summary>Parts rows copied from a parts list or picked individually.</summary>
     public string PartsRows { get; set; } = "[]";
+    /// <summary>
+    /// Free layout the author arranges: ordered blocks of text, images or visual aids, tables, numbered steps with operation numbers,
+    /// cautions and warnings, and checks or sign-offs (see <c>SequflohBlocks</c>).
+    /// </summary>
+    public string Blocks { get; set; } = "[]";
+    /// <summary>The reusable template the blocks were started from, if any (copied, never linked back).</summary>
+    public Guid? TemplateId { get; set; }
     public string AuditLabel => $"work instruction {Number} rev {Revision}";
+}
+
+/// <summary>A reusable arrangement of work instruction blocks that authors start new instructions from or add to existing ones.</summary>
+public class SequflohInstructionTemplate : Entity, IAudited
+{
+    public string Name { get; set; } = "";
+    public string? Description { get; set; }
+    /// <summary>Instruction type the template is meant for; null suits every type.</summary>
+    public WorkInstructionType? Type { get; set; }
+    public string Blocks { get; set; } = "[]";
+    public bool IsActive { get; set; } = true;
+    public Guid? OwnerId { get; set; }
+    public string AuditLabel => $"work instruction template {Name}";
 }
 
 /// <summary>Lifecycle transition (append-only): previous and new status, action, user, time, comment, revision, record.</summary>

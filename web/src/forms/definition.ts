@@ -3,8 +3,11 @@ import type { FieldDef } from '../pages/FormBuilder';
 /** Form schema version 2 as stored on a template revision. A version 1 schema (array of fields) is read as one implicit section. */
 export interface Condition { field: string; operator: string; value?: string | null }
 export interface BandText { left?: string | null; center?: string | null; right?: string | null }
-export interface PageSetup { size: string; orientation: 'portrait' | 'landscape'; marginMm: number; header?: BandText | null; footer?: BandText | null; watermark?: string | null; printStyle: 'standardized' | 'original'; fontSize: number; confidentiality?: string }
-export interface SectionDef { key: string; title: string; parent?: string | null; instructions?: string | null; columns: number; repeatable?: boolean; minRepeat?: number | null; maxRepeat?: number | null; repeatLabel?: string | null; visibleWhen?: Condition | null; orientation?: string | null; pageBreakBefore?: boolean; keepTogether?: boolean }
+export interface PageSetup { size: string; orientation: 'portrait' | 'landscape'; marginMm: number; header?: BandText | null; footer?: BandText | null; watermark?: string | null; printStyle: 'standardized' | 'original'; fontSize: number; confidentiality?: string; theme?: FormTheme | null }
+export type FormTheme = 'report' | 'worksheet' | 'checklist' | 'certificate' | 'investigation' | 'register' | 'plan';
+export type SectionStyle = 'standard' | 'panel' | 'callout' | 'titleblock' | 'steps' | 'checklist' | 'ledger' | 'signoff';
+export const formThemes: [FormTheme, string][] = [['report', 'Report'], ['worksheet', 'Engineering worksheet'], ['checklist', 'Checklist'], ['certificate', 'Certificate / warrant'], ['investigation', 'Investigation'], ['register', 'Register / log'], ['plan', 'Plan']];
+export interface SectionDef { key: string; title: string; parent?: string | null; instructions?: string | null; columns: number; repeatable?: boolean; minRepeat?: number | null; maxRepeat?: number | null; repeatLabel?: string | null; visibleWhen?: Condition | null; orientation?: string | null; pageBreakBefore?: boolean; keepTogether?: boolean; style?: SectionStyle | null }
 export interface ColumnDef extends FieldDef { columns?: ColumnDef[] | null }
 export interface TableTotal { column: string; function: string; label?: string | null }
 export interface TableDef { key: string; title: string; section?: string | null; instructions?: string | null; columns: ColumnDef[]; headerGroups?: { label: string; span: number }[] | null; fixedRows?: string[] | null; minRows: number; maxRows: number; totals?: TableTotal[] | null; runningTotals?: string[] | null; subtotalBy?: string | null; repeatHeaderOnEachPage?: boolean; visibleWhen?: Condition | null }

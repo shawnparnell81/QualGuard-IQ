@@ -298,6 +298,8 @@ export function CapaDetail() {
   const [dlg, setDlg] = useState<string | null>(null);
   const q = useQuery({ queryKey: ['capa', id], queryFn: () => get<CapaDetailDto>(`/api/capas/${id}`) });
   const { error, run } = useRunner(() => qc.invalidateQueries({ queryKey: ['capa', id] }));
+  const nav = useNavigate();
+  const { can } = useAuth();
   const d = q.data;
   if (!d) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'CAPA', to: '/capa' }]} title="Loading">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   const s = d.status;
@@ -306,6 +308,7 @@ export function CapaDetail() {
       title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={capaStatus[s]} /></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Actions', value: 'actions' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
+        {can('forms.edit') && <Button variant="outlined" onClick={() => run(async () => { const r = await post<{ id: string }>(`/api/forms/records/from-capa/${d.id}`, {}); nav(`/forms/records/${r.id}`); })}>CAPA report form</Button>}
         {d.allowed.includes('plan') && <Button variant="outlined" onClick={() => setDlg('plan')}>Scope & containment</Button>}
         {d.allowed.includes('reopen') && <Button variant="outlined" color="warning" onClick={() => setDlg('reopen')}>Reopen</Button>}
         {d.allowed.includes('rootCause') && <Button variant="outlined" onClick={() => setDlg('rca')}>{d.rootCause ? 'Edit root cause' : 'Record root cause'}</Button>}

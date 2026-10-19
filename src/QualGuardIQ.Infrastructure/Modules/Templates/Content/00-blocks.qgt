@@ -1,7 +1,7 @@
 # Shared building blocks. A template includes a block with "use <name>"; each block may be used once per template.
 # Line format:
 #   section key | Title | columns | instructions
-#   f key | Label | type | options | help        options: * required, [A; B] choices, {formula}, unit= min= max= dec= w= len= labels=A/B when=key=value reqwhen=key=value
+#   f key | Label | type | options | help        options: * required, [A; B] choices, {formula}, unit= min= max= dec= w= len= labels=A/B when=key=value reqwhen=key=value from=source key (copied when filling from another record)
 #   table key | Title | minimum rows | instructions, then c lines for its columns, rows/groups/total/running lines
 #   sign key | Label | role | meaning | permission | optional
 #   rule target | operator | value | fill | bold
@@ -337,4 +337,16 @@ block ppap_signatures
 sign ppap_prepared | Prepared by | prepared | I prepared this element and the results recorded are from production parts and processes.
 sign ppap_reviewed | Reviewed by | reviewed | I reviewed this element for completeness and accuracy.
 sign ppap_customer | Customer disposition | customer | The customer records its disposition of this element. | | optional
+end
+
+block ppap_parties
+section ppap_parties_section | Organization and customer | 3
+f org_name | Organization name | text | *
+f org_code | Organization (supplier) code | text
+f org_address | Manufacturing address | longtext
+f customer_buyer | Customer buyer or contact | text
+f customer_division | Customer division or plant | text
+f application | Application (vehicle, program or end use) | text
+f purchase_order | Purchase order | text
+f part_weight | Part weight | number | dec=4 min=0 unit=kg
 end

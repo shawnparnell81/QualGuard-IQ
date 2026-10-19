@@ -82,7 +82,8 @@ public class TemplateLibraryContentTests
         foreach (var w in new[] { "First Article", "Configuration", "Process Verification" }) Assert.Contains(w, Titles("aerospace"), StringComparison.OrdinalIgnoreCase);
         foreach (var w in new[] { "Design History File", "Device Master Record", "Device History Record", "Validation", "Corrective Action" }) Assert.Contains(w, Titles("medical-device"), StringComparison.OrdinalIgnoreCase);
         foreach (var w in new[] { "Nonconformance", "Corrective Action", "Audit", "Calibration", "Supplier" }) Assert.Contains(w, Titles("manufacturing"), StringComparison.OrdinalIgnoreCase);
-        Assert.Empty(TemplateLibrary.PackTemplates(packs["electronics"]));
+        foreach (var w in new[] { "ESD Control Audit", "Moisture Sensitive Device", "Reflow Profile", "PCBA Workmanship", "First Pass Yield", "Counterfeit", "(CAPA) Report" }) Assert.Contains(w, Titles("electronics"), StringComparison.OrdinalIgnoreCase);
+        foreach (var w in new[] { "Design and Process Validation Report", "Automotive First Article Inspection", "First Pass Yield", "PPAP Common Data Page", "PPAP Characteristics List" }) Assert.Contains(w, Titles("automotive"), StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

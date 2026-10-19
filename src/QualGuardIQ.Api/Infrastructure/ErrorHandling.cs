@@ -9,8 +9,21 @@ namespace QualGuardIQ.Api.Infrastructure;
 /// <summary>Maps known failures to problem details; unexpected errors never leak internals.</summary>
 public sealed class ErrorHandler(ILogger<ErrorHandler> log, IProblemDetailsService problems) : IExceptionHandler
 {
+    /// <summary>Status for a request the browser abandoned (nginx's "client closed request"); nothing failed on the server.</summary>
+    public const int ClientClosedRequest = 499;
+
+    // the database driver can wrap the cancellation (for example in a DbUpdateException)
+    static bool Cancelled(Exception? ex) { for (; ex is not null; ex = ex.InnerException) if (ex is OperationCanceledException) return true; return false; }
+
     public async ValueTask<bool> TryHandleAsync(HttpContext http, Exception ex, CancellationToken ct)
     {
+        // The browser went away (page closed, request cancelled): not a server error, and there is no one left to send a body to.
+        if (http.RequestAborted.IsCancellationRequested && Cancelled(ex))
+        {
+            log.LogInformation("Request {Method} {Path} was cancelled by the client", http.Request.Method, http.Request.Path);
+            if (!http.Response.HasStarted) http.Response.StatusCode = ClientClosedRequest;
+            return true;
+        }
         var (status, title, errors) = ex switch
         {
             ValidationException v => (400, "Validation failed", v.Errors.GroupBy(e => e.PropertyName).ToDictionary(g => g.Key, g => g.Select(e => e.ErrorMessage).ToArray())),

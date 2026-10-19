@@ -1,7 +1,6 @@
 # CAPA templates (TECH 4, FI 1)
 
 template capa-request | CAPA Request | CAPA
-packs medical-device, manufacturing
 tags CAPA, request
 purpose Request a corrective or preventive action for a problem or risk whose cause must be found and removed, and decide whether a CAPA is warranted.
 scope Requests from nonconformances, complaints, audits, process monitoring, risk reviews, management review and any employee.
@@ -23,7 +22,6 @@ sign screening_signed | Screened by | approved | I record the screening decision
 end
 
 template capa-investigation | CAPA Investigation | CAPA
-packs medical-device, manufacturing
 tags CAPA, investigation
 purpose Plan and record the investigation of a CAPA: the team, the data reviewed, the analysis and the verified root cause.
 scope All accepted CAPAs.
@@ -40,7 +38,6 @@ c data_by | Reviewed by | user
 end
 
 template correction-record | Correction Record | CAPA
-packs medical-device, manufacturing
 tags correction
 purpose Record the correction made to eliminate a detected nonconformity, such as rework, replacement or a corrected record, separately from the corrective action that addresses its cause.
 scope Corrections linked to nonconformances, audit findings, complaints and CAPAs.
@@ -59,7 +56,6 @@ use approval_trio
 end
 
 template containment-plan | Containment Plan | CAPA
-packs medical-device, manufacturing
 tags containment, plan
 purpose Plan the containment of a problem across every location where suspect product or process output may exist, with owners, dates and exit criteria.
 scope Containment for CAPAs, customer complaints and significant nonconformances.
@@ -82,7 +78,6 @@ use approval_trio
 end
 
 template root-cause-analysis-record | Root Cause Analysis | CAPA
-packs medical-device, manufacturing
 tags root cause, analysis
 purpose Record a structured root cause analysis for a CAPA, nonconformance or complaint, from problem definition through verified root causes.
 scope Any investigation that requires a documented root cause.
@@ -101,7 +96,6 @@ use approval_trio
 end
 
 template corrective-action-plan | Corrective Action Plan | CAPA
-packs medical-device, manufacturing
 tags corrective action, plan
 purpose Plan the actions that remove the verified root causes, with owners, dates, the risk of each change and how implementation and effectiveness will be verified.
 scope Corrective actions for accepted CAPAs.
@@ -120,7 +114,6 @@ f change_request_link | Change request | record
 end
 
 template preventive-action-plan | Preventive Action Plan | CAPA
-packs medical-device, manufacturing
 tags preventive action, plan
 purpose Plan action against the cause of a potential nonconformity identified from trends, risk assessments or lessons learned elsewhere, before it occurs.
 scope Preventive actions arising from data analysis, risk reviews, management review and similar products or processes.
@@ -138,7 +131,6 @@ f risk_after | Target risk level after | choice | [High; Medium; Low]
 end
 
 template implementation-verification | Implementation Verification | CAPA
-packs medical-device, manufacturing
 tags verification, implementation
 purpose Verify that every planned CAPA action was implemented as planned, with objective evidence, before effectiveness is reviewed.
 scope All corrective and preventive actions.
@@ -161,7 +153,6 @@ sign impl_approved | Approved by | approved | I accept the implementation verifi
 end
 
 template effectiveness-review | Effectiveness Review | CAPA
-packs medical-device, manufacturing
 tags effectiveness
 purpose Decide on objective data whether CAPA actions prevented recurrence and achieved the criteria set when they were planned.
 scope All CAPAs after implementation verification.
@@ -180,7 +171,6 @@ sign eff_approved | Approved by | approved | I approve the effectiveness decisio
 end
 
 template capa-closure | CAPA Closure | CAPA
-packs medical-device, manufacturing
 tags CAPA, closure
 purpose Close a CAPA once its actions are implemented and effective, and confirm that documents, training, risk files and related records were updated.
 scope All CAPAs.

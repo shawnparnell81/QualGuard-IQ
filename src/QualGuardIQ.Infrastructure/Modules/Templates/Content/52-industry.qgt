@@ -1,0 +1,278 @@
+# Industry additions: automotive validation, first article and first pass yield; electronics; gaps in the aerospace and medical packs.
+
+template product-validation-report | Design and Process Validation Report | APQP
+packs automotive
+tags validation, DV, PV, test report
+layout worksheet
+landscape
+purpose Report the results of design validation and production validation testing against the validation plan, test by test, and decide whether the product is validated.
+scope Design validation on prototype or off-tool parts and production validation on parts from production tooling and processes.
+instructions Copy each test from the validation plan with its standard and acceptance criterion. Record the samples tested, passed and failed and the report reference. A test with any failure, or with fewer samples than planned, is not complete.
+workflow Testing in progress, results recorded, reviewed by engineering, approved.
+retention Keep for the life of the product plus ten years.
+use program_header
+section pvr_basis | Validation basis | 4
+f pvr_phase | Phase | choice | * [Design validation (DV); Production validation (PV); Both]
+f pvr_plan_ref | Validation plan | record
+f pvr_build | Build level or tooling state | text
+f pvr_lab | Laboratory | text
+section pvr_tests | Tests | 1
+table pvr_rows | Tests | 1
+groups Test:4; Samples:4; Result:2
+c pvr_test | Test | text | *
+c pvr_standard | Standard or procedure | text
+c pvr_criterion | Acceptance criterion | text | *
+c pvr_phase_row | Phase | choice | [DV; PV]
+c pvr_planned | Planned | integer | min=0
+c pvr_tested | Tested | integer | min=0
+c pvr_passed | Passed | integer | min=0
+c pvr_failed | Failed | calc | {IF(ISNUMBER(pvr_tested), pvr_tested - pvr_passed, "")}
+c pvr_result | Result | calc | {IF(ISBLANK(pvr_tested), "OPEN", IF(pvr_tested - pvr_passed > 0, "FAIL", IF(pvr_tested >= pvr_planned, "PASS", "OPEN")))}
+c pvr_report | Report | text
+rule pvr_rows.pvr_result | equals | FAIL | #FDE7E9 | bold
+rule pvr_rows.pvr_result | equals | OPEN | #FFF4D6
+section pvr_summary | Conclusion | 4
+f pvr_count | Tests | calc | {COUNTA(pvr_rows.pvr_test)}
+f pvr_pass_count | Passed | calc | {COUNTIF(pvr_rows.pvr_result, "PASS")}
+f pvr_fail_count | Failed | calc | {COUNTIF(pvr_rows.pvr_result, "FAIL")}
+f pvr_validated | Validated | calc | {IF(AND(pvr_count > 0, pvr_pass_count = pvr_count), "Yes", "No")}
+f pvr_notes | Deviations and open items | longtext | w=12
+use apqp_signatures
+end
+
+template automotive-first-article | Automotive First Article Inspection | PPAP
+packs automotive
+tags first article, initial sample, first off, automotive
+layout worksheet
+landscape
+purpose Inspect the first parts from new or changed tooling, process or source, every characteristic on the drawing, before production or submission parts are made.
+scope First parts after new tooling, a tool repair or transfer, an engineering change, a new source or a process change, and as the customer requires.
+instructions Fill the characteristics from the characteristics list, measure each on the first part, and decide each one. Production does not start until every characteristic is OK or a deviation is approved.
+workflow Parts made, inspected, decided, approved by quality.
+retention Keep with the part's quality records for the life of the part.
+use ppap_header
+section afa_trigger | Reason and source | 4
+f afa_reason | Reason | choice | * [New tooling; Tool repair or transfer; Engineering change; New source; Process change; Customer request]
+f afa_tool | Tool, mould or die | text
+f afa_cavity | Cavity | text
+f afa_machine | Machine or line | equipment
+f afa_parts | Parts inspected | integer | * min=1
+f afa_inspector | Inspected by | user | *
+f afa_date | Inspection date | date | *
+section afa_results | Characteristics | 1
+table afa_rows | Characteristics | 1
+tablefrom characteristics
+c afa_no | No. | text | * from=char_no
+c afa_char | Characteristic | text | * from=char_desc
+c afa_class | Class | text | from=char_class
+c afa_lsl | LSL | number | dec=4 from=char_lsl
+c afa_usl | USL | number | dec=4 from=char_usl
+c afa_actual | Actual | number | dec=4
+c afa_attribute | Attribute result | choice | [OK; NOT OK; Not applicable]
+c afa_ok | OK | calc | {IF(ISNUMBER(afa_actual), IF(AND(OR(ISBLANK(afa_lsl), afa_actual >= afa_lsl), OR(ISBLANK(afa_usl), afa_actual <= afa_usl)), "OK", "NOT OK"), IF(afa_attribute = "NOT OK", "NOT OK", IF(afa_attribute = "OK", "OK", "")))}
+c afa_method | Method | text | from=char_method
+rule afa_rows.afa_ok | equals | NOT OK | #FDE7E9 | bold
+section afa_decision | Decision | 3
+f afa_count | Characteristics | calc | {COUNTA(afa_rows.afa_no)}
+f afa_not_ok | Not OK | calc | {COUNTIF(afa_rows.afa_ok, "NOT OK")}
+f afa_released | Released for production | calc | {IF(AND(afa_count > 0, afa_not_ok = 0), "Yes", "No")}
+f afa_deviation | Deviation | record | when=afa_released=No
+rule afa_released | equals | No | #FDE7E9 | bold
+use ppap_signatures
+end
+
+template first-pass-yield | First Pass Yield | INSPECTION
+packs automotive, electronics, manufacturing
+tags first pass yield, FPY, rolled throughput yield, RTY, production metrics
+layout worksheet
+landscape
+purpose Measure, for each operation, the share of units that pass the first time with no rework, repair or scrap, and the rolled throughput yield of the whole process.
+scope Production lines and cells, by shift, day, week or lot.
+instructions For each operation enter the units that entered it, the units that passed first time, and the units reworked or scrapped. First pass yield is first-pass good divided by units in. Rolled throughput yield multiplies the first pass yields of all operations and is the chance a unit passes every operation first time.
+workflow Recorded each period, reviewed by production and quality.
+retention Keep for three years.
+section fpy_period | Period | 4
+f fpy_line | Line or cell | text | *
+f fpy_from | From | date | *
+f fpy_to | To | date
+f fpy_shift | Shift | text
+f fpy_target | Target first pass yield | percent | min=0 max=100
+section fpy_ops | Operations | 1
+table fpy_rows | Operations | 1
+c op_no | Operation | text | *
+c op_name | Operation name | text
+c op_in | Units in | integer | * min=0
+c op_good | Passed first time | integer | * min=0
+c op_rework | Reworked or repaired | integer | min=0
+c op_scrap | Scrapped | integer | min=0
+c op_fpy | First pass yield | calc | {IF(op_in > 0, op_good / op_in * 100, "")} dec=2 unit=%
+c op_ratio | Yield ratio | calc | {IF(op_in > 0, op_good / op_in, "")} dec=4
+c op_balance | Units not accounted for | calc | {IF(ISNUMBER(op_in), op_in - op_good - op_rework - op_scrap, "")}
+total op_in | sum | Total in
+total op_good | sum | Total first-pass good
+total op_rework | sum | Total reworked
+total op_scrap | sum | Total scrapped
+rule fpy_rows.op_balance | notEquals | 0 | #FFF4D6
+section fpy_results | Results | 4
+f fpy_rty | Rolled throughput yield | calc | {IF(COUNT(fpy_rows.op_ratio) > 0, PRODUCT(fpy_rows.op_ratio) * 100, "")} dec=2 unit=%
+f fpy_lowest | Lowest operation yield | calc | {IF(COUNT(fpy_rows.op_fpy) > 0, MIN(fpy_rows.op_fpy), "")} dec=2 unit=%
+f fpy_meets | Meets target | calc | {IF(OR(ISBLANK(fpy_target), ISBLANK(fpy_rty)), "", IF(fpy_rty >= fpy_target, "Yes", "No"))}
+f fpy_actions | Actions on the lowest operations | longtext | w=12
+rule fpy_meets | equals | No | #FDE7E9 | bold
+end
+
+# ---------------------------------------------------------------- electronics
+
+template esd-control-audit | ESD Control Audit | AUDIT
+packs electronics
+tags ESD, electrostatic discharge, audit
+purpose Check that electrostatic discharge protection is in place and working in every protected area, against the organization's ESD control plan.
+scope ESD protected areas: receiving, stores, kitting, assembly, test, repair, packing and any area where sensitive parts are handled unpackaged.
+instructions Check each item in the area audited and measure where a limit applies. Any failed item is corrected or the area stops handling sensitive parts until it is.
+workflow Audited, findings raised, findings closed.
+retention Keep for three years.
+section esd_area | Area | 4
+f esd_area_name | Area audited | text | *
+f esd_plan_ref | ESD control plan | text
+f esd_meter | Meter used | equipment
+f esd_auditor | Audited by | user | *
+section esd_checks | Checks | 1
+table esd_rows | Checks | 0
+rows Area marked and access controlled; Wrist straps tested and logged each shift; Footwear or heel straps tested; Work surfaces grounded and within resistance limits; Flooring within resistance limits; Ionizers balanced and working; Sensitive parts kept in shielding packaging outside the area; Carts, racks and seating grounded; Insulators kept away from sensitive parts; Garments worn and in good condition; Humidity within the control plan limits; Training records current for people in the area
+c esd_result | Result | passfail
+c esd_measured | Measured value | text
+c esd_comment | Comment | text
+rule esd_rows.esd_result | equals | fail | #FDE7E9 | bold
+f esd_failed | Items failed | calc | {COUNTIF(esd_rows.esd_result, "fail")}
+end
+
+template msd-floor-life-log | Moisture Sensitive Device Floor Life Log | INSPECTION
+packs electronics
+tags MSD, moisture sensitivity, floor life, bake
+layout register
+landscape
+purpose Track the time moisture sensitive components spend out of dry storage against their floor life, so parts are baked or dried before they exceed it.
+scope Every opened package of moisture sensitive components at the site.
+instructions Record when each package is opened and the hours it has spent out of dry storage. Hours left are calculated from the floor life for the moisture sensitivity level. Parts with no hours left are baked or dried to the supplier's instructions before use.
+workflow Kept current at each opening, return to dry storage and bake.
+retention Keep for three years.
+section msd_section | Packages | 1
+table msd_rows | Packages | 1
+c msd_part | Part number | text | *
+c msd_lot | Lot or reel | text | *
+c msd_level | Moisture sensitivity level | choice | * [1; 2; 2a; 3; 4; 5; 5a; 6]
+c msd_life | Floor life (hours) | calc | {SWITCH(msd_level, "2", 8760, "2a", 672, "3", 168, "4", 72, "5", 48, "5a", 24, "6", 0, "")}
+c msd_opened | Opened | datetime
+c msd_hours | Hours out of dry storage | number | dec=1 min=0
+c msd_left | Hours left | calc | {IF(AND(ISNUMBER(msd_life), ISNUMBER(msd_hours)), msd_life - msd_hours, "")} dec=1
+c msd_over | Past floor life | calc | {IF(ISNUMBER(msd_left), IF(msd_left < 1, "YES", "NO"), "")}
+c msd_baked | Baked or dried | date
+c msd_by | Recorded by | user
+rule msd_rows.msd_over | equals | YES | #FDE7E9 | bold
+f msd_expired | Packages past floor life | calc | {COUNTIF(msd_rows.msd_over, "YES")}
+end
+
+template reflow-profile-verification | Reflow Profile Verification | INSPECTION
+packs electronics
+tags reflow, solder, profile, SMT
+layout worksheet
+purpose Verify that a measured reflow oven profile meets the solder paste and component limits before production on a board.
+scope New boards, oven recipe changes, paste changes and periodic profile checks.
+instructions Attach the profile and enter the measured values for the hottest and coldest thermocouples. Each value is compared with its limits; production waits until every value is within limits.
+workflow Profiled, verified, approved by process engineering.
+retention Keep for three years after the board is no longer produced.
+section rpv_setup | Setup | 4
+f rpv_board | Board or assembly | text | *
+f rpv_oven | Oven | equipment
+f rpv_recipe | Oven recipe | text | *
+f rpv_paste | Solder paste | text | *
+f rpv_profile_file | Profile file | attachment
+section rpv_values | Values | 1
+table rpv_rows | Profile values | 0
+rows Peak temperature (C); Time above liquidus (s); Soak time (s); Ramp-up rate (C/s); Cooling rate (C/s); Delta across board at peak (C)
+c rpv_low | Lower limit | number | dec=2
+c rpv_high | Upper limit | number | dec=2
+c rpv_hot | Hottest point | number | dec=2
+c rpv_cold | Coldest point | number | dec=2
+c rpv_ok | OK | calc | {IF(AND(ISNUMBER(rpv_hot), ISNUMBER(rpv_cold)), IF(AND(OR(ISBLANK(rpv_low), MIN(rpv_hot, rpv_cold) >= rpv_low), OR(ISBLANK(rpv_high), MAX(rpv_hot, rpv_cold) <= rpv_high)), "OK", "NOT OK"), "")}
+rule rpv_rows.rpv_ok | equals | NOT OK | #FDE7E9 | bold
+f rpv_not_ok | Values out of limits | calc | {COUNTIF(rpv_rows.rpv_ok, "NOT OK")}
+end
+
+template pcba-workmanship-inspection | PCBA Workmanship Inspection | INSPECTION
+packs electronics
+tags PCBA, workmanship, solder, DPMO
+layout checklist
+purpose Inspect printed circuit board assemblies against the workmanship class agreed with the customer and measure the defect rate per million opportunities.
+scope Assembled boards after soldering, rework and conformal coating.
+instructions Record the workmanship class, the boards inspected and the solder joint or placement opportunities per board. Count defects by type. Defects per million opportunities and the board yield are calculated.
+workflow Inspected, recorded, reviewed by quality.
+retention Keep for three years.
+section pwi_basis | Basis | 4
+f pwi_board | Board or assembly | text | *
+f pwi_class | Workmanship class | choice | * [Class 1 - general; Class 2 - dedicated service; Class 3 - high performance]
+f pwi_boards | Boards inspected | integer | * min=1
+f pwi_opportunities | Opportunities per board | integer | * min=1
+f pwi_boards_good | Boards with no defects | integer | min=0
+section pwi_defects | Defects | 1
+table pwi_rows | Defects by type | 0
+rows Insufficient solder; Excess solder or bridging; Solder balls; Tombstoning; Missing component; Wrong component; Polarity or orientation; Lifted lead; Damaged component; Cleanliness or residue; Coating defect; Other
+c pwi_count | Count | integer | min=0
+c pwi_locations | Reference designators | text
+total pwi_count | sum | Total defects
+section pwi_results | Results | 3
+f pwi_dpmo | Defects per million opportunities | calc | {IF(pwi_boards * pwi_opportunities > 0, SUM(pwi_rows.pwi_count) / (pwi_boards * pwi_opportunities) * 1000000, "")} dec=0
+f pwi_yield | Board first pass yield | calc | {IF(AND(pwi_boards > 0, ISNUMBER(pwi_boards_good)), pwi_boards_good / pwi_boards * 100, "")} dec=2 unit=%
+f pwi_lot_decision | Lot decision | choice | [Accept; Accept with rework; Reject]
+end
+
+template counterfeit-part-check | Counterfeit Component Risk Check | SUPPLIER
+packs electronics, aerospace
+tags counterfeit, components, broker, traceability
+purpose Check components bought outside the manufacturer's authorized channel for signs of counterfeit or recycled parts before they are used.
+scope Electronic components from brokers, independent distributors, customer-supplied stock and any source without full traceability to the manufacturer.
+instructions Record the source and traceability, carry out each check that applies and attach the evidence. Any failed check quarantines the lot and is reported as a suspect counterfeit.
+workflow Received, checked, released or quarantined and reported.
+retention Keep for the life of the product plus ten years.
+section ccc_source | Source | 3
+f ccc_part | Manufacturer part number | text | *
+f ccc_manufacturer | Manufacturer | text | *
+f ccc_lot | Lot or date code | text
+f ccc_supplier | Supplier | supplier | *
+f ccc_channel | Channel | choice | * [Manufacturer; Authorized distributor; Independent distributor or broker; Customer supplied; Other]
+f ccc_coc | Certificate of conformance from the manufacturer | boolean
+section ccc_checks | Checks | 1
+table ccc_rows | Checks | 0
+rows Packaging and labels match the manufacturer; Marking permanence; Lead or termination condition; Signs of resurfacing or remarking; X-ray of internal structure; Electrical test; Decapsulation and die marking; Solderability
+c ccc_applies | Applies | boolean
+c ccc_result | Result | passfail
+c ccc_evidence | Evidence | text
+rule ccc_rows.ccc_result | equals | fail | #FDE7E9 | bold
+f ccc_failed | Checks failed | calc | {COUNTIF(ccc_rows.ccc_result, "fail")}
+f ccc_decision | Decision | calc | {IF(ccc_failed > 0, "Quarantine and report", "Release")}
+f ccc_files | Evidence files | attachment
+end
+
+# ---------------------------------------------------------------- aerospace and medical gaps
+
+template fod-prevention-inspection | Foreign Object Damage Prevention Inspection | AUDIT
+packs aerospace
+tags FOD, foreign object, aerospace
+purpose Check that work areas, tools and parts are controlled so foreign objects cannot enter or damage the product.
+scope FOD-critical areas: assembly, final assembly, test cells, flight line and packing.
+instructions Check each item in the area. Record any foreign object found, where, and the action taken. Missing tools are reported at once and work in the area stops until the tool is found or the product is cleared.
+workflow Inspected, findings closed, reviewed.
+retention Keep for three years.
+section fod_area | Area | 3
+f fod_area_name | Area | text | *
+f fod_inspector | Inspected by | user | *
+f fod_date | Date | date | *
+section fod_checks | Checks | 1
+table fod_rows | Checks | 0
+rows Area marked as FOD controlled; Tool shadow boards complete and tools accounted for; Consumables and hardware controlled; Openings and ports covered; Loose items removed from clothing and pockets; Housekeeping clean and free of debris; Parts protected in storage and movement; FOD walk completed and recorded
+c fod_result | Result | passfail
+c fod_comment | Comment | text
+f fod_objects_found | Foreign objects found | integer | min=0
+f fod_actions | Actions taken | longtext
+f fod_failed | Items failed | calc | {COUNTIF(fod_rows.fod_result, "fail")}
+end

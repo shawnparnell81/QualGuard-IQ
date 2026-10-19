@@ -8,11 +8,11 @@ import { get } from '../api';
 import { lookupLabel, useLookup, useSites, useUsers, type LookupKind } from '../components/Kit';
 import { brand } from '../brand';
 import { mono } from '../theme';
-import { hiddenSections, matches, readRows, readTable, roleLabel, totalLabel, writeRows, type ColumnDef, type FormDef, type Row, type SectionDef, type TableDef } from './definition';
+import { hiddenSections, matches, readRows, readTable, roleLabel, totalLabel, writeRows, type ColumnDef, type FormDef, type FormTheme, type Row, type SectionDef, type SectionStyle, type TableDef } from './definition';
 
 type Values = Record<string, string | null>;
 export interface SignatureState { key: string; signerName?: string | null; signedAt?: string | null; meaning?: string | null; valid?: boolean }
-interface Ctx { readOnly: boolean; recordType?: string; recordId?: string; siteId?: string | null; signatures?: SignatureState[]; onSign?: (key: string) => void; canSign?: (key: string) => boolean }
+interface Ctx { theme?: FormTheme; readOnly: boolean; recordType?: string; recordId?: string; siteId?: string | null; signatures?: SignatureState[]; onSign?: (key: string) => void; canSign?: (key: string) => boolean }
 
 const numeric = new Set(['number', 'integer', 'currency', 'percent', 'measurement', 'calc']);
 
@@ -127,13 +127,17 @@ function visibleFieldKeys(fields: ColumnDef[], values: Values): Set<string> {
   return shown;
 }
 
-function FieldGrid({ fields, values, set, columns, ctx }: { fields: ColumnDef[]; values: Values; set: (k: string, v: string | null) => void; columns: number; ctx: Ctx }) {
+function FieldGrid({ fields, values, set, columns, ctx, boxed }: { fields: ColumnDef[]; values: Values; set: (k: string, v: string | null) => void; columns: number; ctx: Ctx; boxed?: boolean }) {
   const shown = visibleFieldKeys(fields, values);
+  // three or more columns only on wide screens (1536px and up); narrower screens get two so long labels are not cut off
+  const narrow = Math.min(columns, 2);
+  // a title block draws every field in a ruled cell, like the header of an engineering drawing
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: `repeat(${columns * 6}, 1fr)` }, gap: 2 }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: `repeat(${narrow * 6}, minmax(0, 1fr))`, xl: `repeat(${columns * 6}, minmax(0, 1fr))` }, gap: boxed ? 0 : 2, ...(boxed ? { borderTop: 1, borderLeft: 1, borderColor: 'divider' } : {}) }}>
       {fields.filter((f) => shown.has(f.key)).map((f) => {
-        const span = f.type === 'longtext' || f.type === 'instruction' ? columns * 6 : Math.min(columns * 6, f.width ? Math.round((f.width / 12) * columns * 6) : 6);
-        return <Box key={f.key} sx={{ gridColumn: { xs: '1 / -1', sm: `span ${span}` }, minWidth: 0 }}><FieldInput f={f} value={values[f.key]} onChange={(v) => set(f.key, v)} ctx={ctx} /></Box>;
+        const span = (cols: number) => f.type === 'longtext' || f.type === 'instruction' ? cols * 6 : Math.min(cols * 6, f.width ? Math.max(1, Math.round((f.width / 12) * cols * 6)) : 6);
+        return <Box key={f.key} sx={{ gridColumn: { xs: '1 / -1', sm: `span ${span(narrow)}`, xl: `span ${span(columns)}` }, minWidth: 0,
+ ...(boxed ? { borderRight: 1, borderBottom: 1, borderColor: 'divider', p: 1, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' }, '&:focus-within': { bgcolor: 'action.hover' } } : {}) }}><FieldInput f={f} value={values[f.key]} onChange={(v) => set(f.key, v)} ctx={ctx} /></Box>;
       })}
     </Box>
   );
@@ -162,7 +166,9 @@ function groupSpans(t: TableDef) {
   });
 }
 
-const headCell = { bgcolor: brand.blue, color: '#fff', fontWeight: 600, fontSize: 12, py: 0.75, borderRight: '1px solid rgba(255,255,255,0.25)', whiteSpace: 'nowrap' } as const;
+const headCellBase = { bgcolor: brand.blue, color: '#fff', fontWeight: 600, fontSize: 12, py: 0.75, borderRight: '1px solid rgba(255,255,255,0.25)', whiteSpace: 'nowrap' } as const;
+/** Table header colours by form look: worksheets use the dark ink of a drawing, registers a quiet charcoal, checklists and plans keep the brand blue. */
+const headFill: Partial<Record<FormTheme, string>> = { worksheet: brand.blueDark, register: brand.charcoal, certificate: brand.tagline, investigation: brand.blueHover };
 
 /** Table block: grouped headers, fixed or dynamic rows, nested tables, running totals, totals and subtotals. */
 export function GridTable({ t, value, onChange, ctx, compact }: { t: TableDef; value: string | null | undefined; onChange: (v: string | null) => void; ctx: Ctx; compact?: boolean }) {
@@ -173,6 +179,7 @@ export function GridTable({ t, value, onChange, ctx, compact }: { t: TableDef; v
   const setCell = (i: number, k: string, v: string | null) => write(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   const running = t.runningTotals ?? [];
   const showTotals = (t.totals?.length ?? 0) > 0;
+  const headCell = { ...headCellBase, bgcolor: headFill[ctx.theme ?? 'report'] ?? brand.blue };
   return (
     <Box sx={{ overflowX: 'auto', border: 1, borderColor: 'divider', borderRadius: 1 }}>
       <Table size="small" aria-label={t.title} sx={{ '& td': { py: 0.5, px: 0.75, verticalAlign: 'top', borderRight: 1, borderColor: 'divider' } }}>
@@ -269,6 +276,30 @@ function SignatureLine({ s, ctx }: { s: FormDef['signatures'][number]; ctx: Ctx 
   );
 }
 
+/** Certificate, worksheet and checklist forms sign in a row of boxes, like the authorization panel of a printed warrant. */
+function SignatureBox({ s, ctx }: { s: FormDef['signatures'][number]; ctx: Ctx }) {
+  const mine = (ctx.signatures ?? []).filter((x) => x.key === s.key);
+  const st = mine.find((x) => x.valid !== false);
+  const lapsed = !st ? mine.filter((x) => x.valid === false).at(-1) : undefined;
+  const signed = !!st?.signedAt;
+  return (
+    <Box aria-label={`Signature ${s.label}`} sx={{ border: 1, borderColor: signed ? 'success.main' : 'text.disabled', borderStyle: signed ? 'solid' : 'dashed', p: 1.5, display: 'flex', flexDirection: 'column', gap: 0.75, minHeight: 132 }}>
+      <Typography variant="overline" sx={{ lineHeight: 1.4, color: 'text.secondary' }}>{roleLabel[s.role] ?? s.role}</Typography>
+      <Typography variant="body2" fontWeight={700}>{s.label}{s.required ? ' *' : ''}</Typography>
+      <Box sx={{ flex: 1, display: 'flex', alignItems: 'flex-end', borderBottom: 1, borderColor: 'text.disabled', minHeight: 30 }}>
+        {signed && <Typography sx={{ fontFamily: '"Segoe Script", "Brush Script MT", cursive', fontSize: 18, color: 'primary.dark' }}>{st!.signerName}</Typography>}
+      </Box>
+      <Typography variant="caption" color="text.secondary">{signed ? `${new Date(st!.signedAt!).toLocaleString()} · ${st!.meaning ?? s.meaning}` : s.meaning}</Typography>
+      {lapsed && <Typography variant="caption" color="warning.dark">Signed by {lapsed.signerName}; changed afterwards, so it must be signed again.</Typography>}
+      <Stack direction="row" gap={1}>
+        {!signed && ctx.onSign && ctx.canSign?.(s.key) && <Button size="small" variant="outlined" onClick={() => ctx.onSign!(s.key)}>Sign</Button>}
+        {signed && <Chip size="small" color="success" label="Signed" />}
+        {!signed && lapsed && !(ctx.onSign && ctx.canSign?.(s.key)) && <Chip size="small" color="warning" label="Invalidated" />}
+      </Stack>
+    </Box>
+  );
+}
+
 function RepeatSection({ s, fields, value, onChange, ctx }: { s: SectionDef; fields: ColumnDef[]; value: string | null | undefined; onChange: (v: string | null) => void; ctx: Ctx }) {
   const items = readRows(value);
   const max = s.maxRepeat ?? 200;
@@ -291,12 +322,16 @@ function RepeatSection({ s, fields, value, onChange, ctx }: { s: SectionDef; fie
   );
 }
 
+/** The section style each look uses when a section does not name its own. */
+const sectionDefault: Record<FormTheme, SectionStyle> = { report: 'standard', worksheet: 'panel', checklist: 'checklist', certificate: 'titleblock', investigation: 'steps', register: 'ledger', plan: 'steps' };
+
 /** Renders a full form definition for data entry or review: numbered sections, field grids, tables, repeated sections and signature lines. */
 export function FormView({ def, values, onChange, readOnly, recordType, recordId, siteId, signatures, onSign, canSign }: {
   def: FormDef; values: Values; onChange: (v: Values) => void; readOnly: boolean; recordType?: string; recordId?: string; siteId?: string | null;
   signatures?: SignatureState[]; onSign?: (key: string) => void; canSign?: (key: string) => boolean;
 }) {
-  const ctx: Ctx = { readOnly, recordType, recordId, siteId, signatures, onSign, canSign };
+  const theme: FormTheme = def.page?.theme ?? 'report';
+  const ctx: Ctx = { theme, readOnly, recordType, recordId, siteId, signatures, onSign, canSign };
   const set = (k: string, v: string | null) => onChange({ ...values, [k]: v });
   const hidden = hiddenSections(def, values);
   const roots = useMemo(() => {
@@ -313,33 +348,77 @@ export function FormView({ def, values, onChange, readOnly, recordType, recordId
     const tables = def.tables.filter((t) => t.section === s.key && (!t.visibleWhen || matches(t.visibleWhen, values)));
     const sigs = def.signatures.filter((x) => x.section === s.key).sort((a, b) => a.order - b.order);
     const children = def.sections.filter((c) => c.parent === s.key);
-    return (
-      <Box key={s.key} component="section" aria-labelledby={`sec-${s.key}`} sx={{ mb: depth === 0 ? 3 : 2 }}>
-        <Stack direction="row" alignItems="baseline" gap={1.25} sx={depth === 0 ? { borderBottom: 2, borderColor: 'primary.main', pb: 0.5, mb: 1.5 } : { mb: 1 }}>
-          <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, color: 'primary.main', fontSize: depth === 0 ? 15 : 13 }}>{number}</Typography>
-          <Typography id={`sec-${s.key}`} variant={depth === 0 ? 'h3' : 'subtitle1'} component="h2" sx={{ fontWeight: 600 }}>{s.title}</Typography>
-          {s.repeatable && <Chip size="small" variant="outlined" label="Repeatable" />}
-          {s.orientation === 'landscape' && <Chip size="small" variant="outlined" label="Prints landscape" />}
-        </Stack>
-        {s.instructions && <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, whiteSpace: 'pre-wrap' }}>{s.instructions}</Typography>}
+    const style: SectionStyle = s.style ?? (depth > 0 ? 'standard' : sectionDefault[theme]);
+    const boxedSigs = theme === 'certificate' || theme === 'worksheet' || theme === 'checklist' || style === 'signoff' && theme !== 'report' && theme !== 'investigation';
+    const body = (
+      <>
+        {s.instructions && <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5, whiteSpace: 'pre-wrap', ...(style === 'ledger' ? { fontSize: 12.5 } : {}) }}>{s.instructions}</Typography>}
         {s.repeatable
           ? <RepeatSection s={s} fields={fields} value={values[s.key]} onChange={(v) => set(s.key, v)} ctx={ctx} />
-          : fields.length > 0 && <FieldGrid fields={fields} values={values} set={set} columns={s.columns} ctx={ctx} />}
+          : fields.length > 0 && <FieldGrid fields={fields} values={values} set={set} columns={s.columns} ctx={ctx} boxed={style === 'titleblock'} />}
         {tables.map((t) => (
           <Box key={t.key} sx={{ mt: 2 }}>
-            <Typography variant="subtitle2" sx={{ mb: 0.5 }}>{t.title}</Typography>
+            <Typography variant="subtitle2" sx={{ mb: 0.5, ...(theme === 'register' ? { textTransform: 'uppercase', letterSpacing: 0.6, fontSize: 12 } : {}) }}>{t.title}</Typography>
             {t.instructions && <Typography variant="caption" color="text.secondary" component="p" sx={{ mb: 0.75 }}>{t.instructions}</Typography>}
             <GridTable t={t} value={values[t.key]} onChange={(v) => set(t.key, v)} ctx={ctx} />
           </Box>
         ))}
-        {sigs.length > 0 && <Stack gap={1} sx={{ mt: 2 }}>{sigs.map((x) => <SignatureLine key={x.key} s={x} ctx={ctx} />)}</Stack>}
+        {sigs.length > 0 && (boxedSigs
+          ? <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: `repeat(${Math.min(3, sigs.length)}, 1fr)` }, gap: 1.5 }}>{sigs.map((x) => <SignatureBox key={x.key} s={x} ctx={ctx} />)}</Box>
+          : <Stack gap={1} sx={{ mt: 2 }}>{sigs.map((x) => <SignatureLine key={x.key} s={x} ctx={ctx} />)}</Stack>)}
         {children.map((c, i) => <Box key={c.key} sx={{ mt: 2, pl: { sm: 2 }, borderLeft: { sm: 1 }, borderColor: 'divider' }}>{renderSection(c, `${number}${i + 1}.`, depth + 1)}</Box>)}
-      </Box>
+      </>
     );
+    const chips = <>{s.repeatable && <Chip size="small" variant="outlined" label="Repeatable" />}{s.orientation === 'landscape' && <Chip size="small" variant="outlined" label="Prints landscape" />}</>;
+    const title = (variant: 'h3' | 'subtitle1', sx?: object) => <Typography id={`sec-${s.key}`} variant={variant} component="h2" sx={{ fontWeight: 600, ...sx }}>{s.title}</Typography>;
+    const wrap = (sx: object, children: React.ReactNode) => <Box key={s.key} component="section" aria-labelledby={`sec-${s.key}`} data-section-style={style} sx={{ mb: depth === 0 ? 3 : 2, ...sx }}>{children}</Box>;
+    if (depth > 0 || style === 'standard')
+      return wrap({}, <>
+        <Stack direction="row" alignItems="baseline" gap={1.25} sx={depth === 0 ? { borderBottom: 2, borderColor: 'primary.main', pb: 0.5, mb: 1.5 } : { mb: 1 }}>
+          <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, color: 'primary.main', fontSize: depth === 0 ? 15 : 13 }}>{number}</Typography>
+          {title(depth === 0 ? 'h3' : 'subtitle1')}{chips}
+        </Stack>{body}</>);
+    switch (style) {
+      case 'callout':
+        return wrap({ bgcolor: 'action.hover', borderLeft: 4, borderColor: theme === 'investigation' ? 'warning.main' : 'primary.main', p: 2 }, <>
+          <Stack direction="row" alignItems="baseline" gap={1} sx={{ mb: 1 }}><Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, color: 'text.secondary', fontSize: 13 }}>{number}</Typography>{title('subtitle1')}{chips}</Stack>{body}</>);
+      case 'titleblock':
+        return wrap({ border: 2, borderColor: theme === 'certificate' ? 'text.primary' : brand.blueDark }, <>
+          <Stack direction="row" alignItems="center" gap={1.25} sx={{ px: 1.5, py: 0.75, bgcolor: theme === 'certificate' ? 'transparent' : brand.blueDark, color: theme === 'certificate' ? 'text.primary' : '#fff', borderBottom: 2, borderColor: theme === 'certificate' ? 'text.primary' : brand.blueDark }}>
+            <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, fontSize: 13, opacity: 0.85 }}>{number}</Typography>{title('subtitle1', { textTransform: 'uppercase', letterSpacing: 1, fontSize: 14 })}{chips}
+          </Stack><Box sx={{ p: 0 }}>{body}</Box></>);
+      case 'panel':
+        return wrap({ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }, <>
+          <Stack direction="row" alignItems="center" gap={1.25} sx={{ px: 2, py: 1, bgcolor: theme === 'worksheet' ? brand.blueDark : 'action.hover', color: theme === 'worksheet' ? '#fff' : 'text.primary' }}>
+            <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, fontSize: 13 }}>{number}</Typography>{title('subtitle1', { textTransform: theme === 'worksheet' ? 'uppercase' : 'none', letterSpacing: theme === 'worksheet' ? 0.8 : 0 })}{chips}
+          </Stack><Box sx={{ p: 2 }}>{body}</Box></>);
+      case 'steps':
+        return wrap({ display: 'grid', gridTemplateColumns: '44px 1fr', columnGap: 2 }, <>
+          <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <Box sx={{ width: 36, height: 36, borderRadius: '50%', bgcolor: theme === 'plan' ? brand.copper : 'primary.main', color: '#fff', display: 'grid', placeItems: 'center', fontFamily: mono, fontWeight: 700, fontSize: 14 }}>{number.replace(/\.$/, '')}</Box>
+            <Box sx={{ flex: 1, width: 2, bgcolor: 'divider', mt: 0.5 }} />
+          </Box>
+          <Box sx={{ minWidth: 0, pb: 1 }}><Stack direction="row" alignItems="center" gap={1} sx={{ minHeight: 36, mb: 1 }}>{title('h3')}{chips}</Stack>{body}</Box></>);
+      case 'checklist':
+        return wrap({ border: 1, borderColor: 'divider', borderLeft: 6, borderLeftColor: 'success.main', borderRadius: 1, p: 2 }, <>
+          <Stack direction="row" alignItems="center" gap={1.25} sx={{ mb: 1.5 }}>
+            <Chip size="small" label={number.replace(/\.$/, '')} sx={{ fontFamily: mono, fontWeight: 700, bgcolor: 'success.main', color: '#fff' }} />{title('subtitle1')}{chips}
+          </Stack>{body}</>);
+      case 'ledger':
+        return wrap({ borderTop: 1, borderColor: 'divider', pt: 1.5, color: 'text.secondary' }, <>
+          <Stack direction="row" gap={1} alignItems="baseline" sx={{ mb: 1 }}><Typography variant="overline" component="span" sx={{ fontFamily: mono }}>{number}</Typography><Typography variant="overline" id={`sec-${s.key}`} component="h2">{s.title}</Typography>{chips}</Stack>{body}</>);
+      case 'signoff':
+        return wrap({ border: 1, borderColor: 'divider', bgcolor: theme === 'certificate' ? 'transparent' : 'background.paper', p: 2, ...(theme === 'certificate' ? { borderWidth: 3, borderStyle: 'double' } : {}) }, <>
+          <Stack direction="row" alignItems="baseline" gap={1.25} sx={{ mb: 1.5, justifyContent: theme === 'certificate' ? 'center' : 'flex-start' }}>
+            {theme !== 'certificate' && <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, color: 'primary.main', fontSize: 15 }}>{number}</Typography>}
+            {title('h3', theme === 'certificate' ? { textTransform: 'uppercase', letterSpacing: 2 } : undefined)}
+          </Stack>{body}</>);
+      default: return wrap({}, body);
+    }
   };
 
   return (
-    <Box>
+    <Box data-form-theme={theme}>
       {loose.length > 0 && <Box sx={{ mb: 3 }}><FieldGrid fields={loose} values={values} set={set} columns={2} ctx={ctx} /></Box>}
       {looseTables.map((t) => <Box key={t.key} sx={{ mb: 3 }}><Typography variant="subtitle2" sx={{ mb: 0.5 }}>{t.title}</Typography><GridTable t={t} value={values[t.key]} onChange={(v) => set(t.key, v)} ctx={ctx} /></Box>)}
       {roots.map((s, i) => renderSection(s, `${i + 1}.`, 0))}
