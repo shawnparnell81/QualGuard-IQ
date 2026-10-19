@@ -38,7 +38,10 @@ test.describe('Forms B6: Excel conversion', () => {
 
     await page.getByRole('tab', { name: 'Check and approve' }).click();
     await page.getByLabel('Form title').fill(title);
+    // the page still shows the old "Preview ready" until the settings are saved and the workbook converted again
+    const applied = page.waitForResponse((r) => r.url().includes('/excel-settings') && r.request().method() === 'PUT');
     await page.getByRole('button', { name: 'Apply' }).click();
+    expect((await applied).ok()).toBe(true);
     await expect(page.getByText('Preview ready')).toBeVisible();
     await page.getByRole('tab', { name: 'Check and approve' }).click();
     await page.getByRole('button', { name: 'Submit for approval' }).click();
