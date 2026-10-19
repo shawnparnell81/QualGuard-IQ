@@ -43,6 +43,11 @@ public class ControlledDocument : Entity, IAudited, ISiteScoped, IArchivable, IS
     public Guid? ClonedFromId { get; set; }
     /// <summary>Master document list: the date after which the document may no longer be used, when it has one.</summary>
     public DateOnly? ExpiresOn { get; set; }
+    /// <summary>
+    /// Reference copy (a standard, customer or supplier document, or other external document): stored and controlled with an audit trail,
+    /// but never sent for approval or through the revision workflow. Taken from the document type when the document is created.
+    /// </summary>
+    public bool IsReference { get; set; }
     /// <summary>Master document list: who holds controlled copies (departments, locations or roles, as text).</summary>
     public string? Distribution { get; set; }
     /// <summary>Master document list: the process the document belongs to.</summary>
@@ -104,5 +109,7 @@ public class DocumentTypeDefinition : Entity, IAudited
     public bool IsSystem { get; set; }
     public bool IsActive { get; set; } = true;
     public int SortOrder { get; set; }
+    /// <summary>Documents of this type are reference copies: no approval and no revision workflow.</summary>
+    public bool IsReference { get; set; }
     public string AuditLabel => $"Document type {Name}";
 }

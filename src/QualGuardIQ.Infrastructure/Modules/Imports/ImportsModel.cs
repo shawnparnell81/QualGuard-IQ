@@ -88,6 +88,7 @@ public partial class AppDbContext
             e.Property(x => x.Action).HasMaxLength(20).IsRequired().HasDefaultValue("created");
             e.Property(x => x.PreviousValues).HasColumnType("jsonb");
             e.HasIndex(x => new { x.ImportJobId, x.RowNumber });
+            e.HasIndex(x => x.TargetId).HasFilter("\"ReadOnly\" AND NOT \"RolledBack\"").HasDatabaseName("ix_imported_items_read_only_target");
             e.HasIndex(x => new { x.TargetType, x.TargetId });
             e.HasOne<ImportJob>().WithMany().HasForeignKey(x => x.ImportJobId).OnDelete(DeleteBehavior.Restrict);
         });

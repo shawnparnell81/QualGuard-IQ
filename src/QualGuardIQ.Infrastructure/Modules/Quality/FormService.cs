@@ -121,6 +121,7 @@ public sealed class FormService(AppDbContext db, ModuleSupport m, INumberingServ
     public async Task<FormSignature> SignAsync(Guid id, string key, SignFormRequest req, CancellationToken ct)
     {
         await m.ViewAsync(RecordType, id, ct);
+        if (await QualGuardIQ.Infrastructure.Records.ImportedRecords.IsReadOnlyAsync(db, id, ct)) throw new AppException(QualGuardIQ.Infrastructure.Records.ImportedRecords.ReadOnlyMessage, 409);
         var rec = await db.FormRecords.FirstAsync(r => r.Id == id, ct);
         if (rec.Status == FormRecordStatus.Approved) throw new ConflictException("An approved record cannot be signed.");
         var def = await FieldsAsync(rec, ct);

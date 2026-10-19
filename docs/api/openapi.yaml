@@ -11015,6 +11015,69 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/documents/revisions/{revisionId}/release-reference':
+    post:
+      tags:
+        - Documents
+      description: Requires an authenticated user.
+      parameters:
+        - name: revisionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/documents/{id}/replace-reference':
+    post:
+      tags:
+        - Documents
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviseRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReviseRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReviseRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: string
+                format: uuid
+            application/json:
+              schema:
+                type: string
+                format: uuid
+            text/json:
+              schema:
+                type: string
+                format: uuid
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/documents/{id}/obsolete':
     post:
       tags:
@@ -26556,6 +26619,74 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+  /api/industry-packs:
+    get:
+      tags:
+        - Industry Packs
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/IndustryPackStatus'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndustryPackStatus'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/IndustryPackStatus'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/industry-packs/install:
+    post:
+      tags:
+        - Industry Packs
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IndustryPackInstallRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/IndustryPackInstallRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/IndustryPackInstallRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/IndustryPackInstallResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndustryPackInstallResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/IndustryPackInstallResult'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/industry-packs/skip:
+    post:
+      tags:
+        - Industry Packs
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/inspection/plans:
     get:
       tags:
@@ -53495,6 +53626,9 @@ components:
           type: string
         delete:
           $ref: '#/components/schemas/DeleteCheck'
+        importedReadOnly:
+          type: boolean
+          default: false
     CapabilityInput:
       required:
         - title
@@ -59031,6 +59165,9 @@ components:
           type:
             - 'null'
             - string
+        isReference:
+          type: boolean
+          default: false
     DocumentKind:
       type: integer
     DocumentListItem:
@@ -59084,6 +59221,9 @@ components:
           format: date
         ownerName:
           type: string
+        isReference:
+          type: boolean
+          default: false
     DocumentStatus:
       type: integer
     DocumentTypeDto:
@@ -59095,6 +59235,7 @@ components:
         - isSystem
         - isActive
         - sortOrder
+        - isReference
       type: object
       properties:
         id:
@@ -59118,6 +59259,8 @@ components:
             - integer
             - string
           format: int32
+        isReference:
+          type: boolean
     DocumentTypeInput:
       required:
         - kind
@@ -59140,6 +59283,9 @@ components:
             - string
           format: int32
           default: 0
+        isReference:
+          type: boolean
+          default: false
     DocumentTypeUpdate:
       required:
         - name
@@ -59162,6 +59308,10 @@ components:
             - integer
             - string
           format: int32
+        isReference:
+          type:
+            - 'null'
+            - boolean
     DomainQuality:
       required:
         - domainKey
@@ -62631,6 +62781,117 @@ components:
             type: string
         calculated:
           type: object
+    IndustryPackInstallRequest:
+      required:
+        - siteId
+        - packs
+      type: object
+      properties:
+        siteId:
+          type: string
+          format: uuid
+        packs:
+          type: array
+          items:
+            type: string
+    IndustryPackInstallResult:
+      required:
+        - packs
+        - installed
+        - alreadyInstalled
+      type: object
+      properties:
+        packs:
+          type: array
+          items:
+            $ref: '#/components/schemas/InstallResult'
+        installed:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        alreadyInstalled:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+    IndustryPackOption:
+      required:
+        - key
+        - name
+        - description
+        - templateCount
+        - installedCount
+        - chosen
+        - templates
+      type: object
+      properties:
+        key:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        templateCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        installedCount:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        chosen:
+          type: boolean
+        templates:
+          type: array
+          items:
+            $ref: '#/components/schemas/IndustryPackTemplate'
+    IndustryPackStatus:
+      required:
+        - setupDone
+        - chosenAt
+        - canInstall
+        - packs
+      type: object
+      properties:
+        setupDone:
+          type: boolean
+        chosenAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        canInstall:
+          type: boolean
+        packs:
+          type: array
+          items:
+            $ref: '#/components/schemas/IndustryPackOption'
+    IndustryPackTemplate:
+      required:
+        - key
+        - title
+        - category
+        - categoryName
+        - installed
+      type: object
+      properties:
+        key:
+          type: string
+        title:
+          type: string
+        category:
+          type: string
+        categoryName:
+          type: string
+        installed:
+          type: boolean
     InspectionDefect:
       required:
         - id
@@ -84688,6 +84949,7 @@ tags:
   - name: Form Templates
   - name: Form Migrations
   - name: Imports
+  - name: Industry Packs
   - name: Inspection
   - name: Mes
   - name: Production

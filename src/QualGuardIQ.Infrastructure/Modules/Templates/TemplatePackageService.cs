@@ -128,7 +128,7 @@ public sealed class TemplatePackageService(AppDbContext db, IAccessService acces
     }
 
     /// <summary>Library template key → the form template it is installed as (the most recent install that still exists and is not archived).</summary>
-    async Task<Dictionary<string, (Guid Id, string Number)>> InstalledKeysAsync(CancellationToken ct)
+    internal async Task<Dictionary<string, (Guid Id, string Number)>> InstalledKeysAsync(CancellationToken ct)
     {
         var rows = await (from i in db.TemplatePackageItems.AsNoTracking()
                           join p in db.TemplatePackages.AsNoTracking() on i.PackageId equals p.Id

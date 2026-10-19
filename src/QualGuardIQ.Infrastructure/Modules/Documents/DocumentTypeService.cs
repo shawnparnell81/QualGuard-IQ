@@ -5,8 +5,8 @@ using QualGuardIQ.Infrastructure.Persistence;
 
 namespace QualGuardIQ.Infrastructure.Modules.Documents;
 
-public sealed record DocumentTypeInput(DocumentKind Kind, string Name, string? Description, int SortOrder = 0);
-public sealed record DocumentTypeUpdate(string Name, string? Description, bool IsActive, int SortOrder);
+public sealed record DocumentTypeInput(DocumentKind Kind, string Name, string? Description, int SortOrder = 0, bool IsReference = false);
+public sealed record DocumentTypeUpdate(string Name, string? Description, bool IsActive, int SortOrder, bool? IsReference = null);
 
 /// <summary>Governed document type library: idempotent seeding, rename (carried to documents of that type), deactivation, and the create-time check.</summary>
 public sealed class DocumentTypeService(AppDbContext db)
@@ -54,6 +54,9 @@ public sealed class DocumentTypeService(AppDbContext db)
         (DocumentKind.FormTemplate, "request", "Request"),
     ];
 
+    /// <summary>Seeded types whose documents are reference copies (no approval or revision workflow).</summary>
+    public static readonly HashSet<string> ReferenceKeys = ["customer-document", "supplier-document", "external-standard", "reference-document", "standard"];
+
     /// <summary>
     /// Idempotent: a seed row already present by key is left alone (keeps renames and deactivations); a customer type with the
     /// same name is adopted (key attached, name and state kept); types used by existing documents but missing from the
@@ -69,7 +72,7 @@ public sealed class DocumentTypeService(AppDbContext db)
             if (existing.Any(x => x.Kind == kind && x.SeedKey == key)) continue;
             var same = existing.FirstOrDefault(x => x.Kind == kind && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase));
             if (same is not null) { if (same.SeedKey is null) { same.SeedKey = key; same.IsSystem = true; } continue; }
-            var t = new DocumentTypeDefinition { Kind = kind, Name = name, SeedKey = key, IsSystem = true, IsActive = true, SortOrder = (i + 1) * 10 };
+            var t = new DocumentTypeDefinition { Kind = kind, Name = name, SeedKey = key, IsSystem = true, IsActive = true, SortOrder = (i + 1) * 10, IsReference = kind == DocumentKind.Document && ReferenceKeys.Contains(key) };
             db.DocumentTypes.Add(t); existing.Add(t); added++;
         }
         var used = await db.Documents.AsNoTracking().Select(d => new { d.Kind, d.DocumentType }).Distinct().ToListAsync(ct);
@@ -90,7 +93,8 @@ public sealed class DocumentTypeService(AppDbContext db)
     {
         var name = Clean(r.Name);
         if (await db.DocumentTypes.AnyAsync(x => x.Kind == r.Kind && x.Name.ToLower() == name.ToLower(), ct)) throw new ConflictException($"A {r.Kind} type named '{name}' already exists.");
-        var t = new DocumentTypeDefinition { Kind = r.Kind, Name = name, Description = r.Description?.Trim(), SortOrder = r.SortOrder == 0 ? 1000 : r.SortOrder };
+        if (r.IsReference && r.Kind != DocumentKind.Document) throw new AppException("Only document types can be reference types.");
+        var t = new DocumentTypeDefinition { Kind = r.Kind, Name = name, Description = r.Description?.Trim(), SortOrder = r.SortOrder == 0 ? 1000 : r.SortOrder, IsReference = r.IsReference };
         db.DocumentTypes.Add(t);
         await db.SaveChangesAsync(ct);
         return t;
@@ -111,10 +115,19 @@ public sealed class DocumentTypeService(AppDbContext db)
             t.Name = name;
         }
         t.Description = r.Description?.Trim(); t.IsActive = r.IsActive; t.SortOrder = r.SortOrder;
+        // documents already created keep how they were created; the setting applies to new documents of the type
+        if (r.IsReference is { } isRef)
+        {
+            if (isRef && t.Kind != DocumentKind.Document) throw new AppException("Only document types can be reference types.");
+            t.IsReference = isRef;
+        }
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
         return t;
     }
+
+    public async Task<bool> IsReferenceAsync(DocumentKind kind, string name, CancellationToken ct) =>
+        kind == DocumentKind.Document && await db.DocumentTypes.AsNoTracking().AnyAsync(x => x.Kind == kind && x.Name.ToLower() == name.ToLower() && x.IsReference, ct);
 
     /// <summary>New documents must use an active library type; returns its canonical spelling. Existing documents may keep a type that was later deactivated.</summary>
     public async Task<string> RequireActiveAsync(DocumentKind kind, string name, string? current, CancellationToken ct)

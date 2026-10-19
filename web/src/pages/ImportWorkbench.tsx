@@ -138,6 +138,8 @@ function PurposeEditor({ jobId, purpose, target, editable, onDone }: { jobId: st
         {p === 'attachment-package' && <TextField size="small" label="Record number" value={number} onChange={(e) => setNumber(e.target.value)} helperText="The file is attached to this record" />}
         <Button variant="outlined" disabled={busy} onClick={apply}>Apply</Button>
       </Stack>}
+      {editable && p === 'historical-records' && <Typography variant="body2" color="text.secondary" data-testid="historical-hint">Historical records arrive marked Imported (read-only): they can be printed, exported and deleted, but not edited, signed or sent for approval. Records that already exist and are updated stay editable.</Typography>}
+      {editable && p === 'reference-content' && <Typography variant="body2" color="text.secondary">Reference content becomes a reference copy: stored and controlled with a history, without approval or a revision workflow.</Typography>}
     </Stack>
   );
 }

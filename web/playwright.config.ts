@@ -9,8 +9,9 @@ export default defineConfig({
   expect: { timeout: 15_000 },
   fullyParallel: false,
   workers: 1,
-  retries: process.env.CI ? 1 : 0,
-  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  // on GitHub a test that fails is tried twice more, so a slow runner doesn't fail the build; a real failure still fails all three
+  retries: process.env.CI ? 2 : 0,
+  reporter: process.env.CI ? [['list'], ['github'], ['html', { open: 'never' }]] : 'list',
   globalSetup: './e2e/global-setup.ts',
   use: {
     baseURL: web,

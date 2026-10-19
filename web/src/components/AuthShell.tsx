@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Box, Paper, Typography } from '@mui/material';
 import { useBranding } from '../auth';
+import { logos } from '../brand';
 
 /**
  * Shared frame for every signed-out screen (sign in and any later step such as a verification code or password change):
@@ -13,7 +14,7 @@ export function AuthShell({ title, subtitle, organization, children, footer }: {
     <Box component="main" sx={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(360px, 42%) 1fr' }, bgcolor: 'background.default' }}>
       <Box sx={{ bgcolor: '#15181D', color: '#F1F4F8', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', px: { xs: 3, md: 6 }, py: { xs: 3, md: 6 }, borderRight: { md: '4px solid' }, borderBottom: { xs: '4px solid', md: 'none' }, borderImage: 'linear-gradient(180deg, #1257C4, #0E8550) 1',
         backgroundImage: 'radial-gradient(700px 480px at 0% 0%, rgba(74, 143, 240, 0.16), transparent 62%), radial-gradient(640px 460px at 100% 100%, rgba(76, 201, 138, 0.12), transparent 60%)' }}>
-        <Box component="img" src="/brand/logo-full-dark.svg" alt="QualGuard IQ" data-testid="brand-full" sx={{ width: { xs: 220, md: 300 }, display: 'block' }} />
+        <Box component="img" src={logos.full.dark} alt="QualGuard IQ" data-testid="brand-full" sx={{ width: { xs: 220, md: 300 }, display: 'block' }} />
         <Box sx={{ display: { xs: 'none', md: 'block' } }}>
           <Typography sx={{ fontSize: 26, fontWeight: 700, lineHeight: 1.25, letterSpacing: '-0.01em', maxWidth: 380 }}>Quality records, approvals and evidence in one controlled place.</Typography>
           <Box sx={{ mt: 2, width: 48, height: 3, background: 'linear-gradient(90deg, #4A8FF0, #4CC98A)' }} />

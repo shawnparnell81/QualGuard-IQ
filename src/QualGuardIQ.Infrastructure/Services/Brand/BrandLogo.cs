@@ -5,7 +5,8 @@ namespace QualGuardIQ.Infrastructure.Services;
 
 /// <summary>
 /// The QualGuard IQ logo for generated documents. PDFs get the mark and wordmark as vector paths (made from the logo SVG by
-/// scripts/brand/pdf-logo.py, meant for white pages); emails get a PNG. Customer logos uploaded to a document template take
+/// scripts/brand/pdf-logo.py, meant for white pages, with the blue-to-green gradient drawn as clipped colour bands); emails get a PNG
+/// (scripts/brand/render-icons.mjs). Customer logos uploaded to a document template take
 /// priority wherever that feature exists; this is the default.
 /// </summary>
 public static class BrandLogo

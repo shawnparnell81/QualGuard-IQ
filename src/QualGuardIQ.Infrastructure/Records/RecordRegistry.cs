@@ -41,6 +41,7 @@ public sealed class RecordRegistry(IEnumerable<IRecordTypeProvider> providers, I
         var r = await RequireViewAsync(type, id, ct);
         if (!await access.CanAccessAsync(user.UserId!.Value, r.EditPermission, r.SiteId, r.DepartmentId, ct))
             throw new ForbiddenException();
+        if (await ImportedRecords.IsReadOnlyAsync(db, id, ct)) throw new AppException(ImportedRecords.ReadOnlyMessage, 409);
         return r;
     }
 }

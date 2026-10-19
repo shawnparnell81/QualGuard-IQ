@@ -10,8 +10,10 @@ namespace QualGuardIQ.Tests;
 /// <summary>The logo in generated documents: vector paths in PDFs (customer template logos first) and the HTML email view.</summary>
 public class BrandTests
 {
-    // brand blue #1257C4 and charcoal #29333E as PDF fill colours
-    const string Blue = "0.0706 0.3412 0.7686 rg", Charcoal = "0.1608 0.2 0.2431 rg";
+    // brand blue #1257C4 (where the mark's gradient starts), green #0E8550 (the dot) and charcoal #29333E as PDF fill colours
+    const string Blue = "0.0706 0.3412 0.7686 rg", Green = "0.0549 0.5216 0.3137 rg", Charcoal = "0.1608 0.2 0.2431 rg";
+    // the ring is clipped once per logo with the even-odd rule before its gradient bands are painted
+    const string RingClip = "W* n";
 
     static string Text(byte[] pdf) => Encoding.Latin1.GetString(pdf);
 
@@ -31,7 +33,9 @@ public class BrandTests
         Assert.StartsWith("q ", ops);
         Assert.EndsWith("Q\n", ops);
         Assert.Contains(Blue, ops);
+        Assert.Contains(Green, ops);
         Assert.Contains(Charcoal, ops);
+        Assert.Equal(1, CountOf(ops, RingClip));
         Assert.Equal(ops.Count(c => c == 'q'), ops.Count(c => c == 'Q')); // balanced graphics state
     }
 
@@ -45,7 +49,7 @@ public class BrandTests
         var text = Text(bytes);
         var pages = text.Split("/Type /Page ").Length - 1;
         Assert.True(pages >= 2);
-        Assert.Equal(pages, CountOf(text, "0.1608 0.2 0.2431 RG")); // the ring stroke: once per logo
+        Assert.Equal(pages, CountOf(text, RingClip)); // the ring: once per logo
     }
 
     [Fact]

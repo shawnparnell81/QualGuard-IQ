@@ -67,6 +67,7 @@ const AlertsAdmin = lazy(() => import('./pages/Intelligence').then((m) => ({ def
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const MyWork = lazy(() => import('./pages/MyWork').then((m) => ({ default: m.MyWork })));
 const SignInHistory = lazy(() => import('./pages/Account').then((m) => ({ default: m.SignInHistory })));
+const IndustryPacksPage = lazy(() => import('./pages/IndustryPacks').then((m) => ({ default: m.IndustryPacksPage })));
 const OrganizationAppearancePage = lazy(() => import('./pages/Appearance').then((m) => ({ default: m.OrganizationAppearancePage })));
 const MyAppearancePage = lazy(() => import('./pages/Appearance').then((m) => ({ default: m.MyAppearancePage })));
 const AccountSecurity = lazy(() => import('./pages/AccountSecurity').then((m) => ({ default: m.AccountSecurity })));
@@ -573,6 +574,7 @@ export function App() {
               <Route path="/admin/settings" element={<OrganizationSettingsPage />} />
               <Route path="/admin/deleted-records" element={<DeletedRecordsPage />} />
               <Route path="/admin/appearance" element={<OrganizationAppearancePage />} />
+              <Route path="/admin/industry-packs" element={<IndustryPacksPage />} />
               <Route path="/admin/audit" element={<AuditPage />} />
               <Route path="/admin/security" element={<SecurityPage />} />
               <Route path="/admin/sign-in-security" element={<SignInSecurityPage />} />

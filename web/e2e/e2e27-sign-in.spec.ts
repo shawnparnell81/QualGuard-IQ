@@ -318,6 +318,12 @@ test.describe('phone', () => {
 
 test('sign-in screen', async ({ page }) => {
   await page.goto('/');
+  // the logo comes from the build (a file name that changes with its content), not a fixed /brand address a browser could keep
+  const logo = page.getByTestId('brand-full');
+  await expect(logo).not.toHaveAttribute('src', /^\/brand\//);
+  await expect.poll(() => logo.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth)).toBeGreaterThan(0);
+  // the tab and home-screen icons carry a version so a new logo replaces the old one
+  for (const rel of ['icon', 'apple-touch-icon', 'manifest']) await expect(page.locator(`head link[rel="${rel}"]`).first()).toHaveAttribute('href', /\?v=\d+$/);
   await page.getByLabel('Email').fill(person.email);
   await shot(page, 'sign-in-01-sign-in');
 });

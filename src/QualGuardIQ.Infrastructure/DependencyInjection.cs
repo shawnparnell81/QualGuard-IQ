@@ -84,6 +84,7 @@ public static class DependencyInjection
         services.AddScoped<FormDefinitionProjector>();
         services.AddScoped<TemplateCatalogService>();
         services.AddScoped<Modules.Templates.TemplatePackageService>();
+        services.AddScoped<Modules.Templates.IndustryPackSetupService>();
         services.AddScoped<Modules.Templates.FormMigrationService>();
         services.AddScoped<Modules.Imports.ImportCenterService>();
         services.AddSingleton<Modules.Imports.ImportProgress>();
