@@ -8,6 +8,7 @@ import { fmtDate } from '../components/Status';
 import { mono, useChartColors } from '../theme';
 
 import { useWork, type WorkAction } from '../work';
+import { SetupPacksCard } from './IndustryPacks';
 
 function dueBuckets(items: WorkAction[]) {
   const today = new Date(); today.setHours(0, 0, 0, 0);
@@ -38,6 +39,7 @@ export function Home() {
     <Box sx={{ maxWidth: 1240, mx: 'auto', p: { xs: 2, sm: 3, md: 4 } }}>
       <Typography variant="overline" color="text.secondary">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Typography>
       <Typography variant="h1" sx={{ mb: 3, fontSize: '2.3rem', background: qg.greeting, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Good to see you, {me?.displayName.split(' ')[0]}</Typography>
+      {can('templates.install') && <SetupPacksCard />}
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' }, gap: 2, mb: 3 }}>
         {tiles.map((t) => (
