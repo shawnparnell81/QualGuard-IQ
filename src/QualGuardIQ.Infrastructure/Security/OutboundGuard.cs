@@ -5,7 +5,8 @@ using Microsoft.Extensions.Configuration;
 namespace QualGuardIQ.Infrastructure.Security;
 
 /// <summary>
-/// Keeps addresses that administrators type in (webhooks, Teams and SMS targets, print agents, carriers, ERP, messaging) from
+/// Keeps addresses that administrators type in (webhooks, Teams and SMS targets, print agents, carriers, ERP, messaging, generation
+/// providers, single sign-on providers) from
 /// reaching the server itself or the internal network. The host name is looked up once and the connection goes to the address
 /// that was checked, so a name can't switch to an internal address between the check and the connection.
 /// Blocked unless listed in Outbound:AllowedNetworks: loopback, private (10/8, 172.16/12, 192.168/16), link-local
@@ -34,7 +35,8 @@ public sealed class OutboundGuard
         _printers = Parse(config["Outbound:PrinterNetworks"] is { Length: > 0 } p ? p : DefaultPrinterNetworks, "Outbound:PrinterNetworks");
     }
 
-    static IPNetwork[] Parse(string? value, string setting) =>
+    /// <summary>Reads a comma-separated list of addresses or ranges from a setting; a bad entry stops start-up with the setting's name.</summary>
+    public static IPNetwork[] Parse(string? value, string setting) =>
         (value ?? "").Split([',', ';', ' '], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(n => IPNetwork.TryParse(n.Contains('/') ? n : n + (n.Contains(':') ? "/128" : "/32"), out var net) ? net
                 : throw new InvalidOperationException($"{setting} has an invalid address or range: {n}"))
@@ -66,17 +68,32 @@ public sealed class OutboundGuard
         return ok;
     }
 
-    /// <summary>An HTTP handler whose connections pass the check above.</summary>
-    public SocketsHttpHandler Handler(Action<SocketsHttpHandler>? configure = null)
+    /// <summary>True when the address is allowed by the general rule or is inside one of <paramref name="extra"/>. Link-local
+    /// addresses (cloud metadata) stay blocked unless Outbound:AllowedNetworks lists them, whatever <paramref name="extra"/> says.</summary>
+    public bool IsAllowed(IPAddress address, IReadOnlyCollection<IPNetwork> extra)
     {
-        var h = new SocketsHttpHandler { ConnectCallback = ConnectAsync };
+        var a = Normal(address);
+        return IsAllowed(a) || extra.Any(n => n.Contains(a)) && !LinkLocal.Any(n => n.Contains(a));
+    }
+    static readonly IPNetwork[] LinkLocal = [IPNetwork.Parse("169.254.0.0/16"), IPNetwork.Parse("fe80::/10")];
+
+    /// <summary>An HTTP handler whose connections pass the check above.</summary>
+    public SocketsHttpHandler Handler(Action<SocketsHttpHandler>? configure = null) => Handler(IsAllowed, configure);
+
+    /// <summary>An HTTP handler whose connections pass the general check or go to one of <paramref name="extra"/> (never link-local).</summary>
+    public SocketsHttpHandler Handler(IReadOnlyCollection<IPNetwork> extra, Action<SocketsHttpHandler>? configure = null) =>
+        extra.Count == 0 ? Handler(configure) : Handler(a => IsAllowed(a, extra), configure);
+
+    SocketsHttpHandler Handler(Func<IPAddress, bool> rule, Action<SocketsHttpHandler>? configure)
+    {
+        var h = new SocketsHttpHandler { ConnectCallback = (ctx, ct) => ConnectAsync(ctx, rule, ct) };
         configure?.Invoke(h);
         return h;
     }
 
-    async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext ctx, CancellationToken ct)
+    static async ValueTask<Stream> ConnectAsync(SocketsHttpConnectionContext ctx, Func<IPAddress, bool> rule, CancellationToken ct)
     {
-        var addresses = await ResolveAsync(ctx.DnsEndPoint.Host, IsAllowed, ct);
+        var addresses = await ResolveAsync(ctx.DnsEndPoint.Host, rule, ct);
         var socket = new Socket(SocketType.Stream, ProtocolType.Tcp) { NoDelay = true };
         try
         {
