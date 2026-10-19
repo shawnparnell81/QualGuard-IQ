@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Box, Paper, Typography } from '@mui/material';
+import { useBranding } from '../auth';
 
 /**
  * Shared frame for every signed-out screen (sign in and any later step such as a verification code or password change):
@@ -7,6 +8,7 @@ import { Box, Paper, Typography } from '@mui/material';
  * On phones the brand panel shrinks to a strip above the form.
  */
 export function AuthShell({ title, subtitle, organization, children, footer }: { title: string; subtitle?: string; organization?: string; children: ReactNode; footer?: ReactNode }) {
+  const { data: brand } = useBranding();
   return (
     <Box component="main" sx={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(360px, 42%) 1fr' }, bgcolor: 'background.default' }}>
       <Box sx={{ bgcolor: '#17202B', color: '#F1F4F8', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', px: { xs: 3, md: 6 }, py: { xs: 3, md: 6 }, borderRight: { md: '4px solid' }, borderBottom: { xs: '4px solid', md: 'none' }, borderColor: { xs: 'primary.main', md: 'primary.main' },
@@ -21,6 +23,7 @@ export function AuthShell({ title, subtitle, organization, children, footer }: {
       <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', px: 2, py: { xs: 4, sm: 6 } }}>
         <Box sx={{ width: '100%', maxWidth: 400 }}>
           <Paper sx={{ p: { xs: 3, sm: 4 } }}>
+            {brand?.hasLogo && <Box component="img" src="/api/settings/logo" alt={organization ?? ''} data-testid="sign-in-org-logo" sx={{ display: 'block', maxHeight: 56, maxWidth: '70%', mb: 2 }} />}
             <Typography variant="h2" component="h1" sx={{ mb: subtitle ? 0.5 : 2.5 }}>{title}</Typography>
             {subtitle && <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>{subtitle}</Typography>}
             {children}
