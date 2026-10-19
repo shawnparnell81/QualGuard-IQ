@@ -158,7 +158,9 @@ public sealed class RecordToolsTests(TestApp app)
         using (var zip = new ZipArchive(ds))
         {
             using var reader = new StreamReader(zip.GetEntry("word/document.xml")!.Open());
-            Assert.Contains(title, await reader.ReadToEndAsync());
+            var xml = await reader.ReadToEndAsync();
+            Assert.Contains(title, xml);
+            Assert.Contains("In-process", xml); // the value beside each label, not only the labels
             Assert.NotNull(zip.GetEntry("[Content_Types].xml"));
         }
 
