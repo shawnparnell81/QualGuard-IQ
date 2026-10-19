@@ -18,7 +18,9 @@ public sealed class UploadScanningController(IConfiguration config, IMalwareScan
     public sealed record ScanningStatus(bool Enabled, string Provider, bool? Reachable, bool AllowWhenUnavailable, string? Message);
 
     [HttpGet]
-    public async Task<ScanningStatus> Get(CancellationToken ct)
+    public Task<ScanningStatus> Get(CancellationToken ct) => StatusAsync(config, scanner, ct);
+
+    public static async Task<ScanningStatus> StatusAsync(IConfiguration config, IMalwareScanner scanner, CancellationToken ct)
     {
         var provider = config["MalwareScanning:Provider"] is { Length: > 0 } p ? p : "None";
         var enabled = string.Equals(provider, "ClamAV", StringComparison.OrdinalIgnoreCase);

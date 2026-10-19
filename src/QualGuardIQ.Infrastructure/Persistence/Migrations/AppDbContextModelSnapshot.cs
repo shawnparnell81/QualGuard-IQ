@@ -6999,6 +6999,13 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("LogoAttachmentId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("LogoContentType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<byte[]>("LogoImage")
+                        .HasColumnType("bytea");
+
                     b.Property<string>("OrganizationName")
                         .IsRequired()
                         .HasMaxLength(200)

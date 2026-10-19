@@ -28,6 +28,21 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 nullable: false,
                 defaultValue: true);
 
+            migrationBuilder.AddColumn<string>(
+                name: "LogoContentType",
+                schema: "qms",
+                table: "organization_settings",
+                type: "character varying(20)",
+                maxLength: 20,
+                nullable: true);
+
+            migrationBuilder.AddColumn<byte[]>(
+                name: "LogoImage",
+                schema: "qms",
+                table: "organization_settings",
+                type: "bytea",
+                nullable: true);
+
             migrationBuilder.CreateTable(
                 name: "deleted_records",
                 schema: "qms",
@@ -124,6 +139,16 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
             migrationBuilder.DropColumn(
                 name: "EmailNotificationsEnabled",
+                schema: "qms",
+                table: "organization_settings");
+
+            migrationBuilder.DropColumn(
+                name: "LogoContentType",
+                schema: "qms",
+                table: "organization_settings");
+
+            migrationBuilder.DropColumn(
+                name: "LogoImage",
                 schema: "qms",
                 table: "organization_settings");
         }

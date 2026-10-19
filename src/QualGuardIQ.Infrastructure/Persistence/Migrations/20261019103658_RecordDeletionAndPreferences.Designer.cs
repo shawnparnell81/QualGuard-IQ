@@ -13,7 +13,7 @@ using QualGuardIQ.Infrastructure.Persistence;
 namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261019103042_RecordDeletionAndPreferences")]
+    [Migration("20261019103658_RecordDeletionAndPreferences")]
     partial class RecordDeletionAndPreferences
     {
         /// <inheritdoc />
@@ -7001,6 +7001,13 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 
                     b.Property<Guid?>("LogoAttachmentId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("LogoContentType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<byte[]>("LogoImage")
+                        .HasColumnType("bytea");
 
                     b.Property<string>("OrganizationName")
                         .IsRequired()
