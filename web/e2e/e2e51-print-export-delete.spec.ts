@@ -268,7 +268,8 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     await page.getByRole('button', { name: 'User menu' }).click();
     await page.getByRole('menuitem', { name: 'My settings' }).click();
     await expect(page.getByRole('heading', { name: 'My settings' })).toBeVisible();
-    await expect(page.getByRole('menu')).toHaveCount(0);
+    // the closing user menu is hidden from the accessibility tree but still covers the page until it has faded out
+    await expect(page.locator('.MuiMenu-root')).toHaveCount(0);
     await page.waitForLoadState('networkidle');
     await page.getByLabel('Also send them to me by e-mail').uncheck();
     await expect(page.getByTestId('prefs-msg')).toHaveText('Saved.');
