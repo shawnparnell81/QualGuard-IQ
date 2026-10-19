@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactElement, type RefObject } from 'react';
+import { flushSync } from 'react-dom';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, GlobalStyles, ListItemIcon, ListItemText, Menu, MenuItem, Snackbar, TextField, Tooltip, Typography } from '@mui/material';
 import PrintOutlined from '@mui/icons-material/PrintOutlined';
@@ -228,6 +229,19 @@ export function PrintStyles() {
 export function PrintHeading({ title }: { title: string }) {
   const { me } = useAuth();
   const { data: brand } = useBranding();
+  const [printing, setPrinting] = useState(() => window.matchMedia('print').matches);
+  useEffect(() => {
+    // Only in the page while printing, so the hidden copy of the title never shadows the on-screen one.
+    const before = () => flushSync(() => setPrinting(true));
+    const after = () => setPrinting(false);
+    const media = window.matchMedia('print');
+    const change = () => (media.matches ? before() : after());
+    window.addEventListener('beforeprint', before);
+    window.addEventListener('afterprint', after);
+    media.addEventListener('change', change);
+    return () => { window.removeEventListener('beforeprint', before); window.removeEventListener('afterprint', after); media.removeEventListener('change', change); };
+  }, []);
+  if (!printing) return null;
   return (
     <Box className="qg-print-only" sx={{ mb: 2, pb: 1, borderBottom: 1, borderColor: 'divider' }} data-testid="print-heading">
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 2 }}>
