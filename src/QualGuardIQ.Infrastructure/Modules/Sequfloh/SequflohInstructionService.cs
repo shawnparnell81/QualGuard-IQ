@@ -152,7 +152,18 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         wi.Steps = CleanRows(r.Steps, schema.StepColumns, true, "step");
         wi.Characteristics = schema.HasCharacteristics ? CleanRows(r.Characteristics, schema.CharacteristicColumns, true, "characteristic") : "[]";
         wi.PartsRows = schema.HasPartsRows ? CleanRows(r.PartsRows, schema.PartsRowColumns, true, "parts row") : "[]";
-        if (r.Blocks is not null) wi.Blocks = SequflohBlocks.Clean(r.Blocks);
+        if (r.Blocks is not null)
+        {
+            wi.Blocks = SequflohBlocks.Clean(r.Blocks);
+            // an image block may only show a file attached to this instruction or an earlier revision of it
+            var images = SequflohBlocks.ImageIds(wi.Blocks);
+            if (images.Count > 0)
+            {
+                var family = db.SequflohWorkInstructions.Where(x => x.FamilyId == wi.FamilyId).Select(x => x.Id);
+                var ok = await db.Attachments.CountAsync(a => images.Contains(a.Id) && a.OwnerType == EntityType && family.Contains(a.OwnerId) && !a.IsArchived, ct);
+                if (ok != images.Distinct().Count()) throw new AppException("An image block can only show a picture attached to this work instruction.");
+            }
+        }
         await db.SaveChangesAsync(ct);
         await IndexAsync(wi, ct);
     }
@@ -426,6 +437,7 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         var settings = await f.GetSettingsAsync(ct);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
         var wi = Copy(src);
+        wi.Blocks = SequflohBlocks.WithoutImages(wi.Blocks); // a duplicate is a new instruction; its pictures are attached again
         wi.FamilyId = wi.Id; wi.Title = (src.Title + " (copy)")[..Math.Min(300, src.Title.Length + 7)];
         wi.Number = await numbers.NextAsync(SequflohDesigner.Schemas[src.Type].NumberingType, null, ct);
         wi.Revision = SequflohFoundationService.FirstRevision(settings.Numbering.RevisionFormat);

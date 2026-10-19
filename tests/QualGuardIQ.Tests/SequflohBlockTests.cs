@@ -61,6 +61,9 @@ public sealed class SequflohBlockTests(TestApp app)
         var after = wi.GetProperty("instruction").GetProperty("blocks").EnumerateArray().ToList();
         Assert.Equal(6, after.Count);
         Assert.Equal(blocks[2].Str("id"), after[0].Str("id"));   // ids survive reordering
+        var print = await author.GetAsync($"{url}/print");
+        Assert.Equal(HttpStatusCode.OK, print.StatusCode);
+        Assert.Equal("application/pdf", print.Content.Headers.ContentType?.MediaType);
 
         // save as a reusable template; a viewer cannot
         Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsync($"{url}/save-as-template", new { name = "Valve seal layout" })).StatusCode);
@@ -100,5 +103,29 @@ public sealed class SequflohBlockTests(TestApp app)
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         var audit = await db.AuditEntries.AsNoTracking().Where(a => a.EntityId == tplId).OrderBy(a => a.Id).Select(a => a.Description).ToListAsync();
         Assert.Contains(audit, d => d.Contains("work instruction template Valve seal layout"));
+    
+    }
+
+    [Fact]
+    public async Task Image_blocks_show_only_pictures_attached_to_the_instruction()
+    {
+        var site = await app.CreateSiteAsync();
+        var (_, author) = await app.CreateUserAsync(AuthorPerms, site);
+        var a = (await (await author.PostOkAsync("/api/sequfloh/instructions", new { type = "Fai", title = "Bracket FAI", siteId = site })).JsonAsync()).Id();
+        var b = (await (await author.PostOkAsync("/api/sequfloh/instructions", new { type = "Fai", title = "Other FAI", siteId = site })).JsonAsync()).Id();
+        var up = await author.UploadAsync("SequflohWorkInstruction", a, "datum-scheme.pdf", "%PDF datum scheme");
+        Assert.True(up.IsSuccessStatusCode, await up.Content.ReadAsStringAsync());
+        var file = (await author.GetElAsync($"/api/records/SequflohWorkInstruction/{a}/files")).EnumerateArray().Single().Id();
+
+        var wiA = await author.GetElAsync($"/api/sequfloh/instructions/{a}");
+        Assert.True((await author.PutAsync($"/api/sequfloh/instructions/{a}", Save(wiA, site, [new { kind = "image", caption = "Datum scheme", attachmentId = file }]))).IsSuccessStatusCode);
+        var wiB = await author.GetElAsync($"/api/sequfloh/instructions/{b}");
+        Assert.Equal(HttpStatusCode.BadRequest, (await author.PutAsync($"/api/sequfloh/instructions/{b}", Save(wiB, site, [new { kind = "image", caption = "Borrowed", attachmentId = file }]))).StatusCode);
+
+        // a template keeps the caption but not the picture
+        var tpl = await (await author.PostOkAsync($"/api/sequfloh/instructions/{a}/save-as-template", new { name = $"FAI datum layout {a:N}" })).JsonAsync();
+        var block = (await author.GetElAsync($"/api/sequfloh/instruction-templates/{tpl.Id()}")).GetProperty("blocks")[0];
+        Assert.Equal("Datum scheme", block.Str("caption"));
+        Assert.False(block.TryGetProperty("attachmentId", out _));
     }
 }
