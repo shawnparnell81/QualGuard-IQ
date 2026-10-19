@@ -56,7 +56,7 @@ npm run dev        # http://localhost:5173, proxies /api to QGIQ_API_URL (defaul
 
 Copy `.env.example` to `.env`, fill in the values, then `docker compose up -d --build` and open http://localhost:8081.
 Virus scanning is off by default: uploads are stored and marked "Not scanned", and administrators see a notice in Admin.
-To scan every upload with ClamAV (Intel/AMD computers only; there is no ARM image), set `MALWARE_SCANNER=ClamAV` and add
+To scan every upload with ClamAV (Intel/AMD and ARM computers), set `MALWARE_SCANNER=ClamAV` and add
 `clamav` to `COMPOSE_PROFILES`. Files go to MinIO in a container by default (`COMPOSE_PROFILES=minio`), using a login that
 can only reach the file bucket; for Cloudflare R2 or Amazon S3 leave `minio` out of `COMPOSE_PROFILES` and fill in the
 `STORAGE_*` values. A one-time `migrate` step updates the database with the owner login; the API and worker use a limited
@@ -81,10 +81,11 @@ User, administrator, deployment, recovery, API and architecture guides are in [`
 ## Tests
 
 - Backend: `dotnet test` (uses `QMS_TEST_DB` or the local `qgiq_test` database; the test database is dropped and
-  rebuilt). Optional suites run when their service is configured: `QGIQ_CLAMAV=1` (clamd on 127.0.0.1:3310) and
+  rebuilt; the login needs `CREATEDB` and `CREATEROLE`, or superuser, because some tests create throwaway databases and app logins). Optional suites run when their service is configured: `QGIQ_CLAMAV=1` (clamd on 127.0.0.1:3310) and
   `QMS_TEST_AZURE=UseDevelopmentStorage=true` (Azurite).
 - UI: `cd web && npx playwright install chromium && npm run test:e2e`. The run starts its own API on port 5081 against a
-  freshly created `qgiq_e2e` database (needs `psql` and a role allowed to create databases; see `web/e2e/serve-api.sh`
+  freshly created `qgiq_e2e` database (needs `psql` and a role allowed to create databases and roles; like compose, it runs
+  the `migrate` step as that role and the API as the limited `<database>_app` login; see `web/e2e/serve-api.sh`
   for the `E2E_*` settings) and a web dev server on port 5174. Set `E2E_CHROME` to use an installed Chrome.
   The suite covers end-to-end flows 1-6, each as a permitted user and as read-only / unassigned users.
 
@@ -103,9 +104,11 @@ User, administrator, deployment, recovery, API and architecture guides are in [`
 - The business audit trail (who, what, when, and a plain-language description with old and new values) is written in
   the same transaction as the change and has no edit or delete endpoint. The app's database login can only add to it,
   and a database trigger refuses changes and deletions from any login. Security events are stored separately, with the
-  same protection.
-- Addresses administrators enter for outbound calls (webhooks, notifications, printers, carriers, ERP) can't reach
-  internal networks unless allowed in `Outbound:AllowedNetworks`.
-- Uploads must match their file extension (PDF, images, Office, ZIP and video are checked byte by byte) and are stored
+  same protection. The database owner (used only by the `migrate` step) owns the tables and could remove the triggers,
+  so keep its password out of day-to-day use.
+- Addresses administrators enter for outbound calls (webhooks, notifications, printers, carriers, ERP, generation
+  providers, single sign-on) can't reach internal networks unless allowed in `Outbound:AllowedNetworks`.
+- Uploads must match their file extension (PDF, images, Office, ZIP, video and DWG are checked byte by byte; text, CSV,
+  JSON, XML and CAD exchange files are refused when they are really a program or another binary format) and are stored
   with the type for that extension.
 - Security verification target: OWASP ASVS Level 2 (not a certification).
