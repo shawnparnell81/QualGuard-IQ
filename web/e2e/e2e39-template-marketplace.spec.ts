@@ -12,7 +12,8 @@ test.describe('Forms B11: template marketplace', () => {
     await expect(page).toHaveURL(/\/forms\/marketplace/);
     await expect(page.getByRole('heading', { name: 'Template marketplace' })).toBeVisible();
     for (const name of ['Automotive', 'Aerospace', 'Medical device', 'Electronics', 'Manufacturing']) await expect(page.getByRole('heading', { name, exact: true })).toBeVisible();
-    await expect(page.getByText('No templates are defined for this pack yet.')).toBeVisible();
+    // every pack, electronics included, now has templates
+    await expect(page.getByText('No templates are defined for this pack yet.')).toHaveCount(0);
     await shot(page, 'forms-import/b11-marketplace-packs');
 
     // browse the library by category and preview a template with its live calculations
@@ -43,8 +44,8 @@ test.describe('Forms B11: template marketplace', () => {
     const aero = page.locator('.MuiCard-root').filter({ has: page.getByRole('heading', { name: 'Aerospace', exact: true }) });
     await aero.getByRole('button', { name: 'Install pack' }).click();
     await page.getByRole('dialog').getByRole('button', { name: 'Install' }).click();
-    await expect(page.getByText(/Installed 21 draft form templates/)).toBeVisible({ timeout: 90_000 });
-    await expect(aero.getByText('21 of 21 installed')).toBeVisible();
+    await expect(page.getByText(/Installed 31 draft form templates/)).toBeVisible({ timeout: 90_000 });
+    await expect(aero.getByText('31 of 31 installed')).toBeVisible();
     await expect(aero.getByRole('button', { name: 'Install pack' })).toBeDisabled();
     await aero.getByRole('button', { name: 'View templates' }).click();
     await expect(page.getByRole('table', { name: 'Library templates' }).getByText('Configuration Change Record')).toBeVisible();
