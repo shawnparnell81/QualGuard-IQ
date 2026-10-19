@@ -126,6 +126,23 @@ The containers also start by themselves when Docker Desktop starts, unless you s
    docker compose -f C:\QualGuard-IQ\docker-compose.yml up -d --build
    ```
 
+### Updating an installation from before the separate `migrate` step
+
+Installations set up before the security update (October 2026) need two new lines in `.env` before step 3. Without them, `docker compose` stops with `required variable POSTGRES_APP_PASSWORD is missing a value`, or `minio-init` exits with an error.
+
+```
+POSTGRES_APP_PASSWORD=<a new password, at least 12 characters, different from POSTGRES_PASSWORD>
+MINIO_APP_PASSWORD=<a new password, at least 8 characters, different from MINIO_ROOT_PASSWORD>
+```
+
+Leave every other line as it is, including `POSTGRES_PASSWORD`, `MINIO_ROOT_PASSWORD`, `ADMIN_EMAIL` and `ADMIN_PASSWORD`. Skip `MINIO_APP_PASSWORD` if you use Cloudflare R2 instead of MinIO. You choose both new passwords yourself; nothing else needs them.
+
+What happens on the first start after the update:
+
+- The existing database, files and key ring are kept. `migrate` signs in with the existing owner login (`POSTGRES_PASSWORD`), applies the update and creates the limited `qgiq_app` login inside the same database. `minio-init` creates the bucket-only `qgiq-app` storage login next to the existing files.
+- Everyone, including you, is signed out once and signs in again with their usual password.
+- Your administrator account is not switched to two-step verification. `ADMIN_REQUIRES_MFA` only applies to new installations; to require it, turn on **Requires two-step verification** for the Administrator role in Admin › Roles.
+
 ## Troubleshooting
 
 See what is running and whether it is healthy:
