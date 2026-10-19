@@ -3,6 +3,8 @@ import { MessagingAdmin, MyMessaging } from './pages/Messaging';
 import { GenerationAdmin } from './pages/Generation';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { Route, Routes } from 'react-router-dom';
+import { PrintStyles } from './tools/PageTools';
+import { PreferencesSync } from './tools/PreferencesSync';
 import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material';
 import { useAuth, useBranding } from './auth';
 import { makeTheme } from './theme';
@@ -265,7 +267,9 @@ const ScarDetail = lazy(() => import('./pages/Suppliers').then((m) => ({ default
 const ReviewsDue = lazy(() => import('./pages/Suppliers').then((m) => ({ default: m.ReviewsDue })));
 const AdminHome = lazy(() => import('./pages/Admin').then((m) => ({ default: m.AdminHome })));
 const AuditPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.AuditPage })));
-const OrganizationPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.OrganizationPage })));
+const OrganizationSettingsPage = lazy(() => import('./pages/Settings').then((m) => ({ default: m.OrganizationSettingsPage })));
+const MySettingsPage = lazy(() => import('./pages/Settings').then((m) => ({ default: m.MySettingsPage })));
+const DeletedRecordsPage = lazy(() => import('./pages/Settings').then((m) => ({ default: m.DeletedRecordsPage })));
 const RolesPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.RolesPage })));
 const RoutesPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.RoutesPage })));
 const SecurityPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.SecurityPage })));
@@ -293,9 +297,11 @@ export function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
+      <PrintStyles />
       {loading ? <Box sx={{ display: 'grid', placeItems: 'center', height: '100vh' }}><CircularProgress /></Box>
         : !me ? <Login /> : me.portalKind ? <Suspense fallback={null}><PortalApp /></Suspense> : (
           <>
+            <PreferencesSync />
             <TopBar onOpenPalette={() => setPalette(true)} />
             <CommandPalette open={palette} onClose={() => setPalette(false)} />
             <Suspense fallback={<Box sx={{ display: 'grid', placeItems: 'center', height: '60vh' }}><CircularProgress /></Box>}>
@@ -306,6 +312,7 @@ export function App() {
               <Route path="/account/sign-ins" element={<SignInHistory />} />
               <Route path="/account/security" element={<AccountSecurity />} />
               <Route path="/account/messaging" element={<MyMessaging />} />
+              <Route path="/account/settings" element={<MySettingsPage />} />
               <Route path="/documents" element={<DocumentList kind={0} />} />
               <Route path="/documents/new" element={<DocumentNew kind={0} />} />
               <Route path="/documents/:id" element={<DocumentDetail kind={0} />} />
@@ -552,7 +559,9 @@ export function App() {
               <Route path="/admin/roles" element={<RolesPage />} />
               <Route path="/admin/sites" element={<SitesPage />} />
               <Route path="/admin/routes" element={<RoutesPage />} />
-              <Route path="/admin/organization" element={<OrganizationPage />} />
+              <Route path="/admin/organization" element={<OrganizationSettingsPage />} />
+              <Route path="/admin/settings" element={<OrganizationSettingsPage />} />
+              <Route path="/admin/deleted-records" element={<DeletedRecordsPage />} />
               <Route path="/admin/audit" element={<AuditPage />} />
               <Route path="/admin/security" element={<SecurityPage />} />
               <Route path="/admin/sign-in-security" element={<SignInSecurityPage />} />

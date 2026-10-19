@@ -71,7 +71,8 @@ function UploadPanel({ onStarted }: { onStarted: (id: string) => void }) {
   const [params] = useSearchParams();
   const preset = params.get('target');
   const [target, setTarget] = useState(preset ?? 'form-records');
-  const [mode, setMode] = useState(preset?.startsWith('master-') ? 'master-list' : 'records');
+  const presetMode = params.get('mode');
+  const [mode, setMode] = useState(presetMode && ['records', 'template', 'document'].includes(presetMode) ? presetMode : preset?.startsWith('master-') ? 'master-list' : 'records');
   const rowsMode = mode === 'records' || mode === 'master-list';
   const choices = (targets.data ?? []).filter((x) => !!x.masterList === (mode === 'master-list'));
   const pickMode = (m: string) => { setMode(m); if (m === 'master-list' && !target.startsWith('master-')) setTarget(targets.data?.find((x) => x.masterList)?.key ?? ''); if (m === 'records' && target.startsWith('master-')) setTarget('form-records'); };

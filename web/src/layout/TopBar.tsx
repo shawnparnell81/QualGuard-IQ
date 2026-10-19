@@ -14,11 +14,13 @@ import { useAuth, useBranding } from '../auth';
 import { visibleModules } from '../modules/registry';
 import { get, post } from '../api';
 import { mono } from '../theme';
+import { useCanSeeDeleted } from '../tools/PageTools';
 
 interface Notif { id: number; title: string; body: string | null; link: string | null; createdAt: string; readAt: string | null }
 
 export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
-  const { me, logout } = useAuth();
+  const { me, logout, can } = useAuth();
+  const canSeeDeleted = useCanSeeDeleted();
   const { preference, setPreference } = useColorMode();
   const { data: brand } = useBranding();
   const nav = useNavigate();
@@ -41,8 +43,10 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         {/* Mark + wordmark; narrow screens keep the mark only so the bar never outgrows a phone. */}
         <Box component={RouterLink} to="/" aria-label={`${brand?.applicationName ?? 'QualGuard IQ'} home`} data-testid="brand-home"
           sx={{ display: 'flex', alignItems: 'center', gap: 1, color: 'inherit', textDecoration: 'none', mr: { xs: 0.5, sm: 2 }, flexShrink: 0, borderRadius: 1 }}>
-          <BrandLogo variant="mark" height={30} width={30} />
-          <BrandLogo variant="wordmark" height={19} sx={{ display: { xs: 'none', sm: 'block' } }} />
+          {brand?.hasLogo
+            ? <Box component="img" src="/api/settings/logo" alt={brand.organizationName} data-testid="org-logo" sx={{ height: 30, maxWidth: 140, objectFit: 'contain' }} />
+            : <><BrandLogo variant="mark" height={30} width={30} />
+              <BrandLogo variant="wordmark" height={19} sx={{ display: { xs: 'none', sm: 'block' } }} /></>}
         </Box>
         <ModuleNav />
         <Box component="form" onSubmit={(e) => { e.preventDefault(); if (q.trim()) nav(`/search?q=${encodeURIComponent(q.trim())}`); }}
@@ -73,6 +77,10 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         <IconButton sx={{ color: 'text.secondary' }} onClick={(e) => setUserEl(e.currentTarget)} aria-label="User menu"><AccountCircleOutlined /></IconButton>
         <Menu anchorEl={userEl} open={!!userEl} onClose={() => setUserEl(null)}>
           <MenuItem disabled><ListItemText primary={me?.displayName} secondary={me?.email} /></MenuItem>
+          <Divider />
+          <MenuItem onClick={() => { setUserEl(null); nav('/account/settings'); }}>My settings</MenuItem>
+          {can('admin.organization') && <MenuItem onClick={() => { setUserEl(null); nav('/admin/organization'); }}>Organization settings</MenuItem>}
+          {canSeeDeleted && <MenuItem onClick={() => { setUserEl(null); nav('/admin/deleted-records'); }}>Deleted records</MenuItem>}
           <Divider />
           <MenuItem onClick={() => { setUserEl(null); nav('/account/security'); }}>Security</MenuItem>
           <MenuItem onClick={() => { setUserEl(null); nav('/account/sign-ins'); }}>Sign-in history</MenuItem>
