@@ -18,8 +18,28 @@ export const docStatus = ['Draft', 'Active', 'Obsolete'];
 export const revStatus = ['Draft', 'InReview', 'Approved', 'Effective', 'Superseded', 'Obsolete'];
 export const actionStatus = ['Open', 'InProgress', 'Completed', 'Verified', 'Cancelled'];
 export const approvalStatus = ['Pending', 'Approved', 'Rejected', 'Cancelled'];
-export const fmtDate = (d?: string | null) => (d ? new Date(d.length === 10 ? d + 'T00:00:00' : d).toLocaleDateString() : '—');
-export const fmtDateTime = (d?: string | null) => (d ? new Date(d).toLocaleString() : '—');
+/** The date format chosen in settings ("auto" follows the browser). Set once preferences load. */
+let dateFormat = (() => { try { return localStorage.getItem('qg.dateFormat') ?? 'auto'; } catch { return 'auto'; } })();
+export const setDateFormat = (f: string) => { dateFormat = f || 'auto'; try { localStorage.setItem('qg.dateFormat', dateFormat); } catch { /* private mode */ } };
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const two = (n: number) => String(n).padStart(2, '0');
+const dayText = (x: Date) => {
+  const y = x.getFullYear(), m = x.getMonth(), d = x.getDate();
+  switch (dateFormat) {
+    case 'yyyy-MM-dd': return `${y}-${two(m + 1)}-${two(d)}`;
+    case 'MM/dd/yyyy': return `${two(m + 1)}/${two(d)}/${y}`;
+    case 'dd/MM/yyyy': return `${two(d)}/${two(m + 1)}/${y}`;
+    case 'dd-MMM-yyyy': return `${two(d)}-${months[m]}-${y}`;
+    case 'dd.MM.yyyy': return `${two(d)}.${two(m + 1)}.${y}`;
+    default: return x.toLocaleDateString();
+  }
+};
+export const fmtDate = (d?: string | null) => (d ? dayText(new Date(d.length === 10 ? d + 'T00:00:00' : d)) : '—');
+export const fmtDateTime = (d?: string | null) => {
+  if (!d) return '—';
+  const x = new Date(d);
+  return dateFormat === 'auto' ? x.toLocaleString() : `${dayText(x)} ${x.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+};
 export const formStatus = ['Draft', 'Submitted', 'Approved', 'Rejected'];
 export const ncrStatus = ['Open', 'Contained', 'DispositionPending', 'DispositionApproved', 'Closed', 'Cancelled'];
 export const severity = ['Minor', 'Major', 'Critical'];

@@ -325,33 +325,6 @@ export function RoutesPage() {
   );
 }
 
-interface Settings { applicationName: string; organizationName: string; primaryColor: string | null; timeZone: string; loginHistoryEnabled: boolean; rowVersion: number }
-export function OrganizationPage() {
-  const qc = useQueryClient();
-  const s = useQuery({ queryKey: ['settings'], queryFn: () => get<Settings>('/api/organization/settings') });
-  const [v, setV] = useState<Settings | null>(null);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const cur = v ?? s.data;
-  if (!cur) return null;
-  return (
-    <ModuleWorkspace module={mod} crumbs={[{ label: 'Settings & branding' }]} title="Settings & branding">
-      <UploadScanningNotice />
-      <Paper sx={{ p: 3, maxWidth: 640, display: 'grid', gap: 2 }}>
-        {msg && <Alert severity={msg.ok ? 'success' : 'error'}>{msg.text}</Alert>}
-        <TextField label="Application name" value={cur.applicationName} onChange={(e) => setV({ ...cur, applicationName: e.target.value })} />
-        <TextField label="Organization name" value={cur.organizationName} onChange={(e) => setV({ ...cur, organizationName: e.target.value })} />
-        <TextField label="Primary color (#RRGGBB, blank for default)" value={cur.primaryColor ?? ''} onChange={(e) => setV({ ...cur, primaryColor: e.target.value || null })} />
-        <TextField label="Time zone (IANA)" value={cur.timeZone} onChange={(e) => setV({ ...cur, timeZone: e.target.value })} />
-        <FormControlLabel control={<Switch checked={cur.loginHistoryEnabled} onChange={(e) => setV({ ...cur, loginHistoryEnabled: e.target.checked })} />} label="Show login history to administrators" />
-        <Box><Button variant="contained" onClick={async () => {
-          try { await put('/api/organization/settings', cur); setV(null); setMsg({ ok: true, text: 'Saved.' }); qc.invalidateQueries({ queryKey: ['settings'] }); qc.invalidateQueries({ queryKey: ['branding'] }); }
-          catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
-        }}>Save</Button></Box>
-      </Paper>
-    </ModuleWorkspace>
-  );
-}
-
 interface AuditRow { id: number; occurredAt: string; userName: string; action: string; entityType: string; description: string; reason: string | null }
 export function AuditPage() {
   const [page, setPage] = useState(1);

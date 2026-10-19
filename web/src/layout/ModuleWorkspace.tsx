@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { Box, Breadcrumbs, Collapse, IconButton, Link, List, ListItemButton, ListItemText, Tab, Tabs, Tooltip, Typography, useMediaQuery } from '@mui/material';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
@@ -7,6 +7,7 @@ import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { useAuth } from '../auth';
 import type { ModuleDef, NavItem } from '../modules/registry';
+import { ArrivalNotice, PageTools, PrintHeading } from '../tools/PageTools';
 
 export interface Crumb { label: string; to?: string }
 export interface WorkspaceTab { label: string; value: string }
@@ -14,11 +15,16 @@ export interface WorkspaceTab { label: string; value: string }
 /**
  * A module's own workspace: collapsible left menu with that module's submenus,
  * breadcrumbs, and a secondary tab bar for the current page's options.
+ * Every page also gets Print, and record and list pages get Download PDF, Save as / Export list and Delete
+ * (see PageTools). `record` names the record when the address doesn't carry its id; `false` turns the record tools off.
  */
-export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onTab, children }: {
+export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onTab, children, record, tools = true }: {
   module: ModuleDef; crumbs: Crumb[]; title: ReactNode; actions?: ReactNode;
   tabs?: WorkspaceTab[]; tab?: string; onTab?: (v: string) => void; children: ReactNode;
+  record?: { type: string; id: string } | false; tools?: boolean;
 }) {
+  const area = useRef<HTMLElement>(null);
+  const titleText = typeof title === 'string' ? title : crumbs.length ? crumbs[crumbs.length - 1].label : module.label;
   const [stored, setStored] = useState(() => localStorage.getItem('ws.collapsed') === '1');
   // On phones and small tablets the menu starts folded and opens over the page, so scan screens get the full width.
   const narrow = useMediaQuery('(max-width:899.95px)');
@@ -38,7 +44,8 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
         </Box>
         {!collapsed && <SideNav items={module.sidebar} />}
       </Box>
-      <Box component="main" sx={{ flex: 1, minWidth: 0 }}>
+      <Box component="main" ref={area} sx={{ flex: 1, minWidth: 0 }}>
+        <PrintHeading title={titleText} />
         {/* Page header: module tag and crumbs on one quiet line, then a large title beside a blue module badge. */}
         <Box sx={{ px: { xs: 2, md: 4 }, pt: 2, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
           <Breadcrumbs separator="/" sx={{ fontSize: 11.5, mb: 1.25, letterSpacing: '0.04em', '& .MuiBreadcrumbs-separator': { mx: 0.75, color: 'divider' } }}>
@@ -49,6 +56,7 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: tabs ? 0.5 : 2, flexWrap: 'wrap' }}>
             <Box aria-hidden sx={{ width: 34, height: 34, flexShrink: 0, display: { xs: 'none', sm: 'grid' }, placeItems: 'center', bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 0.75, '& svg': { fontSize: 20 } }}>{module.icon}</Box>
             <Typography variant="h1" sx={{ flex: 1, minWidth: 0 }}>{title}</Typography>
+            {tools && <PageTools area={area} title={titleText} record={record} />}
             {actions}
           </Box>
           {tabs && (
@@ -58,6 +66,7 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
           )}
         </Box>
         <Box sx={{ p: { xs: 1.5, sm: 2.5, md: 3.5 }, maxWidth: 1600 }}>{children}</Box>
+        <ArrivalNotice />
       </Box>
     </Box>
   );

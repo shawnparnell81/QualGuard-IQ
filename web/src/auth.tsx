@@ -60,6 +60,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export const useAuth = () => useContext(Ctx);
 
-export interface Branding { applicationName: string; organizationName: string; primaryColor: string | null }
+export interface Branding { applicationName: string; organizationName: string; primaryColor: string | null; hasLogo?: boolean }
 export const useBranding = () =>
   useQuery({ queryKey: ['branding'], queryFn: () => get<Branding>('/api/organization/branding'), staleTime: 300_000 });
