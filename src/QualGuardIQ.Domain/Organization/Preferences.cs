@@ -2,7 +2,7 @@ using QualGuardIQ.Domain.Common;
 
 namespace QualGuardIQ.Domain.Organization;
 
-/// <summary>A person's own settings. A missing row means every default applies.</summary>
+/// <summary>A person's own settings. A missing row means every default applies. Light, dark or system mode lives in <see cref="AppearanceSetting"/>.</summary>
 public class UserPreference : Entity, IAudited
 {
     public Guid UserId { get; set; }
@@ -10,8 +10,6 @@ public class UserPreference : Entity, IAudited
     public bool EmailNotifications { get; set; } = true;
     /// <summary>Date display format; null follows the organization setting.</summary>
     public string? DateFormat { get; set; }
-    /// <summary>"light", "dark" or "system"; null follows the device.</summary>
-    public string? Theme { get; set; }
     public string AuditLabel => $"settings for {AuditRef.To(UserId, "a person")}";
 }
 

@@ -13,7 +13,7 @@ using QualGuardIQ.Infrastructure.Persistence;
 namespace QualGuardIQ.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261019103658_RecordDeletionAndPreferences")]
+    [Migration("20261019134016_RecordDeletionAndPreferences")]
     partial class RecordDeletionAndPreferences
     {
         /// <inheritdoc />
@@ -7141,10 +7141,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("xid")
                         .HasColumnName("xmin");
-
-                    b.Property<string>("Theme")
-                        .HasMaxLength(10)
-                        .HasColumnType("character varying(10)");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");

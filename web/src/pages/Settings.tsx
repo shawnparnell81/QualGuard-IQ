@@ -106,7 +106,9 @@ function GeneralTab() {
           <TextField select label="Date format" value={cur.dateFormat ?? 'auto'} onChange={(e) => set({ dateFormat: e.target.value })} helperText="How dates show on screen. People can choose their own in My settings." slotProps={{ select: { SelectDisplayProps: { 'aria-label': 'Date format' } as object } }}>
             {dateFormats.map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}
           </TextField>
-          <TextField label="Brand color (#RRGGBB, blank for the standard theme)" value={cur.primaryColor ?? ''} onChange={(e) => set({ primaryColor: e.target.value || null })} />
+          <Alert severity="info" icon={<PaletteOutlined />} data-testid="appearance-link">
+            Colours, light or dark mode and the colours of each kind of form are set in <Link component={RouterLink} to="/admin/appearance">Appearance</Link>.
+          </Alert>
           <FormControlLabel control={<Switch checked={cur.emailNotificationsEnabled ?? true} onChange={(e) => set({ emailNotificationsEnabled: e.target.checked })} />}
             label="Send e-mail copies of notifications (assignments, approvals, due dates)" />
           <FormControlLabel control={<Switch checked={cur.loginHistoryEnabled} onChange={(e) => set({ loginHistoryEnabled: e.target.checked })} />} label="Show login history to administrators" />
@@ -244,7 +246,7 @@ interface Prefs { emailNotifications: boolean; dateFormat: string | null; theme:
 export function MySettingsPage() {
   const qc = useQueryClient();
   const { me } = useAuth();
-  const { preference, setPreference } = useColorMode();
+  const { setPreference } = useColorMode();
   const q = useQuery({ queryKey: ['preferences'], queryFn: () => get<Prefs>('/api/account/preferences') });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   // the switch shows the new value straight away; the shared copy of the settings catches up a moment later
@@ -259,6 +261,8 @@ export function MySettingsPage() {
     try {
       const r = await put<Prefs>('/api/account/preferences', { emailNotifications: next.emailNotifications, dateFormat: next.dateFormat, theme: next.theme });
       qc.setQueryData(['preferences'], r); setDateFormat(r.effectiveDateFormat); setEmail(null);
+      // the mode is the one kept in My appearance, so that page and the colours follow straight away
+      if (patch.theme !== undefined) { setPreference((r.theme ?? 'system') as ColorPreference); void qc.invalidateQueries({ queryKey: ['appearance'] }); }
       setMsg({ ok: true, text: 'Saved.' });
     } catch (e) { qc.setQueryData(['preferences'], p); setEmail(null); setMsg({ ok: false, text: (e as Error).message }); }
   };
@@ -269,10 +273,11 @@ export function MySettingsPage() {
         <Typography color="text.secondary">{me?.displayName} · {me?.email}</Typography>
       </Box>
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} onClose={() => setMsg(null)} data-testid="prefs-msg">{msg.text}</Alert>}
-      <Card icon={<PaletteOutlined />} title="Appearance" intro="Kept with your account, so it follows you to other computers.">
-        <ToggleButtonGroup exclusive value={preference} onChange={(_, v: ColorPreference | null) => { if (v) { setPreference(v); save({ theme: v }); } }} aria-label="Theme">
-          <ToggleButton value="light">Light</ToggleButton><ToggleButton value="dark">Dark</ToggleButton><ToggleButton value="system">Match device</ToggleButton>
-        </ToggleButtonGroup>
+      <Card icon={<PaletteOutlined />} title="Appearance" intro="Kept with your account, so it follows you to other computers."
+        action={<Button size="small" component={RouterLink} to="/account/appearance" data-testid="my-appearance-link">Colours and form palettes</Button>}>
+        {p && <ToggleButtonGroup exclusive value={p.theme ?? 'inherit'} onChange={(_, v: ColorPreference | 'inherit' | null) => { if (v) save({ theme: v === 'inherit' ? null : v }); }} aria-label="Theme">
+          <ToggleButton value="inherit">Organization default</ToggleButton><ToggleButton value="light">Light</ToggleButton><ToggleButton value="dark">Dark</ToggleButton><ToggleButton value="system">Match device</ToggleButton>
+        </ToggleButtonGroup>}
         {p && <TextField select label="Date format" value={p.dateFormat ?? ''} onChange={(e) => save({ dateFormat: e.target.value || null })} sx={{ mt: 2, minWidth: 280, display: 'flex' }}
           slotProps={{ select: { displayEmpty: true, SelectDisplayProps: { 'aria-label': 'My date format' } as object }, inputLabel: { shrink: true } }}>
           <MenuItem value="">Organization default ({dateFormats.find(([k]) => k === p.organizationDateFormat)?.[1] ?? p.organizationDateFormat})</MenuItem>

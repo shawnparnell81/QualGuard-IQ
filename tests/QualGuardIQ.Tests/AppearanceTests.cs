@@ -34,6 +34,8 @@ public sealed class AppearanceTests(TestApp app)
             var org = new Values("dark", "#1257C4", "#0E8550", new() { ["certificate"] = new Pal("custom", "#123456", "#ABCDEF"), ["checklist"] = new Pal("palette2") });
             Assert.Equal(HttpStatusCode.Forbidden, (await plain.PutAsync("/api/appearance/organization", org)).StatusCode);
             Assert.Equal(HttpStatusCode.NoContent, (await admin.PutAsync("/api/appearance/organization", org)).StatusCode);
+            // the sign-in page shows the organization primary colour
+            Assert.Equal("#1257C4", (await admin.GetElAsync("/api/organization/branding")).Str("primaryColor"));
 
             // a person's own choice does not touch the organization default
             Assert.Equal(HttpStatusCode.NoContent, (await plain.PutAsync("/api/appearance/me", new Values("light", null, "#AA3300", null))).StatusCode);
