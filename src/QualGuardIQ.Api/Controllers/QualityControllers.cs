@@ -80,6 +80,17 @@ public sealed class FormsController(AppDbContext db, FormService forms, ModuleSu
             Signatures = (await forms.SignaturesAsync(id, ct)).Select(s => new { s.Id, Key = s.SignatureKey, s.Label, s.Role, s.Meaning, s.SignerId, s.SignerName, s.SignedAt, s.Verification, s.Comment, Valid = !s.IsInvalidated, s.InvalidatedAt, s.InvalidatedReason }) };
     }
 
+    /// <summary>Fills a draft record from another record (a form record such as a PPAP common data page, or a CAPA). Audited.</summary>
+    [HttpPost("records/{id:guid}/prefill")]
+    [RequirePermission(Permissions.FormsEdit)]
+    public Task<PrefillResult> Prefill(Guid id, PrefillRequest req, [FromServices] FormPrefillService prefill, CancellationToken ct) => prefill.PrefillAsync(id, req, ct);
+
+    /// <summary>Starts the CAPA report for a CAPA, filled with what the CAPA already records.</summary>
+    [HttpPost("records/from-capa/{capaId:guid}")]
+    [RequirePermission(Permissions.FormsEdit)]
+    public async Task<object> StartFromCapa(Guid capaId, StartFromCapaRequest? req, [FromServices] FormPrefillService prefill, CancellationToken ct) =>
+        new { Id = await prefill.StartFromCapaAsync(capaId, req ?? new StartFromCapaRequest(), ct) };
+
     /// <summary>Form record as PDF: style=standardized (QualGuard IQ layout) or original (converted source layout). Printing is audited.</summary>
     [EnableRateLimiting("processing")]
     [HttpGet("records/{id:guid}/pdf")]
