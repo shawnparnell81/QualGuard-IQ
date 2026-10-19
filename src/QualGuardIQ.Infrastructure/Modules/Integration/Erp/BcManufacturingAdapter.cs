@@ -175,7 +175,7 @@ public sealed class BcManufacturingAdapter : IErpAdapter
             lines.Add($"{e}: OK" + (idOk ? "" : $", key field(s) '{s.Id}' not found") + (missing.Count == 0 ? ", all mapped fields present." : $", unverified fields (not in the sample row): {string.Join(", ", missing)}."));
             if (!idOk) failed.Add(e.ToString());
         }
-        if (failed.Count > 0) throw new ErpException(string.Join(" ", lines) + $" Fix: {string.Join(", ", failed)}.");
+        if (failed.Count > 0) throw new ErpException(string.Join(" ", lines) + $" Fix: {string.Join(", ", failed)}.") { Summary = $"Signed in OK, but these could not be read: {string.Join(", ", failed)}" };
         return string.Join(" ", lines);
     }
 

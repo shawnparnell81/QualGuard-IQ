@@ -24,6 +24,72 @@ public sealed record ErpPage(IReadOnlyList<ExternalRecord> Records, string? Next
 public sealed class ErpException(string message, int? status = null) : Exception(message)
 {
     public int? Status { get; } = status;
+    /// <summary>
+    /// Short status safe to store and show, for a failure whose message carries text from the ERP's response.
+    /// The full message (with the vendor text) only goes to the server log.
+    /// </summary>
+    public string? Summary { get; init; }
+}
+
+/// <summary>
+/// The short result of Test connection that is stored on the connection, shown to viewers and written to the validation history.
+/// It never carries text from the ERP's response; that stays in the server log.
+/// </summary>
+public static class ErpTestStatus
+{
+    public const string SignedIn = "Signed in OK";
+    public const string Unreachable = "Could not reach host";
+    public const string TimedOut = "Timed out reaching host";
+    public const string Unreadable = "The ERP sent a response that could not be read";
+    public const string Rejected = "The ERP rejected the test request";
+    public const string Undecryptable = "The stored secrets could not be decrypted; enter them again";
+
+    /// <param name="localMessage">The adapter's own wording, used only for a successful test of a connection that makes no network call.</param>
+    public static string Of(bool ok, Exception? error, bool network, string? localMessage = null) => ok
+        ? network ? SignedIn : localMessage ?? SignedIn
+        : error switch
+        {
+            ErpException { Summary: { Length: > 0 } s } => s,
+            ErpException { Status: 401 or 403 } e => $"Authentication failed ({e.Status})",
+            ErpException { Status: 404 } => "Not found at that address (404)",
+            ErpException { Status: 429 } => "The ERP is limiting requests (429)",
+            ErpException { Status: >= 500 } e => $"The ERP returned a server error ({e.Status})",
+            ErpException { Status: { } code } => $"The ERP rejected the request ({code})",
+            // no status: the adapter's own guidance (missing setting, unsupported option), which never quotes the response
+            ErpException e => e.Message,
+            HttpRequestException => Unreachable,
+            TaskCanceledException => TimedOut,
+            System.Text.Json.JsonException => Unreadable,
+            System.Security.Cryptography.CryptographicException => Undecryptable,
+            QualGuardIQ.Application.Abstractions.AppException e => e.Message,
+            _ => "Test failed",
+        };
+}
+
+/// <summary>
+/// Addresses an administrator types into an ERP connection (base URL, token URL, RESTlet URL, authority, generic REST URLs) must be
+/// absolute https URLs. Plain http is accepted only when <see cref="AllowHttpSetting"/> is true, which is meant for a local
+/// development or test setup and is off by default. Which hosts may be reached is the outbound network guard's job.
+/// </summary>
+public static class ErpUrlPolicy
+{
+    public const string AllowHttpSetting = "Integrations:AllowHttpUrls";
+
+    /// <summary>Option keys that hold an address: tokenUrl, restletUrl, url.Item and the like, and authority.</summary>
+    public static bool IsUrlOption(string key) =>
+        key.EndsWith("Url", StringComparison.Ordinal) || key.StartsWith("url.", StringComparison.Ordinal) || key == "authority";
+
+    public static string? Problem(string? url, bool allowHttp, string label) =>
+        Uri.TryCreate(url?.Trim(), UriKind.Absolute, out var u) ? Problem(u, allowHttp, label) : Must(label, allowHttp);
+
+    public static string? Problem(Uri? u, bool allowHttp, string label)
+    {
+        if (u is null || !u.IsAbsoluteUri || !(u.Scheme == Uri.UriSchemeHttps || allowHttp && u.Scheme == Uri.UriSchemeHttp)) return Must(label, allowHttp);
+        if (u.UserInfo.Length > 0) return $"{label} must not contain a user name or password; use the secret fields.";
+        return null;
+    }
+
+    static string Must(string label, bool allowHttp) => $"{label} must be an absolute {(allowHttp ? "http or https" : "https")} URL.";
 }
 
 /// <summary>Everything an adapter needs for one call sequence. Secrets are already decrypted and never leave the adapter.</summary>
@@ -76,7 +142,7 @@ public sealed class ErpTokenCache
 /// HTTP for adapters: per-connection concurrency cap and per-minute budget, retry on 429/503 honouring Retry-After
 /// (seconds or HTTP date), bounded backoff, and vendor error parsing. Counts requests for the run log.
 /// </summary>
-public sealed class ErpHttp(HttpClient http, Guid connectionId, int maxConcurrency, int requestsPerMinute, Func<HttpResponseMessage, string, string?>? errorParser = null)
+public sealed class ErpHttp(HttpClient http, Guid connectionId, int maxConcurrency, int requestsPerMinute, Func<HttpResponseMessage, string, string?>? errorParser = null, bool allowHttp = false)
 {
     private static readonly ConcurrentDictionary<Guid, SemaphoreSlim> Gates = new();
     private static readonly ConcurrentDictionary<Guid, Queue<DateTimeOffset>> Windows = new();
@@ -97,8 +163,11 @@ public sealed class ErpHttp(HttpClient http, Guid connectionId, int maxConcurren
             HttpResponseMessage r; string body;
             try
             {
+                var request = make();
+                // every call, including token URLs and next-page links, must be https
+                if (ErpUrlPolicy.Problem(request.RequestUri, allowHttp, "An ERP address on this connection") is { } why) throw new ErpException(why);
                 Requests++;
-                r = await http.SendAsync(make(), ct);
+                r = await http.SendAsync(request, ct);
                 body = await r.Content.ReadAsStringAsync(ct);
             }
             finally { gate.Release(); }
@@ -123,7 +192,7 @@ public sealed class ErpHttp(HttpClient http, Guid connectionId, int maxConcurren
     {
         var (_, body) = await SendAsync(make, ct);
         try { return JsonNode.Parse(body) ?? throw new ErpException("Empty response."); }
-        catch (JsonException) { throw new ErpException("The response was not JSON: " + Trim(body)); }
+        catch (JsonException) { throw new ErpException("The response was not JSON: " + Trim(body)) { Summary = ErpTestStatus.Unreadable }; }
     }
 
     private async Task ThrottleAsync(CancellationToken ct)

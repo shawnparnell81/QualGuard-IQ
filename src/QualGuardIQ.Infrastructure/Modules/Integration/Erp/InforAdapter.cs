@@ -123,7 +123,7 @@ public sealed class InforAdapter : IErpAdapter
             var (root, auth, headers) = await MongooseAsync(c, ct);
             var url = $"{root}/ido/load/{d.Ido}?properties={Uri.EscapeDataString(d.Properties)}&recordCap={cap}" + (cursor.PageToken is { } b ? "&bookmark=" + Uri.EscapeDataString(b) : "");
             var n = await c.Http.JsonAsync(() => ErpWire.Get(url, auth, headers), ct);
-            if (n["Success"]?.GetValue<bool>() == false) throw new ErpException(n["Message"]?.ToString() ?? "IDO load failed.");
+            if (n["Success"]?.GetValue<bool>() == false) throw new ErpException(n["Message"]?.ToString() ?? "IDO load failed.") { Summary = ErpTestStatus.Rejected };
             var rows = (n["Items"] as JsonArray ?? []).OfType<JsonNode>().Select(x => c.Record(this, entity, x, d.Key, null)).ToList();
             return new ErpPage(rows, n["MoreRowsExist"]?.GetValue<bool>() == true ? n["Bookmark"]?.GetValue<string>() : null);
         }
