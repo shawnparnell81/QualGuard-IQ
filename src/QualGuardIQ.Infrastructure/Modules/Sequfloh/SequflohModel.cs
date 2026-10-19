@@ -16,6 +16,7 @@ public partial class AppDbContext
     public DbSet<SequflohOperationStep> SequflohOperationSteps => Set<SequflohOperationStep>();
     public DbSet<SequflohWorkInstruction> SequflohWorkInstructions => Set<SequflohWorkInstruction>();
     public DbSet<SequflohWorkInstructionTransition> SequflohWorkInstructionTransitions => Set<SequflohWorkInstructionTransition>();
+    public DbSet<SequflohInstructionTemplate> SequflohInstructionTemplates => Set<SequflohInstructionTemplate>();
     public DbSet<SequflohTrackingRecord> SequflohTrackingRecords => Set<SequflohTrackingRecord>();
     public DbSet<SequflohTaskEvent> SequflohTaskEvents => Set<SequflohTaskEvent>();
 
@@ -142,6 +143,18 @@ public partial class AppDbContext
             e.HasIndex(x => new { x.Status, x.ReviewerId });
             foreach (var p in new[] { nameof(SequflohWorkInstruction.Content), nameof(SequflohWorkInstruction.Steps), nameof(SequflohWorkInstruction.Characteristics), nameof(SequflohWorkInstruction.PartsRows) })
                 e.Property(p).HasColumnType("jsonb");
+            e.Property(x => x.Blocks).HasColumnType("jsonb").HasDefaultValueSql("'[]'::jsonb");
+            e.HasOne<SequflohInstructionTemplate>().WithMany().HasForeignKey(x => x.TemplateId).OnDelete(DeleteBehavior.SetNull);
+        });
+        b.Entity<SequflohInstructionTemplate>(e =>
+        {
+            e.ToTable("sequfloh_instruction_templates");
+            e.HasIndex(x => x.Name).IsUnique();
+            e.HasIndex(x => new { x.IsActive, x.Type });
+            e.Property(x => x.Name).HasMaxLength(200);
+            e.Property(x => x.Description).HasMaxLength(2000);
+            e.Property(x => x.Blocks).HasColumnType("jsonb");
+            e.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         });
         b.Entity<SequflohWorkInstructionTransition>(e =>
         {

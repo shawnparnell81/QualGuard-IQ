@@ -221,6 +221,7 @@ public static class DependencyInjection
         s.AddScoped<Modules.Sequfloh.SequflohFoundationService>();
         s.AddScoped<Modules.Sequfloh.SequflohPartsService>();
         s.AddScoped<Modules.Sequfloh.SequflohInstructionService>();
+        s.AddScoped<Modules.Sequfloh.SequflohTemplateService>();
         s.AddScoped<Modules.Sequfloh.SequflohPrintService>();
         s.AddScoped<Modules.Sequfloh.SequflohTrackingService>();
         s.AddScoped<Modules.Sequfloh.SequflohNotifications>();

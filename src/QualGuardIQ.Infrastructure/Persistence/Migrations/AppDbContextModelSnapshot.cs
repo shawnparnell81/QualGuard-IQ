@@ -4877,6 +4877,12 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<string>("EncryptedSecret")
                         .HasColumnType("text");
 
+                    b.Property<string>("EncryptedSecrets")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValueSql("'{}'::jsonb");
+
                     b.Property<int>("Environment")
                         .HasColumnType("integer");
 
@@ -21206,6 +21212,63 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("user_sso_links", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Sequfloh.SequflohInstructionTemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Blocks")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<Guid?>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int?>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.HasIndex("OwnerId");
+
+                    b.HasIndex("IsActive", "Type");
+
+                    b.ToTable("sequfloh_instruction_templates", "qms");
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Sequfloh.SequflohOperationStep", b =>
                 {
                     b.Property<Guid>("Id")
@@ -22149,6 +22212,12 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("AuthorId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Blocks")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("jsonb")
+                        .HasDefaultValueSql("'[]'::jsonb");
+
                     b.Property<string>("Characteristics")
                         .IsRequired()
                         .HasColumnType("jsonb");
@@ -22311,6 +22380,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<DateOnly?>("TargetCompletionDate")
                         .HasColumnType("date");
 
+                    b.Property<Guid?>("TemplateId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Title")
                         .IsRequired()
                         .HasMaxLength(300)
@@ -22362,6 +22434,8 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasIndex("ReviewerId");
 
                     b.HasIndex("SourcePartsListId");
+
+                    b.HasIndex("TemplateId");
 
                     b.HasIndex("UpdatedAt");
 
@@ -27854,6 +27928,14 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Sequfloh.SequflohInstructionTemplate", b =>
+                {
+                    b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Sequfloh.SequflohPartsList", b =>
                 {
                     b.HasOne("QualGuardIQ.Infrastructure.Identity.ApplicationUser", null)
@@ -28049,6 +28131,11 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.HasOne("QualGuardIQ.Domain.Sequfloh.SequflohPartsList", null)
                         .WithMany()
                         .HasForeignKey("SourcePartsListId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("QualGuardIQ.Domain.Sequfloh.SequflohInstructionTemplate", null)
+                        .WithMany()
+                        .HasForeignKey("TemplateId")
                         .OnDelete(DeleteBehavior.SetNull);
                 });
 

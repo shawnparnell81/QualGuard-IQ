@@ -94,6 +94,7 @@ public sealed class SequflohInstructionsController(AppDbContext db, ModuleSuppor
                 x.SourcePartsListId, x.ResultStatus, x.EffectiveDate, x.SupersededAt, x.ObsoleteAt, x.ReviewedAt, x.ApprovedAt, x.ReleasedAt, x.RevisionReason, x.CreatedAt, x.UpdatedAt, x.RowVersion,
                 x.AssignedEngineerId, x.TargetCompletionDate, x.Project, x.EngineeringNotes, x.DevelopmentStatus, x.ReleaseRecommendedAt, ReleaseRecommendedBy = Name(x.ReleaseRecommendedById),
                 Content = JsonNode.Parse(x.Content), Steps = JsonNode.Parse(x.Steps), Characteristics = JsonNode.Parse(x.Characteristics), PartsRows = JsonNode.Parse(x.PartsRows),
+                Blocks = JsonNode.Parse(x.Blocks), x.TemplateId, Template = db.SequflohInstructionTemplates.Where(t => t.Id == x.TemplateId).Select(t => t.Name).FirstOrDefault(),
                 Owner = Name(x.OwnerId), Author = Name(x.AuthorId), Reviewer = Name(x.ReviewerId), Approver = Name(x.ApproverId), ReviewedBy = Name(x.ReviewedById), ApprovedBy = Name(x.ApprovedById),
                 ReleasedBy = Name(x.ReleasedById), CreatedBy = Name(x.CreatedById), UpdatedBy = Name(x.UpdatedById),
                 Site = db.Sites.Where(s => s.Id == x.SiteId).Select(s => s.Code + " · " + s.Name).FirstOrDefault(),
@@ -126,6 +127,11 @@ public sealed class SequflohInstructionsController(AppDbContext db, ModuleSuppor
     public async Task<object> CopyParts(Guid id, CopyPartsListInput r, CancellationToken ct) => new { Copied = await wi.CopyPartsAsync(id, r, ct) };
     [HttpPost("{id:guid}/copy-characteristics")] [RequirePermission(Permissions.SequflohEditDraftWorkInstruction)]
     public async Task<object> CopyCharacteristics(Guid id, CopyCharacteristicsInput r, CancellationToken ct) => new { Copied = await wi.CopyCharacteristicsAsync(id, r, ct) };
+    [HttpPost("{id:guid}/apply-template")] [RequirePermission(Permissions.SequflohEditDraftWorkInstruction)]
+    public async Task<object> ApplyTemplate(Guid id, ApplyTemplateInput r, CancellationToken ct) { var x = await wi.ApplyTemplateAsync(id, r, ct); return new { x.Id, Blocks = JsonNode.Parse(x.Blocks) }; }
+    [HttpPost("{id:guid}/save-as-template")] [RequirePermission(Permissions.SequflohCreateWorkInstruction)]
+    public async Task<object> SaveAsTemplate(Guid id, SaveAsTemplateInput r, [FromServices] SequflohTemplateService templates, CancellationToken ct)
+    { var t = await templates.SaveFromInstructionAsync(id, r, wi, ct); return new { t.Id, t.Name }; }
     [HttpGet("{id:guid}/characteristic-sources")]
     public Task<List<object>> CharacteristicSources(Guid id, CancellationToken ct) => wi.CharacteristicSourcesAsync(id, ct);
     [HttpPost("{id:guid}/import-characteristics")] [RequirePermission(Permissions.SequflohEditDraftWorkInstruction)]
