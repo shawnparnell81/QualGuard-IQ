@@ -81,7 +81,7 @@ c raci_logistics | Logistics | choice | [R; A; C; I; -]
 use apqp_signatures
 end
 
-template apqp-feasibility-review | Feasibility Review | APQP
+template apqp-feasibility-review | Team Feasibility Commitment | APQP
 packs automotive
 tags APQP, feasibility
 purpose Decide whether the organization can make the product to all requirements, at the required volume and cost, and record the conditions and risks of the commitment.
@@ -259,16 +259,24 @@ workflow Drafted, reviewed with the team, approved, revised with the PFMEA and c
 retention Keep for the life of the product plus ten years.
 landscape
 use program_header
-section flow | Process steps | 1
+section flow | Process steps | 1 | Give each step a symbol category: operation (circle), inspection (square), combined operation and inspection (circle in square), transport (arrow), storage (triangle), delay (D), decision (diamond), rework loop or scrap path.
 table flow_steps | Steps | 5
 c step_no | Operation | text | *
-c step_type | Type | choice | * [Operation; Inspection; Move; Storage; Delay; Rework; Decision]
+c step_type | Symbol category | choice | * [Operation; Inspection; Operation and inspection; Transport; Storage; Delay; Decision; Rework; Scrap]
 c step_description | Description | text | *
 c step_machine | Machine, tool or fixture | text
 c product_chars | Product characteristics | text
 c process_chars | Process characteristics | text
 c step_special | Special characteristic | boolean
 c step_next | Next step | text
+c step_alt | If not OK, go to | text
+rule flow_steps.step_type | in | Rework,Scrap | #FFF4D6
+section flow_counts | Steps by symbol | 3
+f flow_ops | Operations | calc | {COUNTIF(flow_steps.step_type, "Operation") + COUNTIF(flow_steps.step_type, "Operation and inspection")}
+f flow_inspections | Inspections | calc | {COUNTIF(flow_steps.step_type, "Inspection") + COUNTIF(flow_steps.step_type, "Operation and inspection")}
+f flow_moves | Transports | calc | {COUNTIF(flow_steps.step_type, "Transport")}
+f flow_storage | Storage and delays | calc | {COUNTIF(flow_steps.step_type, "Storage") + COUNTIF(flow_steps.step_type, "Delay")}
+f flow_loops | Rework and scrap paths | calc | {COUNTIF(flow_steps.step_type, "Rework") + COUNTIF(flow_steps.step_type, "Scrap")}
 use apqp_signatures
 end
 
@@ -348,14 +356,20 @@ f cp_key_contact | Key contact | user
 f cp_revision_date | Revision date | date
 section cp_lines | Controls | 1
 table cp_rows | Characteristics | 3
-groups Process:3; Characteristic:3; Methods:5; Reaction:1
+tablefrom characteristics
+groups Process:3; Characteristic:4; Specification:4; Methods:5; Reaction:1
 c cp_op | Operation | text | *
 c cp_process | Process name | text | *
 c cp_machine | Machine or fixture | text
-c cp_char | Characteristic | text | *
+c cp_char_no | No. | text | from=char_no
+c cp_char | Characteristic | text | * from=char_desc
+c cp_type | Type | choice | [Product; Process]
 c cp_class | Class | choice | [Safety; Regulatory; Fit or function; Key process; Standard]
-c cp_spec | Specification and tolerance | text | *
-c cp_method | Measurement method | text | *
+c cp_spec | Specification and tolerance | text | * from=char_spec
+c cp_nominal | Nominal | number | dec=4 from=char_nominal
+c cp_lsl | LSL | number | dec=4 from=char_lsl
+c cp_usl | USL | number | dec=4 from=char_usl
+c cp_method | Measurement method | text | * from=char_method
 c cp_sample | Sample size | text | *
 c cp_frequency | Frequency | text | *
 c cp_control | Control method | text | *

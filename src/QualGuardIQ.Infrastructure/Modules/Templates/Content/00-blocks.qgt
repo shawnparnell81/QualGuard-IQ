@@ -338,3 +338,15 @@ sign ppap_prepared | Prepared by | prepared | I prepared this element and the re
 sign ppap_reviewed | Reviewed by | reviewed | I reviewed this element for completeness and accuracy.
 sign ppap_customer | Customer disposition | customer | The customer records its disposition of this element. | | optional
 end
+
+block ppap_parties
+section ppap_parties_section | Organization and customer | 3
+f org_name | Organization name | text | *
+f org_code | Organization (supplier) code | text
+f org_address | Manufacturing address | longtext
+f customer_buyer | Customer buyer or contact | text
+f customer_division | Customer division or plant | text
+f application | Application (vehicle, program or end use) | text
+f purchase_order | Purchase order | text
+f part_weight | Part weight | number | dec=4 min=0 unit=kg
+end

@@ -37,7 +37,7 @@ public sealed class TemplatePackageTests(TestApp app)
 
         var list = await viewer.GetJsonAsync<List<Pkg>>("/api/v1/template-packages");
         Assert.Equal(["aerospace", "automotive", "electronics", "manufacturing", "medical-device"], list.Where(p => p.Origin == 0).Select(p => p.Key).Order());
-        Assert.Equal(0, list.Single(p => p.Key == "electronics").TemplateCount);
+        Assert.True(list.Single(p => p.Key == "electronics").TemplateCount >= 12);
         Assert.True(list.Single(p => p.Key == "automotive").TemplateCount >= 50);
         Assert.Equal(HttpStatusCode.Forbidden, (await outsider.GetAsync("/api/v1/template-packages")).StatusCode);
 
