@@ -38,7 +38,7 @@ public class DrawingBalloon : Entity, IAudited
 }
 
 /// <summary>fai_master. First article inspection header.</summary>
-public class FaiRecord : Entity, IAudited, ISiteScoped, IContentLock
+public class FaiRecord : Entity, IAudited, ISiteScoped, IContentLock, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -247,7 +247,7 @@ public class AqlDefectCategory : Entity, IAudited
 }
 
 /// <summary>aql_inspections. AQL sampling record attached 1:1 to an inspection from the shared inspection engine.</summary>
-public class AqlInspection : Entity, IAudited, ISiteScoped
+public class AqlInspection : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     /// <summary>Optional link to an inspection from the shared inspection engine (receiving/in-process/final); standalone lots have none.</summary>
     public Guid? InspectionId { get; set; }

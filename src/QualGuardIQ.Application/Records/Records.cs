@@ -10,6 +10,8 @@ public interface IRecordTypeProvider
 {
     string Type { get; }
     Task<RecordInfo?> FindAsync(Guid id, CancellationToken ct);
+    /// <summary>The stored class behind the record type, when the provider maps one entity (used for delete, print and export).</summary>
+    Type? EntityType => null;
 }
 
 /// <summary>Called by the workflow engine when an approval request finishes, so the owning module can change state.</summary>
@@ -30,6 +32,8 @@ public interface IRecordRegistry
     bool IsKnownType(string type);
     /// <summary>Every registered record type identifier.</summary>
     IReadOnlyCollection<string> KnownTypes { get; }
+    /// <summary>The stored class behind a record type, or null when it is not a single entity.</summary>
+    Type? EntityTypeOf(string type);
 }
 
 public interface ISearchIndexer

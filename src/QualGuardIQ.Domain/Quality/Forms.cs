@@ -5,7 +5,7 @@ namespace QualGuardIQ.Domain.Quality;
 public enum FormRecordStatus { Draft = 0, Submitted = 1, Approved = 2, Rejected = 3 }
 
 /// <summary>A completed controlled form. Bound to the exact template revision it was filled against.</summary>
-public class FormRecord : Entity, IAudited, ISiteScoped, IContentLock
+public class FormRecord : Entity, IAudited, ISiteScoped, IContentLock, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public Guid TemplateId { get; set; }

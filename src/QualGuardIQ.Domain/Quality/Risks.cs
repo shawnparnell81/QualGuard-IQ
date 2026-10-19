@@ -24,7 +24,7 @@ public class RiskSettings : Entity, IAudited
 }
 
 /// <summary>Risk or improvement opportunity with initial and residual assessment, acceptance and monitoring.</summary>
-public class RiskItem : Entity, IAudited, ISiteScoped
+public class RiskItem : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public RiskKind Kind { get; set; }

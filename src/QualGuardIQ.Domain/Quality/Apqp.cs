@@ -6,7 +6,7 @@ namespace QualGuardIQ.Domain.Quality;
 public enum ApqpStatus { Draft = 0, PendingApproval = 1, Released = 2, Superseded = 3, Obsolete = 4 }
 
 /// <summary>Common header of a revision-controlled APQP document: one row per revision, revisions of one document share Number.</summary>
-public abstract class ApqpDocument : Entity, IAudited, ISiteScoped
+public abstract class ApqpDocument : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public int Revision { get; set; } = 1;
@@ -124,7 +124,7 @@ public class ControlPlanLine : Entity
 
 // ---------- SPC and MSA ----------
 
-public class SpcChart : Entity, IAudited, ISiteScoped
+public class SpcChart : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -166,7 +166,7 @@ public class SpcSample : Entity, IAudited
 public enum MsaStudyType { VariableGrr = 0, AttributeGrr = 1, Bias = 2, Linearity = 3, Stability = 4 }
 public enum MsaStatus { Draft = 0, PendingApproval = 1, Approved = 2, Rejected = 3 }
 
-public class MsaStudy : Entity, IAudited, ISiteScoped
+public class MsaStudy : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -250,7 +250,7 @@ public class LpaSchedule : Entity, IAudited, ISiteScoped
     public string AuditLabel => "LPA schedule";
 }
 
-public class LpaAudit : Entity, IAudited, ISiteScoped
+public class LpaAudit : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public Guid TemplateId { get; set; }
@@ -274,7 +274,7 @@ public class LpaAudit : Entity, IAudited, ISiteScoped
 public enum SupplierProgramKind { Assessment = 0, DevelopmentPlan = 1, ImprovementProject = 2, RiskReduction = 3 }
 public enum SupplierProgramStatus { Planned = 0, Active = 1, Completed = 2, Cancelled = 3 }
 
-public class SupplierProgram : Entity, IAudited, ISiteScoped
+public class SupplierProgram : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public Guid SupplierId { get; set; }

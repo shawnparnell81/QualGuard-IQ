@@ -56,6 +56,8 @@ public static class DependencyInjection
 
         // Shared engines
         services.AddScoped<IRecordRegistry, RecordRegistry>();
+        services.AddScoped<RecordDeletionService>();
+        services.AddScoped<Services.Export.RecordExportService>();
         services.AddSingleton(new RecordTypeLabels(config.GetSection("RecordTypeLabels").GetChildren().Where(c => c.Value is not null).ToDictionary(c => c.Key, c => c.Value!)));
         services.AddScoped<ISearchIndexer, SearchIndexer>();
         services.AddScoped<SearchService>();

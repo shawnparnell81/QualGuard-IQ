@@ -9,7 +9,7 @@ public enum KpiFrequency { Monthly = 0, Quarterly = 1, Yearly = 2 }
 public enum KpiRating { OnTarget = 0, Warning = 1, Critical = 2 }
 
 /// <summary>Quality objective with its metric, thresholds and action trigger. Targets are approved before measurement starts.</summary>
-public class QualityObjective : Entity, IAudited, ISiteScoped
+public class QualityObjective : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -63,7 +63,7 @@ public class KpiMeasurement : Entity, IAudited
 public enum ReviewStatus { Planned = 0, InProgress = 1, PendingApproval = 2, Approved = 3, Cancelled = 4 }
 
 /// <summary>Management review meeting. Inputs are compiled from live records into a frozen snapshot; the approved record is immutable.</summary>
-public class ManagementReview : Entity, IAudited, ISiteScoped, IContentLock
+public class ManagementReview : Entity, IAudited, ISiteScoped, IContentLock, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";

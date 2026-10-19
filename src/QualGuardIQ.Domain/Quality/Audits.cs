@@ -7,7 +7,7 @@ public enum ChecklistResult { NotAssessed = 0, Conforming = 1, Nonconforming = 2
 public enum FindingType { MajorNonconformity = 0, MinorNonconformity = 1, Observation = 2, OpportunityForImprovement = 3 }
 public enum FindingStatus { Open = 0, ActionPlanned = 1, Verified = 2, Closed = 3 }
 
-public class Audit : Entity, IAudited, ISiteScoped
+public class Audit : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -37,7 +37,7 @@ public class AuditChecklistItem
     public string? Evidence { get; set; }
 }
 
-public class AuditFinding : Entity, IAudited, ISiteScoped
+public class AuditFinding : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public Guid AuditId { get; set; }

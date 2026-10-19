@@ -6,7 +6,7 @@ public enum NcrStatus { Open = 0, Contained = 1, DispositionPending = 2, Disposi
 public enum Severity { Minor = 0, Major = 1, Critical = 2 }
 public enum Disposition { None = 0, UseAsIs = 1, Rework = 2, Repair = 3, Scrap = 4, ReturnToSupplier = 5, Regrade = 6, Sort = 7, ReInspect = 8, ReTest = 9, Deviation = 10, Concession = 11, Other = 12 }
 
-public class Ncr : Entity, IAudited, ISiteScoped
+public class Ncr : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -64,7 +64,7 @@ public class Ncr : Entity, IAudited, ISiteScoped
 
 public enum CapaStatus { Open = 0, Investigation = 1, Implementation = 2, EffectivenessCheck = 3, Closed = 4, Cancelled = 5 }
 
-public class Capa : Entity, IAudited, ISiteScoped
+public class Capa : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";

@@ -41,7 +41,8 @@ public sealed class SearchService(AppDbContext db, IAccessService access)
         var allPerms = grants.Where(g => g.SiteId == null).Select(g => g.Permission).Distinct().ToList();
         var siteKeys = grants.Where(g => g.SiteId != null && g.DepartmentId == null).Select(g => $"{g.Permission}|{g.SiteId}").Distinct().ToList();
         var deptKeys = grants.Where(g => g.DepartmentId != null).Select(g => $"{g.Permission}|{g.SiteId}|{g.DepartmentId}").Distinct().ToList();
-        return db.SearchEntries.AsNoTracking().Where(e => allPerms.Contains(e.ViewPermission) || siteKeys.Contains(e.PermissionSiteKey) || (e.PermissionDepartmentKey != null && deptKeys.Contains(e.PermissionDepartmentKey)));
+        return db.SearchEntries.AsNoTracking().Where(e => allPerms.Contains(e.ViewPermission) || siteKeys.Contains(e.PermissionSiteKey) || (e.PermissionDepartmentKey != null && deptKeys.Contains(e.PermissionDepartmentKey)))
+            .Where(e => !db.DeletedRecords.Any(d => d.RecordId == e.RecordId && d.RestoredAt == null));
     }
 
     public async Task<IReadOnlyList<SearchHit>> SearchAsync(Guid userId, string text, string? recordType, int limit, CancellationToken ct)
@@ -56,6 +57,8 @@ public sealed class SearchService(AppDbContext db, IAccessService access)
         var q = db.SearchEntries.AsNoTracking().Where(e =>
             allPerms.Contains(e.ViewPermission) || siteKeys.Contains(e.PermissionSiteKey) ||
             (e.PermissionDepartmentKey != null && deptKeys.Contains(e.PermissionDepartmentKey)));
+        // deleted records stay indexed (so a restore brings them straight back) but never appear in results
+        q = q.Where(e => !db.DeletedRecords.Any(d => d.RecordId == e.RecordId && d.RestoredAt == null));
         if (!string.IsNullOrWhiteSpace(recordType)) q = q.Where(e => e.RecordType == recordType);
 
         var like = "%" + text.Replace("\\", "\\\\").Replace("%", "\\%").Replace("_", "\\_") + "%";

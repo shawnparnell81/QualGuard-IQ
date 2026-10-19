@@ -6,7 +6,7 @@ public enum ComplaintStatus { Open = 0, Investigation = 1, AwaitingCustomer = 2,
 public enum WarrantyStatus { Unknown = 0, InWarranty = 1, OutOfWarranty = 2, NotApplicable = 3 }
 
 /// <summary>Customer complaint, including the return (RMA) and returned-material evaluation.</summary>
-public class Complaint : Entity, IAudited, ISiteScoped
+public class Complaint : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
