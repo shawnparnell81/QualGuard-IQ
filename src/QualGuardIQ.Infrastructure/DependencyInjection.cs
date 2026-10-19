@@ -37,7 +37,13 @@ public static class DependencyInjection
         services.AddScoped<SignInSecurityService>();
         services.AddScoped<SessionRevocation>();
         services.AddMemoryCache();
-        services.AddHttpClient("sso", c => c.Timeout = TimeSpan.FromSeconds(15));
+        // any HTTP client registered without its own handler gets the outbound guard too, so a new integration can't skip it
+        services.ConfigureHttpClientDefaults(b => b.ConfigurePrimaryHttpMessageHandler(sp => sp.GetRequiredService<OutboundGuard>().Handler()));
+        // discovery, signing keys and token calls go only to public addresses, plus Outbound:AllowedNetworks and Sso:AllowedNetworks
+        // (for an identity provider inside the company network, such as AD FS on 10.x)
+        var ssoNetworks = OutboundGuard.Parse(config["Sso:AllowedNetworks"], "Sso:AllowedNetworks");
+        services.AddHttpClient("sso", c => c.Timeout = TimeSpan.FromSeconds(15))
+            .ConfigurePrimaryHttpMessageHandler(sp => sp.GetRequiredService<OutboundGuard>().Handler(ssoNetworks, h => h.UseCookies = false));
         services.AddSingleton<OutboundGuard>();
         services.AddSingleton<OidcClient>();
         services.AddScoped<SsoService>();
