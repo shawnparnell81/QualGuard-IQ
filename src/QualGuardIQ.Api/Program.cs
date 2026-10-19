@@ -121,7 +121,7 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = c => c.ProblemDetails.Extensions["traceId"] = c.HttpContext.TraceIdentifier);
 builder.Services.AddExceptionHandler<ErrorHandler>();
 builder.Services.AddOpenApi(o => QualGuardIQ.Api.OpenApi.OpenApiSetup.Configure(o, builder.Configuration));
-builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database").AddCheck<QualGuardIQ.Api.Infrastructure.MalwareScannerHealthCheck>("malware-scanner");
 builder.Services.Configure<ForwardedHeadersOptions>(o => QualGuardIQ.Api.Infrastructure.ProxySettings.Apply(o, builder.Configuration));
 
 builder.Services.AddMemoryCache();
@@ -137,6 +137,7 @@ if (args.Length > 0 && args[0] == "migrate")
     return 0;
 }
 if (app.Configuration.GetValue("Database:MigrateOnStartup", false)) await MigrateAsync(app);
+else await WarnWhenOutOfDateAsync(app);
 await app.Services.GetRequiredService<QualGuardIQ.Infrastructure.Storage.IFileStorage>().EnsureReadyAsync(CancellationToken.None);
 
 app.UseCorrelationId();
@@ -210,10 +211,24 @@ app.MapControllers();
 app.Run();
 return 0;
 
+// the migrate step was skipped (or failed): say so at start-up; /health/ready stays Unhealthy until it has run
+static async Task WarnWhenOutOfDateAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var log = scope.ServiceProvider.GetRequiredService<ILogger<DatabaseHealthCheck>>();
+    try
+    {
+        var pending = (await DatabaseHealthCheck.PendingAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), CancellationToken.None)).ToList();
+        if (pending.Count > 0) log.LogError("{Message} ({Count} pending, the newest is {Latest}).", DatabaseHealthCheck.OutOfDate, pending.Count, pending[^1]);
+    }
+    catch (Exception e) when (e is Npgsql.NpgsqlException or InvalidOperationException) { log.LogWarning(e, "Could not check the database version at start-up."); }
+}
+
 static async Task MigrateAsync(WebApplication app)
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.SetConnectionString(DatabaseRoles.ForMigrate(db.Database.GetConnectionString()!));
     await db.Database.MigrateAsync();
     if (app.Configuration["Database:AppRole"] is { Length: > 0 } appRole)
         await DatabaseRoles.ApplyAsync(db, appRole, app.Configuration["Database:AppRolePassword"], app.Configuration.GetConnectionString("Default"));
