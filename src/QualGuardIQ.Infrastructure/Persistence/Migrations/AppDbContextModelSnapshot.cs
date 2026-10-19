@@ -403,6 +403,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("IsReference")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("Kind")
                         .HasColumnType("integer");
 
@@ -645,6 +648,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsReference")
                         .HasColumnType("boolean");
 
                     b.Property<bool>("IsSystem")
@@ -4792,6 +4798,9 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.Property<string>("PreviousValues")
                         .HasColumnType("jsonb");
 
+                    b.Property<bool>("ReadOnly")
+                        .HasColumnType("boolean");
+
                     b.Property<bool>("RolledBack")
                         .HasColumnType("boolean");
 
@@ -4807,6 +4816,10 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(60)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("TargetId")
+                        .HasDatabaseName("ix_imported_items_read_only_target")
+                        .HasFilter("\"ReadOnly\" AND NOT \"RolledBack\"");
 
                     b.HasIndex("ImportJobId", "RowNumber");
 
@@ -7051,6 +7064,13 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("boolean")
                         .HasDefaultValue(true);
+
+                    b.Property<string>("IndustryPacks")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("IndustryPacksChosenAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<bool>("LoginHistoryEnabled")
                         .HasColumnType("boolean");
