@@ -1,6 +1,6 @@
 # QualGuard IQ: gap-closure report, 17 October 2026
 
-This report covers the 28 gaps from the overnight report (`docs/requirements/gap-closure-prompt.md`), the repository-wide sweep that followed, and the full regression run. All work was committed to the local repository; nothing was pushed at that time.
+This report covers the 28 gaps from the overnight report, the repository-wide sweep that followed, and the full regression run. All work was committed to the local repository; nothing was pushed at that time.
 
 ## Summary
 

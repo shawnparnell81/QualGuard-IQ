@@ -16,7 +16,7 @@ SEQUFLOH runs inside the QualGuard IQ shell. It uses the QualGuard IQ sign-in an
 | [Testing checklist](testing-checklist.md) | Automated tests and the manual and integration checklists |
 | [Acceptance checklist](acceptance-checklist.md) | The final acceptance criteria and where each one is met |
 
-Requirements are in [docs/requirements/sequfloh-prompt-1.md](../../requirements/sequfloh-prompt-1.md) and [sequfloh-prompt-2.md](../../requirements/sequfloh-prompt-2.md); the requirement-by-requirement status is in [sequfloh-traceability.md](../../requirements/sequfloh-traceability.md). Screenshots are in [docs/screenshots/sequfloh](../../screenshots/sequfloh/).
+The requirement-by-requirement status is in [sequfloh-traceability.md](../../requirements/sequfloh-traceability.md). Screenshots are in [docs/screenshots/sequfloh](../../screenshots/sequfloh/).
 
 ## Compliance wording
 
