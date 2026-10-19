@@ -129,12 +129,15 @@ function visibleFieldKeys(fields: ColumnDef[], values: Values): Set<string> {
 
 function FieldGrid({ fields, values, set, columns, ctx, boxed }: { fields: ColumnDef[]; values: Values; set: (k: string, v: string | null) => void; columns: number; ctx: Ctx; boxed?: boolean }) {
   const shown = visibleFieldKeys(fields, values);
+  // three or more columns only on wide screens (1536px and up); narrower screens get two so long labels are not cut off
+  const narrow = Math.min(columns, 2);
   // a title block draws every field in a ruled cell, like the header of an engineering drawing
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: `repeat(${columns * 6}, 1fr)` }, gap: boxed ? 0 : 2, ...(boxed ? { borderTop: 1, borderLeft: 1, borderColor: 'divider' } : {}) }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: `repeat(${narrow * 6}, minmax(0, 1fr))`, xl: `repeat(${columns * 6}, minmax(0, 1fr))` }, gap: boxed ? 0 : 2, ...(boxed ? { borderTop: 1, borderLeft: 1, borderColor: 'divider' } : {}) }}>
       {fields.filter((f) => shown.has(f.key)).map((f) => {
-        const span = f.type === 'longtext' || f.type === 'instruction' ? columns * 6 : Math.min(columns * 6, f.width ? Math.round((f.width / 12) * columns * 6) : 6);
-        return <Box key={f.key} sx={{ gridColumn: { xs: '1 / -1', sm: `span ${span}` }, minWidth: 0, ...(boxed ? { borderRight: 1, borderBottom: 1, borderColor: 'divider', p: 1, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' }, '&:focus-within': { bgcolor: 'action.hover' } } : {}) }}><FieldInput f={f} value={values[f.key]} onChange={(v) => set(f.key, v)} ctx={ctx} /></Box>;
+        const span = (cols: number) => f.type === 'longtext' || f.type === 'instruction' ? cols * 6 : Math.min(cols * 6, f.width ? Math.max(1, Math.round((f.width / 12) * cols * 6)) : 6);
+        return <Box key={f.key} sx={{ gridColumn: { xs: '1 / -1', sm: `span ${span(narrow)}`, xl: `span ${span(columns)}` }, minWidth: 0,
+ ...(boxed ? { borderRight: 1, borderBottom: 1, borderColor: 'divider', p: 1, '& .MuiOutlinedInput-notchedOutline': { borderColor: 'transparent' }, '&:focus-within': { bgcolor: 'action.hover' } } : {}) }}><FieldInput f={f} value={values[f.key]} onChange={(v) => set(f.key, v)} ctx={ctx} /></Box>;
       })}
     </Box>
   );

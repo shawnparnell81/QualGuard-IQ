@@ -33,11 +33,11 @@ export function Home() {
     { label: 'Waiting on others', value: w?.waitingOnOthers.length, tone: 'text.secondary' },
   ];
   return (
-    <Box sx={{ maxWidth: 1240, mx: 'auto', p: 4 }}>
+    <Box sx={{ maxWidth: 1240, mx: 'auto', p: { xs: 2, sm: 3, md: 4 } }}>
       <Typography variant="overline" color="text.secondary">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Typography>
       <Typography variant="h1" sx={{ mb: 3 }}>Good to see you, {me?.displayName.split(' ')[0]}</Typography>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' }, gap: 2, mb: 3 }}>
         {tiles.map((t) => (
           <Paper key={t.label} sx={{ p: 2, borderTop: 3, borderTopColor: t.tone }}>
             <Typography sx={{ fontFamily: mono, fontSize: 30, fontWeight: 500 }}>{t.value ?? '–'}</Typography>
@@ -46,7 +46,7 @@ export function Home() {
         ))}
       </Box>
 
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 2, mb: 4 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1.4fr 1fr' }, gap: 2, mb: 4 }}>
         <Paper sx={{ p: 2 }}>
           <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
             <Typography variant="h3">Approvals waiting on me</Typography>

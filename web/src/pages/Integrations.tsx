@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Link, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { get, post, put } from '../api';
 import { useAuth } from '../auth';
@@ -21,6 +21,23 @@ const systems: [string, string][] = [['NetSuite', 'Oracle NetSuite'], ['Sap', 'S
 /** Wire values of the server's ErpSystem enum. */
 const sysCode: Record<string, number> = { NetSuite: 0, Sap: 1, Oracle: 2, Dynamics: 3, Acumatica: 4, Infor: 5, Epicor: 6, Plex: 7, DelmiaWorks: 8, BcManufacturing: 9, QuickBooks: 10, SageIntacct: 11, CustomRest: 20, CsvExchange: 21 };
 const sysLabel = (s: string) => systems.find(([k]) => k === s)?.[1] ?? s;
+/** The vendor's own setup guide for each ERP (the sources behind each setup screen). */
+const setupGuides: Record<string, string> = {
+  NetSuite: 'https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_157771510070.html',
+  Sap: 'https://api.sap.com/products/SAPS4HANACloud/apis/packages',
+  Oracle: 'https://docs.oracle.com/en/cloud/saas/applications-common/26c/farca/Quick_Start.html',
+  Dynamics: 'https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/automation-apis-using-s2s-authentication',
+  BcManufacturing: 'https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/automation-apis-using-s2s-authentication',
+  Acumatica: 'https://beacon.acumatica.com/r/Form-Reference-Guide/Integration-Forms/Connected-Applications',
+  Infor: 'https://docs.infor.com/inforos/latest/en-us/useradminlib_cloud/etl_dl_ag/oda1623328668051.html',
+  Epicor: 'https://www.epicor.com/en-us/products/enterprise-resource-planning-erp/kinetic/tools-and-technology/open-rest-api/',
+  Plex: 'https://developers.plex.com/getstarted',
+  DelmiaWorks: 'https://www.solidworks.com/product/delmiaworks/manufacturing-erp/web-api/',
+  QuickBooks: 'https://developer.intuit.com/app/developer/qbo/docs/develop/authentication-and-authorization/oauth-2.0',
+  SageIntacct: 'https://developer.intacct.com/web-services/',
+};
+/** Long values (URLs, API names) wrap inside their panel instead of widening the page. */
+const wrapSx = { minWidth: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' } as const;
 const mnum = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue() ?? '')}</span>;
 
 interface Unverified { topic: string; detail: string; source: string }
@@ -190,8 +207,8 @@ function ConnectionForm({ initial, onSaved }: { initial?: Conn; onSaved: (id: st
     </TextField>;
   };
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 380px' }, gap: 2 }}>
-      <Paper sx={{ p: 3, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, alignSelf: 'start' }} data-testid="erp-setup">
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) 380px' }, gap: 2, minWidth: 0 }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 2, alignSelf: 'start', ...wrapSx }} data-testid="erp-setup">
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Name" value={v.name} onChange={set('name')} sx={{ gridColumn: '1 / -1' }} />
         <TextField select label="System" value={v.system} disabled={!!initial} onChange={(e) => { setV({ ...v, system: e.target.value, edition: '' }); setOpts({}); setSecretsIn({}); }}>{systems.map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}</TextField>
@@ -200,7 +217,7 @@ function ConnectionForm({ initial, onSaved }: { initial?: Conn; onSaved: (id: st
           <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Before you start, in {sysLabel(v.system)}:</Typography>
           <Box component="ol" sx={{ m: 0, pl: 2.5 }}>{profile.prepare.map((x) => <li key={x}><Typography variant="body2">{x}</Typography></li>)}</Box>
         </Alert>}
-        {groups.map((g) => <Box key={g} sx={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+        {groups.map((g) => <Box key={g} sx={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 2, minWidth: 0 }}>
           <Typography variant="overline" color="text.secondary" sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', lineHeight: 2 }}>{g}</Typography>
           {fields.filter((f) => f.group === g).map(input)}
         </Box>)}
@@ -232,19 +249,26 @@ function ConnectionForm({ initial, onSaved }: { initial?: Conn; onSaved: (id: st
           }}>{initial ? 'Save settings' : 'Create connection (off)'}</Button>
         </Stack>
       </Paper>
-      {ed && <AdapterNotes caps={ed.capabilities} unverified={ed.unverified} notes={ed.setupNotes} />}
+      {ed && <AdapterNotes system={v.system} caps={ed.capabilities} unverified={ed.unverified} />}
     </Box>
   );
 }
 
-function AdapterNotes({ caps, unverified, notes }: { caps: Caps; unverified: Unverified[]; notes: string }) {
+function AdapterNotes({ system, caps, unverified }: { system: string; caps: Caps; unverified: Unverified[] }) {
+  const guide = setupGuides[system];
   return (
-    <Stack gap={2}>
+    <Stack gap={2} sx={wrapSx}>
       <Section title="What this adapter does">
-        <Facts items={[['Auth', caps.auth], ['API', caps.api], ['Reads', caps.read.map((e) => erpEntities[e]).join(', ')], ['Writes', caps.write.length ? caps.write.map((e) => erpEntities[e]).join(', ') : 'None (read-only)'], ['Delta', caps.delta ? 'Yes' : 'Full read + hash skip'], ['Paging', caps.paging], ['Rate limits', caps.rateLimits], ['Events', caps.events], ['Research', caps.doc]]} />
+        <Facts items={[['Auth', caps.auth], ['API', caps.api], ['Reads', caps.read.map((e) => erpEntities[e]).join(', ')], ['Writes', caps.write.length ? caps.write.map((e) => erpEntities[e]).join(', ') : 'None (read-only)'], ['Delta', caps.delta ? 'Yes' : 'Full read + hash skip'], ['Paging', caps.paging], ['Rate limits', caps.rateLimits], ['Events', caps.events]]} />
       </Section>
-      {notes && <Section title="Setup notes"><Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{notes}</Typography></Section>}
-      <Paper sx={{ p: 2, borderLeft: 4, borderLeftColor: 'warning.main' }}>
+      <Section title="Setup notes">
+        <Typography variant="body2">
+          {unverified.length ? `Confirm the ${unverified.length} item${unverified.length === 1 ? '' : 's'} below against the customer's sandbox before switching the connection on.` : 'Nothing is waiting to be confirmed for this edition.'}
+          {' '}The fields on the setup screen follow {sysLabel(system)}'s own setup steps.
+        </Typography>
+        {guide && <Link href={guide} target="_blank" rel="noopener noreferrer" variant="body2" sx={{ display: 'inline-block', mt: 1 }}>Setup guide</Link>}
+      </Section>
+      <Paper sx={{ p: 2, borderLeft: 4, borderLeftColor: 'warning.main', ...wrapSx }}>
         <Typography variant="overline" color="warning.main">Unverified ({unverified.length})</Typography>
         {unverified.map((u) => <Box key={u.topic} sx={{ py: 0.75, borderTop: 1, borderColor: 'divider' }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{u.topic}</Typography><Typography variant="body2" color="text.secondary">{u.detail}</Typography></Box>)}
         {unverified.length === 0 && <Typography variant="body2" color="text.secondary">Nothing flagged.</Typography>}
@@ -265,7 +289,7 @@ export function AdapterCatalog() {
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Supported systems' }]} title="Supported systems"
       tabs={(q.data ?? []).map((x) => ({ label: sysLabel(x.system), value: x.system }))} tab={sel} onTab={setSel}>
-      <Stack gap={3}>{(a?.editions ?? []).map((e) => <Box key={e.edition}><Typography variant="h3" sx={{ mb: 1 }}>{sysLabel(sel)} · {e.edition}</Typography><AdapterNotes caps={e.capabilities} unverified={e.unverified} notes={e.setupNotes} /></Box>)}</Stack>
+      <Stack gap={3}>{(a?.editions ?? []).map((e) => <Box key={e.edition}><Typography variant="h3" sx={{ mb: 1 }}>{sysLabel(sel)} · {e.edition}</Typography><AdapterNotes system={sel} caps={e.capabilities} unverified={e.unverified} /></Box>)}</Stack>
     </ModuleWorkspace>
   );
 }
@@ -329,7 +353,7 @@ export function ConnectionDetail() {
           { header: 'Status', accessorFn: (r) => runStatus[r.status], cell: (v) => <StatusChip status={v.getValue() === 'PartiallySucceeded' ? 'Conditional' : v.getValue()} /> },
           { header: 'Read / queued / same / rejected', accessorFn: (r) => `${r.read} / ${r.queued} / ${r.unchanged} / ${r.rejected}`, cell: mnum }, { header: 'Requests', accessorKey: 'requests' }, { header: 'Error', accessorKey: 'error' }]} />}
       {tab === 'validation' && <ValidationPanel id={x.id} edit={edit} />}
-      {tab === 'notes' && ed && <AdapterNotes caps={ed.capabilities} unverified={ed.unverified} notes={x.setupNotes} />}
+      {tab === 'notes' && ed && <AdapterNotes system={x.system} caps={ed.capabilities} unverified={ed.unverified} />}
       <StepDialog open={dlg === 'secret'} title={`Set secrets for ${sysLabel(x.system)}`} confirm="Save" onClose={() => setDlg(null)} intro="Secrets are encrypted and can never be read back. Leave a field blank to keep the stored value."
         inputs={secretFields.map((f) => ({ name: f.key, label: f.label, type: f.kind === 'file' ? 'multiline' as const : 'password' as const, helper: `${f.help ?? ''}${secretStored(x, f) ? ' Stored now.' : ''}`.trim() || undefined }))}
         onConfirm={async (v) => { await put(`/api/integrations/${id}/secrets`, secretBody(secretFields, v)); refresh(); }} />
