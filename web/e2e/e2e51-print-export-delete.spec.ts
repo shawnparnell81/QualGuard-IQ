@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { Api, dialog, localDate, shot, signIn, state, unique, users } from './support';
 import { workbook } from './xlsx-fixture';
@@ -9,6 +10,14 @@ const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name, exact: typeof name === 'string' ? true : undefined });
 /** Screenshots for review go in features-shots when E2E_SCREENSHOT_DIR is set. */
 const capture = (p: Page, name: string) => shot(p, `features-shots/${name}`);
+/** When screenshots are being taken, the exported files are kept beside them so they can be opened and checked by eye. */
+function keep(files: Record<string, Buffer>) {
+  const root = process.env.E2E_SCREENSHOT_DIR;
+  if (!root) return;
+  const dir = path.join(root, 'features-shots', 'exported-files');
+  fs.mkdirSync(dir, { recursive: true });
+  for (const [name, bytes] of Object.entries(files)) fs.writeFileSync(path.join(dir, name), bytes);
+}
 // a 2 x 2 PNG
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAIAAAACCAIAAAD91JpzAAAAFklEQVR4nGNgYGD4z8DAwMDAwMDAAAANAAH/BqJ+qwAAAABJRU5ErkJggg==', 'base64');
 
@@ -78,6 +87,7 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     await button(page, 'Export list').click();
     const listPdf = await download(page, () => page.getByRole('menuitem', { name: /PDF document/ }).click());
     expect(listPdf.bytes.subarray(0, 5).toString()).toBe('%PDF-');
+    keep({ 'record.pdf': pdf.bytes, 'record.xlsx': xlsx.bytes, 'record.docx': docx.bytes, 'record.csv': csv.bytes, 'list.csv': list.bytes, 'list.xlsx': listXlsx.bytes, 'list.docx': listDocx.bytes, 'list.pdf': listPdf.bytes });
     await author.dispose();
   });
 
