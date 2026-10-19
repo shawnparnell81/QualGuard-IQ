@@ -81,7 +81,6 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     UserId = table.Column<Guid>(type: "uuid", nullable: false),
                     EmailNotifications = table.Column<bool>(type: "boolean", nullable: false, defaultValue: true),
                     DateFormat = table.Column<string>(type: "character varying(20)", maxLength: 20, nullable: true),
-                    Theme = table.Column<string>(type: "character varying(10)", maxLength: 10, nullable: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     CreatedById = table.Column<Guid>(type: "uuid", nullable: true),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),

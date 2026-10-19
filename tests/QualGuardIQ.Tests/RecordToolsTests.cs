@@ -369,6 +369,12 @@ public sealed class RecordToolsTests(TestApp app)
         var saved = await (await me.PutAsync("/api/account/preferences", new { emailNotifications = false, dateFormat = "dd/MM/yyyy", theme = "dark" })).JsonAsync();
         Assert.Equal("dd/MM/yyyy", saved.Str("effectiveDateFormat"));
         Assert.Equal("dark", saved.Str("theme"));
+        // the theme is the mode of the person's own appearance: one setting, seen the same from both pages
+        Assert.Equal("dark", (await me.GetElAsync("/api/appearance")).GetProperty("personal").GetProperty("mode").GetString());
+        Assert.Equal(HttpStatusCode.NoContent, (await me.PutAsync("/api/appearance/me", new { mode = "light", primaryColor = (string?)null, accentColor = (string?)null, formPalettes = (object?)null })).StatusCode);
+        Assert.Equal("light", (await me.GetElAsync("/api/account/preferences")).Str("theme"));
+        var cleared = await (await me.PutAsync("/api/account/preferences", new { emailNotifications = false, dateFormat = "dd/MM/yyyy", theme = (string?)null })).JsonAsync();
+        Assert.Null(cleared.Str("theme"));
 
         using var scope = app.Services.CreateScope();
         var notifier = scope.ServiceProvider.GetRequiredService<INotifier>();

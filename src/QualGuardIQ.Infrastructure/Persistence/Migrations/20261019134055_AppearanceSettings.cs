@@ -43,6 +43,16 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                 column: "UserId",
                 unique: true)
                 .Annotation("Npgsql:NullsDistinct", false);
+
+            // An organization that already chose a brand colour keeps it: it becomes the primary colour of the organization appearance.
+            migrationBuilder.Sql("""
+                INSERT INTO qms.appearance_settings ("Id", "UserId", "Mode", "PrimaryColor", "AccentColor", "FormPalettes", "CreatedAt", "UpdatedAt")
+                SELECT gen_random_uuid(), NULL, NULL, upper("PrimaryColor"), NULL, '{}'::jsonb, now(), now()
+                FROM qms.organization_settings
+                WHERE "PrimaryColor" IS NOT NULL
+                ORDER BY "Id"
+                LIMIT 1;
+                """);
         }
 
         /// <inheritdoc />

@@ -133,7 +133,10 @@ public sealed partial class SettingsController(AppDbContext db, ICurrentUser cur
     }
 }
 
-/// <summary>A person's own settings: e-mail copies of notifications, date format and theme.</summary>
+/// <summary>
+/// A person's own settings: e-mail copies of notifications and date format. Theme is the mode of the person's own Appearance setting
+/// (the one place light, dark or system is kept), read and written here so My settings and Appearance always agree.
+/// </summary>
 [ApiController]
 [Authorize]
 [Route("api/account/preferences")]
@@ -148,7 +151,8 @@ public sealed class PreferencesController(AppDbContext db, ICurrentUser current)
         var uid = current.UserId ?? throw new ForbiddenException();
         var org = await db.OrganizationSettings.AsNoTracking().Select(s => new { s.DateFormat, s.EmailNotificationsEnabled }).FirstAsync(ct);
         var p = await db.UserPreferences.AsNoTracking().FirstOrDefaultAsync(x => x.UserId == uid, ct);
-        return new PreferencesDto(p?.EmailNotifications ?? true, p?.DateFormat, p?.Theme, org.DateFormat, org.EmailNotificationsEnabled, p?.DateFormat ?? org.DateFormat);
+        var mode = await db.AppearanceSettings.AsNoTracking().Where(x => x.UserId == uid).Select(x => x.Mode).FirstOrDefaultAsync(ct);
+        return new PreferencesDto(p?.EmailNotifications ?? true, p?.DateFormat, mode, org.DateFormat, org.EmailNotificationsEnabled, p?.DateFormat ?? org.DateFormat);
     }
 
     [HttpPut]
@@ -163,7 +167,9 @@ public sealed class PreferencesController(AppDbContext db, ICurrentUser current)
         if (p is null) { p = new UserPreference { UserId = uid }; db.UserPreferences.Add(p); }
         p.EmailNotifications = req.EmailNotifications;
         p.DateFormat = fmt;
-        p.Theme = theme;
+        var look = await db.AppearanceSettings.FirstOrDefaultAsync(x => x.UserId == uid, ct);
+        if (look is null && theme is not null) { look = new AppearanceSetting { UserId = uid }; db.AppearanceSettings.Add(look); }
+        if (look is not null && look.Mode != theme) look.Mode = theme;
         await db.SaveChangesAsync(ct);
         return await Get(ct);
     }

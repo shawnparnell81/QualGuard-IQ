@@ -45,12 +45,14 @@ public sealed class OrganizationController(AppDbContext db, QualGuardIQ.Applicat
         }
     }
 
-    /// <summary>Public branding for the sign-in page.</summary>
+    /// <summary>Public branding for the sign-in page. The primary colour is the organization Appearance colour when one is set.</summary>
     [HttpGet("branding")]
     [AllowAnonymous]
     public async Task<BrandingDto> Branding(CancellationToken ct)
     {
-        return await db.OrganizationSettings.AsNoTracking().Select(s => new BrandingDto(s.ApplicationName, s.OrganizationName, s.PrimaryColor, s.LogoImage != null)).FirstAsync(ct);
+        var b = await db.OrganizationSettings.AsNoTracking().Select(s => new BrandingDto(s.ApplicationName, s.OrganizationName, s.PrimaryColor, s.LogoImage != null)).FirstAsync(ct);
+        var primary = await db.AppearanceSettings.AsNoTracking().Where(x => x.UserId == null).Select(x => x.PrimaryColor).FirstOrDefaultAsync(ct);
+        return primary is null ? b : b with { PrimaryColor = primary };
     }
 
     [HttpGet("settings")]

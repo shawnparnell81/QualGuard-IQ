@@ -69,7 +69,8 @@ export function AppearanceSettings({ scope }: { scope: Scope }) {
     try {
       await put(`/api/appearance/${scope === 'organization' ? 'organization' : 'me'}`, values);
       if (scope === 'personal') setPreference(values.mode ?? 'system');
-      setV(null); setMsg({ ok: true, text }); await qc.invalidateQueries({ queryKey: ['appearance'] });
+      setV(null); setMsg({ ok: true, text });
+      await Promise.all(['appearance', 'preferences', 'branding'].map((k) => qc.invalidateQueries({ queryKey: [k] })));
     } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
   };
   const inheritLabel = scope === 'personal' ? 'Organization default' : 'Built-in default';

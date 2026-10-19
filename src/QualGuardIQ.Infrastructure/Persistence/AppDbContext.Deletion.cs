@@ -37,7 +37,6 @@ public partial class AppDbContext
             e.ToTable("user_preferences");
             e.HasIndex(x => x.UserId).IsUnique();
             e.Property(x => x.DateFormat).HasMaxLength(20);
-            e.Property(x => x.Theme).HasMaxLength(10);
             e.Property(x => x.EmailNotifications).HasDefaultValue(true).HasSentinel(true);
         });
         b.Entity<OrganizationSettings>(e =>
