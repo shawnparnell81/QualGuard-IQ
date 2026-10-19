@@ -6,13 +6,22 @@ namespace QualGuardIQ.Infrastructure.Persistence;
 /// <summary>
 /// Separates the database owner (runs migrations) from the login the API and worker use day to day. The app login can read and
 /// write business data but can't change tables, and it can only add to the audit trail and security log, never edit or delete
-/// them. Runs after every migration, so tables added later are covered. Background job tables (schema "jobs") belong to the app
-/// login because the job library manages them itself.
+/// them, and it can't create schemas. Runs after every migration, so tables added later are covered. Background job tables (schema
+/// "jobs") belong to the app login because the job library manages them itself; this step creates the schema, so the job library
+/// finds it and never needs to create one.
 /// </summary>
 public static partial class DatabaseRoles
 {
     [GeneratedRegex("^[a-z_][a-z0-9_]{0,62}$")]
     private static partial Regex RoleName();
+
+    /// <summary>
+    /// The owner's connection for migrate with a fixed search path. The default ("$user", public) would look first in a schema named
+    /// after the owner, so anyone able to create that schema could shadow functions or operators the migrations use. public stays
+    /// first so pg_trgm lands where it always has.
+    /// </summary>
+    public const string MigrateSearchPath = "public, qms";
+    public static string ForMigrate(string connectionString) => new Npgsql.NpgsqlConnectionStringBuilder(connectionString) { SearchPath = MigrateSearchPath }.ConnectionString;
 
     /// <param name="ownerConnectionString">The owner's connection string from configuration (an open connection no longer shows the password).</param>
     public static async Task ApplyAsync(AppDbContext db, string role, string? password, string? ownerConnectionString, CancellationToken ct = default)
@@ -44,7 +53,14 @@ public static partial class DatabaseRoles
             -- an owner without superuser rights can't touch those attributes, and can't have granted them either
             EXECUTE format('ALTER ROLE %I LOGIN NOCREATEDB NOCREATEROLE PASSWORD %L', r, pw);
           END IF;
-          EXECUTE format('GRANT CONNECT, TEMPORARY, CREATE ON DATABASE %I TO %I', current_database(), r);
+          EXECUTE format('GRANT CONNECT, TEMPORARY ON DATABASE %I TO %I', current_database(), r);
+          -- no new schemas: the jobs schema is made below, and a schema named after the owner could shadow objects the next migrate uses
+          EXECUTE format('REVOKE CREATE ON DATABASE %I FROM %I', current_database(), r);
+          EXECUTE format('REVOKE CREATE ON SCHEMA public FROM %I', r);
+          BEGIN
+            REVOKE CREATE ON SCHEMA public FROM PUBLIC; -- already the default on PostgreSQL 15 and later
+          EXCEPTION WHEN insufficient_privilege THEN NULL;
+          END;
           EXECUTE format('GRANT USAGE ON SCHEMA qms TO %I', r);
           EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA qms TO %I', r);
           EXECUTE format('GRANT USAGE, SELECT, UPDATE ON ALL SEQUENCES IN SCHEMA qms TO %I', r);
