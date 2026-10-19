@@ -38,9 +38,15 @@ test.describe('E2E 53: pickers link to the page where their items are added', ()
     await expect(page.getByTestId('setup-row-part')).not.toContainText('No parts yet');
     await expect(page.getByTestId('setup-add-part')).toBeVisible();
     await capture(page, '02-filled-dropdown-work-order');
-    // picking the link row does not change the value
     await page.getByRole('option', { name: new RegExp(pn) }).click();
-    await expect(page.getByLabel('Part', { exact: true })).toContainText(pn);
+    const part = page.getByRole('combobox', { name: 'Part' });
+    await expect(part).toContainText(pn);
+    // clicking the shortcut row itself is not a choice: the picked part stays
+    await part.click();
+    await page.getByTestId('setup-row-part').click({ position: { x: 4, y: 4 } });
+    await expect(page.getByRole('listbox')).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(part).toContainText(pn);
     await author.dispose();
   });
 
@@ -83,7 +89,7 @@ test.describe('E2E 53: pickers link to the page where their items are added', ()
   test('the entry log offers Record entry to people who may record', async ({ page }) => {
     await signIn(page, users.author);
     await page.goto('/production/entries');
-    const btn = page.getByRole('link', { name: 'Record entry' });
+    const btn = page.locator('a.MuiButton-root', { hasText: 'Record entry' });
     await expect(btn).toHaveAttribute('href', '/production/entry');
     await capture(page, '06-entry-log-record-entry');
     await btn.click();
@@ -92,6 +98,6 @@ test.describe('E2E 53: pickers link to the page where their items are added', ()
     await signIn(page, users.viewer);
     await page.goto('/production/entries');
     await expect(page.getByRole('heading', { name: 'Shop-floor entry log' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Record entry' })).toHaveCount(0);
+    await expect(page.locator('a.MuiButton-root', { hasText: 'Record entry' })).toHaveCount(0);
   });
 });
