@@ -176,21 +176,21 @@ export function StepDialog({ open, title, intro, inputs, confirm, onClose, onCon
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Stack gap={2} sx={{ pt: 1 }}>
           {inputs.map((i) => i.type === 'site'
-            ? <SitePicker key={i.name} label={i.label} helperText={i.helper} permission={i.permission ?? ''} value={val(i.name, i.initial)} onChange={(id) => setV({ ...v, [i.name]: id ?? '' })} />
+            ? <SitePicker key={i.name} label={i.label} helperText={i.helper} permission={i.permission ?? ''} value={val(i.name, i.initial)} onChange={(id) => setV((prev) => ({ ...prev, [i.name]: id ?? '' }))} />
             : i.type === 'users'
             ? <TextField key={i.name} select label={i.label} helperText={i.helper} value={val(i.name, i.initial).split(',').filter(Boolean)} slotProps={{ select: { multiple: true } }}
-                onChange={(e) => setV({ ...v, [i.name]: ([] as string[]).concat(e.target.value as unknown as string[]).join(',') })}>
+                onChange={(e) => setV((prev) => ({ ...prev, [i.name]: ([] as string[]).concat(e.target.value as unknown as string[]).join(',') }))}>
                 {(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
             : i.type === 'multiselect'
             ? <TextField key={i.name} select label={i.label} helperText={i.helper} value={val(i.name, i.initial).split(',').filter(Boolean)} slotProps={{ select: { multiple: true } }}
-                onChange={(e) => setV({ ...v, [i.name]: ([] as string[]).concat(e.target.value as unknown as string[]).join(',') })}>
+                onChange={(e) => setV((prev) => ({ ...prev, [i.name]: ([] as string[]).concat(e.target.value as unknown as string[]).join(',') }))}>
                 {(i.options ?? []).map(([o, l]) => <MenuItem key={o} value={String(o)}>{l}</MenuItem>)}</TextField>
             : i.type === 'select'
-            ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial)} onChange={(e) => setV({ ...v, [i.name]: e.target.value })}>{(i.options ?? []).map(([o, l]) => <MenuItem key={o} value={String(o)}>{l}</MenuItem>)}</TextField>
+            ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial)} onChange={(e) => setV((prev) => ({ ...prev, [i.name]: e.target.value }))}>{(i.options ?? []).map(([o, l]) => <MenuItem key={o} value={String(o)}>{l}</MenuItem>)}</TextField>
             : i.type === 'checkbox'
-              ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial ?? 'false')} onChange={(e) => setV({ ...v, [i.name]: e.target.value })}><MenuItem value="true">Yes</MenuItem><MenuItem value="false">No</MenuItem></TextField>
+              ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial ?? 'false')} onChange={(e) => setV((prev) => ({ ...prev, [i.name]: e.target.value }))}><MenuItem value="true">Yes</MenuItem><MenuItem value="false">No</MenuItem></TextField>
               : <TextField key={i.name} label={i.label} helperText={i.helper} type={i.type === 'date' ? 'date' : i.type === 'password' ? 'password' : 'text'} multiline={i.type === 'multiline'} minRows={i.type === 'multiline' ? 3 : undefined}
-                  value={val(i.name, i.initial)} onChange={(e) => setV({ ...v, [i.name]: e.target.value })} slotProps={i.type === 'date' ? { inputLabel: { shrink: true } } : undefined} />)}
+                  value={val(i.name, i.initial)} onChange={(e) => setV((prev) => ({ ...prev, [i.name]: e.target.value }))} slotProps={i.type === 'date' ? { inputLabel: { shrink: true } } : undefined} />)}
         </Stack>
       </DialogContent>
       <DialogActions>
