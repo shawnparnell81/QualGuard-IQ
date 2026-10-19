@@ -141,6 +141,7 @@ public static class DependencyInjection
     {
         s.AddScoped<ModuleSupport>();
         s.AddScoped<FormService>();
+        s.AddScoped<FormPrefillService>();
         s.AddScoped<FormPrintService>();
         s.AddScoped<FormWorkbookService>();
         s.AddScoped<NcrService>();
@@ -228,6 +229,7 @@ public static class DependencyInjection
         s.AddScoped<Modules.Sequfloh.SequflohFoundationService>();
         s.AddScoped<Modules.Sequfloh.SequflohPartsService>();
         s.AddScoped<Modules.Sequfloh.SequflohInstructionService>();
+        s.AddScoped<Modules.Sequfloh.SequflohTemplateService>();
         s.AddScoped<Modules.Sequfloh.SequflohPrintService>();
         s.AddScoped<Modules.Sequfloh.SequflohTrackingService>();
         s.AddScoped<Modules.Sequfloh.SequflohNotifications>();
@@ -349,7 +351,8 @@ public static class DependencyInjection
         s.AddSingleton<Modules.Integration.Erp.ErpTokenCache>();
         foreach (var a in new Modules.Integration.Erp.IErpAdapter[] { new Modules.Integration.Erp.NetSuiteAdapter(), new Modules.Integration.Erp.SapAdapter(), new Modules.Integration.Erp.OracleAdapter(),
             new Modules.Integration.Erp.DynamicsAdapter(), new Modules.Integration.Erp.AcumaticaAdapter(), new Modules.Integration.Erp.InforAdapter(), new Modules.Integration.Erp.EpicorAdapter(),
-            new Modules.Integration.Erp.PlexAdapter(), new Modules.Integration.Erp.DelmiaWorksAdapter(), new Modules.Integration.Erp.BcManufacturingAdapter(), new Modules.Integration.Erp.CustomRestAdapter(), new Modules.Integration.Erp.CsvExchangeAdapter() })
+            new Modules.Integration.Erp.PlexAdapter(), new Modules.Integration.Erp.DelmiaWorksAdapter(), new Modules.Integration.Erp.BcManufacturingAdapter(), new Modules.Integration.Erp.QuickBooksAdapter(), new Modules.Integration.Erp.SageIntacctAdapter(),
+            new Modules.Integration.Erp.CustomRestAdapter(), new Modules.Integration.Erp.CsvExchangeAdapter() })
             s.AddSingleton(a);
         s.AddSingleton<Modules.Integration.ErpAdapterRegistry>();
         s.AddScoped<Modules.Integration.ErpSyncService>();

@@ -34846,6 +34846,171 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+  '/api/v1/forms/records/{id}/prefill':
+    post:
+      tags:
+        - Forms
+      description: 'Requires permission: `forms.edit` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          description: '1–100 letters, digits, ''-'', ''_'', ''.'', '':''. A retry with the same key and request returns the stored response with Idempotent-Replayed: true; the same key with a different request returns 422; a retry while the first is still running returns 409.'
+          schema:
+            maxLength: 100
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PrefillRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/PrefillRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/PrefillRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PrefillResult'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PrefillResult'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PrefillResult'
+        '401':
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Missing permission or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Validation or business-rule error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not found or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 'Conflict: state or version mismatch'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  '/api/v1/forms/records/from-capa/{capaId}':
+    post:
+      tags:
+        - Forms
+      description: 'Requires permission: `forms.edit` (site/department scoped).'
+      parameters:
+        - name: capaId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: Idempotency-Key
+          in: header
+          description: '1–100 letters, digits, ''-'', ''_'', ''.'', '':''. A retry with the same key and request returns the stored response with Idempotent-Replayed: true; the same key with a different request returns 422; a retry while the first is still running returns 409.'
+          schema:
+            maxLength: 100
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/StartFromCapaRequest'
+          text/json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/StartFromCapaRequest'
+          application/*+json:
+            schema:
+              oneOf:
+                - type: 'null'
+                - $ref: '#/components/schemas/StartFromCapaRequest'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '403':
+          description: Missing permission or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '400':
+          description: Validation or business-rule error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '404':
+          description: Not found or outside site scope
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: 'Conflict: state or version mismatch'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: Unprocessable request
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: Unexpected server error
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
   '/api/v1/forms/records/{id}/pdf':
     get:
       tags:
@@ -47964,6 +48129,68 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/apply-template':
+    post:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.edit_draft_work_instruction` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ApplyTemplateInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ApplyTemplateInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ApplyTemplateInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instructions/{id}/save-as-template':
+    post:
+      tags:
+        - SequflohInstructions
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.create_work_instruction` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveAsTemplateInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SaveAsTemplateInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SaveAsTemplateInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/sequfloh/instructions/{id}/characteristic-sources':
     get:
       tags:
@@ -49279,6 +49506,138 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/sequfloh/instruction-templates:
+    get:
+      tags:
+        - SequflohTemplates
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: type
+          in: query
+          schema:
+            $ref: '#/components/schemas/WorkInstructionType'
+        - name: includeRetired
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    post:
+      tags:
+        - SequflohTemplates
+      description: 'Requires permission: `sequfloh.access`, `sequfloh.create_work_instruction` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstructionTemplateInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/InstructionTemplateInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/InstructionTemplateInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instruction-templates/{id}':
+    get:
+      tags:
+        - SequflohTemplates
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - SequflohTemplates
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InstructionTemplateInput'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/InstructionTemplateInput'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/InstructionTemplateInput'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instruction-templates/{id}/retire':
+    post:
+      tags:
+        - SequflohTemplates
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/sequfloh/instruction-templates/{id}/restore':
+    post:
+      tags:
+        - SequflohTemplates
+      description: 'Requires permission: `sequfloh.access` (site/department scoped).'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/sequfloh/tracking:
     get:
       tags:
@@ -50297,6 +50656,17 @@ components:
         assigneeId:
           type: string
           format: uuid
+    ApplyTemplateInput:
+      required:
+        - templateId
+      type: object
+      properties:
+        templateId:
+          type: string
+          format: uuid
+        replace:
+          type: boolean
+          default: false
     Approval:
       required:
         - id
@@ -60119,6 +60489,10 @@ components:
           type:
             - 'null'
             - string
+        prefill:
+          type:
+            - 'null'
+            - string
         placeholder:
           type:
             - 'null'
@@ -60272,6 +60646,10 @@ components:
           type: boolean
         keepTogether:
           type: boolean
+        style:
+          type:
+            - 'null'
+            - string
     FormTable:
       type: object
       properties:
@@ -60333,6 +60711,10 @@ components:
             - string
         repeatHeaderOnEachPage:
           type: boolean
+        prefill:
+          type:
+            - 'null'
+            - string
         visibleWhen:
           oneOf:
             - type: 'null'
@@ -61759,6 +62141,11 @@ components:
             - 'null'
             - string
           format: uuid
+        templateId:
+          type:
+            - 'null'
+            - string
+          format: uuid
     InstructionSaveInput:
       required:
         - title
@@ -61893,6 +62280,39 @@ components:
             - type: 'null'
             - $ref: '#/components/schemas/JsonArray'
         partsRows:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonArray'
+        rowVersion:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: uint32
+          default: 0
+        blocks:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/JsonArray'
+    InstructionTemplateInput:
+      required:
+        - name
+        - description
+        - type
+        - blocks
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type:
+            - 'null'
+            - string
+        type:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/WorkInstructionType'
+        blocks:
           oneOf:
             - type: 'null'
             - $ref: '#/components/schemas/JsonArray'
@@ -67699,6 +68119,10 @@ components:
           format: double
         confidentiality:
           type: string
+        theme:
+          type:
+            - 'null'
+            - string
     PartExecutionInput:
       required:
         - productFamily
@@ -69205,6 +69629,41 @@ components:
             - integer
             - string
           format: uint32
+    PrefillRequest:
+      required:
+        - sourceType
+        - sourceId
+      type: object
+      properties:
+        sourceType:
+          type: string
+        sourceId:
+          type: string
+          format: uuid
+        overwrite:
+          type: boolean
+          default: false
+    PrefillResult:
+      required:
+        - filled
+        - keys
+        - values
+      type: object
+      properties:
+        filled:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        keys:
+          type: array
+          items:
+            type: string
+        values:
+          type: object
+          additionalProperties:
+            type: string
     PreviewRequest:
       required:
         - fieldSchema
@@ -75273,6 +75732,21 @@ components:
         - Double
         - Multiple
         - Continuous
+    SaveAsTemplateInput:
+      required:
+        - name
+        - description
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type:
+            - 'null'
+            - string
+        forThisTypeOnly:
+          type: boolean
+          default: true
     SaveCertificationRequest:
       required:
         - standard
@@ -79075,6 +79549,12 @@ components:
           type:
             - 'null'
             - string
+    StartFromCapaRequest:
+      type: object
+      properties:
+        templateKey:
+          type: string
+          default: capa-report
     StartMigrationRequest:
       required:
         - documentId
@@ -83420,4 +83900,5 @@ tags:
   - name: SequflohInstructions
   - name: SequflohParts
   - name: SequflohReports
+  - name: SequflohTemplates
   - name: SequflohTracking

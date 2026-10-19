@@ -344,15 +344,16 @@ f dim_samples | Samples measured | integer | * min=1
 f dim_lab | Measured by (laboratory or function) | text
 section dim_results | Results | 1
 table dim_rows | Characteristics | 1
+tablefrom characteristics?char_type=Dimensional
 groups Characteristic:2; Specification:3; Results:3; Decision:1
-c dim_no | No. | text | *
-c dim_char | Characteristic | text | *
-c dim_nominal | Nominal | number | dec=4
-c dim_lsl | Lower limit | number | * dec=4
-c dim_usl | Upper limit | number | * dec=4
+c dim_no | No. | text | * from=char_no
+c dim_char | Characteristic | text | * from=char_desc
+c dim_nominal | Nominal | number | dec=4 from=char_nominal
+c dim_lsl | Lower limit | number | * dec=4 from=char_lsl
+c dim_usl | Upper limit | number | * dec=4 from=char_usl
 c dim_min | Lowest measured | number | * dec=4
 c dim_max | Highest measured | number | * dec=4
-c dim_method | Method | text
+c dim_method | Method | text | from=char_method
 c dim_ok | OK | calc | {IF(AND(dim_min >= dim_lsl, dim_max <= dim_usl), "OK", "NOT OK")}
 rule dim_rows.dim_ok | equals | NOT OK | #FDE7E9 | bold
 section dim_summary | Summary | 3
@@ -380,12 +381,13 @@ f mat_supplier | Material supplier | supplier
 f mat_heat | Heat, lot or batch | text
 section mat_results | Results | 1
 table mat_rows | Tests | 1
-c mat_test | Test | text | *
-c mat_requirement | Requirement | text | *
-c mat_lower | Lower limit | number | dec=4
-c mat_upper | Upper limit | number | dec=4
+tablefrom characteristics?char_type=Material
+c mat_test | Test | text | * from=char_desc
+c mat_requirement | Requirement | text | * from=char_spec
+c mat_lower | Lower limit | number | dec=4 from=char_lsl
+c mat_upper | Upper limit | number | dec=4 from=char_usl
 c mat_result | Result | number | * dec=4
-c mat_unit | Unit | text
+c mat_unit | Unit | text | from=char_unit
 c mat_lab | Laboratory | text
 c mat_ok | OK | calc | {IF(AND(OR(ISBLANK(mat_lower), mat_result >= mat_lower), OR(ISBLANK(mat_upper), mat_result <= mat_upper)), "OK", "NOT OK")}
 rule mat_rows.mat_ok | equals | NOT OK | #FDE7E9 | bold
@@ -406,9 +408,10 @@ landscape
 use ppap_header
 section perf_results | Results | 1
 table perf_rows | Tests | 1
-c perf_test | Test | text | *
-c perf_procedure | Procedure | text | *
-c perf_criterion | Acceptance criterion | text | *
+tablefrom characteristics?char_type=Performance
+c perf_test | Test | text | * from=char_desc
+c perf_procedure | Procedure | text | * from=char_method
+c perf_criterion | Acceptance criterion | text | * from=char_spec
 c perf_samples | Samples | integer | * min=1
 c perf_passed | Passed | integer | * min=0
 c perf_date | Test date | date
@@ -490,6 +493,17 @@ f aa_light_source | Light source | text
 f aa_evaluator | Evaluated by | user | *
 f aa_eval_date | Evaluation date | date | *
 f aa_material_source | Material or paint source | supplier
+f aa_format | Customer format | choice | [General; Customer-specific (OEM) format]
+section appearance_oem | Customer-specific items | 3 | Complete when the customer asks for its own appearance format.
+showwhen aa_format=Customer-specific_(OEM)_format
+f aa_oem_customer_form | Customer form or standard | text
+f aa_oem_colour_code | Customer colour code | text
+f aa_oem_master_id | Customer master panel or plaque | text
+f aa_oem_paint_line | Paint or moulding line | text
+f aa_oem_grain_code | Grain or texture code | text
+f aa_oem_harmony | Harmony with adjacent parts checked | choice | [Yes; No; Not applicable]
+f aa_oem_customer_evaluator | Customer evaluator | text
+f aa_oem_report_ref | Measured appearance report | record
 section appearance_attrs | Attributes | 1
 table aa_rows | Attributes | 0
 rows Colour; Gloss; Grain or texture; Metallic brilliance; Finish; Other
@@ -592,14 +606,14 @@ workflow Prepared, declaration signed by an authorized person, submitted, custom
 retention Keep for the life of the part plus one calendar year after the part is no longer active.
 use ppap_header
 section warrant_org | Organization | 3
-f psw_org | Organization name | text | *
-f psw_org_code | Organization code | text
-f psw_address | Manufacturing address | longtext | *
-f psw_customer_name | Customer | customer | *
-f psw_buyer | Customer buyer or contact | text
-f psw_application | Application | text
+f psw_org | Organization name | text | * from=org_name
+f psw_org_code | Organization code | text | from=org_code
+f psw_address | Manufacturing address | longtext | * from=org_address
+f psw_customer_name | Customer | customer | * from=customer
+f psw_buyer | Customer buyer or contact | text | from=customer_buyer
+f psw_application | Application | text | from=application
 section warrant_results | Results | 3
-f psw_part_weight | Part weight | number | * dec=4 min=0 unit=kg
+f psw_part_weight | Part weight | number | * dec=4 min=0 unit=kg from=part_weight
 f psw_samples_weighed | Parts weighed | integer | min=1
 f psw_dimensional_ok | Dimensional results meet requirements | boolean | *
 f psw_material_ok | Material and performance results meet requirements | boolean | *

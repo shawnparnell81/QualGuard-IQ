@@ -84,7 +84,7 @@ test.describe('E2E 8: shop floor, traceability, returns and integrations', () =>
     await page.goto(`/integrations/${c.id}`);
     await expect(page.getByText('Disabled', { exact: true })).toBeVisible();
     await button(page, 'Set secret').click();
-    await dialog(page).getByLabel(/^Secret/).fill('plex-api-key-value');
+    await dialog(page).getByLabel(/^API key/).fill('plex-api-key-value');
     await dialog(page).getByRole('button', { name: 'Save' }).click();
     await expect(page.getByText(/^Set .*never shown/)).toBeVisible();
     await expect(page.getByText('plex-api-key-value')).toHaveCount(0);

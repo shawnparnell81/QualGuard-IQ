@@ -7,25 +7,35 @@ using QualGuardIQ.Domain.Integration;
 namespace QualGuardIQ.Infrastructure.Modules.Integration.Erp;
 
 /// <summary>
-/// NetSuite: OAuth 2.0 client credentials (M2M) with a certificate-signed JWT assertion, then SuiteQL over REST.
+/// NetSuite, two ways in:
+/// SuiteQL edition: OAuth 2.0 client credentials (M2M) with a certificate-signed JWT assertion, then SuiteQL over REST.
+/// TokenBasedAuth edition: token-based authentication (OAuth 1.0 with HMAC-SHA256 signatures built from the integration record's consumer key and
+/// secret plus an access token id and secret), reading through SuiteQL on SuiteTalk REST or through a customer-deployed RESTlet.
 /// Every rule here follows docs/integrations/netsuite.md.
 /// </summary>
 public sealed class NetSuiteAdapter : IErpAdapter
 {
+    public const string SuiteQl = "SuiteQL", Tba = "TokenBasedAuth";
     public ErpSystem System => ErpSystem.NetSuite;
-    public IReadOnlyList<string> Editions => ["SuiteQL"];
+    public IReadOnlyList<string> Editions => [SuiteQl, Tba];
+    /// <summary>Test hook: nonce source for token-based signatures.</summary>
+    public static Func<string> Nonce { get; set; } = () => Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
     const string Doc = "docs/integrations/netsuite.md";
     public static readonly string[] AllowedAlgorithms = ["PS256", "PS384", "PS512", "ES256", "ES384", "ES512"];
     const int SuiteQlMaxLimit = 1000;
 
     public ErpCapabilities Capabilities(string edition) => new(edition,
         [ErpEntity.Item, ErpEntity.Customer, ErpEntity.Supplier, ErpEntity.Employee, ErpEntity.PurchaseOrder, ErpEntity.ProductionOrder], [], true,
-        "OAuth 2.0 client credentials (M2M): JWT assertion signed with the mapped certificate (PS256/PS384/PS512/ES256/ES384/ES512, kid = certificate id); token valid 60 min, no refresh token",
-        "POST /services/rest/query/v1/suiteql with Prefer: transient", "SuiteQL limit ≤ 1000, keyset paging by id (offset kept at 0, so the 100,000-row offset cap never applies)",
+        edition == Tba
+            ? "Token-based authentication: OAuth 1.0 Authorization header signed with HMAC-SHA256, key = consumer secret & token secret, realm = account id; tokens do not expire until revoked"
+            : "OAuth 2.0 client credentials (M2M): JWT assertion signed with the mapped certificate (PS256/PS384/PS512/ES256/ES384/ES512, kid = certificate id); token valid 60 min, no refresh token",
+        edition == Tba ? "POST /services/rest/query/v1/suiteql (Prefer: transient), or POST to the RESTlet deployment URL (script and deploy ids)" : "POST /services/rest/query/v1/suiteql with Prefer: transient", "SuiteQL limit ≤ 1000, keyset paging by id (offset kept at 0, so the 100,000-row offset cap never applies)",
         "Account concurrency shared with SOAP/REST/RESTlets (5 for Standard and dev accounts, 15 Premium, 20 Enterprise/Ultimate, +10 per SuiteCloud Plus); HTTP 429 when exceeded",
         "None used: polling SuiteQL is the source of truth", 5, 0, Doc);
 
-    public IReadOnlyList<UnverifiedItem> Unverified(string edition) =>
+    public IReadOnlyList<UnverifiedItem> Unverified(string edition) => edition == Tba ? [.. Common(), new("RESTlet contract", "The RESTlet is the customer's own script. It must accept {entity, since, afterId, limit} and answer {items, hasMore} as described in docs/integrations/netsuite.md.", Doc)] : Common();
+
+    static List<UnverifiedItem> Common() =>
     [
         new("Delta field", "Whether lastmodifieddate exists on item, customer, vendor and employee tables (documented on transaction only). Check the Records Catalog in the sandbox.", Doc),
         new("Record ids", "Exact REST record ids for lot/serial item variants and itemRevision (REST API Browser not readable). Check /services/rest/record/v1/metadata-catalog.", Doc),
@@ -34,7 +44,7 @@ public sealed class NetSuiteAdapter : IErpAdapter
         new("Response envelope", "SuiteQL response fields items / hasMore are used for paging; confirm against a sandbox response.", Doc),
         new("Outbound events", "\"No native outbound webhooks\" is not stated in the docs either way; the adapter polls.", Doc),
         new("Governance", "GET /services/rest/system/v1/governanceLimits needs an administrator login, so the concurrency cap is configured on the connection (default 5).", Doc),
-        new("Sandbox", "M2M certificate mapping is not copied to sandbox / Release Preview and is cleared by a sandbox refresh; redo it after each refresh.", Doc),
+        new("Sandbox", "M2M certificate mapping and access tokens are not copied to sandbox / Release Preview and are cleared by a sandbox refresh; redo them after each refresh.", Doc),
     ];
 
     static readonly Dictionary<ErpEntity, (string Sql, Dictionary<string, string> Map)> Queries = new()
@@ -114,9 +124,91 @@ public sealed class NetSuiteAdapter : IErpAdapter
     public async Task<string> TestAsync(ErpCallContext c, CancellationToken ct)
     {
         c.Http.ErrorParser = ParseError;
+        if (c.Connection.Edition == Tba)
+        {
+            if (UsesRestlet(c))
+            {
+                var r = await RestletAsync(c, new JsonObject { ["entity"] = "Item", ["limit"] = 1 }, ct);
+                return $"Token-based signature accepted; the RESTlet returned {(r["items"] as JsonArray)?.Count ?? 0} row(s).";
+            }
+            var t = await QueryAsync(c, "SELECT id FROM item WHERE ROWNUM <= 1", 1, ct);
+            return $"Token-based signature accepted; SuiteQL returned {t.Items.Count} row(s).";
+        }
         await TokenAsync(c, ct);
         var page = await QueryAsync(c, "SELECT id FROM item WHERE ROWNUM <= 1", 1, ct);
         return $"Token issued; SuiteQL returned {page.Items.Count} row(s).";
+    }
+
+    // ---------------------------------------------------------------- token-based authentication (OAuth 1.0, HMAC-SHA256)
+    static bool UsesRestlet(ErpCallContext c) => c.Opt("readVia", "suiteql") == "restlet";
+
+    /// <summary>NetSuite realm: the account id in upper case with an underscore ("123456_SB1").</summary>
+    public static string Realm(string account) => account.Trim().ToUpperInvariant().Replace('-', '_');
+
+    /// <summary>RFC 3986 percent-encoding as OAuth 1.0 requires (unreserved characters only are left as is).</summary>
+    public static string Pct(string s)
+    {
+        var sb = new StringBuilder();
+        foreach (var b in Encoding.UTF8.GetBytes(s))
+        {
+            var ch = (char)b;
+            if (ch is >= 'A' and <= 'Z' or >= 'a' and <= 'z' or >= '0' and <= '9' or '-' or '.' or '_' or '~') sb.Append(ch);
+            else sb.Append('%').Append(b.ToString("X2"));
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// Builds the OAuth 1.0 Authorization header for one request. The signature base string is METHOD &amp; encoded base URL &amp; encoded sorted
+    /// parameters (oauth_* plus the query string); the HMAC-SHA256 key is the encoded consumer secret and token secret joined with &amp;.
+    /// </summary>
+    public static string TbaHeader(ErpCallContext c, HttpMethod method, string url, string? nonce = null, long? timestamp = null)
+    {
+        var account = c.Connection.Account is { Length: > 0 } a ? a : throw new ErpException("Set the NetSuite account id.");
+        var consumerKey = c.Connection.ClientId is { Length: > 0 } k ? k : throw new ErpException("Set the consumer key from the integration record.");
+        var consumerSecret = c.RequireNamed("consumerSecret", "consumer secret", c.Secret);
+        var tokenId = c.RequireNamed("tokenId", "token id");
+        var tokenSecret = c.RequireNamed("tokenSecret", "token secret", c.SecondarySecret);
+        var u = new Uri(url);
+        var oauth = new SortedDictionary<string, string>(StringComparer.Ordinal)
+        {
+            ["oauth_consumer_key"] = consumerKey, ["oauth_nonce"] = nonce ?? Nonce(), ["oauth_signature_method"] = "HMAC-SHA256",
+            ["oauth_timestamp"] = (timestamp ?? c.Now.ToUnixTimeSeconds()).ToString(global::System.Globalization.CultureInfo.InvariantCulture), ["oauth_token"] = tokenId, ["oauth_version"] = "1.0",
+        };
+        var all = oauth.Select(p => (K: Pct(p.Key), V: Pct(p.Value))).ToList();
+        foreach (var part in u.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var i = part.IndexOf('=');
+            var key = Uri.UnescapeDataString(i < 0 ? part : part[..i]); var val = i < 0 ? "" : Uri.UnescapeDataString(part[(i + 1)..]);
+            all.Add((Pct(key), Pct(val)));
+        }
+        var normalized = string.Join("&", all.OrderBy(p => p.K, StringComparer.Ordinal).ThenBy(p => p.V, StringComparer.Ordinal).Select(p => p.K + "=" + p.V));
+        var baseUrl = $"{u.Scheme.ToLowerInvariant()}://{u.Host.ToLowerInvariant()}{(u.IsDefaultPort ? "" : ":" + u.Port)}{u.AbsolutePath}";
+        var baseString = method.Method.ToUpperInvariant() + "&" + Pct(baseUrl) + "&" + Pct(normalized);
+        using var h = new HMACSHA256(Encoding.UTF8.GetBytes(Pct(consumerSecret) + "&" + Pct(tokenSecret)));
+        var sig = Convert.ToBase64String(h.ComputeHash(Encoding.UTF8.GetBytes(baseString)));
+        return $"OAuth realm=\"{Realm(account)}\", " + string.Join(", ", oauth.Select(p => $"{p.Key}=\"{Pct(p.Value)}\"")) + $", oauth_signature=\"{Pct(sig)}\"";
+    }
+
+    /// <summary>RESTlet deployment URL: the full external URL, or built from the account id with the script and deploy ids.</summary>
+    public static string RestletUrl(ErpCallContext c)
+    {
+        if (c.Opt("restletUrl") is { Length: > 0 } full) return full;
+        var script = c.Opt("scriptId"); var deploy = c.Opt("deployId", "1");
+        if (script.Length == 0) throw new ErpException("Set the RESTlet script id (or the full external URL from the script deployment).");
+        var host = $"https://{AccountHost(c.Connection.Account ?? throw new ErpException("Set the NetSuite account id."))}.restlets.api.netsuite.com";
+        return $"{host}/app/site/hosting/restlet.nl?script={Uri.EscapeDataString(script)}&deploy={Uri.EscapeDataString(deploy)}";
+    }
+
+    static async Task<JsonNode> RestletAsync(ErpCallContext c, JsonObject body, CancellationToken ct)
+    {
+        var url = RestletUrl(c);
+        return await c.Http.JsonAsync(() =>
+        {
+            var m = ErpWire.PostJson(url, body);
+            m.Headers.TryAddWithoutValidation("Authorization", TbaHeader(c, HttpMethod.Post, url));
+            return m;
+        }, ct);
     }
 
     public static string Sql(ErpEntity entity, ErpCursor cursor)
@@ -133,8 +225,20 @@ public sealed class NetSuiteAdapter : IErpAdapter
 
     async Task<(JsonArray Items, bool HasMore)> QueryAsync(ErpCallContext c, string sql, int limit, CancellationToken ct)
     {
-        var token = await TokenAsync(c, ct);
-        var n = await c.Http.JsonAsync(() => ErpWire.PostJson($"{Root(c)}/services/rest/query/v1/suiteql?limit={limit}&offset=0", new { q = sql }, ErpWire.Bearer(token), ("Prefer", "transient")), ct);
+        var url = $"{Root(c)}/services/rest/query/v1/suiteql?limit={limit}&offset=0";
+        JsonNode n;
+        if (c.Connection.Edition == Tba)
+            n = await c.Http.JsonAsync(() =>
+            {
+                var m = ErpWire.PostJson(url, new { q = sql }, null, ("Prefer", "transient"));
+                m.Headers.TryAddWithoutValidation("Authorization", TbaHeader(c, HttpMethod.Post, url));
+                return m;
+            }, ct);
+        else
+        {
+            var token = await TokenAsync(c, ct);
+            n = await c.Http.JsonAsync(() => ErpWire.PostJson(url, new { q = sql }, ErpWire.Bearer(token), ("Prefer", "transient")), ct);
+        }
         return (n["items"] as JsonArray ?? [], n["hasMore"]?.GetValue<bool>() ?? false);
     }
 
@@ -143,7 +247,14 @@ public sealed class NetSuiteAdapter : IErpAdapter
         this.RequireRead(c.Connection.Edition, entity);
         c.Http.ErrorParser = ParseError;
         var limit = Math.Clamp(c.PageSize <= 0 ? SuiteQlMaxLimit : c.PageSize, 1, SuiteQlMaxLimit);
-        var (items, hasMore) = await QueryAsync(c, Sql(entity, cursor), limit, ct);
+        JsonArray items; bool hasMore;
+        if (c.Connection.Edition == Tba && UsesRestlet(c))
+        {
+            var body = new JsonObject { ["entity"] = entity.ToString(), ["limit"] = limit, ["afterId"] = cursor.PageToken, ["since"] = cursor.Watermark is { } w ? ErpWire.Iso(w) : null };
+            var r = await RestletAsync(c, body, ct);
+            (items, hasMore) = (r["items"] as JsonArray ?? [], r["hasMore"]?.GetValue<bool>() ?? false);
+        }
+        else (items, hasMore) = await QueryAsync(c, Sql(entity, cursor), limit, ct);
         var records = items.OfType<JsonNode>().Select(row => c.Record(this, entity, row, "id", "lastmodifieddate")).ToList();
         foreach (var r in records.Where(r => entity == ErpEntity.Employee))
             r.Fields["name"] = $"{r.Fields["firstName"]} {r.Fields["lastName"]}".Trim();

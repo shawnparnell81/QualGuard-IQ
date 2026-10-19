@@ -5,6 +5,8 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using QualGuardIQ.Application.Abstractions;
 using QualGuardIQ.Application.Records;
 using QualGuardIQ.Application.Security;
@@ -67,7 +69,7 @@ public sealed class ErpAdapterRegistry(IEnumerable<IErpAdapter> adapters)
 public sealed record ConnectionInput(string Name, ErpSystem System, string? Edition, string? BaseUrl, string? Account, string? Company, string? ClientId, string? Username,
     Dictionary<string, JsonElement>? Options, int? MaxConcurrency, int? RequestsPerMinute, bool InventorySystemOfRecord, string? AdminNotes, Guid SiteId, Guid? DepartmentId, ErpEnvironment? Environment = null);
 /// <summary>Write-only secrets: null leaves the stored value unchanged, empty string clears it.</summary>
-public sealed record SecretInput(string? Secret, string? SecondarySecret);
+public sealed record SecretInput(string? Secret, string? SecondarySecret, Dictionary<string, string?>? Named = null);
 public sealed record MappingInput(SyncDirection Direction, SyncMode Mode, ConflictPolicy Conflict, string Cron, Dictionary<string, string>? FieldMap, JsonElement? ValidationRules);
 public sealed record SyncResult(Guid RunId, SyncRunStatus Status, int Read, int Created, int Updated, int Unchanged, int Queued, int Rejected, int Requests, string? Error);
 
@@ -76,8 +78,12 @@ public sealed record SyncResult(Guid RunId, SyncRunStatus Status, int Read, int 
 /// and the inbound change queue routed through the shared approval engine.
 /// </summary>
 public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, ErpAdapterRegistry adapters, SecretProtector secrets,
-    ErpHttpHandlerProvider handlers, ErpTokenCache tokens, INumberingService numbers, INotifier notifier, WorkflowService workflow, ISiteCalendar calendar, IClock clock, ErpValidationService validation)
+    ErpHttpHandlerProvider handlers, ErpTokenCache tokens, INumberingService numbers, INotifier notifier, WorkflowService workflow, ISiteCalendar calendar, IClock clock, ErpValidationService validation,
+    IConfiguration config, ILogger<ErpSyncService> log)
 {
+    /// <summary>Plain http ERP addresses, for a local development or test setup only (Integrations:AllowHttpUrls, off by default).</summary>
+    bool AllowHttp => config.GetValue<bool>(ErpUrlPolicy.AllowHttpSetting);
+
     public const string ChangeType = "ErpChange";
     public const int MaxPagesPerRun = 200;
     public static readonly TimeSpan Overlap = TimeSpan.FromMinutes(2);
@@ -101,8 +107,11 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, ErpAdapterR
         var adapter = adapters.Get(r.System);
         var edition = string.IsNullOrWhiteSpace(r.Edition) ? adapter.Editions[0] : r.Edition.Trim();
         if (!adapter.Editions.Contains(edition)) throw new AppException($"{r.System} editions: {string.Join(", ", adapter.Editions)}.");
-        if (!string.IsNullOrWhiteSpace(r.BaseUrl) && !(Uri.TryCreate(r.BaseUrl, UriKind.Absolute, out var u) && (u.Scheme == "https" || u.IsLoopback)))
-            throw new AppException("The base URL must be an absolute https URL.");
+        if (!string.IsNullOrWhiteSpace(r.BaseUrl) && ErpUrlPolicy.Problem(r.BaseUrl, AllowHttp, "The base URL") is { } baseProblem) throw new AppException(baseProblem);
+        foreach (var (key, value) in r.Options ?? new())
+            if (ErpUrlPolicy.IsUrlOption(key) && value.ValueKind == JsonValueKind.String && value.GetString() is { Length: > 0 } url
+                && ErpUrlPolicy.Problem(url, AllowHttp, $"The {key} setting") is { } optionProblem)
+                throw new AppException(optionProblem);
         ErpConnection c;
         if (id is { } x)
         {
@@ -142,9 +151,36 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, ErpAdapterR
         var before = ErpValidationService.Fingerprint(c);
         if (r.Secret is not null) { c.EncryptedSecret = r.Secret.Length == 0 ? null : secrets.Protect(r.Secret); c.SecretSetAt = r.Secret.Length == 0 ? null : clock.UtcNow; }
         if (r.SecondarySecret is not null) c.EncryptedSecondarySecret = r.SecondarySecret.Length == 0 ? null : secrets.Protect(r.SecondarySecret);
+        if (r.Named is { Count: > 0 })
+        {
+            var profile = ErpSetupProfiles.For(c.System, c.Edition);
+            var allowed = profile?.Fields.Where(f => f.Target.StartsWith("secret:", StringComparison.Ordinal)).Select(f => f.Target[7..]).ToHashSet() ?? [];
+            var bag = SecretBag(c);
+            foreach (var (name, value) in r.Named)
+            {
+                if (!allowed.Contains(name)) throw new AppException($"{c.System} ({c.Edition}) has no secret called '{name}'.");
+                if (value is null) continue;
+                if (value.Length == 0) bag.Remove(name); else bag[name] = secrets.Protect(value);
+            }
+            c.EncryptedSecrets = JsonSerializer.Serialize(bag);
+            if (r.Named.Values.Any(v => !string.IsNullOrEmpty(v))) c.SecretSetAt = clock.UtcNow;
+        }
         ConfigChanged(c, before);
         await db.SaveChangesAsync(ct);
         tokens.InvalidateAll(c.Id);
+    }
+
+    /// <summary>Stored named secrets (still encrypted).</summary>
+    public static Dictionary<string, string> SecretBag(ErpConnection c) =>
+        string.IsNullOrWhiteSpace(c.EncryptedSecrets) ? new() : JsonSerializer.Deserialize<Dictionary<string, string>>(c.EncryptedSecrets) ?? new();
+
+    /// <summary>Encrypts and stores secrets the vendor replaced during a call (a rotated refresh token). Rotating secrets do not reset validation.</summary>
+    void KeepRotated(ErpConnection c, ErpCallContext ctx)
+    {
+        if (ctx.Rotated.Count == 0) return;
+        var bag = SecretBag(c);
+        foreach (var (k, v) in ctx.Rotated) bag[k] = secrets.Protect(v);
+        c.EncryptedSecrets = JsonSerializer.Serialize(bag);
     }
 
     public async Task SetEnabledAsync(Guid id, bool enabled, CancellationToken ct)
@@ -209,7 +245,8 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, ErpAdapterR
         return new ErpCallContext
         {
             Connection = c, Options = opts, Secret = secrets.Unprotect(c.EncryptedSecret), SecondarySecret = secrets.Unprotect(c.EncryptedSecondarySecret),
-            Http = new ErpHttp(http, c.Id, c.MaxConcurrency, c.RequestsPerMinute, errorParser), Tokens = tokens,
+            Secrets = SecretBag(c).ToDictionary(kv => kv.Key, kv => secrets.Unprotect(kv.Value) ?? ""),
+            Http = new ErpHttp(http, c.Id, c.MaxConcurrency, c.RequestsPerMinute, errorParser, AllowHttp), Tokens = tokens,
             FieldMap = map is null ? new() : JsonSerializer.Deserialize<Dictionary<string, string>>(map.FieldMap) ?? new(),
             PageSize = opts["pageSize"] is JsonValue pv && pv.TryGetValue<int>(out var ps) ? ps : 0, Now = clock.UtcNow
         };
@@ -219,12 +256,25 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, ErpAdapterR
     {
         var c = await EditableAsync(id, ct);
         using var http = handlers.Create();
-        string msg; bool ok; Exception? error = null;
-        try { msg = await adapters.Get(c.System).TestAsync(await ContextAsync(c, null, http), ct); ok = true; }
+        string detail; bool ok; Exception? error = null;
+        ErpCallContext? ctx = null;
+        var missing = ErpSetupProfiles.Missing(c, JsonNode.Parse(string.IsNullOrWhiteSpace(c.Options) ? "{}" : c.Options) as JsonObject ?? new JsonObject(), SecretBag(c).Keys.ToHashSet());
+        try
+        {
+            if (missing.Count > 0) throw new ErpException("Fill in these fields first: " + string.Join(", ", missing) + ".");
+            ctx = await ContextAsync(c, null, http);
+            detail = await adapters.Get(c.System).TestAsync(ctx, ct); ok = true;
+        }
         catch (Exception e) when (e is ErpException or HttpRequestException or TaskCanceledException or CryptographicException or JsonException or AppException)
-        { msg = e.Message; ok = false; error = e; tokens.InvalidateAll(c.Id); }
-        await validation.RecordTestAsync(c, ok, error, msg.Length > 1000 ? msg[..1000] : msg, ct);
-        c.LastTestAt = clock.UtcNow; c.LastTestOk = ok; c.LastTestMessage = msg.Length > 1000 ? msg[..1000] : msg;
+        { detail = e.Message; ok = false; error = e; tokens.InvalidateAll(c.Id); }
+        if (ctx is not null) KeepRotated(c, ctx);
+        // What the ERP answered stays in the server log; the connection, its validation history and the audit trail keep only a short status.
+        var msg = ErpTestStatus.Of(ok, error, !ErpValidationService.NoHttp(c.System), detail);
+        if (ok) log.LogInformation("ERP connection {ConnectionId} test passed: {Detail}", c.Id, detail);
+        else log.LogWarning(error, "ERP connection {ConnectionId} test failed ({Status}): {Detail}", c.Id, msg, detail);
+        if (msg.Length > 1000) msg = msg[..1000];
+        await validation.RecordTestAsync(c, ok, error, msg, ct);
+        c.LastTestAt = clock.UtcNow; c.LastTestOk = ok; c.LastTestMessage = msg;
         await db.SaveChangesAsync(ct);
         return (ok, msg);
     }
@@ -283,6 +333,7 @@ public sealed class ErpSyncService(AppDbContext db, ModuleSupport m, ErpAdapterR
         map.NextRunAt = Next(map.Cron, clock.UtcNow);
         db.ChangeTracker.Clear();
         db.ErpSyncRuns.Update(run); db.ErpSyncCursors.Update(cursor); db.ErpEntityMappings.Update(map);
+        if (ctx.Rotated.Count > 0 && await db.ErpConnections.FirstOrDefaultAsync(x => x.Id == c.Id, ct) is { } fresh) KeepRotated(fresh, ctx);
         await db.SaveChangesAsync(ct);
         if (run.Status == SyncRunStatus.Failed)
             await notifier.NotifyAsync([c.OwnerId], $"ERP sync failed: {c.Name} / {entity}", run.Error, null, ct: ct);

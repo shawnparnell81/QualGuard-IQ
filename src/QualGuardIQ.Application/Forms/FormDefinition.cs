@@ -158,6 +158,20 @@ public sealed class PageSetup
     public decimal FontSize { get; set; } = 9;
     /// <summary>Confidentiality marking printed in the footer ({confidentiality}).</summary>
     public string Confidentiality { get; set; } = "Internal";
+    /// <summary>
+    /// Look of the standardized layout on screen and on paper (see <see cref="FormThemes"/>): report, worksheet, checklist, certificate,
+    /// investigation, register or plan. Null is report. Only the presentation changes; fields, rules and signatures behave the same.
+    /// </summary>
+    public string? Theme { get; set; }
+}
+
+/// <summary>Form looks. Each family of forms gets one so a warrant, a worksheet and an investigation are recognisable at a glance.</summary>
+public static class FormThemes
+{
+    public static readonly string[] Themes = ["report", "worksheet", "checklist", "certificate", "investigation", "register", "plan"];
+    /// <summary>Section styles that override the theme's default for one section.</summary>
+    public static readonly string[] SectionStyles = ["standard", "panel", "callout", "titleblock", "steps", "checklist", "ledger", "signoff"];
+    public static string Of(FormDefinition d) => d.Page.Theme is { Length: > 0 } t && Themes.Contains(t) ? t : "report";
 }
 
 /// <summary>Header or footer text. Tokens: {template}, {revision}, {record}, {title}, {page}, {pages}, {site}, {printed}, {printedBy}, {status}, {confidentiality}.</summary>
@@ -186,6 +200,8 @@ public sealed class FormSection
     public string? Orientation { get; set; }
     public bool PageBreakBefore { get; set; }
     public bool KeepTogether { get; set; }
+    /// <summary>Presentation of this section (see <see cref="FormThemes.SectionStyles"/>); null follows the form's theme.</summary>
+    public string? Style { get; set; }
 }
 
 public sealed class FormTable
@@ -207,6 +223,8 @@ public sealed class FormTable
     /// <summary>Group rows by this column's value and compute subtotals for the total columns.</summary>
     public string? SubtotalBy { get; set; }
     public bool RepeatHeaderOnEachPage { get; set; } = true;
+    /// <summary>Key of the source table whose rows fill this table when the record is filled from another record; null uses the same key.</summary>
+    public string? Prefill { get; set; }
     public FieldCondition? VisibleWhen { get; set; }
 }
 
@@ -380,6 +398,8 @@ public static class FormDefinitions
         if (d.Page.MarginMm is < 5 or > 40) throw new AppException("Page margins must be between 5 and 40 mm.");
         if (d.Page.FontSize is < 7 or > 12) throw new AppException("Print font size must be between 7 and 12 points.");
         if (d.Page.PrintStyle is not ("standardized" or "original")) throw new AppException("Print style must be standardized or original.");
+        if (d.Page.Theme is { Length: > 0 } th && !FormThemes.Themes.Contains(th)) throw new AppException($"Form look must be one of: {string.Join(", ", FormThemes.Themes)}.");
+        if (d.Sections.FirstOrDefault(x => x.Style is { Length: > 0 } st && !FormThemes.SectionStyles.Contains(st)) is { } bad) throw new AppException($"Section '{bad.Title}': style must be one of: {string.Join(", ", FormThemes.SectionStyles)}.");
         if (d.Page.Watermark is { Length: > 40 }) throw new AppException("Watermark text can be at most 40 characters.");
         if (string.IsNullOrWhiteSpace(d.Page.Confidentiality) || d.Page.Confidentiality.Length > 40) throw new AppException("Confidentiality marking must be 1–40 characters.");
         if (d.Layout is { } layout) ValidateLayout(d, layout);

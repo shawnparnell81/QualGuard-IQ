@@ -1,8 +1,13 @@
 # ERP integration research and connector framework design
 
-Per-vendor files: [sap](sap.md) · [oracle](oracle.md) · [epicor](epicor.md) · [infor](infor.md) · [dynamics365](dynamics365.md) · [netsuite](netsuite.md) · [acumatica](acumatica.md) · [plex](plex.md) · [iqms-delmiaworks](iqms-delmiaworks.md)
+Per-vendor files: [quickbooks](quickbooks.md) · [sage-intacct](sage-intacct.md) · [sap](sap.md) · [oracle](oracle.md) · [epicor](epicor.md) · [infor](infor.md) · [dynamics365](dynamics365.md) · [netsuite](netsuite.md) · [acumatica](acumatica.md) · [plex](plex.md) · [iqms-delmiaworks](iqms-delmiaworks.md)
 
-Rule: every claim cites a vendor URL. Anything marked **UNVERIFIED** has to be confirmed against official docs (or the customer's tenant metadata) before an adapter relies on it. No connector code exists yet.
+Rule: every claim cites a vendor URL. Anything marked **UNVERIFIED** has to be confirmed against official docs (or the customer's tenant metadata) before an adapter relies on it. Every vendor has a connector and a setup screen that asks for exactly the fields that vendor needs (see `ErpSetupProfiles`).
+
+## Addresses and test results
+- Every address typed into a connection (base URL, token URL, NetSuite RESTlet URL, Entra authority, generic REST URLs) must be an absolute `https://` URL. The check runs when the connection is saved and again on every call, so token and next-page calls are covered too. Plain `http://` is refused, including loopback addresses.
+- For a local development or test setup only, set `Integrations__AllowHttpUrls=true` (appsettings `Integrations:AllowHttpUrls`) to accept plain `http://`. It is off by default and should never be on in production. Which hosts and networks can be reached is decided separately by the outbound network guard.
+- **Test connection** stores and shows only a short status, such as `Signed in OK`, `Authentication failed (401)`, `Could not reach host` or `Timed out reaching host`, plus the connector's own guidance when a setting is missing. Whatever the ERP sends back goes to the server log only, never to the screen, the validation history or the audit trail.
 
 ## Comparison matrix
 | ERP | M2M auth | Main API | Delta sync | Outbound events | Public docs | Sandbox |
@@ -18,6 +23,8 @@ Rule: every claim cites a vendor URL. Anything marked **UNVERIFIED** has to be c
 | D365 F&SCM | Entra client credentials | OData `/data` | SQL change tracking per entity | Business events (HTTPS/Service Bus/Event Grid) | Yes | Tier-2 |
 | Acumatica | OAuth (ROPC for server, no client creds) | Contract REST + MANUFACTURING endpoint | `LastModifiedDateTime` | Push notifications | Yes | Partner tenant |
 | Plex | Static `X-Plex-Connect-Api-Key` | Plex Connect REST | UNVERIFIED | None documented | Portal (login) | test.connect.plex.com |
+| QuickBooks Online | OAuth 2.0 authorization code, rotating refresh token | Accounting API v3 query (minor version 75) | `MetaData.LastUpdatedTime` | Webhooks (not used) | Yes | Sandbox companies |
+| Sage Intacct | Sender id/password + company user | XML gateway (readByQuery / readMore) | `WHENMODIFIED` | None used | Yes | Sandbox tenant |
 | DELMIAworks | Session login → token | WebAPI REST / GraphQL (licensed) | UNVERIFIED | UNVERIFIED | No (SDK only) | Customer test DB |
 
 ## Proposed connector framework (design only)

@@ -1,0 +1,403 @@
+# The PPAP set: one common data page and one characteristics list feed every submission form.
+# Fill a submission form from the common data page with "Fill from record": part, organization and customer details copy across by name,
+# and characteristic rows copy into dimensional, material, performance, inspection and control plan tables.
+
+template ppap-common-data | PPAP Common Data Page | PPAP
+packs automotive
+tags PPAP, common data, part, customer, supplier
+layout worksheet
+purpose Enter the part, organization, customer and submission details once so every PPAP form for the submission is filled from the same data.
+scope One page per part number and submission.
+instructions Complete this page first. When starting any PPAP form for the same submission, use Fill from record and pick this page; the part, organization, customer and submission details are copied, and each form keeps its own number, status and signatures. Change the details here and fill again rather than editing every form.
+workflow Prepared, checked against the purchase order and design record, approved.
+retention Keep with the submission package.
+use ppap_header, ppap_parties
+section ppap_contacts | Contacts | 3
+f supplier_quality_contact | Organization quality contact | user
+f supplier_contact_phone | Contact phone | text
+f supplier_contact_email | Contact email | text
+f customer_quality_contact | Customer quality engineer | text
+f customer_approver | Customer approver | text
+f ppap_due | Submission due date | date
+section ppap_scope | Submission scope | 2
+f ppap_elements_required | Elements required by the customer | multichoice | [Design record; Engineering change documents; Customer engineering approval; DFMEA; Process flow; PFMEA; Control plan; Measurement system studies; Dimensional results; Material and performance results; Initial process studies; Laboratory documentation; Appearance approval; Sample parts; Master sample; Checking aids; Customer-specific requirements; Part submission warrant; Bulk material requirements]
+f ppap_csr | Customer-specific requirements that apply | longtext
+f characteristics_list_ref | Characteristics list | record
+use ppap_signatures
+end
+
+template ppap-characteristics-list | PPAP Characteristics List | PPAP
+packs automotive
+tags PPAP, characteristics, balloon, special characteristics
+purpose Keep one numbered list of every characteristic on the design record, with its type, limits and measurement method, so the results forms and the control plan use the same numbers and limits.
+scope Every characteristic and note on the design record and the referenced specifications, for one part and engineering level.
+instructions Number characteristics to match the ballooned drawing. Give each a type: dimensional rows fill dimensional results and the inspection report, material and performance rows fill the test results forms, and every row can fill the control plan. Mark special characteristics with the customer's symbol where one is used.
+workflow Drafted from the ballooned drawing, checked, approved, revised with each engineering change.
+retention Keep with the submission package.
+layout register
+landscape
+use ppap_header
+section char_list | Characteristics | 1
+table characteristics | Characteristics | 1
+groups Characteristic:4; Specification:5; Control:2
+c char_no | No. | text | *
+c char_type | Type | choice | * [Dimensional; Material; Performance; Appearance; Process]
+c char_desc | Characteristic | text | *
+c char_class | Class | choice | [Special - safety; Special - fit or function; Key process; Standard]
+c char_spec | Specification | text
+c char_nominal | Nominal | number | dec=4
+c char_lsl | Lower limit (LSL) | number | dec=4
+c char_usl | Upper limit (USL) | number | dec=4
+c char_unit | Unit | text
+c char_method | Measurement method or gauge | text
+c char_symbol | Customer symbol | text
+rule characteristics.char_class | in | Special - safety,Special - fit or function | #FDE7E9 | bold
+section char_summary | Summary | 4
+f char_count | Characteristics | calc | {COUNTA(characteristics.char_no)}
+f char_dimensional | Dimensional | calc | {COUNTIF(characteristics.char_type, "Dimensional")}
+f char_material | Material and performance | calc | {COUNTIF(characteristics.char_type, "Material") + COUNTIF(characteristics.char_type, "Performance")}
+f char_special | Special characteristics | calc | {COUNTIF(characteristics.char_class, "Special - safety") + COUNTIF(characteristics.char_class, "Special - fit or function")}
+use ppap_signatures
+end
+
+template ppap-truck-warrant | Truck Industry Part Submission Warrant | PPAP
+packs automotive
+tags PPAP, warrant, truck, heavy vehicle
+purpose Declare, for a heavy truck or commercial vehicle customer, that submitted parts come from production tooling and processes and meet the design record, with the extra details those customers ask for.
+scope Part submissions to truck, bus, off-highway and other commercial vehicle customers that ask for a truck industry warrant.
+instructions Fill from the PPAP common data page, then complete the results and declaration after every required element is complete. Record whether the part is a service-only part and the vehicle application. The authorized person signs with re-authentication; the customer records its disposition.
+workflow Prepared, declaration signed, submitted, customer disposition recorded.
+retention Keep for the life of the part plus one calendar year after it is no longer active.
+use ppap_header, ppap_parties
+section truck_application | Vehicle application | 3
+f truck_model | Vehicle model or platform | text
+f truck_service_only | Service-only part | boolean
+f truck_safety_item | Safety or regulated item | boolean
+f truck_assembly_level | Assembly level | choice | [Component; Subassembly; Assembly; Kit]
+f truck_tool_owner | Tooling owner | choice | [Organization; Customer; Third party]
+f truck_tool_numbers | Tool numbers | text
+section truck_results | Results | 3
+f truck_dimensional_ok | Dimensional results meet requirements | boolean | *
+f truck_material_ok | Material results meet requirements | boolean | *
+f truck_performance_ok | Performance results meet requirements | boolean | *
+f truck_appearance_ok | Appearance requirements met | choice | [Yes; No; Not applicable]
+f truck_process_ok | Process capability and run at rate meet requirements | boolean
+f truck_substances | Restricted substances reported | choice | [Yes; No; Not applicable]
+f truck_all_ok | All results conform | calc | {IF(AND(truck_dimensional_ok, truck_material_ok, truck_performance_ok), "Yes", "No")}
+rule truck_all_ok | equals | No | #FDE7E9 | bold
+section truck_declaration | Declaration | 1
+note The authorized signature declares that the samples are representative of parts made with production tooling and processes, at the stated rate, and conform to the design record except where noted.
+f truck_exceptions | Exceptions or deviations | longtext
+f truck_rate | Production rate demonstrated (parts per hour) | number | min=0
+sign truck_authorized | Organization authorized signature | approved | I declare that the parts submitted represent production and conform to the design record except as noted. | apqp.approve
+sign truck_customer | Customer disposition | customer | The customer records its disposition of this submission. | | optional
+end
+
+template ppap-appearance-report | Appearance Evaluation Report | PPAP
+packs automotive
+tags PPAP, appearance, colour, measurement
+layout worksheet
+purpose Record measured colour and gloss of submission samples against the customer's masters, with the colour difference calculated for each sample.
+scope Painted, moulded-in-colour, plated and trimmed parts with measured appearance requirements.
+instructions Measure each sample and its master under the same conditions. Enter the master and sample readings; the colour difference is calculated and compared with the tolerance. Record visual results for grain and finish on the appearance approval.
+workflow Measured, reviewed, attached to the appearance approval.
+retention Keep with the submission package.
+landscape
+use ppap_header
+section aer_conditions | Conditions | 4
+f aer_instrument | Instrument | equipment
+f aer_illuminant | Illuminant and observer | text
+f aer_geometry | Geometry | text
+f aer_tolerance | Colour difference tolerance | number | * dec=2 min=0
+section aer_readings | Readings | 1
+table aer_rows | Samples | 1
+groups Sample:2; Master:3; Sample reading:3; Result:3
+c aer_sample | Sample | text | *
+c aer_colour | Colour or material | text
+c aer_m_l | L | number | dec=2
+c aer_m_a | a | number | dec=2
+c aer_m_b | b | number | dec=2
+c aer_s_l | L | number | * dec=2
+c aer_s_a | a | number | * dec=2
+c aer_s_b | b | number | * dec=2
+c aer_de | Colour difference | calc | {SQRT(POWER(aer_s_l - aer_m_l, 2) + POWER(aer_s_a - aer_m_a, 2) + POWER(aer_s_b - aer_m_b, 2))} dec=2
+c aer_gloss | Gloss | number | dec=1
+c aer_ok | OK | calc | {IF(aer_de <= aer_tolerance, "OK", "NOT OK")}
+rule aer_rows.aer_ok | equals | NOT OK | #FDE7E9 | bold
+f aer_not_ok | Samples not OK | calc | {COUNTIF(aer_rows.aer_ok, "NOT OK")}
+f appearance_approval_ref | Appearance approval | record
+use ppap_signatures
+end
+
+template ppap-bulk-material-checklist | Bulk Material Requirements Checklist | PPAP
+packs automotive
+tags PPAP, bulk material
+purpose Agree with the customer which planning and submission items apply to a bulk material, who owns each and when it is due, and track it to completion.
+scope Bulk materials such as adhesives, sealants, coatings, fluids, resins, fabrics and other materials supplied by volume or weight.
+instructions Mark each item required or not required with the customer at the start of planning. Give each required item an owner and target date, and record its status and record reference as the work progresses.
+workflow Agreed with the customer, in progress, complete.
+retention Keep with the submission package.
+use ppap_header, ppap_parties
+section bulk_items | Requirements | 1
+table bulk_rows | Items | 0
+rows Design matrix; Design FMEA; Special characteristics; Design records; Prototype control plan; Appearance approval; Master sample; Test results; Dimensional results; Checking aids; Customer engineering approval; Process flow diagram; Process FMEA; Pre-launch control plan; Production control plan; Measurement system studies; Initial process studies; Interim approval; Part submission warrant; Customer-specific requirements
+c bulk_required | Required | choice | [Required; Not required; To be agreed]
+c bulk_owner | Owner | user
+c bulk_due | Target date | date
+c bulk_status | Status | choice | [Not started; In progress; Complete; Not applicable]
+c bulk_record | Record | record
+c bulk_comment | Comment | text
+f bulk_required_count | Items required | calc | {COUNTIF(bulk_rows.bulk_required, "Required")}
+f bulk_complete_count | Items complete | calc | {COUNTIF(bulk_rows.bulk_status, "Complete")}
+use ppap_signatures
+end
+
+template ppap-design-matrix | Design Matrix | PPAP
+packs automotive
+tags PPAP, design matrix, bulk material, DFMEA
+purpose Relate each function of a material or design to the characteristics and formulation or process variables that drive it, so the critical ones are found and controlled.
+scope Bulk materials and designs where a design FMEA is supported by a matrix of functions against characteristics.
+instructions List each function the customer needs, then each characteristic or variable that affects it, and rate the strength of the relationship. Strong relationships with high severity are candidates for special characteristics and must appear on the control plan.
+workflow Drafted with the team, reviewed, approved.
+retention Keep for the life of the product plus ten years.
+landscape
+use ppap_header
+section dm_rows_section | Relationships | 1
+table dm_rows | Matrix | 1
+c dm_function | Function or requirement | text | *
+c dm_failure | Potential failure mode | text
+c dm_severity | Severity (1-10) | integer | min=1 max=10
+c dm_characteristic | Characteristic or variable | text | *
+c dm_strength | Relationship | choice | * [Strong; Medium; Weak]
+c dm_weight | Weight | calc | {IF(dm_strength = "Strong", 9, IF(dm_strength = "Medium", 3, 1))}
+c dm_score | Score | calc | {dm_weight * dm_severity}
+c dm_control | Control or test | text
+c dm_special | Special characteristic | boolean
+rule dm_rows.dm_strength | equals | Strong | #FFF4D6 | bold
+f dm_top_score | Highest score | calc | {MAX(dm_rows.dm_score)}
+use ppap_signatures
+end
+
+template ppap-inspection-report | PPAP Inspection Report | PPAP
+packs automotive
+tags PPAP, inspection, characteristics
+layout worksheet
+landscape
+purpose Record up to five measured samples for each characteristic of a submission and decide each characteristic and the part.
+scope Submission samples and re-submissions; any part where the customer asks for individual readings.
+instructions Fill from the characteristics list so numbers and limits match the drawing, then enter each sample reading. The lowest and highest readings and the decision are calculated.
+workflow Measured, recorded, reviewed, approved.
+retention Keep with the submission package.
+use ppap_header
+section ir_basis | Inspection | 4
+f ir_inspector | Inspected by | user | *
+f ir_date | Inspection date | date | *
+f ir_lot | Lot or batch | text
+f ir_equipment | Main equipment | equipment
+section ir_results | Results | 1
+table ir_rows | Characteristics | 1
+tablefrom characteristics?char_type=Dimensional
+groups Characteristic:2; Limits:2; Readings:5; Result:3
+c ir_no | No. | text | * from=char_no
+c ir_char | Characteristic | text | * from=char_desc
+c ir_lsl | LSL | number | dec=4 from=char_lsl
+c ir_usl | USL | number | dec=4 from=char_usl
+c ir_s1 | 1 | number | dec=4
+c ir_s2 | 2 | number | dec=4
+c ir_s3 | 3 | number | dec=4
+c ir_s4 | 4 | number | dec=4
+c ir_s5 | 5 | number | dec=4
+c ir_min | Lowest | calc | {MIN(ir_s1, ir_s2, ir_s3, ir_s4, ir_s5)} dec=4
+c ir_max | Highest | calc | {MAX(ir_s1, ir_s2, ir_s3, ir_s4, ir_s5)} dec=4
+c ir_ok | OK | calc | {IF(COUNT(ir_s1, ir_s2, ir_s3, ir_s4, ir_s5) = 0, "", IF(AND(OR(ISBLANK(ir_lsl), ir_min >= ir_lsl), OR(ISBLANK(ir_usl), ir_max <= ir_usl)), "OK", "NOT OK"))}
+rule ir_rows.ir_ok | equals | NOT OK | #FDE7E9 | bold
+section ir_summary | Decision | 3
+f ir_count | Characteristics | calc | {COUNTA(ir_rows.ir_no)}
+f ir_not_ok | Not OK | calc | {COUNTIF(ir_rows.ir_ok, "NOT OK")}
+f ir_decision | Part decision | calc | {IF(ir_not_ok = 0, "Accept", "Reject")}
+rule ir_decision | equals | Reject | #FDE7E9 | bold
+use ppap_signatures
+end
+
+template ppap-interim-recovery | Interim Approval Recovery Worksheet | PPAP
+packs automotive
+tags PPAP, interim approval, recovery
+purpose Plan and track the work that closes each open issue behind an interim approval so full approval is reached before the interim approval expires.
+scope Every submission that has been granted interim approval.
+instructions List each issue that prevented full approval, its cause, the recovery action, owner and date. Keep the status current; the days left before expiry are calculated. Resubmit when every issue is closed.
+workflow Plan agreed with the customer, actions in progress, resubmitted, closed.
+retention Keep with the submission package.
+use ppap_header
+section ir_interim | Interim approval | 3
+f interim_number | Interim approval number | text | *
+f interim_class | Interim approval class | choice | [Class A - parts meet requirements, documentation incomplete; Class B - parts do not meet requirements, rework or deviation; Class C - parts do not meet requirements, significant issue; Other]
+f interim_expires | Interim approval expires | date | *
+f interim_days_left | Days left | calc | {IF(ISBLANK(interim_expires), "", DAYS(interim_expires, TODAY()))}
+f interim_quantity | Quantity or time limit | text
+rule interim_days_left | lessThan | 15 | #FFF4D6 | bold
+section ir_issues | Open issues | 1
+table recovery_rows | Issues | 1
+c rec_issue | Issue | text | *
+c rec_element | Element | text
+c rec_cause | Cause | text
+c rec_action | Recovery action | longtext | *
+c rec_owner | Owner | user | *
+c rec_due | Due | date | *
+c rec_status | Status | choice | [Open; In progress; Closed]
+c rec_evidence | Evidence | text
+f rec_open | Issues open | calc | {COUNTA(recovery_rows.rec_issue) - COUNTIF(recovery_rows.rec_status, "Closed")}
+f rec_ready | Ready to resubmit | calc | {IF(AND(COUNTA(recovery_rows.rec_issue) > 0, rec_open = 0), "Yes", "No")}
+use ppap_signatures
+end
+
+template ppap-engineering-source-approval | Engineering Source Approval | PPAP
+packs automotive
+tags PPAP, source approval, material, engineering
+purpose Request and record the customer's engineering approval of a material or component source before parts using it are submitted.
+scope Materials and components the customer controls by an approved source list, and changes of source for them.
+instructions Identify the material, its specification and the proposed source, attach the test evidence that it meets the specification, and record the customer's decision and any limits on the approval.
+workflow Requested, evidence reviewed, customer decision recorded.
+retention Keep for the life of the part plus one calendar year.
+use ppap_header, ppap_parties
+section esa_material | Material and source | 3
+f esa_material | Material or component | text | *
+f esa_specification | Material specification | text | *
+f esa_source | Proposed source | supplier | *
+f esa_source_location | Source manufacturing location | text
+f esa_trade_name | Trade name or grade | text
+f esa_reason | Reason | choice | * [New source; Additional source; Source location change; Formulation change; Other]
+section esa_evidence | Evidence | 1
+table esa_tests | Test results | 1
+c esa_test | Test | text | *
+c esa_requirement | Requirement | text | *
+c esa_result | Result | text | *
+c esa_lab | Laboratory | text
+c esa_ok | Meets requirement | passfail | *
+f esa_failed | Tests failed | calc | {COUNTIF(esa_tests.esa_ok, "fail")}
+f esa_files | Test reports | attachment
+section esa_decision | Customer decision | 2
+f esa_decision_value | Decision | choice | [Approved; Approved with limits; Rejected; Pending]
+f esa_limits | Limits on the approval | longtext | when=esa_decision_value=Approved_with_limits
+f esa_approval_number | Approval number | text
+f esa_valid_until | Valid until | date
+use ppap_signatures
+end
+
+template ppap-bulk-interim-approval | Bulk Material Interim Approval | PPAP
+packs automotive
+tags PPAP, bulk material, interim approval
+purpose Record a time-limited approval to ship a bulk material while named submission items are completed, with the status of each item and the date full approval is due.
+scope Bulk materials whose submission is not complete when shipments must start.
+instructions Record the status of each submission item, why full approval cannot be given now, the plan to complete it and the expiry. Track the plan on the interim approval recovery worksheet.
+workflow Requested, customer decision recorded, closed by full approval.
+retention Keep with the submission package.
+use ppap_header, ppap_parties
+section bia_status | Item status | 1
+table bia_rows | Items | 0
+rows Dimensional; Appearance; Laboratory; Process; Engineering; Documentation; Other
+c bia_state | Status | choice | [Approved; Interim; Not submitted; Not applicable]
+c bia_issue | Issue | text
+c bia_plan | Completion plan | text
+c bia_due | Due | date
+section bia_terms | Terms | 2
+f bia_reason | Reason full approval is not possible | longtext | *
+f bia_quantity_limit | Quantity limit | text
+f bia_expires | Expires | date | *
+f bia_recovery_ref | Recovery worksheet | record
+f bia_decision | Customer decision | choice | [Interim approval granted; Rejected; Pending]
+f bia_number | Interim approval number | text
+use ppap_signatures
+end
+
+template ppap-process-matrix | Process Matrix | PPAP
+packs automotive
+tags PPAP, process matrix, characteristics, operations
+purpose Show which operation creates, changes or checks each characteristic, so every characteristic has a home in the process and a control in the control plan.
+scope Every part in quality planning, built from the process flow and the characteristics list.
+instructions List each operation from the process flow and each characteristic it affects. Mark whether the operation creates, changes or only checks the characteristic, and name the control. A characteristic no operation creates is a gap to resolve.
+workflow Drafted with the team, reviewed against the control plan, approved.
+retention Keep for the life of the product plus ten years.
+landscape
+use ppap_header
+section pm_section | Matrix | 1
+table pm_rows | Operations and characteristics | 1
+c pm_op | Operation | text | *
+c pm_op_name | Operation name | text
+c pm_char_no | Characteristic no. | text | * from=char_no
+c pm_char | Characteristic | text | from=char_desc
+c pm_effect | Effect | choice | * [Creates; Changes; Checks]
+c pm_special | Special characteristic | boolean
+c pm_control | Control | text
+rule pm_rows.pm_special | equals | true | #FFF4D6 | bold
+f pm_creates | Characteristics created | calc | {COUNTIF(pm_rows.pm_effect, "Creates")}
+f pm_checks | Checks | calc | {COUNTIF(pm_rows.pm_effect, "Checks")}
+use ppap_signatures
+end
+
+template ppap-pqp-summary | Product Quality Planning Summary | PPAP
+packs automotive
+tags PPAP, APQP, quality planning, summary, sign-off
+purpose Summarize the state of quality planning for a part on one page: each planning item, its status and the team's sign-off before launch.
+scope Every part in quality planning, at each gate and before the production submission.
+instructions Rate each item green, yellow or red with a short comment and the record it rests on. The summary counts the items in each state; red items need a recovery plan before the gate is passed.
+workflow Reviewed by the team, signed at each gate.
+retention Keep for the life of the program plus ten years.
+use ppap_header
+section pqp_items | Planning items | 1
+table pqp_rows | Items | 0
+rows Feasibility commitment; Design and process FMEA; Special characteristics; Process flow; Control plan; Measurement systems; Gauges and checking aids; Process capability; Run at rate and capacity; Packaging; Dimensional results; Material and performance results; Appearance; Supplier readiness; Operator instructions and training; Part submission
+c pqp_status | Status | choice | [Green; Yellow; Red; Not applicable]
+c pqp_owner | Owner | user
+c pqp_comment | Comment | text
+c pqp_record | Record | record
+rule pqp_rows.pqp_status | equals | Red | #FDE7E9 | bold
+rule pqp_rows.pqp_status | equals | Yellow | #FFF4D6
+section pqp_totals | Summary | 4
+f pqp_green | Green | calc | {COUNTIF(pqp_rows.pqp_status, "Green")}
+f pqp_yellow | Yellow | calc | {COUNTIF(pqp_rows.pqp_status, "Yellow")}
+f pqp_red | Red | calc | {COUNTIF(pqp_rows.pqp_status, "Red")}
+f pqp_ready | Ready for launch | calc | {IF(AND(pqp_red = 0, pqp_yellow = 0, pqp_green > 0), "Yes", "No")}
+rule pqp_ready | equals | No | #FFF4D6 | bold
+sign pqp_quality | Quality planning lead | prepared | I confirm the status recorded for each item.
+sign pqp_engineering | Engineering | reviewed | I agree with the status recorded.
+sign pqp_manufacturing | Manufacturing | reviewed | I agree with the status recorded.
+sign pqp_approval | Program approval | approved | I accept this quality planning summary. | apqp.approve
+end
+
+template ppap-data-point-coordinates | Data Point Coordinates | PPAP
+packs automotive
+tags PPAP, coordinates, CMM, dimensional
+layout worksheet
+landscape
+purpose Record measured coordinates of surface and hole points against their nominal positions, with the deviation of each point calculated and compared with its tolerance.
+scope Bodies, panels, castings and other parts checked by coordinate measurement or fixtures against point data.
+instructions Enter each point's nominal X, Y and Z from the design data and the measured values. Deviations along each axis and the total deviation are calculated; a point is OK when its total deviation is within the tolerance.
+workflow Measured, recorded, reviewed, attached to the dimensional results.
+retention Keep with the submission package.
+use ppap_header
+section dpc_setup | Measurement | 4
+f dpc_machine | Measuring machine | equipment
+f dpc_program | Program | text
+f dpc_alignment | Alignment or datum scheme | text
+f dpc_operator | Measured by | user
+section dpc_points | Points | 1
+table dpc_rows | Points | 1
+groups Point:2; Nominal:3; Measured:3; Deviation:4; Result:2
+c dpc_id | Point | text | *
+c dpc_feature | Feature | text
+c dpc_nx | X | number | * dec=3
+c dpc_ny | Y | number | * dec=3
+c dpc_nz | Z | number | * dec=3
+c dpc_mx | X | number | dec=3
+c dpc_my | Y | number | dec=3
+c dpc_mz | Z | number | dec=3
+c dpc_dx | dX | calc | {IF(ISNUMBER(dpc_mx), dpc_mx - dpc_nx, "")} dec=3
+c dpc_dy | dY | calc | {IF(ISNUMBER(dpc_my), dpc_my - dpc_ny, "")} dec=3
+c dpc_dz | dZ | calc | {IF(ISNUMBER(dpc_mz), dpc_mz - dpc_nz, "")} dec=3
+c dpc_total | Total | calc | {IF(ISNUMBER(dpc_mx), SQRT(POWER(dpc_mx - dpc_nx, 2) + POWER(dpc_my - dpc_ny, 2) + POWER(dpc_mz - dpc_nz, 2)), "")} dec=3
+c dpc_tol | Tolerance | number | * dec=3 min=0
+c dpc_ok | OK | calc | {IF(ISNUMBER(dpc_mx), IF(dpc_total <= dpc_tol, "OK", "NOT OK"), "")}
+rule dpc_rows.dpc_ok | equals | NOT OK | #FDE7E9 | bold
+f dpc_not_ok | Points not OK | calc | {COUNTIF(dpc_rows.dpc_ok, "NOT OK")}
+use ppap_signatures
+end

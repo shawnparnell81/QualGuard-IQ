@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Link, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { get, post, put } from '../api';
 import { useAuth } from '../auth';
@@ -17,16 +17,35 @@ const syncMode = ['Disabled', 'Auto', 'Approval required'];
 const conflict = ['ERP wins', 'QMS wins', 'Manual'];
 const runStatus = ['Running', 'Succeeded', 'Failed', 'PartiallySucceeded'];
 export const changeStatus = ['Pending', 'PendingApproval', 'Applied', 'Rejected', 'Failed', 'Superseded'];
-const systems: [string, string][] = [['NetSuite', 'Oracle NetSuite'], ['Sap', 'SAP'], ['Oracle', 'Oracle Fusion Cloud SCM'], ['Dynamics', 'Microsoft Dynamics 365'], ['Acumatica', 'Acumatica'], ['Infor', 'Infor'], ['Epicor', 'Epicor Kinetic'], ['Plex', 'Plex Smart Manufacturing'], ['DelmiaWorks', 'DELMIAworks (IQMS)'], ['BcManufacturing', 'Business Central manufacturing'], ['CustomRest', 'Generic REST'], ['CsvExchange', 'CSV exchange']];
+const systems: [string, string][] = [['NetSuite', 'Oracle NetSuite'], ['Sap', 'SAP'], ['Oracle', 'Oracle Fusion Cloud SCM'], ['Dynamics', 'Microsoft Dynamics 365'], ['Acumatica', 'Acumatica'], ['Infor', 'Infor'], ['Epicor', 'Epicor Kinetic'], ['Plex', 'Plex Smart Manufacturing'], ['DelmiaWorks', 'DELMIAworks (IQMS)'], ['BcManufacturing', 'Business Central manufacturing'], ['QuickBooks', 'QuickBooks Online'], ['SageIntacct', 'Sage Intacct'], ['CustomRest', 'Generic REST'], ['CsvExchange', 'CSV exchange']];
 /** Wire values of the server's ErpSystem enum. */
-const sysCode: Record<string, number> = { NetSuite: 0, Sap: 1, Oracle: 2, Dynamics: 3, Acumatica: 4, Infor: 5, Epicor: 6, Plex: 7, DelmiaWorks: 8, CustomRest: 20, CsvExchange: 21 };
+const sysCode: Record<string, number> = { NetSuite: 0, Sap: 1, Oracle: 2, Dynamics: 3, Acumatica: 4, Infor: 5, Epicor: 6, Plex: 7, DelmiaWorks: 8, BcManufacturing: 9, QuickBooks: 10, SageIntacct: 11, CustomRest: 20, CsvExchange: 21 };
 const sysLabel = (s: string) => systems.find(([k]) => k === s)?.[1] ?? s;
+/** The vendor's own setup guide for each ERP (the sources behind each setup screen). */
+const setupGuides: Record<string, string> = {
+  NetSuite: 'https://docs.oracle.com/en/cloud/saas/netsuite/ns-online-help/section_157771510070.html',
+  Sap: 'https://api.sap.com/products/SAPS4HANACloud/apis/packages',
+  Oracle: 'https://docs.oracle.com/en/cloud/saas/applications-common/26c/farca/Quick_Start.html',
+  Dynamics: 'https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/automation-apis-using-s2s-authentication',
+  BcManufacturing: 'https://learn.microsoft.com/en-us/dynamics365/business-central/dev-itpro/administration/automation-apis-using-s2s-authentication',
+  Acumatica: 'https://beacon.acumatica.com/r/Form-Reference-Guide/Integration-Forms/Connected-Applications',
+  Infor: 'https://docs.infor.com/inforos/latest/en-us/useradminlib_cloud/etl_dl_ag/oda1623328668051.html',
+  Epicor: 'https://www.epicor.com/en-us/products/enterprise-resource-planning-erp/kinetic/tools-and-technology/open-rest-api/',
+  Plex: 'https://developers.plex.com/getstarted',
+  DelmiaWorks: 'https://www.solidworks.com/product/delmiaworks/manufacturing-erp/web-api/',
+  QuickBooks: 'https://developer.intuit.com/app/developer/qbo/docs/develop/authentication-and-authorization/oauth-2.0',
+  SageIntacct: 'https://developer.intacct.com/web-services/',
+};
+/** Long values (URLs, API names) wrap inside their panel instead of widening the page. */
+const wrapSx = { minWidth: 0, overflowWrap: 'anywhere', wordBreak: 'break-word' } as const;
 const mnum = (x: { getValue: () => unknown }) => <span style={{ fontFamily: mono }}>{String(x.getValue() ?? '')}</span>;
 
 interface Unverified { topic: string; detail: string; source: string }
 interface Caps { edition: string; read: number[]; write: number[]; delta: boolean; auth: string; api: string; paging: string; rateLimits: string; events: string; defaultConcurrency: number; defaultRequestsPerMinute: number; doc: string }
-interface Adapter { system: string; editions: { edition: string; capabilities: Caps; unverified: Unverified[]; setupNotes: string }[] }
-interface Conn { id: string; name: string; system: string; edition: string; baseUrl: string; account?: string; company?: string; clientId?: string; username?: string; options: Record<string, unknown>; hasSecret: boolean; hasSecondarySecret: boolean; secretSetAt?: string; enabled: boolean; allowWrites: boolean; maxConcurrency: number; requestsPerMinute: number; inventorySystemOfRecord: boolean; setupNotes: string; adminNotes?: string; lastTestAt?: string; lastTestOk?: boolean; lastTestMessage?: string; environment?: string; siteId: string; departmentId?: string }
+interface SetupField { key: string; label: string; kind: 'text' | 'url' | 'number' | 'select' | 'secret' | 'file'; target: string; required: boolean; group: string; help?: string; placeholder?: string; choices?: string[]; default?: string; showWhen?: string; isSecret: boolean }
+interface SetupProfile { title: string; prepare: string[]; fields: SetupField[]; rotatingSecrets: string[] }
+interface Adapter { system: string; editions: { edition: string; capabilities: Caps; unverified: Unverified[]; setupNotes: string; setup?: SetupProfile | null }[] }
+interface Conn { id: string; name: string; system: string; edition: string; baseUrl: string; account?: string; company?: string; clientId?: string; username?: string; options: Record<string, unknown>; hasSecret: boolean; hasSecondarySecret: boolean; secretNames?: string[]; secretSetAt?: string; enabled: boolean; allowWrites: boolean; maxConcurrency: number; requestsPerMinute: number; inventorySystemOfRecord: boolean; setupNotes: string; adminNotes?: string; lastTestAt?: string; lastTestOk?: boolean; lastTestMessage?: string; environment?: string; siteId: string; departmentId?: string }
 interface Mapping { id: string; entity: number; direction: number; mode: number; conflict: number; cron: string; nextRunAt?: string; fieldMap: string; validationRules: string; version: number }
 interface Run { id: string; entity: number; startedAt: string; finishedAt?: string; status: number; read: number; created: number; updated: number; unchanged: number; queued: number; rejected: number; requests: number; error?: string; trigger: string }
 interface Change { id: string; number: string; connectionId: string; entity: number; externalId: string; action: string; before?: string; after: string; validationErrors?: string; status: number; localType?: string; localId?: string; decisionNote?: string; appliedAt?: string; createdAt: string }
@@ -115,58 +134,141 @@ export function ConnectionList() {
   );
 }
 
+const directTargets = ['baseUrl', 'account', 'company', 'clientId', 'username'] as const;
+type Direct = (typeof directTargets)[number];
+
+/** Whether a stored secret exists for a profile field. */
+export function secretStored(c: Conn | undefined, f: SetupField) {
+  if (!c) return false;
+  if (f.target === 'secret') return c.hasSecret;
+  if (f.target === 'secondarySecret') return c.hasSecondarySecret;
+  return (c.secretNames ?? []).includes(f.target.slice(7));
+}
+
+/** Shows a field when its showWhen option matches (falling back to that option's default). */
+function applies(f: SetupField, fields: SetupField[], opts: Record<string, string>) {
+  if (!f.showWhen) return true;
+  const [k, want] = f.showWhen.split('=');
+  const def = fields.find((x) => x.target === `option:${k}`)?.default ?? '';
+  return (opts[k] || def) === want;
+}
+
+/** Splits secret inputs into the request body for PUT /secrets (null keeps the stored value). */
+function secretBody(fields: SetupField[], values: Record<string, string>) {
+  const body: { secret: string | null; secondarySecret: string | null; named: Record<string, string> } = { secret: null, secondarySecret: null, named: {} };
+  for (const f of fields.filter((x) => x.isSecret)) {
+    const val = values[f.key];
+    if (!val) continue;
+    if (f.target === 'secret') body.secret = val; else if (f.target === 'secondarySecret') body.secondarySecret = val; else body.named[f.target.slice(7)] = val;
+  }
+  return body;
+}
+
+function FileSecret({ f, value, onChange, stored }: { f: SetupField; value: string; onChange: (v: string) => void; stored: boolean }) {
+  return (
+    <Stack gap={0.5} sx={{ gridColumn: '1 / -1' }}>
+      <TextField label={f.label} required={f.required && !stored} multiline minRows={3} value={value} onChange={(e) => onChange(e.target.value)} type="password"
+        helperText={`${f.help ?? ''}${stored ? ' Stored and encrypted; leave blank to keep it.' : ''}`.trim() || undefined} sx={{ '& textarea': { fontFamily: mono, fontSize: 12 } }} />
+      <Box><Button size="small" component="label">Load from file<input hidden type="file" aria-label={`Load ${f.label}`} onChange={async (e) => { const file = e.target.files?.[0]; if (file) onChange(await file.text()); }} /></Button></Box>
+    </Stack>
+  );
+}
+
 function ConnectionForm({ initial, onSaved }: { initial?: Conn; onSaved: (id: string) => void }) {
   const adapters = useAdapters();
   const sites = useSites();
   const [v, setV] = useState({ name: initial?.name ?? '', system: initial?.system ?? 'NetSuite', edition: initial?.edition ?? '', baseUrl: initial?.baseUrl ?? '', account: initial?.account ?? '', company: initial?.company ?? '', clientId: initial?.clientId ?? '', username: initial?.username ?? '',
-    options: JSON.stringify(initial?.options ?? {}, null, 2), maxConcurrency: String(initial?.maxConcurrency ?? ''), requestsPerMinute: String(initial?.requestsPerMinute ?? ''), adminNotes: initial?.adminNotes ?? '', siteId: initial?.siteId ?? '', environment: initial?.environment ?? 'Sandbox' });
+    maxConcurrency: String(initial?.maxConcurrency ?? ''), requestsPerMinute: String(initial?.requestsPerMinute ?? ''), adminNotes: initial?.adminNotes ?? '', siteId: initial?.siteId ?? '', environment: initial?.environment ?? 'Sandbox' });
+  const [opts, setOpts] = useState<Record<string, string>>(() => Object.fromEntries(Object.entries(initial?.options ?? {}).map(([k, x]) => [k, x == null ? '' : String(x)])));
+  const [secretsIn, setSecretsIn] = useState<Record<string, string>>({});
+  const [extra, setExtra] = useState('');
   const [error, setError] = useState<string | null>(null);
   const set = (k: string) => (e: { target: { value: string } }) => setV({ ...v, [k]: e.target.value });
   const ad = adapters.data?.find((a) => a.system === v.system);
   const ed = ad?.editions.find((e) => e.edition === v.edition) ?? ad?.editions[0];
+  const profile = ed?.setup ?? null;
+  const fields = (profile?.fields ?? []).filter((f) => applies(f, profile!.fields, opts));
+  const groups = [...new Set(fields.map((f) => f.group))];
+  const profileOptions = new Set((profile?.fields ?? []).filter((f) => f.target.startsWith('option:')).map((f) => f.target.slice(7)));
+  const value = (f: SetupField) => f.isSecret ? secretsIn[f.key] ?? '' : f.target.startsWith('option:') ? opts[f.target.slice(7)] ?? '' : (v[f.target as Direct] ?? '');
+  const change = (f: SetupField, x: string) => {
+    if (f.isSecret) setSecretsIn({ ...secretsIn, [f.key]: x });
+    else if (f.target.startsWith('option:')) setOpts({ ...opts, [f.target.slice(7)]: x });
+    else setV({ ...v, [f.target]: x });
+  };
+  const input = (f: SetupField) => {
+    const stored = f.isSecret && secretStored(initial, f);
+    if (f.kind === 'file') return <FileSecret key={f.key} f={f} value={value(f)} onChange={(x) => change(f, x)} stored={stored} />;
+    const helper = `${f.help ?? ''}${stored ? ' Stored and encrypted; leave blank to keep it.' : f.isSecret ? ' Encrypted when saved and never shown again.' : ''}${!f.isSecret && f.default ? ` Default ${f.default}.` : ''}`.trim();
+    return <TextField key={f.key} label={f.label} required={f.required && !stored} value={value(f)} onChange={(e) => change(f, e.target.value)} select={f.kind === 'select'}
+      type={f.isSecret ? 'password' : f.kind === 'number' ? 'number' : 'text'} placeholder={f.placeholder} helperText={helper || undefined} autoComplete={f.isSecret ? 'new-password' : undefined}
+      sx={f.kind === 'url' ? { gridColumn: '1 / -1' } : undefined}>
+      {f.kind === 'select' && (f.choices ?? []).map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}
+    </TextField>;
+  };
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 380px' }, gap: 2 }}>
-      <Paper sx={{ p: 3, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, alignSelf: 'start' }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) 380px' }, gap: 2, minWidth: 0 }}>
+      <Paper sx={{ p: { xs: 2, sm: 3 }, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 2, alignSelf: 'start', ...wrapSx }} data-testid="erp-setup">
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Name" value={v.name} onChange={set('name')} sx={{ gridColumn: '1 / -1' }} />
-        <TextField select label="System" value={v.system} disabled={!!initial} onChange={(e) => setV({ ...v, system: e.target.value, edition: '' })}>{systems.map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}</TextField>
-        <TextField select label="Edition" value={ed?.edition ?? ''} onChange={set('edition')}>{(ad?.editions ?? []).map((e) => <MenuItem key={e.edition} value={e.edition}>{e.edition}</MenuItem>)}</TextField>
-        <TextField label="Base URL" value={v.baseUrl} onChange={set('baseUrl')} sx={{ gridColumn: '1 / -1' }} helperText="https only" />
-        <TextField label="Account / tenant" value={v.account} onChange={set('account')} />
-        <TextField label="Company / database" value={v.company} onChange={set('company')} />
-        <TextField label="Client id" value={v.clientId} onChange={set('clientId')} />
-        <TextField label="User name" value={v.username} onChange={set('username')} />
+        <TextField select label="System" value={v.system} disabled={!!initial} onChange={(e) => { setV({ ...v, system: e.target.value, edition: '' }); setOpts({}); setSecretsIn({}); }}>{systems.map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}</TextField>
+        <TextField select label="Edition" value={ed?.edition ?? ''} onChange={(e) => { setV({ ...v, edition: e.target.value }); setSecretsIn({}); }}>{(ad?.editions ?? []).map((e) => <MenuItem key={e.edition} value={e.edition}>{e.setup?.title ?? e.edition}</MenuItem>)}</TextField>
+        {profile && profile.prepare.length > 0 && <Alert severity="info" icon={false} sx={{ gridColumn: '1 / -1' }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>Before you start, in {sysLabel(v.system)}:</Typography>
+          <Box component="ol" sx={{ m: 0, pl: 2.5 }}>{profile.prepare.map((x) => <li key={x}><Typography variant="body2">{x}</Typography></li>)}</Box>
+        </Alert>}
+        {groups.map((g) => <Box key={g} sx={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))' }, gap: 2, minWidth: 0 }}>
+          <Typography variant="overline" color="text.secondary" sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', lineHeight: 2 }}>{g}</Typography>
+          {fields.filter((f) => f.group === g).map(input)}
+        </Box>)}
+        <Typography variant="overline" color="text.secondary" sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', lineHeight: 2 }}>Ownership and limits</Typography>
+        <TextField select label="Site" value={v.siteId} onChange={set('siteId')}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>
+        <TextField select label="Environment" value={v.environment} onChange={set('environment')} helperText="Changing it puts every validation gate back to not run.">{environments.map((e) => <MenuItem key={e} value={e}>{e}</MenuItem>)}</TextField>
         <TextField label="Max concurrency" type="number" value={v.maxConcurrency} onChange={set('maxConcurrency')} helperText={ed ? `Default ${ed.capabilities.defaultConcurrency}` : undefined} />
         <TextField label="Requests per minute" type="number" value={v.requestsPerMinute} onChange={set('requestsPerMinute')} helperText={ed ? `Default ${ed.capabilities.defaultRequestsPerMinute}` : undefined} />
-        <TextField label="Options (JSON)" multiline minRows={4} value={v.options} onChange={set('options')} sx={{ gridColumn: '1 / -1', '& textarea': { fontFamily: mono, fontSize: 12.5 } }} />
-        <TextField select label="Site" value={v.siteId} onChange={set('siteId')}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>
-        <TextField label="Admin notes" value={v.adminNotes} onChange={set('adminNotes')} />
-        <TextField select label="Environment" value={v.environment} onChange={set('environment')} helperText="Changing it puts every validation gate back to not run.">{environments.map((e) => <MenuItem key={e} value={e}>{e}</MenuItem>)}</TextField>
+        <TextField label="Admin notes" value={v.adminNotes} onChange={set('adminNotes')} sx={{ gridColumn: '1 / -1' }} />
+        <TextField label="Other options (JSON)" multiline minRows={2} value={extra} onChange={(e) => setExtra(e.target.value)} sx={{ gridColumn: '1 / -1', '& textarea': { fontFamily: mono, fontSize: 12.5 } }}
+          helperText={`Only for settings not on this screen, for example per-entity paths.${Object.keys(opts).filter((k) => !profileOptions.has(k)).length ? ` Stored now: ${Object.keys(opts).filter((k) => !profileOptions.has(k)).join(', ')}.` : ''}`} />
         <Stack direction="row" gap={1} sx={{ gridColumn: '1 / -1' }}>
           <Button variant="contained" onClick={async () => {
             setError(null);
-            let options: unknown;
-            try { options = JSON.parse(v.options || '{}'); } catch { setError('Options must be valid JSON.'); return; }
+            let more: Record<string, unknown> = {};
+            try { more = extra.trim() ? JSON.parse(extra) : {}; } catch { setError('Other options must be valid JSON.'); return; }
+            const options: Record<string, unknown> = { ...more };
+            for (const [k, x] of Object.entries(opts)) if (x !== '' && options[k] === undefined) options[k] = k === 'pageSize' && !isNaN(Number(x)) ? Number(x) : x;
             const body = { name: v.name, system: sysCode[v.system], edition: ed?.edition ?? null, baseUrl: v.baseUrl || null, account: v.account || null, company: v.company || null, clientId: v.clientId || null, username: v.username || null, options,
               maxConcurrency: v.maxConcurrency ? Number(v.maxConcurrency) : null, requestsPerMinute: v.requestsPerMinute ? Number(v.requestsPerMinute) : null, inventorySystemOfRecord: initial?.inventorySystemOfRecord ?? false, adminNotes: v.adminNotes || null, siteId: v.siteId, departmentId: null, environment: environments.indexOf(v.environment) };
-            try { const r = initial ? await put<Conn>(`/api/integrations/${initial.id}`, body) : await post<Conn>('/api/integrations', body); onSaved(r.id); }
+            try {
+              const r = initial ? await put<Conn>(`/api/integrations/${initial.id}`, body) : await post<Conn>('/api/integrations', body);
+              const sb = secretBody(profile?.fields ?? [], secretsIn);
+              if (sb.secret || sb.secondarySecret || Object.keys(sb.named).length) await put(`/api/integrations/${r.id}/secrets`, sb);
+              setSecretsIn({}); setExtra('');
+              onSaved(r.id);
+            }
             catch (e) { setError((e as Error).message); }
           }}>{initial ? 'Save settings' : 'Create connection (off)'}</Button>
         </Stack>
       </Paper>
-      {ed && <AdapterNotes caps={ed.capabilities} unverified={ed.unverified} notes={ed.setupNotes} />}
+      {ed && <AdapterNotes system={v.system} caps={ed.capabilities} unverified={ed.unverified} />}
     </Box>
   );
 }
 
-function AdapterNotes({ caps, unverified, notes }: { caps: Caps; unverified: Unverified[]; notes: string }) {
+function AdapterNotes({ system, caps, unverified }: { system: string; caps: Caps; unverified: Unverified[] }) {
+  const guide = setupGuides[system];
   return (
-    <Stack gap={2}>
+    <Stack gap={2} sx={wrapSx}>
       <Section title="What this adapter does">
-        <Facts items={[['Auth', caps.auth], ['API', caps.api], ['Reads', caps.read.map((e) => erpEntities[e]).join(', ')], ['Writes', caps.write.length ? caps.write.map((e) => erpEntities[e]).join(', ') : 'None (read-only)'], ['Delta', caps.delta ? 'Yes' : 'Full read + hash skip'], ['Paging', caps.paging], ['Rate limits', caps.rateLimits], ['Events', caps.events], ['Research', caps.doc]]} />
+        <Facts items={[['Auth', caps.auth], ['API', caps.api], ['Reads', caps.read.map((e) => erpEntities[e]).join(', ')], ['Writes', caps.write.length ? caps.write.map((e) => erpEntities[e]).join(', ') : 'None (read-only)'], ['Delta', caps.delta ? 'Yes' : 'Full read + hash skip'], ['Paging', caps.paging], ['Rate limits', caps.rateLimits], ['Events', caps.events]]} />
       </Section>
-      {notes && <Section title="Setup notes"><Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>{notes}</Typography></Section>}
-      <Paper sx={{ p: 2, borderLeft: 4, borderLeftColor: 'warning.main' }}>
+      <Section title="Setup notes">
+        <Typography variant="body2">
+          {unverified.length ? `Confirm the ${unverified.length} item${unverified.length === 1 ? '' : 's'} below against the customer's sandbox before switching the connection on.` : 'Nothing is waiting to be confirmed for this edition.'}
+          {' '}The fields on the setup screen follow {sysLabel(system)}'s own setup steps.
+        </Typography>
+        {guide && <Link href={guide} target="_blank" rel="noopener noreferrer" variant="body2" sx={{ display: 'inline-block', mt: 1 }}>Setup guide</Link>}
+      </Section>
+      <Paper sx={{ p: 2, borderLeft: 4, borderLeftColor: 'warning.main', ...wrapSx }}>
         <Typography variant="overline" color="warning.main">Unverified ({unverified.length})</Typography>
         {unverified.map((u) => <Box key={u.topic} sx={{ py: 0.75, borderTop: 1, borderColor: 'divider' }}><Typography variant="body2" sx={{ fontWeight: 600 }}>{u.topic}</Typography><Typography variant="body2" color="text.secondary">{u.detail}</Typography></Box>)}
         {unverified.length === 0 && <Typography variant="body2" color="text.secondary">Nothing flagged.</Typography>}
@@ -187,7 +289,7 @@ export function AdapterCatalog() {
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Supported systems' }]} title="Supported systems"
       tabs={(q.data ?? []).map((x) => ({ label: sysLabel(x.system), value: x.system }))} tab={sel} onTab={setSel}>
-      <Stack gap={3}>{(a?.editions ?? []).map((e) => <Box key={e.edition}><Typography variant="h3" sx={{ mb: 1 }}>{sysLabel(sel)} · {e.edition}</Typography><AdapterNotes caps={e.capabilities} unverified={e.unverified} notes={e.setupNotes} /></Box>)}</Stack>
+      <Stack gap={3}>{(a?.editions ?? []).map((e) => <Box key={e.edition}><Typography variant="h3" sx={{ mb: 1 }}>{sysLabel(sel)} · {e.edition}</Typography><AdapterNotes system={sel} caps={e.capabilities} unverified={e.unverified} /></Box>)}</Stack>
     </ModuleWorkspace>
   );
 }
@@ -213,12 +315,13 @@ export function ConnectionDetail() {
   const ed = adapters.data?.find((a) => a.system === x.system)?.editions.find((e) => e.edition === x.edition);
   const edit = can('integrations.edit');
   const readable = ed?.capabilities.read ?? [];
+  const secretFields = (ed?.setup?.fields ?? []).filter((f) => f.isSecret);
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Connections', to: '/integrations' }, { label: x.name }]}
       title={<Stack direction="row" gap={1.5} alignItems="center"><span>{x.name}</span><Chip size="small" color={x.enabled ? 'success' : 'default'} label={x.enabled ? 'On' : 'Off'} /><Typography color="text.secondary">{sysLabel(x.system)} · {x.edition}</Typography></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Settings', value: 'settings' }, { label: 'Mappings', value: 'mappings' }, { label: 'Sync runs', value: 'runs' }, { label: 'Live validation', value: 'validation' }, { label: 'Unverified', value: 'notes' }]} tab={tab} onTab={(t) => setP({ tab: t })}
       actions={edit ? <Stack direction="row" gap={1} alignItems="center">
-        <Button variant="outlined" onClick={() => setDlg('secret')}>{x.hasSecret ? 'Replace secret' : 'Set secret'}</Button>
+        {secretFields.length > 0 && <Button variant="outlined" onClick={() => setDlg('secret')}>{secretFields.some((f) => secretStored(x, f)) ? `Replace secret${secretFields.length > 1 ? 's' : ''}` : `Set secret${secretFields.length > 1 ? 's' : ''}`}</Button>}
         <Button variant="outlined" disabled={busy} onClick={() => run(async () => setTest(await post<{ ok: boolean; message: string }>(`/api/integrations/${id}/test`)))}>Test connection</Button>
         <Stack direction="row" alignItems="center"><Switch checked={x.enabled} onChange={(e) => run(() => post(`/api/integrations/${id}/enabled`, { enabled: e.target.checked }))} slotProps={{ input: { 'aria-label': 'Enabled' } }} /><Typography variant="body2">{x.enabled ? 'Enabled' : 'Disabled'}</Typography></Stack>
       </Stack> : undefined}>
@@ -226,8 +329,10 @@ export function ConnectionDetail() {
       {test && <Alert severity={test.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setTest(null)}>{test.message}</Alert>}
       {lastRun && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setLastRun(null)}>{lastRun}</Alert>}
       {tab === 'overview' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
-        <Facts items={[['Base URL', <span style={{ fontFamily: mono }}>{x.baseUrl || '—'}</span>], ['Account / tenant', x.account ?? '—'], ['Company', x.company ?? '—'], ['Client id', x.clientId ?? '—'], ['User', x.username ?? '—'],
-          ['Secret', x.hasSecret ? `Set ${fmtDateTime(x.secretSetAt)} (never shown)` : 'Not set'], ['Second secret', x.hasSecondarySecret ? 'Set' : '—'], ['Writes', x.allowWrites ? 'Allowed' : 'Read-only'], ['Throttle', `${x.maxConcurrency} parallel · ${x.requestsPerMinute}/min`],
+        <Facts items={[...(ed?.setup ? ed.setup.fields.filter((f) => !f.isSecret && (directTargets as readonly string[]).includes(f.target)).map((f) => [f.label, <span style={{ fontFamily: f.kind === 'url' ? mono : undefined }}>{(x[f.target as Direct] as string | undefined) || '—'}</span>] as [string, React.ReactNode])
+            : [['Base URL', <span style={{ fontFamily: mono }}>{x.baseUrl || '—'}</span>], ['Account / tenant', x.account ?? '—'], ['Company', x.company ?? '—'], ['Client id', x.clientId ?? '—'], ['User', x.username ?? '—']] as [string, React.ReactNode][]),
+          ...(ed?.setup?.fields ?? []).filter((f) => f.target.startsWith('option:') && x.options[f.target.slice(7)] != null && x.options[f.target.slice(7)] !== '').map((f) => [f.label, String(x.options[f.target.slice(7)])] as [string, string]),
+          ...secretFields.map((f) => [f.label, secretStored(x, f) ? `Set ${fmtDateTime(x.secretSetAt)} (never shown)` : 'Not set'] as [string, string]), ['Writes', x.allowWrites ? 'Allowed' : 'Read-only'], ['Throttle', `${x.maxConcurrency} parallel · ${x.requestsPerMinute}/min`],
           ['Last test', x.lastTestAt ? `${fmtDateTime(x.lastTestAt)} · ${x.lastTestOk ? 'passed' : 'failed'}` : 'Never'], ['Test message', x.lastTestMessage ?? '—']]} />
         <Section title="Change queue" action={<Button size="small" component={RouterLink} to={`/integrations/changes?connectionId=${x.id}`}>Open</Button>}>
           <Typography variant="body2" color="text.secondary">New and changed ERP records are queued here. Submit them for approval, and they apply once approved.</Typography>
@@ -248,10 +353,10 @@ export function ConnectionDetail() {
           { header: 'Status', accessorFn: (r) => runStatus[r.status], cell: (v) => <StatusChip status={v.getValue() === 'PartiallySucceeded' ? 'Conditional' : v.getValue()} /> },
           { header: 'Read / queued / same / rejected', accessorFn: (r) => `${r.read} / ${r.queued} / ${r.unchanged} / ${r.rejected}`, cell: mnum }, { header: 'Requests', accessorKey: 'requests' }, { header: 'Error', accessorKey: 'error' }]} />}
       {tab === 'validation' && <ValidationPanel id={x.id} edit={edit} />}
-      {tab === 'notes' && ed && <AdapterNotes caps={ed.capabilities} unverified={ed.unverified} notes={x.setupNotes} />}
-      <StepDialog open={dlg === 'secret'} title="Set secrets" confirm="Save" onClose={() => setDlg(null)} intro="Secrets are encrypted and can never be read back. Leave a field blank to keep the stored value."
-        inputs={[{ name: 'secret', label: 'Secret / private key / API key / password', type: 'password' }, { name: 'secondary', label: 'Second secret (if the vendor needs one)', type: 'password' }]}
-        onConfirm={async (v) => { await put(`/api/integrations/${id}/secrets`, { secret: v.secret || null, secondarySecret: v.secondary || null }); refresh(); }} />
+      {tab === 'notes' && ed && <AdapterNotes system={x.system} caps={ed.capabilities} unverified={ed.unverified} />}
+      <StepDialog open={dlg === 'secret'} title={`Set secrets for ${sysLabel(x.system)}`} confirm="Save" onClose={() => setDlg(null)} intro="Secrets are encrypted and can never be read back. Leave a field blank to keep the stored value."
+        inputs={secretFields.map((f) => ({ name: f.key, label: f.label, type: f.kind === 'file' ? 'multiline' as const : 'password' as const, helper: `${f.help ?? ''}${secretStored(x, f) ? ' Stored now.' : ''}`.trim() || undefined }))}
+        onConfirm={async (v) => { await put(`/api/integrations/${id}/secrets`, secretBody(secretFields, v)); refresh(); }} />
       <StepDialog open={dlg === 'csv'} title={`Import ${erpEntities[csvEntity]} CSV`} confirm="Import" onClose={() => setDlg(null)} intro="Header row, then one row per record. Rows go to the change queue."
         inputs={[{ name: 'content', label: 'CSV content', type: 'multiline' }]}
         onConfirm={async (v) => { const r = await post<{ read: number; queued: number; rejected: number }>(`/api/integrations/${id}/mappings/${erpEntities[csvEntity]}/csv`, { content: v.content }); setLastRun(`CSV: read ${r.read}, queued ${r.queued}, rejected ${r.rejected}`); refresh(); }} />

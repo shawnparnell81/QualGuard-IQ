@@ -138,6 +138,7 @@ public static class TemplateLibrary
                 case "max": f.Max = decimal.Parse(v, System.Globalization.CultureInfo.InvariantCulture); break;
                 case "dec": f.Decimals = int.Parse(v); break;
                 case "w": f.Width = int.Parse(v); break;
+                case "from": f.Prefill = v; break;
                 case "len": f.MaxLength = int.Parse(v); break;
                 case "labels": f.ResultLabels = v.Split('/').ToList(); break;
                 case "when": f.VisibleWhen = Cond(v); break;
@@ -173,6 +174,35 @@ public static class TemplateLibrary
                     foreach (var l in bl) Apply(x, l, blocks, used);
                 }
                 break;
+            case "section" when c[0] == "identification":
+                {
+                    // continue the common identification section instead of opening a new one
+                    var id = x.D.Sections.First(z => z.Key == "identification");
+                    id.Title = c.Length > 1 && c[1].Length > 0 ? c[1] : id.Title;
+                    if (c.Length > 2 && c[2].Length > 0) id.Columns = int.Parse(c[2]);
+                    if (c.Length > 3 && c[3].Length > 0) id.Instructions = c[3];
+                    x.Section = "identification"; x.Table = null;
+                    break;
+                }
+            case "relabel":
+                {
+                    // relabel key | Label | help: renames a common field so it reads in the form's own terms
+                    var f = x.D.Fields.FirstOrDefault(z => z.Key == c[0]) ?? throw new InvalidOperationException($"Relabel of unknown field '{c[0]}'.");
+                    f.Label = c[1];
+                    if (c.Length > 2 && c[2].Length > 0) f.Help = c[2];
+                    break;
+                }
+            case "order":
+                {
+                    // order key; key; ...: puts these fields of one section first, in this order
+                    var keys = List(rest);
+                    var moved = keys.Select(k => x.D.Fields.FirstOrDefault(z => z.Key == k) ?? throw new InvalidOperationException($"Order names unknown field '{k}'.")).ToList();
+                    if (moved.Select(f => f.Section).Distinct().Count() != 1) throw new InvalidOperationException("Order lists fields of one section only.");
+                    var at = x.D.Fields.FindIndex(f => f.Section == moved[0].Section);
+                    foreach (var f in moved) x.D.Fields.Remove(f);
+                    x.D.Fields.InsertRange(at, moved);
+                    break;
+                }
             case "section":
                 x.D.Sections.Add(new FormSection { Key = "sec_" + c[0], Title = c[1], Columns = c.Length > 2 && c[2].Length > 0 ? int.Parse(c[2]) : 2, Instructions = c.Length > 3 && c[3].Length > 0 ? c[3] : null });
                 x.Section = "sec_" + c[0]; x.Table = null;
@@ -183,6 +213,7 @@ public static class TemplateLibrary
                     break;
                 }
             case "showwhen": x.D.Sections[^1].VisibleWhen = Cond(rest.Trim()); break;
+            case "style": x.D.Sections[^1].Style = rest.Trim(); break;
             case "landscape-section": x.D.Sections[^1].Orientation = "landscape"; break;
             case "f":
                 {
@@ -208,6 +239,7 @@ public static class TemplateLibrary
             case "total": (Last().Totals ??= []).Add(new TableTotal { Column = c[0], Function = c[1], Label = c.Length > 2 ? c[2] : null }); break;
             case "running": (Last().RunningTotals ??= []).Add(c[0]); break;
             case "tablewhen": Last().VisibleWhen = Cond(rest.Trim()); break;
+            case "tablefrom": Last().Prefill = rest.Trim(); break;
             case "sign":
                 x.Signs.Add(new SignatureBlock { Key = c[0], Label = c[1], Role = c[2], Meaning = c[3], RequiredPermission = c.Length > 4 && c[4].Length > 0 ? c[4] : null,
                     Required = !(c.Length > 5 && c[5] == "optional") });
@@ -230,6 +262,28 @@ public static class TemplateLibrary
         }
     }
 
+    /// <summary>
+    /// The look a template gets when its file does not name one: by what the form is (a warrant or approval reads as a certificate, a list or
+    /// matrix as a register, a checklist or audit as a checklist), then by family.
+    /// </summary>
+    public static string DefaultTheme(string key, string category)
+    {
+        bool Has(params string[] w) => w.Any(k => key.Contains(k, StringComparison.Ordinal));
+        if (Has("warrant", "certificate", "approval", "authorization", "concession", "cover", "commitment")) return "certificate";
+        if (Has("register", "-list", "matrix", "schedule", "log", "inventory", "index", "program")) return "register";
+        if (Has("checklist", "audit", "inspection", "review", "verification")) return "checklist";
+        if (Has("results", "study", "pfmea", "control-plan", "process-flow", "balloon", "characteristic", "gage", "linearity", "bias", "stability", "yield", "worksheet", "run-at-rate")) return "worksheet";
+        return category switch
+        {
+            "NONCONFORMANCE" or "CAPA" or "ROOT_CAUSE" or "CUSTOMER_QUALITY" => "investigation",
+            "APQP" or "RISK_CHANGE" or "DESIGN_DEVICE" => "plan",
+            "PPAP" or "FAI" or "CALIBRATION" or "CONFIGURATION" => "worksheet",
+            "INSPECTION" or "AUDIT" => "checklist",
+            "DOCUMENT_CONTROL" or "TRAINING" => "register",
+            _ => "report",
+        };
+    }
+
     static readonly string[] DefaultStatus = ["Draft", "Open", "In progress", "Awaiting approval", "Approved", "Closed", "Cancelled"];
 
     static LibraryTemplate Build(List<string> lines, Dictionary<string, List<string>> blocks)
@@ -240,7 +294,7 @@ public static class TemplateLibrary
         var cat = Categories.FirstOrDefault(z => z.Code == category) ?? throw new InvalidOperationException($"Unknown category '{category}'.");
         string purpose = "", scope = "", instructions = "", workflow = "", retention = "";
         List<string> packs = [], tags = [], status = [.. DefaultStatus];
-        var landscape = false; var confidentiality = "Internal";
+        var landscape = false; var confidentiality = "Internal"; string? theme = null;
         var x = new Ctx(); var used = new HashSet<string>();
         var body = new List<string>();
         foreach (var l in lines.Skip(1))
@@ -258,6 +312,7 @@ public static class TemplateLibrary
                 case "status": status = List(rest); break;
                 case "landscape": landscape = true; break;
                 case "confidential": confidentiality = "Confidential"; break;
+                case "layout": theme = rest; break;
                 default: body.Add(l); break;
             }
         }
@@ -265,19 +320,21 @@ public static class TemplateLibrary
             if (v.Length == 0) throw new InvalidOperationException($"Template '{key}' has no {n}.");
 
         var d = x.D;
-        d.Page = new PageSetup { Size = "Letter", Orientation = landscape ? "landscape" : "portrait", Confidentiality = confidentiality, PrintStyle = "standardized",
+        theme ??= DefaultTheme(key, cat.Code);
+        d.Page = new PageSetup { Size = "Letter", Orientation = landscape ? "landscape" : "portrait", Confidentiality = confidentiality, PrintStyle = "standardized", Theme = theme,
             Header = new BandText { Left = "{template}", Right = "Revision {revision}" },
             Footer = new BandText { Left = "{template} rev {revision} | {confidentiality}", Center = "Printed {printed}", Right = "Page {page} of {pages}" } };
 
         // purpose, scope and instructions
-        d.Sections.Add(new FormSection { Key = "about", Title = "Purpose, scope and instructions", Columns = 1 });
+        d.Sections.Add(new FormSection { Key = "about", Title = "Purpose, scope and instructions", Columns = 1, Style = "callout" });
         d.Fields.Add(new FormField { Key = "about_purpose", Label = "Purpose", Type = "instruction", Help = $"Purpose: {purpose}", Section = "about" });
         d.Fields.Add(new FormField { Key = "about_scope", Label = "Scope", Type = "instruction", Help = $"Scope: {scope}", Section = "about" });
         d.Fields.Add(new FormField { Key = "about_instructions", Label = "Instructions", Type = "instruction", Help = $"Instructions: {instructions}", Section = "about" });
         d.Fields.Add(new FormField { Key = "about_workflow", Label = "Workflow", Type = "instruction", Help = $"Workflow: {workflow}", Section = "about" });
 
         // record identification, ownership, organization and dates
-        d.Sections.Add(new FormSection { Key = "identification", Title = "Record identification", Columns = 3 });
+        d.Sections.Add(new FormSection { Key = "identification", Title = theme switch { "certificate" => "Submission details", "worksheet" => "Title block", "checklist" => "Checklist header", "register" => "Register details", "investigation" => "Case details", "plan" => "Plan details", _ => "Record identification" },
+            Columns = theme is "worksheet" or "register" ? 4 : theme == "certificate" ? 2 : 3, Style = theme is "worksheet" or "certificate" or "register" ? "titleblock" : null });
         void Id(string k, string label, string type, bool req = false, string? help = null, List<string>? options = null) =>
             d.Fields.Add(new FormField { Key = k, Label = label, Type = type, Required = req, Help = help, Options = options, Section = "identification" });
         Id("record_title", "Record title", "text", true, "A short description that identifies this record in lists and reports.");
@@ -311,7 +368,7 @@ public static class TemplateLibrary
         d.Fields.Add(new FormField { Key = "photos", Label = "Photos", Type = "photo", Section = "related" });
 
         // signatures
-        d.Sections.Add(new FormSection { Key = "approvals", Title = "Signatures", Columns = 2, Instructions = "Each signature is applied with re-authentication and records the signer, date, time and meaning. Editing a signed section invalidates the signatures that follow it.", KeepTogether = true });
+        d.Sections.Add(new FormSection { Key = "approvals", Title = theme == "certificate" ? "Declaration and authorization" : theme == "checklist" ? "Sign-off" : "Signatures", Columns = 2, Style = "signoff", Instructions = "Each signature is applied with re-authentication and records the signer, date, time and meaning. Editing a signed section invalidates the signatures that follow it.", KeepTogether = true });
         var signs = x.Signs.Count > 0 ? x.Signs :
         [
             new SignatureBlock { Key = "prepared_by", Label = "Prepared by", Role = "prepared", Meaning = "I prepared this record and the information in it is complete and accurate." },
@@ -328,7 +385,7 @@ public static class TemplateLibrary
         }
 
         // audit history and retention
-        d.Sections.Add(new FormSection { Key = "record_control", Title = "Record control", Columns = 1 });
+        d.Sections.Add(new FormSection { Key = "record_control", Title = "Record control", Columns = 1, Style = "ledger" });
         d.Fields.Add(new FormField { Key = "record_retention", Label = "Retention", Type = "instruction", Section = "record_control",
             Help = $"Retention: {retention} Disposal follows the organization's retention schedule and is blocked while a legal hold applies." });
         d.Fields.Add(new FormField { Key = "record_audit", Label = "Audit history", Type = "instruction", Section = "record_control",
