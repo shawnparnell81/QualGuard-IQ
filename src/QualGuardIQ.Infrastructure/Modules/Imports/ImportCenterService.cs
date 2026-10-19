@@ -835,6 +835,14 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
                 var end = skipped > 0 ? ImportJobStatus.PartiallyImported : job.WarningCount > 0 || dupSkipped > 0 ? ImportJobStatus.CompletedWithWarnings : ImportJobStatus.Imported;
                 Transition(job, end, $"{created} records created{(updated > 0 ? $", {updated} updated" : "")}{(skipped > 0 ? $", {skipped} rows skipped" : "")}{(dupSkipped > 0 ? $", {dupSkipped} duplicates skipped" : "")}");
                 await db.SaveChangesAsync(ct);
+                // historical records stay exactly as imported (records that already existed and were updated keep working as before)
+                if (PurposeOf(job) == "historical-records" && created > 0)
+                {
+                    await db.ImportedItems.Where(i => i.ImportJobId == job.Id && i.Action == "created" && !i.RolledBack).ExecuteUpdateAsync(u => u.SetProperty(i => i.ReadOnly, true), ct);
+                    AuditLog.Add(db, current, clock.UtcNow, "ImportedReadOnly", nameof(ImportJob), job.Id, job.SiteId,
+                        $"Marked the {created} record(s) created by import {job.Number} as {QualGuardIQ.Infrastructure.Records.ImportedRecords.Label}: historical records cannot be edited, signed or sent for approval");
+                    await db.SaveChangesAsync(ct);
+                }
                 await tx.CommitAsync(ct);
             }
             catch (ImportCanceled)
@@ -908,6 +916,8 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         if (!CanMove(job.Status, ImportJobStatus.RolledBack)) throw new ConflictException("Only a completed import can be rolled back.");
         var target = WholeFile(job) ? null : Target(job.TargetModule);
         await using var tx = await db.Database.BeginTransactionAsync(ct);
+        // read-only historical records may be taken out again by rolling back the import that brought them in
+        await db.ImportedItems.Where(i => i.ImportJobId == job.Id && i.ReadOnly).ExecuteUpdateAsync(u => u.SetProperty(i => i.ReadOnly, false), ct);
         var items = await db.ImportedItems.Where(i => i.ImportJobId == job.Id && !i.RolledBack).ToListAsync(ct);
         var blocked = new List<string>();
         foreach (var it in items)

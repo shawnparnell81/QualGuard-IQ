@@ -67,9 +67,11 @@ public sealed class DocumentService(
             Kind = req.Kind, Number = await numbers.NextAsync(DocumentRecordTypes.ForDocument(req.Kind), req.SiteId, ct),
             Title = req.Title.Trim(), DocumentType = docType, SiteId = req.SiteId, DepartmentId = req.DepartmentId,
             OwnerId = req.OwnerId ?? current.UserId!.Value, Status = DocumentStatus.Draft, ReviewIntervalMonths = req.ReviewIntervalMonths,
-            PartNumber = req.PartNumber?.Trim(), DrawingSize = req.DrawingSize?.Trim(), SheetCount = req.SheetCount
+            PartNumber = req.PartNumber?.Trim(), DrawingSize = req.DrawingSize?.Trim(), SheetCount = req.SheetCount,
+            IsReference = await types.IsReferenceAsync(req.Kind, docType, ct)
         };
-        doc.Revisions.Add(new DocumentRevision { DocumentId = doc.Id, Revision = rev, Sequence = 1, Status = RevisionStatus.Draft, ChangeSummary = req.ChangeSummary?.Trim() is { Length: > 0 } cs ? cs : "Initial release" });
+        doc.Revisions.Add(new DocumentRevision { DocumentId = doc.Id, Revision = rev, Sequence = 1, Status = RevisionStatus.Draft,
+            ChangeSummary = req.ChangeSummary?.Trim() is { Length: > 0 } cs ? cs : doc.IsReference ? "Reference copy" : "Initial release" });
         db.Documents.Add(doc);
         await db.SaveChangesAsync(ct);
         await IndexAsync(doc, ct);
@@ -84,6 +86,11 @@ public sealed class DocumentService(
         Validate(req.Title, req.DocumentType, req.ReviewIntervalMonths, req.SheetCount);
         if (req.DepartmentId is { } d && !await db.Departments.AnyAsync(x => x.Id == d && x.SiteId == doc.SiteId, ct)) throw new AppException("The department does not belong to the site.");
         var docType = await types.RequireActiveAsync(doc.Kind, req.DocumentType, doc.DocumentType, ct);
+        var isReference = docType == doc.DocumentType ? doc.IsReference : await types.IsReferenceAsync(doc.Kind, docType, ct);
+        if (isReference != doc.IsReference && doc.Status != DocumentStatus.Draft)
+            throw new AppException(isReference ? "A released controlled document cannot become a reference copy. Make it obsolete and add the reference copy as a new document."
+                : "A released reference copy cannot become a controlled document. Make it obsolete and create the controlled document as a new document.");
+        doc.IsReference = isReference;
         db.Entry(doc).Property(x => x.RowVersion).OriginalValue = req.RowVersion;
         doc.Title = req.Title.Trim();
         doc.DocumentType = docType;
@@ -122,6 +129,7 @@ public sealed class DocumentService(
     public async Task<DocumentRevision> ReviseAsync(Guid id, string? label, string changeSummary, CancellationToken ct, bool preAuthorized = false)
     {
         var doc = await LoadForEditAsync(id, ct, preAuthorized);
+        if (doc.IsReference) throw new ConflictException("Reference copies are not revised. Use Replace copy to file a newer edition; the earlier copy is kept as superseded.");
         if (doc.Status != DocumentStatus.Active) throw new AppException("Only active documents can be revised.");
         if (doc.Revisions.Any(r => r.Status is RevisionStatus.Draft or RevisionStatus.InReview)) throw new ConflictException("A revision is already in progress.");
         if (string.IsNullOrWhiteSpace(changeSummary)) throw new AppException("A change summary is required.");
@@ -141,6 +149,7 @@ public sealed class DocumentService(
         var type = DocumentRecordTypes.ForRevision(rev.Document!.Kind);
         await records.RequireEditAsync(type, rev.Id, ct);
         if (rev.Status != RevisionStatus.Draft) throw new ConflictException("Only draft revisions can be submitted.");
+        if (rev.Document.IsReference) throw new ConflictException(ReferenceNoApproval);
         if (rev.Document.Kind == DocumentKind.FormTemplate)
         {
             if (string.IsNullOrWhiteSpace(rev.FieldSchema)) throw new AppException("Define the form fields before submitting for approval.");
@@ -154,6 +163,52 @@ public sealed class DocumentService(
         rev.Status = RevisionStatus.InReview;
         await db.SaveChangesAsync(ct);
         await tx.CommitAsync(ct);
+    }
+
+    public const string ReferenceNoApproval = "Reference copies are not sent for approval. Release the copy instead.";
+
+    /// <summary>
+    /// Releases the reference copy: no approval and no revision workflow. The attached file is locked, the copy is in use from today,
+    /// and any earlier copy is kept as superseded. Needs the module's edit permission.
+    /// </summary>
+    public async Task ReleaseReferenceAsync(Guid revisionId, CancellationToken ct)
+    {
+        var rev = await db.DocumentRevisions.Include(r => r.Document).FirstOrDefaultAsync(r => r.Id == revisionId, ct) ?? throw new NotFoundException("Revision");
+        var doc = rev.Document!;
+        var type = DocumentRecordTypes.ForRevision(doc.Kind);
+        await records.RequireEditAsync(DocumentRecordTypes.ForDocument(doc.Kind), doc.Id, ct);
+        if (!doc.IsReference) throw new ConflictException("Only reference copies are released without approval. Submit this revision for approval.");
+        if (rev.Status != RevisionStatus.Draft) throw new ConflictException("This copy has already been released.");
+        if (doc.Status == DocumentStatus.Obsolete) throw new AppException("Obsolete documents cannot be changed.");
+        if (!await db.Attachments.AnyAsync(a => a.OwnerType == type && a.OwnerId == rev.Id && !a.IsArchived, ct))
+            throw new AppException("Attach the reference file before releasing it.");
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var today = await TodayAsync(doc.SiteId, ct);
+        rev.EffectiveDate = today;
+        foreach (var a in await db.Attachments.Where(a => a.OwnerType == type && a.OwnerId == rev.Id && !a.IsArchived).ToListAsync(ct)) a.IsLocked = true;
+        AuditLog.Add(db, current, clock.UtcNow, "ReferenceReleased", nameof(ControlledDocument), doc.Id, doc.SiteId,
+            $"Released reference copy {doc.Number} {rev.Revision} \"{doc.Title}\" for use from {today:yyyy-MM-dd} (reference copy: no approval or revision workflow)");
+        await db.SaveChangesAsync(ct);
+        await MakeEffectiveAsync(rev, ct);
+        await tx.CommitAsync(ct);
+    }
+
+    /// <summary>Files a newer edition of a released reference copy as a new draft copy; the current copy stays in use until the new one is released.</summary>
+    public async Task<DocumentRevision> ReplaceReferenceAsync(Guid id, string? label, string? note, CancellationToken ct)
+    {
+        var doc = await LoadForEditAsync(id, ct);
+        if (!doc.IsReference) throw new ConflictException("Only reference copies are replaced. Start a revision instead.");
+        if (doc.Status != DocumentStatus.Active) throw new AppException("Release the current copy first.");
+        if (doc.Revisions.Any(r => r.Status == RevisionStatus.Draft)) throw new ConflictException("A replacement copy is already waiting to be released.");
+        var last = doc.Revisions.OrderByDescending(r => r.Sequence).First();
+        var next = string.IsNullOrWhiteSpace(label) ? NextLabel(last.Revision) : label.Trim().ToUpperInvariant();
+        if (next.Length > 10) throw new AppException("Edition labels are limited to 10 characters.");
+        if (doc.Revisions.Any(r => r.Revision == next)) throw new ConflictException($"Copy {next} already exists.");
+        var rev = new DocumentRevision { DocumentId = doc.Id, Revision = next, Sequence = last.Sequence + 1, Status = RevisionStatus.Draft,
+            ChangeSummary = note?.Trim() is { Length: > 0 } n ? n : "Newer edition of the reference copy" };
+        db.DocumentRevisions.Add(rev);
+        await db.SaveChangesAsync(ct);
+        return rev;
     }
 
     internal async Task OnApprovedAsync(Guid revisionId, CancellationToken ct)
@@ -198,7 +253,8 @@ public sealed class DocumentService(
         await db.SaveChangesAsync(ct);
         rev.Status = RevisionStatus.Effective;
         doc.Status = DocumentStatus.Active;
-        doc.NextReviewDue = rev.EffectiveDate!.Value.AddMonths(doc.ReviewIntervalMonths);
+        // reference copies are not reviewed on a cycle; the owner replaces them when a newer edition is issued
+        doc.NextReviewDue = doc.IsReference ? null : rev.EffectiveDate!.Value.AddMonths(doc.ReviewIntervalMonths);
         await db.SaveChangesAsync(ct);
         await IndexAsync(doc, ct);
         foreach (var h in released) await h.OnReleasedAsync(doc, rev, ct);

@@ -48,6 +48,7 @@ public sealed class WorkflowService(
     {
         var req = await db.ApprovalRequests.Include(r => r.Decisions).FirstOrDefaultAsync(r => r.Id == requestId, ct) ?? throw new NotFoundException("Approval request");
         var record = await records.RequireViewAsync(req.RecordType, req.RecordId, ct);
+        if (await QualGuardIQ.Infrastructure.Records.ImportedRecords.IsReadOnlyAsync(db, req.RecordId, ct)) throw new AppException(QualGuardIQ.Infrastructure.Records.ImportedRecords.ReadOnlyMessage, 409);
         if (req.Status != ApprovalStatus.Pending) throw new ConflictException("This approval is no longer pending.");
         var route = await db.ApprovalRoutes.Include(r => r.Steps).FirstAsync(r => r.Id == req.RouteId, ct);
         var values = await conditions.ValuesAsync(req.RecordType, req.RecordId, ct);

@@ -17,14 +17,15 @@ namespace QualGuardIQ.Api.Controllers;
 public sealed class RecordToolsController(IRecordRegistry records, RecordDeletionService deletion, RecordExportService export, RecordTypeLabels labels, AppDbContext db) : ControllerBase
 {
     public sealed record ReasonRequest(string? Reason);
-    public sealed record CapabilitiesDto(string Type, string TypeLabel, Guid Id, string Number, string Title, string? Status, string Url, DeleteCheck Delete);
+    public sealed record CapabilitiesDto(string Type, string TypeLabel, Guid Id, string Number, string Title, string? Status, string Url, DeleteCheck Delete, bool ImportedReadOnly = false);
 
     /// <summary>What the current user can do with the record from the shared toolbar (export is open to anyone who can view it).</summary>
     [HttpGet("{type}/{id:guid}/capabilities")]
     public async Task<CapabilitiesDto> Capabilities(string type, Guid id, CancellationToken ct)
     {
         var r = await records.RequireViewAsync(type, id, ct);
-        return new CapabilitiesDto(r.Type, labels.For(r.Type), r.Id, r.Number, r.Title, r.Status, r.Url, await deletion.CheckAsync(r.Type, r.Id, ct));
+        return new CapabilitiesDto(r.Type, labels.For(r.Type), r.Id, r.Number, r.Title, r.Status, r.Url, await deletion.CheckAsync(r.Type, r.Id, ct),
+            await ImportedRecords.IsReadOnlyAsync(db, r.Id, ct));
     }
 
     /// <summary>

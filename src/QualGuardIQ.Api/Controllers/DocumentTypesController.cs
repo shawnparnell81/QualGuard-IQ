@@ -13,8 +13,8 @@ namespace QualGuardIQ.Api.Controllers;
 [Route("api/document-types")]
 public sealed class DocumentTypesController(DocumentTypeService types) : ControllerBase
 {
-    public sealed record DocumentTypeDto(Guid Id, DocumentKind Kind, string Name, string? Description, bool IsSystem, bool IsActive, int SortOrder);
-    static DocumentTypeDto Dto(DocumentTypeDefinition t) => new(t.Id, t.Kind, t.Name, t.Description, t.IsSystem, t.IsActive, t.SortOrder);
+    public sealed record DocumentTypeDto(Guid Id, DocumentKind Kind, string Name, string? Description, bool IsSystem, bool IsActive, int SortOrder, bool IsReference);
+    static DocumentTypeDto Dto(DocumentTypeDefinition t) => new(t.Id, t.Kind, t.Name, t.Description, t.IsSystem, t.IsActive, t.SortOrder, t.IsReference);
 
     [HttpGet]
     public async Task<IEnumerable<DocumentTypeDto>> List([FromQuery] DocumentKind? kind, [FromQuery] bool includeInactive = false, CancellationToken ct = default) =>

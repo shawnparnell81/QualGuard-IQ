@@ -15,12 +15,12 @@ namespace QualGuardIQ.Api.Controllers;
 public sealed class DocumentsController(AppDbContext db, DocumentService docs, IAccessService access, ICurrentUser current) : ControllerBase
 {
     public sealed record DocumentListItem(Guid Id, DocumentKind Kind, string Number, string Title, string DocumentType, DocumentStatus Status,
-        string? CurrentRevision, DateOnly? EffectiveDate, string SiteCode, string? PartNumber, DateOnly? NextReviewDue, string OwnerName);
+        string? CurrentRevision, DateOnly? EffectiveDate, string SiteCode, string? PartNumber, DateOnly? NextReviewDue, string OwnerName, bool IsReference = false);
     public sealed record RevisionDto(Guid Id, string Revision, int Sequence, RevisionStatus Status, string ChangeSummary, DateOnly? EffectiveDate,
         DateOnly? SupersededOn, DateTimeOffset? ApprovedAt, bool TrainingRequired, string? ObsoleteReason, uint RowVersion, string? FieldSchema = null, bool ReadyToSubmit = false);
     public sealed record DocumentDetail(Guid Id, DocumentKind Kind, string Number, string Title, string DocumentType, DocumentStatus Status, Guid SiteId,
         Guid? DepartmentId, Guid OwnerId, string OwnerName, int ReviewIntervalMonths, DateOnly? NextReviewDue, string? PartNumber, string? DrawingSize,
-        int? SheetCount, uint RowVersion, IReadOnlyList<RevisionDto> Revisions, bool CanEdit, bool CanApprove, string? FormFamily = null);
+        int? SheetCount, uint RowVersion, IReadOnlyList<RevisionDto> Revisions, bool CanEdit, bool CanApprove, string? FormFamily = null, bool IsReference = false);
     public sealed record ReviseRequest(string? Revision, string ChangeSummary);
     public sealed record ObsoleteRequest(string Reason);
     public sealed record Page<T>(IReadOnlyList<T> Items, int Total, int PageNumber, int PageSize);
@@ -55,7 +55,7 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
                 d.Revisions.Where(r => r.Status == RevisionStatus.Effective).Select(r => r.Revision).FirstOrDefault(),
                 d.Revisions.Where(r => r.Status == RevisionStatus.Effective).Select(r => r.EffectiveDate).FirstOrDefault(),
                 db.Sites.Where(s => s.Id == d.SiteId).Select(s => s.Code).First(), d.PartNumber, d.NextReviewDue,
-                db.Users.Where(u => u.Id == d.OwnerId).Select(u => u.DisplayName).First()))
+                db.Users.Where(u => u.Id == d.OwnerId).Select(u => u.DisplayName).First(), d.IsReference))
             .ToListAsync(ct);
         return new Page<DocumentListItem>(items, total, page, pageSize);
     }
@@ -78,7 +78,7 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
                 r.SupersededOn, r.ApprovedAt, r.TrainingRequired, r.ObsoleteReason, r.RowVersion, r.FieldSchema, Ready(r))).ToList(),
             await access.CanAccessAsync(uid, edit, d.SiteId, d.DepartmentId, ct), await access.CanAccessAsync(uid, approve, d.SiteId, d.DepartmentId, ct),
             // form templates: the family look a revision without its own look is shown and printed with, so blank previews match filled records
-            d.Kind == DocumentKind.FormTemplate ? await QualGuardIQ.Infrastructure.Modules.Quality.FormFamily.InferAsync(db, d.Id, ct) : null);
+            d.Kind == DocumentKind.FormTemplate ? await QualGuardIQ.Infrastructure.Modules.Quality.FormFamily.InferAsync(db, d.Id, ct) : null, d.IsReference);
     }
 
     [HttpPost]
@@ -95,6 +95,14 @@ public sealed class DocumentsController(AppDbContext db, DocumentService docs, I
 
     [HttpPost("revisions/{revisionId:guid}/submit")]
     public async Task<IActionResult> Submit(Guid revisionId, CancellationToken ct) { await docs.SubmitAsync(revisionId, ct); return NoContent(); }
+
+    /// <summary>Reference copies only: put the attached copy in use without approval.</summary>
+    [HttpPost("revisions/{revisionId:guid}/release-reference")]
+    public async Task<IActionResult> ReleaseReference(Guid revisionId, CancellationToken ct) { await docs.ReleaseReferenceAsync(revisionId, ct); return NoContent(); }
+
+    /// <summary>Reference copies only: file a newer edition (a new draft copy that is released without approval).</summary>
+    [HttpPost("{id:guid}/replace-reference")]
+    public async Task<ActionResult<Guid>> ReplaceReference(Guid id, ReviseRequest req, CancellationToken ct) => (await docs.ReplaceReferenceAsync(id, req.Revision, req.ChangeSummary, ct)).Id;
 
     [HttpPost("{id:guid}/obsolete")]
     public async Task<IActionResult> Obsolete(Guid id, ObsoleteRequest req, CancellationToken ct) { await docs.ObsoleteAsync(id, req.Reason, ct); return NoContent(); }

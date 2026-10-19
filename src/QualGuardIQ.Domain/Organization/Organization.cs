@@ -23,6 +23,10 @@ public class OrganizationSettings : Entity, IAudited
     public QualGuardIQ.Domain.MasterData.SupplierRestriction SupplierDisqualifiedPolicy { get; set; } = QualGuardIQ.Domain.MasterData.SupplierRestriction.Block;
     public QualGuardIQ.Domain.MasterData.SupplierRestriction SupplierUnapprovedPolicy { get; set; } = QualGuardIQ.Domain.MasterData.SupplierRestriction.Warn;
     public QualGuardIQ.Domain.MasterData.SupplierRestriction SupplierExpiredCertPolicy { get; set; } = QualGuardIQ.Domain.MasterData.SupplierRestriction.Warn;
+    /// <summary>When the industry packs were chosen (or the step skipped) during organization setup; null until then.</summary>
+    public DateTimeOffset? IndustryPacksChosenAt { get; set; }
+    /// <summary>Industry pack keys chosen so far, comma separated (packs installed later from Admin are added).</summary>
+    public string IndustryPacks { get; set; } = "";
     public string AuditLabel => "Organization settings";
 }
 

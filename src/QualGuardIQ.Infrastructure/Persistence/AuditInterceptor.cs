@@ -29,6 +29,18 @@ public sealed class AuditInterceptor(ICurrentUser user, IClock clock) : SaveChan
         return base.SavingChanges(e, result);
     }
 
+    /// <summary>Historical records brought in by an import are kept exactly as imported: no change to the record itself is saved.</summary>
+    private static async Task RefuseImportedReadOnlyAsync(DbContext ctx, List<EntityEntry<Entity>> entries, bool async, CancellationToken ct)
+    {
+        var ids = entries.Where(x => x.Entity is IAudited && (x.State == EntityState.Deleted || (x.State == EntityState.Modified &&
+                x.Properties.Any(p => p.IsModified && !Ignored.Contains(p.Metadata.Name) && !Equals(p.OriginalValue, p.CurrentValue)))))
+            .Select(x => x.Entity.Id).Distinct().ToList();
+        if (ids.Count == 0 || ctx.Model.FindEntityType(typeof(Domain.Imports.ImportedItem)) is null) return;
+        var q = ctx.Set<Domain.Imports.ImportedItem>().AsNoTracking().Where(i => i.ReadOnly && !i.RolledBack && ids.Contains(i.TargetId));
+        if (async ? await q.AnyAsync(ct) : q.Any())
+            throw new AppException(QualGuardIQ.Infrastructure.Records.ImportedRecords.ReadOnlyMessage, 409);
+    }
+
     private sealed record Pending(EntityEntry<Entity> Entry, string Action, string Label, List<(string Label, object? From, object? To, string? Fixed)> Fields, Dictionary<string, object?> Changes);
 
     private async Task ApplyAsync(DbContext ctx, bool async, CancellationToken ct)
@@ -51,6 +63,7 @@ public sealed class AuditInterceptor(ICurrentUser user, IClock clock) : SaveChan
             if (illegal.Count > 0)
                 throw new AppException($"{entry.Metadata.ClrType.Name} is locked; {string.Join(", ", illegal)} cannot be changed.", 409);
         }
+        await RefuseImportedReadOnlyAsync(ctx, entries, async, ct);
         foreach (var entry in entries)
         {
             if (entry.State == EntityState.Added)

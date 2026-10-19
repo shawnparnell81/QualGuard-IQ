@@ -115,4 +115,9 @@ public class ImportedItem
     public string Action { get; set; } = "created";
     /// <summary>For an update: the record's values before the import (JSON), so a rollback can put them back.</summary>
     public string? PreviousValues { get; set; }
+    /// <summary>
+    /// Set when the job brought in historical (legacy) records: the created record is kept as imported and cannot be edited, signed or sent
+    /// through a workflow. It can still be printed, exported and deleted. Cleared when the import is rolled back.
+    /// </summary>
+    public bool ReadOnly { get; set; }
 }
