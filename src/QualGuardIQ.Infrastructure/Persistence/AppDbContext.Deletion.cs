@@ -44,6 +44,7 @@ public partial class AppDbContext
         {
             e.Property(x => x.DateFormat).HasMaxLength(20).HasDefaultValue("auto");
             e.Property(x => x.EmailNotificationsEnabled).HasDefaultValue(true).HasSentinel(true);
+            e.Property(x => x.LogoContentType).HasMaxLength(20);
         });
 
         var apply = typeof(AppDbContext).GetMethod(nameof(HideDeleted), System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)!;

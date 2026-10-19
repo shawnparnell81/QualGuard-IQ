@@ -39,6 +39,9 @@ public sealed class RecordExportService(AppDbContext db, IRecordRegistry records
         return list;
     }
 
+    async Task<byte[]?> LogoAsync(CancellationToken ct) =>
+        await db.OrganizationSettings.AsNoTracking().Where(s => s.LogoContentType == "image/jpeg").Select(s => s.LogoImage).FirstOrDefaultAsync(ct);
+
     public async Task<ExportFile> TableAsync(TableExportRequest req, CancellationToken ct)
     {
         if (!ExportRenderer.TryParse(req.Format, out var format)) throw new AppException("Choose CSV, Excel, Word or PDF.");
@@ -52,7 +55,7 @@ public sealed class RecordExportService(AppDbContext db, IRecordRegistry records
         var header = await HeaderAsync(null, ct);
         if (!string.IsNullOrWhiteSpace(req.Filters)) header.Add(new("Filters", Cut(req.Filters)));
         header.Add(new("Rows", rows.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)));
-        var doc = new ExportDocument(title, null, header, [new ExportSection(title, Columns: req.Columns.Select(Cut).ToList(), Rows: rows)]);
+        var doc = new ExportDocument(title, null, header, [new ExportSection(title, Columns: req.Columns.Select(Cut).ToList(), Rows: rows)], await LogoAsync(ct));
         AuditLog.Add(db, current, clock.UtcNow, "Exported", "List", Guid.Empty, null,
             $"Exported the list \"{title}\" ({rows.Count} rows) as {ExportRenderer.Extension(format).ToUpperInvariant()}{(string.IsNullOrWhiteSpace(req.Filters) ? "" : $", filtered by {req.Filters}")}");
         await db.SaveChangesAsync(ct);
@@ -170,7 +173,7 @@ public sealed class RecordExportService(AppDbContext db, IRecordRegistry records
         sections.Add(new("History", Columns: ["When", "Who", "What", "Description"],
             Rows: history.Select(h => (IReadOnlyList<string>)[T(h.OccurredAt), h.UserName, h.Action, h.Description]).ToList()));
 
-        return new ExportDocument($"{r.Number} {r.Title}".Trim(), labels.For(r.Type), await HeaderAsync(r.SiteId, ct), sections);
+        return new ExportDocument($"{r.Number} {r.Title}".Trim(), labels.For(r.Type), await HeaderAsync(r.SiteId, ct), sections, await LogoAsync(ct));
     }
 
     /// <summary>A property name as a label: "DetectedOn" becomes "Detected on", "PartNumber" becomes "Part number" (quality acronyms kept).</summary>

@@ -15,6 +15,9 @@ public class OrganizationSettings : Entity, IAudited
     public string DateFormat { get; set; } = "auto";
     /// <summary>Organization-wide switch for email copies of notifications (people can also turn their own off).</summary>
     public bool EmailNotificationsEnabled { get; set; } = true;
+    /// <summary>Organization logo (PNG or JPEG, up to 512 KB) shown on the sign-in page, the top bar and printed records.</summary>
+    public byte[]? LogoImage { get; set; }
+    public string? LogoContentType { get; set; }
     /// <summary>Supplier restriction policy: what happens when a record references a supplier in this condition.</summary>
     public QualGuardIQ.Domain.MasterData.SupplierRestriction SupplierSuspendedPolicy { get; set; } = QualGuardIQ.Domain.MasterData.SupplierRestriction.Block;
     public QualGuardIQ.Domain.MasterData.SupplierRestriction SupplierDisqualifiedPolicy { get; set; } = QualGuardIQ.Domain.MasterData.SupplierRestriction.Block;

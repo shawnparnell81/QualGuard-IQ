@@ -16,7 +16,7 @@ public sealed record ExportSection(string Title, IReadOnlyList<ExportField>? Fie
 }
 
 /// <summary>What gets written to a file: a title, a few header lines (organization, printed by and when) and the sections.</summary>
-public sealed record ExportDocument(string Title, string? Subtitle, IReadOnlyList<ExportField> Header, IReadOnlyList<ExportSection> Sections);
+public sealed record ExportDocument(string Title, string? Subtitle, IReadOnlyList<ExportField> Header, IReadOnlyList<ExportSection> Sections, byte[]? LogoJpeg = null);
 
 public enum ExportFormat { Csv, Xlsx, Docx, Pdf }
 
@@ -268,8 +268,9 @@ public static class ExportRenderer
         void NewPage() { pdf.AddPage(pw, ph); y = m; }
         void Need(double h) { if (y + h > bottom) NewPage(); }
 
-        var logoW = pdf.Logo(pw - m - BrandLogo.WidthForHeight(18), m, 18);
-        _ = logoW;
+        // the organization's own logo when it is a JPEG (the format PDF pages take directly), otherwise the product mark
+        if (d.LogoJpeg is { } jpg && PdfCanvas.JpegSize(jpg) is not null) pdf.Jpeg(pw - m - 110, m, 110, 32, jpg);
+        else pdf.Logo(pw - m - BrandLogo.WidthForHeight(18), m, 18);
         foreach (var line in PdfCanvas.Wrap(d.Title, 16, usable - 120)) { pdf.Text(m, y, 16, line, true); y += 20; }
         if (d.Subtitle is { Length: > 0 }) { pdf.Text(m, y, 10, d.Subtitle, new TextStyle(Colour: muted)); y += 14; }
         foreach (var h in d.Header) { pdf.Text(m, y, 8, $"{h.Label}: {h.Value}", new TextStyle(Colour: muted)); y += 11; }

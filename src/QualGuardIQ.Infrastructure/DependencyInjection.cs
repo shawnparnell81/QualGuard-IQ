@@ -104,6 +104,9 @@ public static class DependencyInjection
         services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.TrainingCourseListImportTarget>();
         services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.SkillsMatrixImportTarget>();
         services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.RiskRegisterImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.NcrLogImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.CapaLogImportTarget>();
+        services.AddScoped<Modules.Imports.IImportTarget, Modules.MasterLists.TrainingRecordImportTarget>();
         services.AddScoped<QualGuardIQ.Infrastructure.Modules.Quality.FormValueIndexer>();
         services.AddScoped<DocumentTypeService>();
         foreach (var (kind, docType, revType) in new[]
