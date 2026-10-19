@@ -80,7 +80,7 @@ def circle(cx, cy, r):
             f'{fmt(cx + k)} {fmt(cy - r)} {fmt(cx + r)} {fmt(cy - k)} {fmt(cx + r)} {fmt(cy)} c', 'h']
 
 ops = []
-charcoal = '#29333E'; blue = '#1257C4'
+charcoal = '#29333E'; blue = '#1257C4'; green = '#0E8550'
 tail = re.search(r'<path d="(M298 335[^"]*)" fill="#29333E"', svg).group(1)
 ccx, ccy = T(270, 265)
 # ring
@@ -94,9 +94,10 @@ for x, y, w, h in [(243, 128, 54, 62), (243, 322, 54, 86)]:
 ops += [f'{rgb(charcoal)} rg'] + path_ops_mark(tail) + ['f']
 # dot
 ops += [f'{rgb(blue)} rg'] + circle(ccx, ccy, 58 * sc) + ['f']
-# wordmark ("qualguard" charcoal, "IQ" blue); the tagline (third glyph run) is left out
-runs = re.findall(r'<path d="([^"]{3000,})" fill="(#[0-9A-Fa-f]{6})"/>', svg)
+# wordmark ("qualguard" charcoal, "IQ" in the accent green: the screen gradient runs blue to green); the tagline (third glyph run) is left out
+runs = re.findall(r'<path d="([^"]{3000,})" fill="(#[0-9A-Fa-f]{6}|url\(#iq\))"/>', svg)
 for d, fill in runs[:2]:
+    if fill.startswith('url'): fill = green
     ops += [f'{rgb(fill)} rg'] + path_ops(d) + ['f']
 xs = [b[0] for b in bounds]; ys = [b[1] for b in bounds]
 x0, y0, x1, y1 = min(xs) - 1, min(ys) - 1, max(xs) + 1, max(ys) + 1

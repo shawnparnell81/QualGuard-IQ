@@ -19,6 +19,9 @@ export interface LayoutBlock { type: 'grid' | 'paragraph' | 'pagebreak'; origin?
 export interface SourceLayout { source: string; fileName?: string | null; blocks: LayoutBlock[] }
 export interface FormDef { schemaVersion: number; page: PageSetup; sections: SectionDef[]; fields: ColumnDef[]; tables: TableDef[]; signatures: SignatureDef[]; layout?: SourceLayout | null }
 
+/** A copy of the definition with the family look filled in when the form does not name one (the stored definition is left as it is). */
+export const withFamily = (d: FormDef, family?: FormTheme | null): FormDef => (d.page?.theme || !family ? d : { ...d, page: { ...d.page, theme: family } });
+
 export const defaultPage: PageSetup = { size: 'Letter', orientation: 'portrait', marginMm: 15, printStyle: 'standardized', fontSize: 9 };
 
 export function parseDefinition(json?: string | null | object): FormDef {

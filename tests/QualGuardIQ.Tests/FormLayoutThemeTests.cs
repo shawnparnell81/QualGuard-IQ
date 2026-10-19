@@ -21,6 +21,25 @@ public sealed class FormLayoutThemeTests
     [InlineData("supplier-scorecard", "SUPPLIER", "report")]
     public void Library_forms_get_a_look_from_what_they_are(string key, string category, string theme) => Assert.Equal(theme, TemplateLibrary.DefaultTheme(key, category));
 
+    [Theory]
+    [InlineData("Production Part Approval - Part Submission Warrant", null, "certificate")]
+    [InlineData("Receiving Inspection Checklist", null, "checklist")]
+    [InlineData("8D Problem Solving Report", null, "investigation")]
+    [InlineData("Corrective Action / Preventive Action (CAPA) Report", "CAPA", "investigation")]
+    [InlineData("Equipment Calibration Log", "", "register")]
+    [InlineData("Supplier Scorecard", "SUPPLIER", "report")]
+    [InlineData("Weekly Notes", null, "report")]
+    public void Forms_without_a_look_get_their_family_look_from_title_and_category(string title, string? category, string theme) => Assert.Equal(theme, FormThemes.Infer(title, category));
+
+    [Fact]
+    public void A_form_that_names_its_look_keeps_it()
+    {
+        var d = new FormDefinition { Page = new PageSetup { Theme = "plan" } };
+        Assert.Equal("plan", FormThemes.WithFamily(d, "Part Submission Warrant", "PPAP").Page.Theme);
+        var old = new FormDefinition { Page = new PageSetup() };
+        Assert.Equal("certificate", FormThemes.WithFamily(old, "ppap-warrant", "PPAP").Page.Theme);
+    }
+
     [Fact]
     public void The_library_uses_every_look_and_each_form_has_a_valid_one()
     {

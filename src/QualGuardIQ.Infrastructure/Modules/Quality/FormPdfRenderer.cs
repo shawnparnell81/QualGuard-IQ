@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using QualGuardIQ.Application.Forms;
+using QualGuardIQ.Infrastructure.Modules.Appearance;
 using QualGuardIQ.Infrastructure.Modules.Logistics;
 using QualGuardIQ.Infrastructure.Services;
 
@@ -26,7 +27,7 @@ public sealed record PrintedSignature(string Key, string SignerName, string Sign
 public sealed class FormPdfRenderer
 {
     public const string Brand = "#1257C4";
-    const string Grey = "#666666", Rule = "#B0B7C3", HeadFill = "#E8EEF8", Ink = "#0B3F94", Charcoal = "#29333E", Copper = "#B4632A", Pass = "#2E7D4F";
+    const string Grey = "#666666", Rule = "#B0B7C3", Charcoal = "#29333E";
 
     /// <summary>The form's look (report, worksheet, checklist, certificate, investigation, register or plan).</summary>
     string Theme => FormThemes.Of(_d);
@@ -35,8 +36,27 @@ public sealed class FormPdfRenderer
     {
         "worksheet" => "panel", "checklist" => "checklist", "certificate" => "titleblock", "investigation" or "plan" => "steps", "register" => "ledger", _ => "standard",
     };
-    /// <summary>Table header fill and text colour for the look: worksheets and registers print dark headers, the rest a light band.</summary>
-    (string Fill, string? Text) TableHead => Theme switch { "worksheet" => (Ink, "#FFFFFF"), "register" => (Charcoal, "#FFFFFF"), "investigation" => ("#FBF1E9", null), _ => (HeadFill, null) };
+    /// <summary>
+    /// Edge colour (section bars, badges, rules, table heads) and accent colour (numbers, callouts, titles) of the form's family, from
+    /// Settings › Appearance; without one, the built-in palette (green and blue for checklists, investigations and plans, slate and blue for the rest).
+    /// </summary>
+    public (string Edge, string Accent)? Palette { get; init; }
+    (string Edge, string Accent) Pal => Palette ?? AppearanceModel.Colours(AppearanceModel.DefaultPalette(Theme));
+    string Edge => Pal.Edge;
+    string Accent => Pal.Accent;
+    /// <summary>The colour mixed with white: amount 0 keeps it, 1 gives white.</summary>
+    static string Tint(string hex, double amount)
+    {
+        int C(int i) => (int)Math.Round(Convert.ToInt32(hex.Substring(i, 2), 16) * (1 - amount) + 255 * amount);
+        return $"#{C(1):X2}{C(3):X2}{C(5):X2}";
+    }
+    void Frame(double x, double y, double w, double h, double lw, string colour)
+    {
+        _pdf!.Line(x, y, x + w, y, lw, colour); _pdf.Line(x, y + h, x + w, y + h, lw, colour);
+        _pdf.Line(x, y, x, y + h, lw, colour); _pdf.Line(x + w, y, x + w, y + h, lw, colour);
+    }
+    /// <summary>Table header fill and text colour for the look: worksheets, certificates and registers print solid edge-colour headers, the rest a light tint.</summary>
+    (string Fill, string? Text) TableHead => Theme is "worksheet" or "certificate" or "register" ? (Edge, "#FFFFFF") : (Tint(Edge, 0.86), null);
     bool _boxed;
 
     readonly FormDefinition _d;
@@ -104,7 +124,7 @@ public sealed class FormPdfRenderer
         p.TextAligned(x, y, _fs - 1, w, right, new TextStyle(), "right");
         if (_c.RecordNumber is { } rn) p.TextAligned(x, y + _fs + 1, _fs - 1, w, $"Record {rn}", new TextStyle(true), "right");
         y += 22;
-        p.TextAligned(x, y, _fs + 3, w, _c.Title, new TextStyle(true, Colour: Brand), "center");
+        p.TextAligned(x, y, _fs + 3, w, _c.Title, new TextStyle(true, Colour: Accent), "center");
         y += _fs + 7;
         if (_d.Page.Header is { } hb && (hb.Left ?? hb.Center ?? hb.Right) is not null) { Band(hb, y, "{header}"); y += _fs + 4; }
         if (_c.ControlledCopy is { } cc)
@@ -112,7 +132,8 @@ public sealed class FormPdfRenderer
             p.TextAligned(x, y, _fs - 1, w, cc, new TextStyle(true, Colour: cc.StartsWith("CONTROLLED", StringComparison.OrdinalIgnoreCase) ? Brand : "#B00020"), "center");
             y += _fs + 3;
         }
-        p.Line(x, y, x + w, y, 0.8, Brand);
+        if (Theme == "certificate") { p.Line(x, y, x + w, y, 1.4, Edge); p.Line(x, y + 2.2, x + w, y + 2.2, 0.5, Accent); y += 2; }
+        else p.Line(x, y, x + w, y, 0.8, Accent);
         _y = y + 8;
     }
 
@@ -126,6 +147,12 @@ public sealed class FormPdfRenderer
         for (var i = 0; i < pages; i++)
         {
             p.SelectPage(i);
+            if (Theme == "certificate")
+            {
+                // certificate frame: accent outer rule, fine edge-colour inner rule around the page content
+                Frame(_margin - 10, _margin - 10, Width + 20, p.PageHeight - 2 * _margin + 20, 1.4, Accent);
+                Frame(_margin - 7, _margin - 7, Width + 14, p.PageHeight - 2 * _margin + 14, 0.5, Edge);
+            }
             foreach (var (pg, y, b) in _bands.Where(b => b.Page == i)) DrawBand(b, y, i + 1, pages, false);
             var fy = p.PageHeight - _margin - _fs * 2.2;
             p.Line(_margin, fy - 3, _margin + Width, fy - 3, 0.5, Rule);
@@ -234,26 +261,38 @@ public sealed class FormPdfRenderer
         switch (style)
         {
             case "panel":
-                p.Fill(_margin, _y - 2, Width, h, Ink);
+                p.Fill(_margin, _y - 2, Width, h, Edge);
+                p.Line(_margin, _y + h - 1, _margin + Width, _y + h - 1, 1.2, Accent);
                 p.Text(_margin + 5, _y + 1.5, _fs + 1, $"{num}   {title.ToUpperInvariant()}", new TextStyle(true, Colour: "#FFFFFF"));
                 _y += h + 4; break;
             case "titleblock":
-                p.Rect(_margin, _y - 2, Width, h, false, 1.4);
-                p.Text(_margin + 5, _y + 1.5, _fs + 1, $"{num}   {title.ToUpperInvariant()}", new TextStyle(true, Colour: Theme == "certificate" ? Charcoal : Ink));
+                if (Theme == "certificate")
+                {
+                    // formal title block: accent-tinted head over an edge-colour rule
+                    p.Fill(_margin, _y - 2, Width, h, Tint(Accent, 0.9));
+                    Frame(_margin, _y - 2, Width, h, 0.8, Edge);
+                    p.Line(_margin, _y + h - 2, _margin + Width, _y + h - 2, 1.6, Edge);
+                    p.Text(_margin + 5, _y + 1.5, _fs + 1, $"{num}   {title.ToUpperInvariant()}", new TextStyle(true, Colour: Accent));
+                }
+                else
+                {
+                    Frame(_margin, _y - 2, Width, h, 1.4, Edge);
+                    p.Text(_margin + 5, _y + 1.5, _fs + 1, $"{num}   {title.ToUpperInvariant()}", new TextStyle(true, Colour: Edge));
+                }
                 _y += h; break;
             case "callout":
-                p.Fill(_margin, _y - 2, Width, h, "#F2F4F7"); p.Fill(_margin, _y - 2, 3, h, Theme == "investigation" ? Copper : Brand);
+                p.Fill(_margin, _y - 2, Width, h, Tint(Accent, 0.93)); p.Fill(_margin, _y - 2, 3, h, Accent);
                 p.Text(_margin + 9, _y + 1.5, _fs + 0.5, $"{num}  {title}", new TextStyle(true, Colour: Charcoal));
                 _y += h + 4; break;
             case "steps":
-                var badge = Theme == "plan" ? Copper : Brand;
+                var badge = Theme == "plan" ? Edge : Accent;
                 p.Fill(_margin, _y - 3, h + 2, h + 2, badge);
                 p.TextAligned(_margin, _y + 1.5, _fs + 1, h + 2, num, new TextStyle(true, Colour: "#FFFFFF"), "center");
                 p.Text(_margin + h + 9, _y + 1.5, _fs + 1.5, title, new TextStyle(true, Colour: Charcoal));
-                p.Line(_margin + h + 9, _y + h + 1, _margin + Width, _y + h + 1, 0.6, badge);
+                p.Line(_margin + h + 9, _y + h + 1, _margin + Width, _y + h + 1, 0.6, Edge);
                 _y += h + 7; break;
             case "checklist":
-                p.Fill(_margin, _y - 2, 4, h, Pass);
+                p.Fill(_margin, _y - 2, 4, h, Edge);
                 p.Rect(_margin + 9, _y + 0.5, _fs, _fs, false, 0.8);
                 p.Text(_margin + 14 + _fs, _y + 1.5, _fs + 1, $"{num}  {title}", new TextStyle(true));
                 p.Line(_margin + 9, _y + h, _margin + Width, _y + h, 0.4, Rule);
@@ -263,8 +302,14 @@ public sealed class FormPdfRenderer
                 p.Text(_margin, _y + 2, _fs - 1, $"{num}  {title.ToUpperInvariant()}", new TextStyle(true, Colour: Grey));
                 _y += _fs + 7; break;
             case "signoff":
-                if (Theme == "certificate") { p.Line(_margin, _y - 2, _margin + Width, _y - 2, 1.2, Charcoal); p.Line(_margin, _y + 0.5, _margin + Width, _y + 0.5, 0.5, Charcoal); _y += 4; p.TextAligned(_margin, _y, _fs + 1.5, Width, title.ToUpperInvariant(), new TextStyle(true, Colour: Charcoal), "center"); _y += _fs + 8; }
-                else { p.Fill(_margin, _y - 2, Width, h, HeadFill); p.Text(_margin + 4, _y + 1, _fs + 1.5, $"{num}  {title}", new TextStyle(true, Colour: Brand)); _y += h + 3; }
+                if (Theme == "certificate")
+                {
+                    // signature band: edge-tinted strip between double accent rules, title centred
+                    p.Fill(_margin, _y - 2, Width, _fs + 10, Tint(Edge, 0.92));
+                    p.Line(_margin, _y - 2, _margin + Width, _y - 2, 1.2, Accent); p.Line(_margin, _y + 0.5, _margin + Width, _y + 0.5, 0.5, Accent);
+                    _y += 4; p.TextAligned(_margin, _y, _fs + 1.5, Width, title.ToUpperInvariant(), new TextStyle(true, Colour: Accent), "center"); _y += _fs + 8;
+                }
+                else { p.Fill(_margin, _y - 2, Width, h, Tint(Accent, 0.9)); p.Text(_margin + 4, _y + 1, _fs + 1.5, $"{num}  {title}", new TextStyle(true, Colour: Accent)); _y += h + 3; }
                 break;
             default: _y -= 4; SectionTitle($"{num}  {title}", depth); break;
         }
@@ -274,7 +319,11 @@ public sealed class FormPdfRenderer
     {
         Ensure(_fs * 4);
         _y += 4;
-        if (depth == 0) { _pdf!.Fill(_margin, _y - 2, Width, _fs + 7, HeadFill); _pdf.Text(_margin + 4, _y + 1, _fs + 1.5, title, new TextStyle(true, Colour: Brand)); _y += _fs + 10; }
+        if (depth == 0)
+        {
+            _pdf!.Fill(_margin, _y - 2, Width, _fs + 7, Tint(Accent, 0.9)); _pdf.Line(_margin, _y + _fs + 5, _margin + Width, _y + _fs + 5, 0.8, Edge);
+            _pdf.Text(_margin + 4, _y + 1, _fs + 1.5, title, new TextStyle(true, Colour: Accent)); _y += _fs + 10;
+        }
         else { _pdf!.Text(_margin + 8 * depth, _y, _fs + 0.5, title, new TextStyle(true)); _y += _fs * 1.7; }
     }
 
@@ -472,6 +521,7 @@ public sealed class FormPdfRenderer
             for (var j = 0; j < perRow && i + j < blocks.Count; j++)
             {
                 var b = blocks[i + j]; var x = _margin + j * (w + 10);
+                if (Theme == "certificate") { _pdf!.Fill(x, _y, w, h, Tint(Edge, 0.94)); _pdf.Line(x, _y + h, x + w, _y + h, 2, Edge); }
                 _pdf!.Rect(x, _y, w, h, false, 0.6);
                 _pdf.Text(x + 4, _y + 3, _fs - 0.5, b.Label + (b.Required ? " *" : ""), new TextStyle(true));
                 _pdf.TextAligned(x + 4, _y + 3 + _fs * 1.25, _fs - 2, w - 8, b.Meaning, new TextStyle(Italic: true, Colour: Grey), "left");

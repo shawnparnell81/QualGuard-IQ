@@ -6,7 +6,7 @@ import TableRowsOutlined from '@mui/icons-material/TableRowsOutlined';
 import { useQuery } from '@tanstack/react-query';
 import { get } from '../api';
 import { lookupLabel, useLookup, useSites, useUsers, type LookupKind } from '../components/Kit';
-import { brand } from '../brand';
+import { alpha, useTheme, type Theme } from '@mui/material/styles';
 import { mono } from '../theme';
 import { hiddenSections, matches, readRows, readTable, roleLabel, totalLabel, writeRows, type ColumnDef, type FormDef, type FormTheme, type Row, type SectionDef, type SectionStyle, type TableDef } from './definition';
 
@@ -166,9 +166,14 @@ function groupSpans(t: TableDef) {
   });
 }
 
-const headCellBase = { bgcolor: brand.blue, color: '#fff', fontWeight: 600, fontSize: 12, py: 0.75, borderRight: '1px solid rgba(255,255,255,0.25)', whiteSpace: 'nowrap' } as const;
-/** Table header colours by form look: worksheets use the dark ink of a drawing, registers a quiet charcoal, checklists and plans keep the brand blue. */
-const headFill: Partial<Record<FormTheme, string>> = { worksheet: brand.blueDark, register: brand.charcoal, certificate: brand.tagline, investigation: brand.blueHover };
+const headCellBase = { fontSize: 12, py: 0.75, whiteSpace: 'nowrap' } as const;
+/** Table header by form family: tinted heads in the family's edge colour, solid edge-colour heads with an accent rule on worksheets and certificates. */
+const headFor = (t: Theme, theme: FormTheme) => {
+  const { edge, accent } = t.qg.families[theme] ?? t.qg.families.report;
+  if (theme === 'worksheet' || theme === 'certificate')
+    return { bgcolor: edge, group: alpha(edge, 0.85), color: t.palette.getContrastText(edge), line: '1px solid rgba(255,255,255,0.22)', under: `2px solid ${accent}` };
+  return { bgcolor: alpha(edge, 0.08), group: alpha(edge, 0.15), color: edge, line: `1px solid ${alpha(edge, 0.14)}`, under: `2px solid ${alpha(edge, 0.25)}` };
+};
 
 /** Table block: grouped headers, fixed or dynamic rows, nested tables, running totals, totals and subtotals. */
 export function GridTable({ t, value, onChange, ctx, compact }: { t: TableDef; value: string | null | undefined; onChange: (v: string | null) => void; ctx: Ctx; compact?: boolean }) {
@@ -179,16 +184,19 @@ export function GridTable({ t, value, onChange, ctx, compact }: { t: TableDef; v
   const setCell = (i: number, k: string, v: string | null) => write(rows.map((r, j) => (j === i ? { ...r, [k]: v } : r)));
   const running = t.runningTotals ?? [];
   const showTotals = (t.totals?.length ?? 0) > 0;
-  const headCell = { ...headCellBase, bgcolor: headFill[ctx.theme ?? 'report'] ?? brand.blue };
+  const th = useTheme();
+  const hf = headFor(th, ctx.theme ?? 'report');
+  const headCell = { ...headCellBase, bgcolor: hf.bgcolor, color: hf.color, borderRight: hf.line, fontWeight: 700, borderBottom: hf.under };
+  const square = ctx.theme === 'certificate' || ctx.theme === 'register';
   return (
-    <Box sx={{ overflowX: 'auto', border: 1, borderColor: 'divider', borderRadius: 1 }}>
+    <Box sx={{ overflowX: 'auto', border: 1, borderColor: 'divider', borderRadius: square ? '4px' : `${th.qg.form.radius * 0.6}px`, bgcolor: th.qg.glass.table }}>
       <Table size="small" aria-label={t.title} sx={{ '& td': { py: 0.5, px: 0.75, verticalAlign: 'top', borderRight: 1, borderColor: 'divider' } }}>
         <TableHead>
           {t.headerGroups && (
             <TableRow>
-              {!fixed && !compact && <TableCell sx={{ ...headCell, bgcolor: brand.blueDark }} />}
-              {groupSpans(t).map((g, i) => <TableCell key={i} colSpan={g.span} align="center" sx={{ ...headCell, bgcolor: brand.blueDark }}>{g.label}</TableCell>)}
-              {!ctx.readOnly && !fixed && <TableCell sx={{ ...headCell, bgcolor: brand.blueDark }} />}
+              {!fixed && !compact && <TableCell sx={{ ...headCell, bgcolor: hf.group }} />}
+              {groupSpans(t).map((g, i) => <TableCell key={i} colSpan={g.span} align="center" sx={{ ...headCell, bgcolor: hf.group }}>{g.label}</TableCell>)}
+              {!ctx.readOnly && !fixed && <TableCell sx={{ ...headCell, bgcolor: hf.group }} />}
             </TableRow>
           )}
           <TableRow>
@@ -278,12 +286,15 @@ function SignatureLine({ s, ctx }: { s: FormDef['signatures'][number]; ctx: Ctx 
 
 /** Certificate, worksheet and checklist forms sign in a row of boxes, like the authorization panel of a printed warrant. */
 function SignatureBox({ s, ctx }: { s: FormDef['signatures'][number]; ctx: Ctx }) {
+  const qg = useTheme().qg;
+  const edge = (qg.families[ctx.theme ?? 'report'] ?? qg.families.report).edge;
   const mine = (ctx.signatures ?? []).filter((x) => x.key === s.key);
   const st = mine.find((x) => x.valid !== false);
   const lapsed = !st ? mine.filter((x) => x.valid === false).at(-1) : undefined;
   const signed = !!st?.signedAt;
   return (
-    <Box aria-label={`Signature ${s.label}`} sx={{ border: 1, borderColor: signed ? 'success.main' : 'text.disabled', borderStyle: signed ? 'solid' : 'dashed', p: 1.5, display: 'flex', flexDirection: 'column', gap: 0.75, minHeight: 132 }}>
+    <Box aria-label={`Signature ${s.label}`} sx={{ border: 1, borderColor: signed ? 'success.main' : 'text.disabled', borderStyle: signed ? 'solid' : 'dashed', p: 1.5, display: 'flex', flexDirection: 'column', gap: 0.75, minHeight: 132,
+      ...(ctx.theme === 'certificate' ? { borderStyle: 'solid', borderColor: signed ? 'success.main' : 'divider', borderRadius: '4px', bgcolor: 'background.paper', borderBottom: 3, borderBottomColor: edge } : {}) }}>
       <Typography variant="overline" sx={{ lineHeight: 1.4, color: 'text.secondary' }}>{roleLabel[s.role] ?? s.role}</Typography>
       <Typography variant="body2" fontWeight={700}>{s.label}{s.required ? ' *' : ''}</Typography>
       <Box sx={{ flex: 1, display: 'flex', alignItems: 'flex-end', borderBottom: 1, borderColor: 'text.disabled', minHeight: 30 }}>
@@ -334,6 +345,15 @@ export function FormView({ def, values, onChange, readOnly, recordType, recordId
   const ctx: Ctx = { theme, readOnly, recordType, recordId, siteId, signatures, onSign, canSign };
   const set = (k: string, v: string | null) => onChange({ ...values, [k]: v });
   const hidden = hiddenSections(def, values);
+  const t = useTheme();
+  const qg = t.qg;
+  const R = `${qg.form.radius}px`;
+  // the family's palette (Settings › Appearance): edge for bars, badges and rules, accent for numbers and callouts
+  const { edge, accent } = qg.families[theme] ?? qg.families.report;
+  const onEdge = t.palette.getContrastText(edge);
+  const darkMode = t.palette.mode === 'dark';
+  const bandBg = edge;
+  const soft = { bgcolor: qg.glass.section, boxShadow: darkMode ? 'none' : '0 4px 18px rgba(32,56,120,0.06)' };
   const roots = useMemo(() => {
     const secs = def.sections.length ? def.sections : [];
     return secs.filter((s) => !s.parent || !secs.some((x) => x.key === s.parent));
@@ -364,7 +384,8 @@ export function FormView({ def, values, onChange, readOnly, recordType, recordId
           </Box>
         ))}
         {sigs.length > 0 && (boxedSigs
-          ? <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: `repeat(${Math.min(3, sigs.length)}, 1fr)` }, gap: 1.5 }}>{sigs.map((x) => <SignatureBox key={x.key} s={x} ctx={ctx} />)}</Box>
+          ? <Box data-signature-band={theme === 'certificate' || undefined} sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: `repeat(${Math.min(3, sigs.length)}, 1fr)` }, gap: 1.5,
+              ...(theme === 'certificate' && style !== 'signoff' ? { p: 1.5, bgcolor: alpha(edge, darkMode ? 0.1 : 0.06), borderTop: `3px double ${accent}` } : {}) }}>{sigs.map((x) => <SignatureBox key={x.key} s={x} ctx={ctx} />)}</Box>
           : <Stack gap={1} sx={{ mt: 2 }}>{sigs.map((x) => <SignatureLine key={x.key} s={x} ctx={ctx} />)}</Stack>)}
         {children.map((c, i) => <Box key={c.key} sx={{ mt: 2, pl: { sm: 2 }, borderLeft: { sm: 1 }, borderColor: 'divider' }}>{renderSection(c, `${number}${i + 1}.`, depth + 1)}</Box>)}
       </>
@@ -374,51 +395,69 @@ export function FormView({ def, values, onChange, readOnly, recordType, recordId
     const wrap = (sx: object, children: React.ReactNode) => <Box key={s.key} component="section" aria-labelledby={`sec-${s.key}`} data-section-style={style} sx={{ mb: depth === 0 ? 3 : 2, ...sx }}>{children}</Box>;
     if (depth > 0 || style === 'standard')
       return wrap({}, <>
-        <Stack direction="row" alignItems="baseline" gap={1.25} sx={depth === 0 ? { borderBottom: 2, borderColor: 'primary.main', pb: 0.5, mb: 1.5 } : { mb: 1 }}>
-          <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, color: 'primary.main', fontSize: depth === 0 ? 15 : 13 }}>{number}</Typography>
+        <Stack direction="row" alignItems="baseline" gap={1.25} sx={depth === 0 ? { pb: 0.5, mb: 1.5, backgroundImage: `linear-gradient(90deg, ${accent}, ${edge})`, backgroundSize: '100% 2px', backgroundRepeat: 'no-repeat', backgroundPosition: 'bottom' } : { mb: 1 }}>
+          <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, color: accent, fontSize: depth === 0 ? 15 : 13 }}>{number}</Typography>
           {title(depth === 0 ? 'h3' : 'subtitle1')}{chips}
         </Stack>{body}</>);
     switch (style) {
       case 'callout':
-        return wrap({ bgcolor: 'action.hover', borderLeft: 4, borderColor: theme === 'investigation' ? 'warning.main' : 'primary.main', p: 2 }, <>
+        return wrap({ bgcolor: qg.form.callout, borderLeft: 4, borderColor: accent, p: 2, borderRadius: `0 ${R} ${R} 0` }, <>
           <Stack direction="row" alignItems="baseline" gap={1} sx={{ mb: 1 }}><Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, color: 'text.secondary', fontSize: 13 }}>{number}</Typography>{title('subtitle1')}{chips}</Stack>{body}</>);
       case 'titleblock':
-        return wrap({ border: 2, borderColor: theme === 'certificate' ? 'text.primary' : brand.blueDark }, <>
-          <Stack direction="row" alignItems="center" gap={1.25} sx={{ px: 1.5, py: 0.75, bgcolor: theme === 'certificate' ? 'transparent' : brand.blueDark, color: theme === 'certificate' ? 'text.primary' : '#fff', borderBottom: 2, borderColor: theme === 'certificate' ? 'text.primary' : brand.blueDark }}>
-            <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, fontSize: 13, opacity: 0.85 }}>{number}</Typography>{title('subtitle1', { textTransform: 'uppercase', letterSpacing: 1, fontSize: 14 })}{chips}
-          </Stack><Box sx={{ p: 0 }}>{body}</Box></>);
+        // certificate: a formal ruled title block, an accent-tinted head with spaced capitals over an edge-colour rule; elsewhere a solid edge-colour band
+        return theme === 'certificate'
+          ? wrap({ border: 1, borderColor: alpha(accent, 0.45), borderRadius: '4px', overflow: 'hidden', bgcolor: darkMode ? 'rgba(30,33,39,0.85)' : '#FFFFFF' }, <>
+              <Stack direction="row" alignItems="center" gap={1.25} sx={{ px: 1.75, py: 1, bgcolor: alpha(accent, darkMode ? 0.14 : 0.07), borderBottom: `2px solid ${edge}` }}>
+                <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, fontSize: 13, color: accent }}>{number}</Typography>{title('subtitle1', { textTransform: 'uppercase', letterSpacing: 1.6, fontSize: 13.5, fontWeight: 700, color: accent })}{chips}
+              </Stack><Box sx={{ p: 0 }}>{body}</Box></>)
+          : wrap({ border: 2, borderColor: bandBg, borderRadius: R, overflow: 'hidden', ...soft }, <>
+              <Stack direction="row" alignItems="center" gap={1.25} sx={{ px: 1.5, py: 1, background: bandBg, color: onEdge, borderBottom: 2, borderColor: bandBg }}>
+                <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, fontSize: 13, opacity: 0.85 }}>{number}</Typography>{title('subtitle1', { textTransform: 'uppercase', letterSpacing: 1, fontSize: 14 })}{chips}
+              </Stack><Box sx={{ p: 0 }}>{body}</Box></>);
       case 'panel':
-        return wrap({ border: 1, borderColor: 'divider', borderRadius: 1, overflow: 'hidden' }, <>
-          <Stack direction="row" alignItems="center" gap={1.25} sx={{ px: 2, py: 1, bgcolor: theme === 'worksheet' ? brand.blueDark : 'action.hover', color: theme === 'worksheet' ? '#fff' : 'text.primary' }}>
+        return wrap({ border: 1, borderColor: 'divider', borderRadius: R, overflow: 'hidden', ...soft }, <>
+          <Stack direction="row" alignItems="center" gap={1.25} sx={{ px: 2, py: 1, background: theme === 'worksheet' ? bandBg : 'action.hover', color: theme === 'worksheet' ? onEdge : 'text.primary', ...(theme === 'worksheet' ? { borderBottom: `3px solid ${edge}` } : {}) }}>
             <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, fontSize: 13 }}>{number}</Typography>{title('subtitle1', { textTransform: theme === 'worksheet' ? 'uppercase' : 'none', letterSpacing: theme === 'worksheet' ? 0.8 : 0 })}{chips}
           </Stack><Box sx={{ p: 2 }}>{body}</Box></>);
       case 'steps':
         return wrap({ display: 'grid', gridTemplateColumns: '44px 1fr', columnGap: 2 }, <>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-            <Box sx={{ width: 36, height: 36, borderRadius: '50%', bgcolor: theme === 'plan' ? brand.copper : 'primary.main', color: '#fff', display: 'grid', placeItems: 'center', fontFamily: mono, fontWeight: 700, fontSize: 14 }}>{number.replace(/\.$/, '')}</Box>
+            <Box sx={{ width: 36, height: 36, borderRadius: '50%', background: theme === 'plan' ? edge : `linear-gradient(135deg, ${accent} 0%, ${edge} 100%)`, boxShadow: `0 6px 14px ${alpha(edge, 0.3)}`, color: '#fff', display: 'grid', placeItems: 'center', fontFamily: mono, fontWeight: 700, fontSize: 14 }}>{number.replace(/\.$/, '')}</Box>
             <Box sx={{ flex: 1, width: 2, bgcolor: 'divider', mt: 0.5 }} />
           </Box>
           <Box sx={{ minWidth: 0, pb: 1 }}><Stack direction="row" alignItems="center" gap={1} sx={{ minHeight: 36, mb: 1 }}>{title('h3')}{chips}</Stack>{body}</Box></>);
       case 'checklist':
-        return wrap({ border: 1, borderColor: 'divider', borderLeft: 6, borderLeftColor: 'success.main', borderRadius: 1, p: 2 }, <>
+        return wrap({ border: 1, borderColor: 'divider', borderLeft: 6, borderLeftColor: edge, borderRadius: R, p: 2, ...soft }, <>
           <Stack direction="row" alignItems="center" gap={1.25} sx={{ mb: 1.5 }}>
-            <Chip size="small" label={number.replace(/\.$/, '')} sx={{ fontFamily: mono, fontWeight: 700, bgcolor: 'success.main', color: '#fff' }} />{title('subtitle1')}{chips}
+            <Chip size="small" label={number.replace(/\.$/, '')} sx={{ fontFamily: mono, fontWeight: 700, bgcolor: edge, color: onEdge }} />{title('subtitle1')}{chips}
           </Stack>{body}</>);
       case 'ledger':
         return wrap({ borderTop: 1, borderColor: 'divider', pt: 1.5, color: 'text.secondary' }, <>
           <Stack direction="row" gap={1} alignItems="baseline" sx={{ mb: 1 }}><Typography variant="overline" component="span" sx={{ fontFamily: mono }}>{number}</Typography><Typography variant="overline" id={`sec-${s.key}`} component="h2">{s.title}</Typography>{chips}</Stack>{body}</>);
       case 'signoff':
-        return wrap({ border: 1, borderColor: 'divider', bgcolor: theme === 'certificate' ? 'transparent' : 'background.paper', p: 2, ...(theme === 'certificate' ? { borderWidth: 3, borderStyle: 'double' } : {}) }, <>
-          <Stack direction="row" alignItems="baseline" gap={1.25} sx={{ mb: 1.5, justifyContent: theme === 'certificate' ? 'center' : 'flex-start' }}>
-            {theme !== 'certificate' && <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, color: 'primary.main', fontSize: 15 }}>{number}</Typography>}
-            {title('h3', theme === 'certificate' ? { textTransform: 'uppercase', letterSpacing: 2 } : undefined)}
-          </Stack>{body}</>);
+        // certificate: the signature band, an edge-tinted strip between double accent rules with the title centred
+        return theme === 'certificate'
+          ? wrap({ borderTop: `3px double ${accent}`, borderBottom: `3px double ${accent}`, bgcolor: alpha(edge, darkMode ? 0.1 : 0.06), px: 2, py: 2 }, <>
+              <Stack direction="row" alignItems="baseline" gap={1.25} sx={{ mb: 1.5, justifyContent: 'center' }}>
+                {title('h3', { textTransform: 'uppercase', letterSpacing: 2, color: accent })}
+              </Stack>{body}</>)
+          : wrap({ border: 1, borderColor: 'divider', p: 2, borderRadius: R, ...soft }, <>
+              <Stack direction="row" alignItems="baseline" gap={1.25} sx={{ mb: 1.5 }}>
+                <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, color: accent, fontSize: 15 }}>{number}</Typography>
+                {title('h3')}
+              </Stack>{body}</>);
       default: return wrap({}, body);
     }
   };
 
+  // certificates sit in a bordered frame: accent outer rule, fine edge-colour inner rule and an accent-to-edge strip across the top
+  const frame = theme === 'certificate' ? {
+    position: 'relative', border: `2px solid ${alpha(accent, 0.55)}`, borderRadius: '6px', p: { xs: 2, sm: 3 }, pt: { xs: 3, sm: 4 },
+    boxShadow: `inset 0 0 0 5px ${darkMode ? '#202328' : '#FFFFFF'}, inset 0 0 0 6px ${alpha(edge, 0.55)}`, bgcolor: darkMode ? 'rgba(30,33,39,0.6)' : 'rgba(255,255,255,0.85)',
+    '&::before': { content: '""', position: 'absolute', left: 0, right: 0, top: 0, height: 6, background: `linear-gradient(90deg, ${accent}, ${edge})`, borderRadius: '4px 4px 0 0' },
+  } : {};
   return (
-    <Box data-form-theme={theme}>
+    <Box data-form-theme={theme} sx={frame}>
       {loose.length > 0 && <Box sx={{ mb: 3 }}><FieldGrid fields={loose} values={values} set={set} columns={2} ctx={ctx} /></Box>}
       {looseTables.map((t) => <Box key={t.key} sx={{ mb: 3 }}><Typography variant="subtitle2" sx={{ mb: 0.5 }}>{t.title}</Typography><GridTable t={t} value={values[t.key]} onChange={(v) => set(t.key, v)} ctx={ctx} /></Box>)}
       {roots.map((s, i) => renderSection(s, `${i + 1}.`, 0))}

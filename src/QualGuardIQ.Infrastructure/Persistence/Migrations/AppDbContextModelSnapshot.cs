@@ -6915,6 +6915,65 @@ namespace QualGuardIQ.Infrastructure.Persistence.Migrations
                     b.ToTable("messaging_subscriptions", "qms");
                 });
 
+            modelBuilder.Entity("QualGuardIQ.Domain.Organization.AppearanceSetting", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AccentColor")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("FormPalettes")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Mode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<string>("PrimaryColor")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<uint>("RowVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex(new[] { "UserId" }, "ux_appearance_user")
+                        .IsUnique();
+
+                    NpgsqlIndexBuilderExtensions.AreNullsDistinct(b.HasIndex(new[] { "UserId" }, "ux_appearance_user"), false);
+
+                    b.ToTable("appearance_settings", "qms", t =>
+                        {
+                            t.HasCheckConstraint("ck_appearance_accent", "\"AccentColor\" IS NULL OR \"AccentColor\" ~ '^#[0-9A-Fa-f]{6}$'");
+
+                            t.HasCheckConstraint("ck_appearance_mode", "\"Mode\" IS NULL OR \"Mode\" IN ('light', 'dark', 'system')");
+
+                            t.HasCheckConstraint("ck_appearance_primary", "\"PrimaryColor\" IS NULL OR \"PrimaryColor\" ~ '^#[0-9A-Fa-f]{6}$'");
+                        });
+                });
+
             modelBuilder.Entity("QualGuardIQ.Domain.Organization.Department", b =>
                 {
                     b.Property<Guid>("Id")

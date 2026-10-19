@@ -266,23 +266,7 @@ public static class TemplateLibrary
     /// The look a template gets when its file does not name one: by what the form is (a warrant or approval reads as a certificate, a list or
     /// matrix as a register, a checklist or audit as a checklist), then by family.
     /// </summary>
-    public static string DefaultTheme(string key, string category)
-    {
-        bool Has(params string[] w) => w.Any(k => key.Contains(k, StringComparison.Ordinal));
-        if (Has("warrant", "certificate", "approval", "authorization", "concession", "cover", "commitment")) return "certificate";
-        if (Has("register", "-list", "matrix", "schedule", "log", "inventory", "index", "program")) return "register";
-        if (Has("checklist", "audit", "inspection", "review", "verification")) return "checklist";
-        if (Has("results", "study", "pfmea", "control-plan", "process-flow", "balloon", "characteristic", "gage", "linearity", "bias", "stability", "yield", "worksheet", "run-at-rate")) return "worksheet";
-        return category switch
-        {
-            "NONCONFORMANCE" or "CAPA" or "ROOT_CAUSE" or "CUSTOMER_QUALITY" => "investigation",
-            "APQP" or "RISK_CHANGE" or "DESIGN_DEVICE" => "plan",
-            "PPAP" or "FAI" or "CALIBRATION" or "CONFIGURATION" => "worksheet",
-            "INSPECTION" or "AUDIT" => "checklist",
-            "DOCUMENT_CONTROL" or "TRAINING" => "register",
-            _ => "report",
-        };
-    }
+    public static string DefaultTheme(string key, string category) => FormThemes.Infer(key, category);
 
     static readonly string[] DefaultStatus = ["Draft", "Open", "In progress", "Awaiting approval", "Approved", "Closed", "Cancelled"];
 

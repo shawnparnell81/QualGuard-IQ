@@ -7,6 +7,7 @@ import { PrintStyles } from './tools/PageTools';
 import { PreferencesSync } from './tools/PreferencesSync';
 import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material';
 import { useAuth, useBranding } from './auth';
+import { effectiveAppearance, useAppearance } from './appearance';
 import { makeTheme } from './theme';
 import { useColorMode } from './colorMode';
 import { TopBar } from './layout/TopBar';
@@ -66,6 +67,8 @@ const AlertsAdmin = lazy(() => import('./pages/Intelligence').then((m) => ({ def
 const Home = lazy(() => import('./pages/Home').then((m) => ({ default: m.Home })));
 const MyWork = lazy(() => import('./pages/MyWork').then((m) => ({ default: m.MyWork })));
 const SignInHistory = lazy(() => import('./pages/Account').then((m) => ({ default: m.SignInHistory })));
+const OrganizationAppearancePage = lazy(() => import('./pages/Appearance').then((m) => ({ default: m.OrganizationAppearancePage })));
+const MyAppearancePage = lazy(() => import('./pages/Appearance').then((m) => ({ default: m.MyAppearancePage })));
 const AccountSecurity = lazy(() => import('./pages/AccountSecurity').then((m) => ({ default: m.AccountSecurity })));
 const Search = lazy(() => import('./pages/Search').then((m) => ({ default: m.Search })));
 const DocumentDetail = lazy(() => import('./pages/Documents').then((m) => ({ default: m.DocumentDetail })));
@@ -281,8 +284,14 @@ const UsersPage = lazy(() => import('./pages/Admin').then((m) => ({ default: m.U
 export function App() {
   const { me, loading } = useAuth();
   const { data: brand } = useBranding();
-  const { mode } = useColorMode();
-  const theme = useMemo(() => makeTheme(brand?.primaryColor, mode), [brand?.primaryColor, mode]);
+  const { preference, mode: deviceMode } = useColorMode();
+  // Settings › Appearance: a choice made on this device wins, then the person's own setting, then the organization default
+  const appearance = effectiveAppearance(useAppearance(!!me && !me.portalKind).data);
+  const wanted = preference !== 'system' ? preference : appearance.personalMode ?? appearance.organizationMode ?? 'system';
+  const mode = wanted === 'system' ? deviceMode : wanted;
+  const theme = useMemo(() => makeTheme(appearance.primaryColor ?? brand?.primaryColor, mode, { accent: appearance.accentColor, forms: appearance.forms }),
+    [appearance.primaryColor, brand?.primaryColor, mode, appearance.accentColor, JSON.stringify(appearance.forms)]);
+  useEffect(() => { document.documentElement.style.colorScheme = mode; }, [mode]);
   useEffect(() => { // browser chrome follows the top bar colour
     document.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
     const meta = document.createElement('meta'); meta.name = 'theme-color'; meta.content = theme.palette.background.bar; document.head.appendChild(meta);
@@ -313,6 +322,7 @@ export function App() {
               <Route path="/account/security" element={<AccountSecurity />} />
               <Route path="/account/messaging" element={<MyMessaging />} />
               <Route path="/account/settings" element={<MySettingsPage />} />
+              <Route path="/account/appearance" element={<MyAppearancePage />} />
               <Route path="/documents" element={<DocumentList kind={0} />} />
               <Route path="/documents/new" element={<DocumentNew kind={0} />} />
               <Route path="/documents/:id" element={<DocumentDetail kind={0} />} />
@@ -562,6 +572,7 @@ export function App() {
               <Route path="/admin/organization" element={<OrganizationSettingsPage />} />
               <Route path="/admin/settings" element={<OrganizationSettingsPage />} />
               <Route path="/admin/deleted-records" element={<DeletedRecordsPage />} />
+              <Route path="/admin/appearance" element={<OrganizationAppearancePage />} />
               <Route path="/admin/audit" element={<AuditPage />} />
               <Route path="/admin/security" element={<SecurityPage />} />
               <Route path="/admin/sign-in-security" element={<SignInSecurityPage />} />

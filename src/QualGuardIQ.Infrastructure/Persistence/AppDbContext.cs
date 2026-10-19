@@ -44,6 +44,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     {
         base.OnModelCreating(b);
         b.HasDefaultSchema("qms");
+        ConfigureAppearance(b);
         ConfigureShared(b);
         ConfigureModules(b);
         ConfigureRecordDeletion(b);

@@ -45,11 +45,11 @@ export function Facts({ items, children }: { items: [string, ReactNode][]; child
   );
 }
 
-/** Panel header band: small uppercase label on a tinted strip with a rule underneath, optional action on the right. */
+/** Panel header: a quiet title on the frosted panel with a hairline underneath, optional action on the right. */
 export function PanelHead({ title, action }: { title: ReactNode; action?: ReactNode }) {
   return (
-    <Stack direction="row" alignItems="center" gap={1} sx={{ px: 2, minHeight: 38, bgcolor: 'background.band', borderBottom: 1, borderColor: 'divider' }}>
-      <Typography variant="overline" component="h3" color="text.secondary" sx={{ flex: 1 }}>{title}</Typography>
+    <Stack direction="row" alignItems="center" gap={1} sx={{ px: 2, minHeight: 44, borderBottom: 1, borderColor: 'divider' }}>
+      <Typography component="h3" sx={{ flex: 1, color: 'text.primary', fontWeight: 700, fontSize: 14.5, letterSpacing: '-0.005em' }}>{title}</Typography>
       {action}
     </Stack>
   );
