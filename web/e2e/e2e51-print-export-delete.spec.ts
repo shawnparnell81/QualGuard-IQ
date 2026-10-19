@@ -107,6 +107,7 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     await button(page, 'Export list').click();
     await page.getByRole('menuitem', { name: /Excel workbook/ }).click();
     await expect(page.getByTestId('tool-notice')).toContainText('Saved as Excel workbook');
+    await capture(page, '03c-saved-to-chosen-folder');
     const saved = await page.evaluate(() => (window as unknown as { __saved: { name: string; size: number; type: string }[] }).__saved);
     expect(saved).toHaveLength(1);
     expect(saved[0].name).toMatch(/\.xlsx$/);
