@@ -223,6 +223,8 @@ public sealed class FormTable
     /// <summary>Group rows by this column's value and compute subtotals for the total columns.</summary>
     public string? SubtotalBy { get; set; }
     public bool RepeatHeaderOnEachPage { get; set; } = true;
+    /// <summary>Key of the source table whose rows fill this table when the record is filled from another record; null uses the same key.</summary>
+    public string? Prefill { get; set; }
     public FieldCondition? VisibleWhen { get; set; }
 }
 

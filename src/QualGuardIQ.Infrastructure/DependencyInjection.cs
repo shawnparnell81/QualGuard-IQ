@@ -133,6 +133,7 @@ public static class DependencyInjection
     {
         s.AddScoped<ModuleSupport>();
         s.AddScoped<FormService>();
+        s.AddScoped<FormPrefillService>();
         s.AddScoped<FormPrintService>();
         s.AddScoped<FormWorkbookService>();
         s.AddScoped<NcrService>();

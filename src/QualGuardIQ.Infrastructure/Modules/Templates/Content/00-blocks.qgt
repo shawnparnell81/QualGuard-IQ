@@ -1,7 +1,7 @@
 # Shared building blocks. A template includes a block with "use <name>"; each block may be used once per template.
 # Line format:
 #   section key | Title | columns | instructions
-#   f key | Label | type | options | help        options: * required, [A; B] choices, {formula}, unit= min= max= dec= w= len= labels=A/B when=key=value reqwhen=key=value
+#   f key | Label | type | options | help        options: * required, [A; B] choices, {formula}, unit= min= max= dec= w= len= labels=A/B when=key=value reqwhen=key=value from=source key (copied when filling from another record)
 #   table key | Title | minimum rows | instructions, then c lines for its columns, rows/groups/total/running lines
 #   sign key | Label | role | meaning | permission | optional
 #   rule target | operator | value | fill | bold

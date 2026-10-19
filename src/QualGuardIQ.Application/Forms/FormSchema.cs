@@ -33,6 +33,11 @@ public sealed class FormField
     public string? FromComponent { get; set; }
     /// <summary>Help text shown under the input and in the print layout's instructions.</summary>
     public string? Help { get; set; }
+    /// <summary>
+    /// When the record is filled from another record (a PPAP common data page, a characteristics list, a CAPA), the key of the value to copy
+    /// into this field or column. Null copies the value with the same key.
+    /// </summary>
+    public string? Prefill { get; set; }
     public string? Placeholder { get; set; }
     /// <summary>Layout width in a 12-column grid (print and screen).</summary>
     public int? Width { get; set; }

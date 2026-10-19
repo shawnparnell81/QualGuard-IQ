@@ -138,6 +138,7 @@ public static class TemplateLibrary
                 case "max": f.Max = decimal.Parse(v, System.Globalization.CultureInfo.InvariantCulture); break;
                 case "dec": f.Decimals = int.Parse(v); break;
                 case "w": f.Width = int.Parse(v); break;
+                case "from": f.Prefill = v; break;
                 case "len": f.MaxLength = int.Parse(v); break;
                 case "labels": f.ResultLabels = v.Split('/').ToList(); break;
                 case "when": f.VisibleWhen = Cond(v); break;
@@ -173,6 +174,35 @@ public static class TemplateLibrary
                     foreach (var l in bl) Apply(x, l, blocks, used);
                 }
                 break;
+            case "section" when c[0] == "identification":
+                {
+                    // continue the common identification section instead of opening a new one
+                    var id = x.D.Sections.First(z => z.Key == "identification");
+                    id.Title = c.Length > 1 && c[1].Length > 0 ? c[1] : id.Title;
+                    if (c.Length > 2 && c[2].Length > 0) id.Columns = int.Parse(c[2]);
+                    if (c.Length > 3 && c[3].Length > 0) id.Instructions = c[3];
+                    x.Section = "identification"; x.Table = null;
+                    break;
+                }
+            case "relabel":
+                {
+                    // relabel key | Label | help: renames a common field so it reads in the form's own terms
+                    var f = x.D.Fields.FirstOrDefault(z => z.Key == c[0]) ?? throw new InvalidOperationException($"Relabel of unknown field '{c[0]}'.");
+                    f.Label = c[1];
+                    if (c.Length > 2 && c[2].Length > 0) f.Help = c[2];
+                    break;
+                }
+            case "order":
+                {
+                    // order key; key; ...: puts these fields of one section first, in this order
+                    var keys = List(rest);
+                    var moved = keys.Select(k => x.D.Fields.FirstOrDefault(z => z.Key == k) ?? throw new InvalidOperationException($"Order names unknown field '{k}'.")).ToList();
+                    if (moved.Select(f => f.Section).Distinct().Count() != 1) throw new InvalidOperationException("Order lists fields of one section only.");
+                    var at = x.D.Fields.FindIndex(f => f.Section == moved[0].Section);
+                    foreach (var f in moved) x.D.Fields.Remove(f);
+                    x.D.Fields.InsertRange(at, moved);
+                    break;
+                }
             case "section":
                 x.D.Sections.Add(new FormSection { Key = "sec_" + c[0], Title = c[1], Columns = c.Length > 2 && c[2].Length > 0 ? int.Parse(c[2]) : 2, Instructions = c.Length > 3 && c[3].Length > 0 ? c[3] : null });
                 x.Section = "sec_" + c[0]; x.Table = null;
@@ -209,6 +239,7 @@ public static class TemplateLibrary
             case "total": (Last().Totals ??= []).Add(new TableTotal { Column = c[0], Function = c[1], Label = c.Length > 2 ? c[2] : null }); break;
             case "running": (Last().RunningTotals ??= []).Add(c[0]); break;
             case "tablewhen": Last().VisibleWhen = Cond(rest.Trim()); break;
+            case "tablefrom": Last().Prefill = rest.Trim(); break;
             case "sign":
                 x.Signs.Add(new SignatureBlock { Key = c[0], Label = c[1], Role = c[2], Meaning = c[3], RequiredPermission = c.Length > 4 && c[4].Length > 0 ? c[4] : null,
                     Required = !(c.Length > 5 && c[5] == "optional") });
