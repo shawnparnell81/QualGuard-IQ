@@ -13,7 +13,7 @@ test.describe('Forms B8: PDF and scanned form intake', () => {
     await page.getByRole('option', { name: 'Convert to an electronic form' }).click();
     await page.getByRole('button', { name: 'Upload and inspect' }).click();
     await expect(page).toHaveURL(/\/imports\/[0-9a-f-]{36}$/);
-    await expect(page.getByText('Preview ready')).toBeVisible();
+    await expect(page.getByText('Preview ready').first()).toBeVisible();
 
     // the original PDF beside the converted form, which keeps the fields, checkboxes, the totalled table and the sign-off blocks
     await expect(page.locator('iframe[title="Original document"]')).toBeVisible();
@@ -32,10 +32,16 @@ test.describe('Forms B8: PDF and scanned form intake', () => {
     await expect(table.getByText(/Medium · \d+%/).first()).toBeVisible();
     await shot(page, 'forms-import/b8-detections');
     await page.getByLabel('Label for Inspector').fill('Inspector name');
+    const saved = page.waitForResponse((r) => r.request().method() === 'PUT' && /\/api\/imports\/[0-9a-f-]{36}\/detections$/.test(r.url()));
+    const reloaded = page.waitForResponse((r) => r.request().method() === 'GET' && /\/api\/imports\/[0-9a-f-]{36}$/.test(r.url()));
     await page.getByRole('button', { name: 'Save review' }).click();
+    expect((await saved).ok()).toBeTruthy();
+    await reloaded;
     await expect(page.getByRole('tab', { name: /Detections \(\d+ to confirm\)/ })).toBeVisible();
+    const confirmed = page.waitForResponse((r) => r.request().method() === 'PUT' && /\/api\/imports\/[0-9a-f-]{36}\/detections$/.test(r.url()));
     await page.getByRole('button', { name: 'Confirm all' }).click();
-    await expect(page.getByRole('tab', { name: 'Detections', exact: true })).toBeVisible();
+    expect((await confirmed).ok()).toBeTruthy();
+    await expect(page.getByRole('tab', { name: 'Detections', exact: true })).toBeVisible({ timeout: 15_000 });
     await expect(page.getByText('Every detection has been reviewed or has high confidence.')).toBeVisible();
 
     await page.getByRole('tab', { name: 'Pages' }).click();
@@ -45,7 +51,7 @@ test.describe('Forms B8: PDF and scanned form intake', () => {
     await page.getByRole('tab', { name: 'Check and approve' }).click();
     await page.getByLabel('Form title').fill(title);
     await page.getByRole('button', { name: 'Apply' }).click();
-    await expect(page.getByText('Preview ready')).toBeVisible();
+    await expect(page.getByText('Preview ready').first()).toBeVisible();
     await page.getByRole('tab', { name: 'Check and approve' }).click();
     await page.getByRole('button', { name: 'Submit for approval' }).click();
     await expect(page.getByText('Waiting for approval by someone other than the uploader.')).toBeVisible();
