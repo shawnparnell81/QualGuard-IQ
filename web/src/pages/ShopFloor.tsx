@@ -293,8 +293,10 @@ export function PurchaseOrderDetail() {
 }
 
 export function EntryLog() {
+  const { can } = useAuth();
   const q = useQuery({ queryKey: ['entries', 'all'], queryFn: () => get<Entry[]>('/api/production/entries') });
-  return <ModuleWorkspace module={mod} crumbs={[{ label: 'Entry log' }]} title="Shop-floor entry log"><EntryTable rows={q.data ?? []} /></ModuleWorkspace>;
+  return <ModuleWorkspace module={mod} crumbs={[{ label: 'Entry log' }]} title="Shop-floor entry log"
+    actions={can('production.edit') ? <Button variant="contained" component={RouterLink} to="/production/entry">Record entry</Button> : undefined}><EntryTable rows={q.data ?? []} /></ModuleWorkspace>;
 }
 
 /**
