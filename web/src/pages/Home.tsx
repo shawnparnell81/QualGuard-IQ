@@ -1,5 +1,6 @@
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { Box, Button, Card, CardActionArea, Chip, Paper, Stack, Typography } from '@mui/material';
+import { alpha } from '@mui/material/styles';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useAuth } from '../auth';
 import { visibleModules } from '../modules/registry';
@@ -39,8 +40,12 @@ export function Home() {
 
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 2, mb: 3 }}>
         {tiles.map((t) => (
-          <Paper key={t.label} sx={{ p: 2, borderTop: 3, borderTopColor: t.tone }}>
-            <Typography sx={{ fontFamily: mono, fontSize: 30, fontWeight: 500 }}>{t.value ?? '–'}</Typography>
+          <Paper key={t.label} sx={(th) => {
+            const c = t.tone.split('.').reduce<any>((o, k) => o?.[k], th.palette) as string;
+            return { p: 2, pl: 2.5, position: 'relative', overflow: 'hidden', backgroundImage: `linear-gradient(135deg, ${alpha(c, th.palette.mode === 'dark' ? 0.16 : 0.08)} 0%, transparent 60%)`,
+              '&::before': { content: '""', position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: `linear-gradient(180deg, ${c}, ${alpha(c, 0.45)})` } };
+          }}>
+            <Typography sx={{ fontFamily: mono, fontSize: 30, fontWeight: 500, color: t.tone }}>{t.value ?? '–'}</Typography>
             <Typography variant="body2" color="text.secondary">{t.label}</Typography>
           </Paper>
         ))}
@@ -82,9 +87,12 @@ export function Home() {
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 2 }}>
         {visibleModules(can).map((m) => (
           <Card key={m.key} variant="outlined">
-            <CardActionArea onClick={() => nav(m.basePath)} sx={{ p: 2, height: '100%' }}>
-              <Stack direction="row" gap={1} alignItems="center" sx={{ color: 'primary.main', mb: 0.5 }}>{m.icon}<Typography fontWeight={600}>{m.label}</Typography></Stack>
-              <Typography variant="body2" color="text.secondary">{m.description}</Typography>
+            <CardActionArea onClick={() => nav(m.basePath)} sx={{ p: 2, height: '100%', display: 'flex', alignItems: 'flex-start', gap: 1.5, '&:hover .module-tile': { bgcolor: 'primary.main', color: 'primary.contrastText' }, '&:hover .module-name': { color: 'primary.main' } }}>
+              <Box className="module-tile" sx={(th) => ({ flexShrink: 0, width: 40, height: 40, borderRadius: 2, display: 'grid', placeItems: 'center', color: 'primary.main', bgcolor: alpha(th.palette.primary.main, th.palette.mode === 'dark' ? 0.18 : 0.1), transition: 'background-color .18s, color .18s', '& svg': { fontSize: 22 } })}>{m.icon}</Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography className="module-name" fontWeight={700} sx={{ mb: 0.25, transition: 'color .18s' }}>{m.label}</Typography>
+                <Typography variant="body2" color="text.secondary">{m.description}</Typography>
+              </Box>
             </CardActionArea>
           </Card>
         ))}

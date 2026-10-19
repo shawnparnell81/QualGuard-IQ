@@ -10,7 +10,7 @@ import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDate, fmtDateTime } from '../components/Status';
-import { Facts, SchemaForm, Section, StepDialog, useRunner, useSites, useUsers } from '../components/Kit';
+import { Facts, Readout, SchemaForm, Section, StepDialog, useRunner, useSites, useUsers } from '../components/Kit';
 import { mono } from '../theme';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -29,13 +29,7 @@ export function Loading({ m, crumbs, q }: { m: string; crumbs: { label: string; 
 
 /** Key figure tile used in the war room and dashboards. */
 export function Tile({ label, value, color, hint }: { label: string; value: ReactNode; color?: string; hint?: string }) {
-  return (
-    <Paper sx={{ p: 1.75, borderLeft: 4, borderColor: color ?? 'divider' }}>
-      <Typography variant="caption" color="text.secondary">{label}</Typography>
-      <Typography sx={{ fontSize: 24, fontWeight: 600, fontFamily: mono, lineHeight: 1.2 }}>{value}</Typography>
-      {hint && <Typography variant="caption" color="text.secondary">{hint}</Typography>}
-    </Paper>
-  );
+  return <Readout label={label} value={value} color={color} hint={hint} />;
 }
 
 export function SiteSelect({ value, onChange, label = 'Site' }: { value: string; onChange: (v: string) => void; label?: string }) {
@@ -75,7 +69,7 @@ export function EnterpriseOverview() {
       <Typography variant="overline" color="text.secondary">Plant scorecards — open a plant's war room</Typography>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 1.5, mt: 0.5 }}>
         {rows.map((r) => (
-          <Paper key={r.siteId} data-testid="site-card" onClick={() => nav(`/enterprise/war-room/${r.siteId}`)} sx={{ p: 2, cursor: 'pointer', '&:hover': { boxShadow: 3 } }}>
+          <Paper key={r.siteId} data-testid="site-card" onClick={() => nav(`/enterprise/war-room/${r.siteId}`)} sx={{ p: 2, cursor: 'pointer', borderTop: '3px solid', borderTopColor: 'text.secondary', '&:hover': { bgcolor: 'action.hover' } }}>
             <Stack direction="row" alignItems="baseline" gap={1}><Typography sx={{ fontFamily: mono, fontWeight: 700 }}>{r.siteCode}</Typography><Typography variant="body2" color="text.secondary" noWrap>{r.siteName}</Typography></Stack>
             <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, mt: 1.25 }}>
               {([['NCR', r.openNcrs, r.overdueNcrs === 0, r.overdueNcrs < 3], ['CAPA', r.openCapas, r.overdueCapas === 0, r.overdueCapas < 3], ['Findings', r.overdueFindings, r.overdueFindings === 0, r.overdueFindings < 3],

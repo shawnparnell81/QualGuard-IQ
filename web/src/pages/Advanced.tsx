@@ -10,7 +10,7 @@ import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { DataTable } from '../components/DataTable';
 import { StatusChip, fmtDate, fmtDateTime, localDate } from '../components/Status';
-import { Facts, SchemaForm, Section, StepDialog, useRunner, useUsers } from '../components/Kit';
+import { Facts, Readout, SchemaForm, Section, StepDialog, useRunner, useUsers } from '../components/Kit';
 import { mono, useChartColors } from '../theme';
 import { ImportHistory, LineImportDialog } from '../components/LineImport';
 
@@ -517,13 +517,10 @@ const fmtMetric = (m: Metric) => (m.value == null ? '—' : m.unit === '%' ? pct
 
 function Tile({ m }: { m: Metric }) {
   const nav = useNavigate();
-  return <Paper variant="outlined" onClick={() => m.drillUrl && nav(m.drillUrl)} title={m.definition}
-    sx={{ p: 2, cursor: m.drillUrl ? 'pointer' : 'default', borderLeft: 4, borderLeftColor: '#3E5C76', '&:hover': m.drillUrl ? { bgcolor: 'action.hover' } : undefined }}>
-    <Typography variant="caption" color="text.secondary">{m.label}</Typography>
-    <Typography variant="h5" sx={{ fontFamily: mono }}>{fmtMetric(m)}</Typography>
+  return <Readout label={m.label} value={fmtMetric(m)} title={m.definition} color="#3E5C76" onClick={m.drillUrl ? () => nav(m.drillUrl!) : undefined}>
     {m.denominator != null && m.numerator != null && <Typography variant="caption" color="text.secondary" sx={{ fontFamily: mono }}>{m.numerator} / {m.denominator}</Typography>}
     {m.denominatorLabel && <Typography variant="caption" data-testid={`denominator-${m.key}`} sx={{ display: 'block', color: m.isFallback || m.value == null ? '#8A6D3B' : 'text.secondary' }}>{m.denominatorLabel}</Typography>}
-  </Paper>;
+  </Readout>;
 }
 
 export function InsightsHome() {
