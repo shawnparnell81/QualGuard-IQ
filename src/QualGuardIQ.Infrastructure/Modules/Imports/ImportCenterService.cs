@@ -658,7 +658,8 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
             if (problems.Count == 0) await ResolveReferencesAsync(job, vals, byKey, problems, ct);
             if (problems.Count == 0) problems.AddRange(await target.ValidateAsync(job, vals, ct));
             var dup = false; string action = "create"; IReadOnlyDictionary<string, string?>? before = null;
-            if (keys.Count > 0 && problems.Count == 0)
+            // rows with no key at all (a log without numbers: each row gets the next number) can't repeat one another
+            if (keys.Count > 0 && problems.Count == 0 && keys.Any(x => !string.IsNullOrWhiteSpace(vals.GetValueOrDefault(x))))
             {
                 var k = string.Join("\u001f", keys.Select(x => vals.GetValueOrDefault(x)?.Trim().ToLowerInvariant()));
                 if (seen.TryGetValue(k, out var firstRow)) { dup = true; dups++; AddIssue(job, $"row {line}", line, ImportIssueSeverity.Warning, "DUPLICATE_ROW", $"Row {line} repeats row {firstRow} ({string.Join(", ", keys)}).", "Remove one of the rows; duplicates are skipped."); }
@@ -793,7 +794,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
                         if (!skipInvalid) throw new AppException($"Row {line}: {string.Join(" ", problems)}");
                         skipped++; continue;
                     }
-                    if (keys.Count > 0)
+                    if (keys.Count > 0 && keys.Any(x => !string.IsNullOrWhiteSpace(vals.GetValueOrDefault(x))))
                     {
                         var k = string.Join("\u001f", keys.Select(x => vals.GetValueOrDefault(x)?.Trim().ToLowerInvariant()));
                         if (!seen.Add(k)) { dupSkipped++; continue; }

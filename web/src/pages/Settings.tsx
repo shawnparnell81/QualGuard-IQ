@@ -106,7 +106,7 @@ function GeneralTab() {
           <TextField select label="Date format" value={cur.dateFormat ?? 'auto'} onChange={(e) => set({ dateFormat: e.target.value })} helperText="How dates show on screen. People can choose their own in My settings." slotProps={{ select: { SelectDisplayProps: { 'aria-label': 'Date format' } as object } }}>
             {dateFormats.map(([k, l]) => <MenuItem key={k} value={k}>{l}</MenuItem>)}
           </TextField>
-          <TextField label="Brand colour (#RRGGBB, blank for the standard theme)" value={cur.primaryColor ?? ''} onChange={(e) => set({ primaryColor: e.target.value || null })} />
+          <TextField label="Brand color (#RRGGBB, blank for the standard theme)" value={cur.primaryColor ?? ''} onChange={(e) => set({ primaryColor: e.target.value || null })} />
           <FormControlLabel control={<Switch checked={cur.emailNotificationsEnabled ?? true} onChange={(e) => set({ emailNotificationsEnabled: e.target.checked })} />}
             label="Send e-mail copies of notifications (assignments, approvals, due dates)" />
           <FormControlLabel control={<Switch checked={cur.loginHistoryEnabled} onChange={(e) => set({ loginHistoryEnabled: e.target.checked })} />} label="Show login history to administrators" />
@@ -251,11 +251,12 @@ export function MySettingsPage() {
   const save = async (patch: Partial<Prefs>) => {
     if (!p) return;
     const next = { ...p, ...patch };
+    qc.setQueryData(['preferences'], next);
     try {
       const r = await put<Prefs>('/api/account/preferences', { emailNotifications: next.emailNotifications, dateFormat: next.dateFormat, theme: next.theme });
       qc.setQueryData(['preferences'], r); setDateFormat(r.effectiveDateFormat);
       setMsg({ ok: true, text: 'Saved.' });
-    } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
+    } catch (e) { qc.setQueryData(['preferences'], p); setMsg({ ok: false, text: (e as Error).message }); }
   };
   return (
     <Box sx={{ maxWidth: 960, mx: 'auto', p: { xs: 2, sm: 4 }, display: 'grid', gap: 2.5 }}>

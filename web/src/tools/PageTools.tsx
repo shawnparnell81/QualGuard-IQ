@@ -53,10 +53,10 @@ const importLinks: [RegExp, string, string, string][] = [
 
 const errorText = (e: unknown) => e instanceof ApiError ? e.message : 'Something went wrong. Try again.';
 const formats: [SaveFormat, string, ReactElement][] = [
-  ['pdf', 'PDF (.pdf)', <PictureAsPdfOutlined fontSize="small" />],
-  ['xlsx', 'Excel (.xlsx)', <GridOnOutlined fontSize="small" />],
-  ['docx', 'Word (.docx)', <DescriptionOutlined fontSize="small" />],
-  ['csv', 'CSV (.csv)', <TableViewOutlined fontSize="small" />],
+  ['pdf', 'PDF document (.pdf)', <PictureAsPdfOutlined fontSize="small" />],
+  ['xlsx', 'Excel workbook (.xlsx)', <GridOnOutlined fontSize="small" />],
+  ['docx', 'Word document (.docx)', <DescriptionOutlined fontSize="small" />],
+  ['csv', 'CSV file (.csv)', <TableViewOutlined fontSize="small" />],
 ];
 
 /**
@@ -108,7 +108,7 @@ export function PageTools({ area, title, record }: { area: RefObject<HTMLElement
   const showSave = !!r || hasTable;
   return (
     <Box className="qg-no-print" data-testid="page-tools" sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-      <Tooltip title={r ? 'Print this record as shown' : 'Print this page'}>
+      <Tooltip describeChild title={r ? 'Print this record as shown' : 'Print this page'}>
         <Button size="small" variant="outlined" startIcon={<PrintOutlined />} onClick={() => window.print()} data-testid="tool-print">Print</Button>
       </Tooltip>
       {r && (
@@ -117,10 +117,10 @@ export function PageTools({ area, title, record }: { area: RefObject<HTMLElement
       {showSave && (
         <>
           <Button size="small" variant="outlined" startIcon={<SaveAltOutlined />} endIcon={<ExpandMore />} disabled={busy} onClick={(e) => setMenu(e.currentTarget)}
-            aria-haspopup="menu" data-testid="tool-save-as">{r ? 'Save as' : 'Export list'}</Button>
+            aria-haspopup="menu" data-testid="tool-save-as">{r ? 'Export' : 'Export list'}</Button>
           <Menu anchorEl={menu} open={!!menu} onClose={() => setMenu(null)}>
             <Typography variant="caption" color="text.secondary" sx={{ px: 2, py: 0.5, display: 'block' }}>
-              {r ? 'Save this record to your computer' : 'Save the list as shown (filters and columns)'}
+              {r ? 'Save this record to your computer as…' : 'Save the list as shown (filters and columns) as…'}
             </Typography>
             <Divider />
             {formats.map(([f, label, icon]) => (
@@ -133,7 +133,7 @@ export function PageTools({ area, title, record }: { area: RefObject<HTMLElement
         <Button key={to} size="small" variant="outlined" startIcon={<UploadFileOutlined />} component={RouterLink} to={to} data-testid="tool-import">{label}</Button>
       ))}
       {r?.delete.deletable && (
-        <Tooltip title={r.delete.canDelete ? (r.delete.locked ? 'This record is closed, approved or signed' : '') : r.delete.reason ?? ''}>
+        <Tooltip describeChild title={r.delete.canDelete ? (r.delete.locked ? 'This record is closed, approved or signed' : '') : r.delete.reason ?? ''}>
           <span>
             <Button size="small" variant="outlined" color="error" startIcon={<DeleteOutline />} disabled={!r.delete.canDelete} onClick={() => setDeleting(true)} data-testid="tool-delete">Delete</Button>
           </span>
@@ -211,7 +211,7 @@ export function PrintStyles() {
       '@media print': {
         '@page': { margin: '14mm 12mm' },
         'html, body, #root': { background: t.palette.common.white, color: t.palette.common.black },
-        'header.MuiAppBar-root, aside, nav, .qg-no-print, [role="tablist"], .MuiBreadcrumbs-root, .MuiSnackbar-root, .MuiFab-root, button:not(.qg-print-keep)': { display: 'none !important' },
+        'header.MuiAppBar-root, aside, nav, .qg-no-print, .MuiTabs-root, .MuiTooltip-popper, .MuiPopover-root, .MuiBreadcrumbs-root, .MuiSnackbar-root, .MuiFab-root, button:not(.qg-print-keep)': { display: 'none !important' },
         '.qg-print-only': { display: 'block' },
         'main, main *': { boxShadow: 'none !important' },
         '.MuiPaper-root': { background: `${t.palette.common.white} !important`, color: `${t.palette.common.black} !important`, border: `1px solid ${t.palette.grey[300]}` },
