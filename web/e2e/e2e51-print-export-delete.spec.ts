@@ -10,6 +10,8 @@ const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name, exact: typeof name === 'string' ? true : undefined });
 /** Screenshots for review go in features-shots when E2E_SCREENSHOT_DIR is set. */
 const capture = (p: Page, name: string) => shot(p, `features-shots/${name}`);
+/** An open menu, captured once it has finished fading in. */
+const menuOpen = (p: Page) => expect(p.locator('.MuiMenu-paper')).toHaveCSS('opacity', '1');
 /** When screenshots are being taken, the exported files are kept beside them so they can be opened and checked by eye. */
 function keep(files: Record<string, Buffer>) {
   const root = process.env.E2E_SCREENSHOT_DIR;
@@ -55,6 +57,7 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
 
     await button(page, 'Export').click();
     await expect(page.getByRole('menuitem', { name: /Excel workbook/ })).toBeVisible();
+    await menuOpen(page);
     await capture(page, '03-record-save-as-menu');
     const xlsx = await download(page, () => page.getByRole('menuitem', { name: /Excel workbook/ }).click());
     expect(xlsx.name).toMatch(/\.xlsx$/);
@@ -72,6 +75,8 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     await expect(page.getByRole('main').getByText(title)).toBeVisible();
     await capture(page, '04-list-toolbar');
     await button(page, 'Export list').click();
+    await expect(page.getByRole('menuitem', { name: /CSV file/ })).toBeVisible();
+    await menuOpen(page);
     await capture(page, '04b-list-export-menu');
     const list = await download(page, () => page.getByRole('menuitem', { name: /CSV file/ }).click());
     expect(list.name).toMatch(/\.csv$/);
@@ -245,6 +250,7 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     await page.getByRole('option', { name: '2026-03-07' }).click();
     await page.getByTestId('settings-save').click();
     await expect(page.getByTestId('settings-msg')).toHaveText('Settings saved.');
+    await expect(page.getByTestId('appearance-link').getByRole('link', { name: 'Appearance' })).toHaveAttribute('href', '/admin/appearance');
     await capture(page, '12-org-settings-general');
 
     await page.getByRole('tab', { name: 'Logo' }).click();
@@ -277,6 +283,17 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     await capture(page, '17-my-settings');
     const admin = await Api.as(users.admin);
     expect((await admin.get('/api/account/preferences')).emailNotifications).toBe(false);
+
+    // light or dark here is the mode of My appearance: one setting, the same on both pages
+    await page.getByRole('group', { name: 'Theme' }).getByRole('button', { name: 'Dark' }).click();
+    await expect(page.getByTestId('prefs-msg')).toHaveText('Saved.');
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.colorScheme)).toBe('dark');
+    expect((await admin.get('/api/appearance')).personal.mode).toBe('dark');
+    await page.getByRole('group', { name: 'Theme' }).getByRole('button', { name: 'Organization default' }).click();
+    await expect.poll(async () => (await admin.get('/api/appearance')).personal?.mode ?? null).toBeNull();
+    await expect.poll(() => page.evaluate(() => document.documentElement.style.colorScheme)).toBe('light');
+    await page.getByTestId('my-appearance-link').click();
+    await expect(page.getByRole('heading', { name: 'My appearance' })).toBeVisible();
     await admin.put('/api/account/preferences', { emailNotifications: true, dateFormat: null, theme: null });
     const s = await admin.get('/api/organization/settings');
     await admin.put('/api/organization/settings', { ...s, dateFormat: 'auto' });
