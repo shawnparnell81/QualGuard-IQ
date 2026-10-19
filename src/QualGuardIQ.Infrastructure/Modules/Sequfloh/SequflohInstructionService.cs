@@ -12,10 +12,10 @@ using QualGuardIQ.Infrastructure.Services;
 namespace QualGuardIQ.Infrastructure.Modules.Sequfloh;
 
 public sealed record DevelopmentInput(Guid? AssignedEngineerId = null, DateOnly? TargetCompletionDate = null, string? Project = null, string? EngineeringNotes = null, string? DevelopmentStatus = null, bool? RecommendRelease = null);
-public sealed record InstructionCreateInput(WorkInstructionType Type, string Title, Guid SiteId, Guid? DepartmentId, Guid? PartId);
+public sealed record InstructionCreateInput(WorkInstructionType Type, string Title, Guid SiteId, Guid? DepartmentId, Guid? PartId, Guid? TemplateId = null);
 public sealed record InstructionSaveInput(string Title, Guid SiteId, Guid? DepartmentId, Guid? OwnerId, Guid? ReviewerId, Guid? ApproverId, Guid? PartId, string? ProductFamily, string? Assembly,
     string? Model, string? Variant, string? Process, string? Operation, string? Workstation, string? Location, string? ValidationType, string? FaiType, string? RepairCategory, string? RepairType,
-    string? RepairDescription, string? ResultStatus, DateOnly? EffectiveDate, JsonObject? Content, JsonArray? Steps, JsonArray? Characteristics, JsonArray? PartsRows, uint RowVersion = 0);
+    string? RepairDescription, string? ResultStatus, DateOnly? EffectiveDate, JsonObject? Content, JsonArray? Steps, JsonArray? Characteristics, JsonArray? PartsRows, uint RowVersion = 0, JsonArray? Blocks = null);
 public sealed record InstructionActionInput(string? Comment, DateOnly? EffectiveDate, uint RowVersion = 0);
 public sealed record CopyStepsInput(List<Guid> OperationStepIds);
 public sealed record CopyPartsListInput(Guid? PartsListId, List<Guid>? PartIds, bool Replace = false);
@@ -101,6 +101,12 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         };
         wi.FamilyId = wi.Id;
         await ApplyPartAsync(wi, r.PartId, ct);
+        if (r.TemplateId is { } tid)
+        {
+            var t = await db.SequflohInstructionTemplates.AsNoTracking().FirstOrDefaultAsync(x => x.Id == tid && x.IsActive, ct) ?? throw new AppException("The template is not available.");
+            if (t.Type is { } tt && tt != r.Type) throw new AppException($"The template '{t.Name}' is for another instruction type.");
+            wi.Blocks = SequflohBlocks.Fresh(t.Blocks); wi.TemplateId = t.Id;
+        }
         db.SequflohWorkInstructions.Add(wi);
         Transition(wi, "create", null, WorkInstructionStatus.Draft, null);
         await db.SaveChangesAsync(ct);
@@ -146,6 +152,7 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         wi.Steps = CleanRows(r.Steps, schema.StepColumns, true, "step");
         wi.Characteristics = schema.HasCharacteristics ? CleanRows(r.Characteristics, schema.CharacteristicColumns, true, "characteristic") : "[]";
         wi.PartsRows = schema.HasPartsRows ? CleanRows(r.PartsRows, schema.PartsRowColumns, true, "parts row") : "[]";
+        if (r.Blocks is not null) wi.Blocks = SequflohBlocks.Clean(r.Blocks);
         await db.SaveChangesAsync(ct);
         await IndexAsync(wi, ct);
     }
@@ -436,8 +443,25 @@ public sealed class SequflohInstructionService(AppDbContext db, ModuleSupport m,
         ApproverId = s.ApproverId, PartId = s.PartId, PartNumber = s.PartNumber, PartDescription = s.PartDescription, ProductFamily = s.ProductFamily, Assembly = s.Assembly, Model = s.Model,
         Variant = s.Variant, Process = s.Process, Operation = s.Operation, Workstation = s.Workstation, Location = s.Location, ValidationType = s.ValidationType, FaiType = s.FaiType,
         RepairCategory = s.RepairCategory, RepairType = s.RepairType, RepairDescription = s.RepairDescription, SourcePartsListId = s.SourcePartsListId,
-        Content = s.Content, Steps = NewIds(s.Steps), Characteristics = NewIds(s.Characteristics), PartsRows = NewIds(s.PartsRows)
+        Content = s.Content, Steps = NewIds(s.Steps), Characteristics = NewIds(s.Characteristics), PartsRows = NewIds(s.PartsRows),
+        Blocks = SequflohBlocks.Fresh(s.Blocks), TemplateId = s.TemplateId
     };
+
+    /// <summary>Adds a template's blocks to an editable instruction, after its own blocks or in place of them.</summary>
+    public async Task<SequflohWorkInstruction> ApplyTemplateAsync(Guid id, ApplyTemplateInput r, CancellationToken ct)
+    {
+        await using var tx = await db.Database.BeginTransactionAsync(ct);
+        var wi = await EditableAsync(id, ct);
+        var t = await db.SequflohInstructionTemplates.AsNoTracking().FirstOrDefaultAsync(x => x.Id == r.TemplateId && x.IsActive, ct) ?? throw new AppException("The template is not available.");
+        if (t.Type is { } tt && tt != wi.Type) throw new AppException($"The template '{t.Name}' is for another instruction type.");
+        var blocks = r.Replace ? new JsonArray() : JsonNode.Parse(wi.Blocks) as JsonArray ?? [];
+        foreach (var b in (JsonNode.Parse(SequflohBlocks.Fresh(t.Blocks)) as JsonArray ?? []).ToList()) { b!.Parent?.AsArray().Remove(b); blocks.Add(b); }
+        wi.Blocks = SequflohBlocks.Clean(blocks);
+        wi.TemplateId = t.Id;
+        await db.SaveChangesAsync(ct);
+        await tx.CommitAsync(ct);
+        return wi;
+    }
     static string NewIds(string json)
     {
         var a = JsonNode.Parse(json)!.AsArray();
