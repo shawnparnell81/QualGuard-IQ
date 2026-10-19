@@ -23,7 +23,7 @@ x-common: &common
   Seed__TimeZone: ${TIME_ZONE:-America/New_York}
   DataProtection__KeyPath: /keys
   Video__FfmpegPath: /usr/bin/ffmpeg
-  # Virus scanning is optional: set MALWARE_SCANNER=ClamAV and add clamav to COMPOSE_PROFILES (Intel/AMD computers only).
+  # Virus scanning is optional: set MALWARE_SCANNER=ClamAV and add clamav to COMPOSE_PROFILES.
   MalwareScanning__Provider: ${MALWARE_SCANNER:-None}
   MalwareScanning__ClamAV__Host: clamav
   # Only the web server and the optional HTTPS front end inside the compose network may report the real client address.
@@ -45,7 +45,7 @@ x-seed: &seed
 
 services:
   postgres:
-    image: postgres:18
+    image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
     restart: unless-stopped
     environment:
       POSTGRES_DB: qgiq
@@ -60,8 +60,8 @@ services:
       retries: 5
 
   clamav:
-    # No ARM image exists, so this only runs on Intel/AMD computers when the clamav profile is on.
-    image: clamav/clamav:stable
+    # Debian build: runs on Intel/AMD and on ARM (arm64) computers. Needs about 3 GB of memory while it loads the definitions.
+    image: clamav/clamav:1.5.4-debian@sha256:9a96980b265cb2b51a20bdcca921dc80aa55ed0e56cdfb076198ee27a9171927
     profiles: [clamav]
     restart: unless-stopped
     volumes: [clamdb:/var/lib/clamav]
@@ -73,7 +73,7 @@ services:
 
   minio:
     # Maintained MinIO-compatible community build (MinIO images are no longer published on Docker Hub).
-    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z@sha256:635197cb9f36d01bee221d34d1c7d7960f6a95c48b0b6c01d99cd13bdae51a46
     profiles: [minio]
     restart: unless-stopped
     command: server /data --console-address :9001
@@ -89,7 +89,7 @@ services:
 
   minio-init:
     # Runs once on each start: makes the file bucket and the bucket-only app login. Safe to repeat.
-    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z
+    image: pgsty/silo:RELEASE.2026-09-16T00-00-00Z@sha256:635197cb9f36d01bee221d34d1c7d7960f6a95c48b0b6c01d99cd13bdae51a46
     profiles: [minio]
     restart: "no"
     entrypoint: ["/bin/sh", "/init/minio-init.sh"]
@@ -153,6 +153,26 @@ services:
     ports: ["${WEB_PORT:-8081}:80"]
     depends_on:
       api: { condition: service_healthy }
+
+  backup:
+    # On demand only: docker compose run --rm backup. Writes the database and the Data Protection keys to ./backups
+    # (or BACKUP_DIR in .env). Uses the same PostgreSQL image as the database, so pg_dump always matches the server.
+    image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
+    profiles: [backup]
+    restart: "no"
+    entrypoint: ["bash", "/scripts/backup.sh", "/backups"]
+    environment:
+      PGHOST: postgres
+      PGUSER: qgiq
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      PGDATABASE: qgiq
+      QGIQ_KEYS_DIR: /keys
+    volumes:
+      - ./scripts:/scripts:ro
+      - dpkeys:/keys:ro
+      - ${BACKUP_DIR:-./backups}:/backups
+    depends_on:
+      postgres: { condition: service_healthy }
 
   caddy:
     # Optional HTTPS front end for a server people reach by name: COMPOSE_PROFILES=...,https and QG_DOMAIN in .env.

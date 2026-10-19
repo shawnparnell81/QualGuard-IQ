@@ -11,3 +11,6 @@ data/
 *.private.pem
 *.DEVELOPMENT-ONLY.*
 docs/screenshots/other/
+
+# backups made with docker compose run --rm backup (database dump and the key ring)
+backups/

@@ -11,12 +11,12 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:18
+        image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
         env: { POSTGRES_USER: qgiq, POSTGRES_PASSWORD: ci_only, POSTGRES_DB: qgiq_test }
         ports: ["5432:5432"]
         options: --health-cmd pg_isready --health-interval 5s --health-retries 10
       clamav:
-        image: clamav/clamav:stable
+        image: clamav/clamav:1.5.4-debian@sha256:9a96980b265cb2b51a20bdcca921dc80aa55ed0e56cdfb076198ee27a9171927
         ports: ["3310:3310"]
         options: --health-cmd clamdcheck.sh --health-interval 15s --health-retries 30 --health-start-period 120s
     env:
@@ -57,7 +57,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     services:
       postgres:
-        image: postgres:18
+        image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
         env: { POSTGRES_USER: qgiq, POSTGRES_PASSWORD: ci_only, POSTGRES_DB: postgres }
         ports: ["5432:5432"]
         options: --health-cmd pg_isready --health-interval 5s --health-retries 10
