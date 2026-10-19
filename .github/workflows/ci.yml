@@ -52,9 +52,14 @@ jobs:
       - run: npm audit --audit-level=high
   ui:
     runs-on: ubuntu-latest
-    needs: [backend, web]
-    # Full browser suite runs only when started by hand (Actions > ci > Run workflow).
-    if: github.event_name == 'workflow_dispatch'
+    needs: [web]
+    # Full browser suite: on every pull request, on pushes to main, and on demand (Actions > ci > Run workflow).
+    # Pushes to other branches skip it, since the pull request for that branch already runs it.
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
+    timeout-minutes: 60
+    concurrency:
+      group: ui-${{ github.event.pull_request.number || github.ref }}
+      cancel-in-progress: true
     services:
       postgres:
         image: postgres:18.6@sha256:74935e72241653ca55e0414067e6d8763aceb8a810eb51b452253ec3dcfc4336
@@ -62,25 +67,59 @@ jobs:
         ports: ["5432:5432"]
         options: --health-cmd pg_isready --health-interval 5s --health-retries 10
     env:
+      E2E_PGHOST: localhost
       E2E_PGPORT: "5432"
+      E2E_PGUSER: qgiq
       E2E_PGPASSWORD: ci_only
+      E2E_S3_URL: http://localhost:9000
       E2E_S3_KEY: ci_minio
       E2E_S3_SECRET: ci_minio_secret
+      DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+      DOTNET_NOLOGO: "1"
     defaults: { run: { working-directory: web } }
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Start MinIO (S3-compatible storage)
         run: |
           docker run -d --name minio -p 9000:9000 -e MINIO_ROOT_USER=ci_minio -e MINIO_ROOT_PASSWORD=ci_minio_secret pgsty/silo:RELEASE.2026-09-16T00-00-00Z server /data
-          for i in $(seq 1 30); do curl -sf http://localhost:9000/minio/health/live && break; sleep 2; done
+          for i in $(seq 1 30); do curl -sf http://localhost:9000/minio/health/live && exit 0; sleep 2; done
+          docker logs minio; exit 1
       - uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4.3.1
         with: { dotnet-version: "10.0.x" }
+      - name: Cache NuGet packages
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.nuget/packages
+          key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj', '**/Directory.Packages.props', '**/Directory.Build.props') }}
+          restore-keys: nuget-${{ runner.os }}-
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with: { node-version: 24 }
+        with: { node-version: 24, cache: npm, cache-dependency-path: web/package-lock.json }
+      - name: psql client (the test API script creates a fresh database with it)
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y postgresql-client)
       - run: npm ci
-      - run: npx playwright install --with-deps chromium
-      - run: dotnet build ../src/QualGuardIQ.Api
-      - run: npm run test:e2e
+      - name: Playwright version
+        id: pw
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Playwright browsers
+        id: pwcache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - if: steps.pwcache.outputs.cache-hit != 'true'
+        run: npx playwright install --with-deps chromium
+      - if: steps.pwcache.outputs.cache-hit == 'true'
+        run: npx playwright install-deps chromium
+      - name: Build the API once (the test server starts it without rebuilding)
+        run: dotnet build ../src/QualGuardIQ.Api -nologo -v q
+      - name: Browser tests
+        run: npm run test:e2e
+        env: { CI: "true" }
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         if: failure()
-        with: { name: playwright-report, path: web/playwright-report }
+        with:
+          name: playwright-report-${{ github.run_attempt }}
+          path: |
+            web/playwright-report
+            web/test-results
+          retention-days: 14
