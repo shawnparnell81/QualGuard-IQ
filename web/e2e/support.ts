@@ -91,7 +91,7 @@ export function screenshotFolder(name: string): string {
 }
 
 /** Saves a screenshot when E2E_SCREENSHOT_DIR is set (documentation captures); does nothing otherwise. */
-export async function shot(page: Page, name: string) {
+export async function shot(page: Page, name: string, opts: { fullPage?: boolean } = {}) {
   const root = process.env.E2E_SCREENSHOT_DIR;
   if (!root) return;
   const file = path.join(root, screenshotFolder(name), `${name}.png`);
@@ -99,5 +99,5 @@ export async function shot(page: Page, name: string) {
   await page.waitForLoadState('networkidle').catch(() => undefined);
   await page.evaluate(() => window.scrollTo(0, 0)); // the sticky top bar would otherwise sit mid-image
   const wide = (page.viewportSize()?.width ?? 1440) >= 900; // phone captures keep the screen size
-  await page.screenshot({ path: file, fullPage: wide });
+  await page.screenshot({ path: file, fullPage: opts.fullPage ?? wide }); // open dialogs and menus are shot at screen size, where their backdrop reaches
 }
