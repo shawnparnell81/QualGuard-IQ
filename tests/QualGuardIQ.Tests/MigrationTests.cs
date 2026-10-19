@@ -49,6 +49,6 @@ public sealed class MigrationTests(TestApp app)
             await migrator.MigrateAsync();
             Assert.Equal(all, (await db.Database.GetAppliedMigrationsAsync()).ToList());
         }
-        finally { await db.Database.EnsureDeletedAsync(); }
+        finally { await TestDatabases.DropAsync(db); }
     }
 }
