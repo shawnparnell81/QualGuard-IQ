@@ -123,7 +123,7 @@ public sealed class TemplatePackageService(AppDbContext db, IAccessService acces
     {
         await RequireAnyAsync(Permissions.FormsView, ct);
         var t = TemplateLibrary.Find(templateKey) ?? throw new NotFoundException("Library template");
-        using var doc = JsonDocument.Parse(FormDefinitions.Serialize(t.Definition));
+        using var doc = JsonDocument.Parse(FormDefinitions.Serialize(FormThemes.WithFamily(t.Definition, t.Key, t.Category)));
         return new TemplatePreview(t.Key, t.Title, CategoryName(t.Category), t.Purpose, t.Scope, t.Instructions, t.Workflow, t.Retention, doc.RootElement.Clone());
     }
 

@@ -44,7 +44,8 @@ public sealed class FormService(AppDbContext db, ModuleSupport m, INumberingServ
         await m.ViewAsync(RecordType, id, ct);
         var rec = await db.FormRecords.AsNoTracking().FirstAsync(r => r.Id == id, ct);
         var schema = await db.DocumentRevisions.Where(r => r.Id == rec.TemplateRevisionId).Select(r => r.FieldSchema).FirstAsync(ct);
-        return (rec, FormDefinitions.Parse(schema!), JsonSerializer.Deserialize<Dictionary<string, string?>>(rec.ValuesJson) ?? []);
+        var def = await FormFamily.ApplyAsync(db, rec.TemplateId, FormDefinitions.Parse(schema!), ct);
+        return (rec, def, JsonSerializer.Deserialize<Dictionary<string, string?>>(rec.ValuesJson) ?? []);
     }
 
     public async Task<Dictionary<string, string?>> SaveAsync(Guid id, Dictionary<string, string?> values, uint rowVersion, CancellationToken ct)
