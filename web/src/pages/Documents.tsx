@@ -117,7 +117,7 @@ export function DocumentNew({ kind }: { kind: Kind }) {
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Title" sx={{ gridColumn: '1 / -1' }} {...register('title')} error={!!errors.title} helperText={errors.title?.message} />
         <Controller name="documentType" control={control} render={({ field }) => (
-          <TextField select label="Type" {...field} error={!!errors.documentType} helperText={errors.documentType?.message}>{typeNames.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>)} />
+          <TextField select label="Type" {...field} error={!!errors.documentType} helperText={errors.documentType?.message}>{typeNames.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}{setupOptions('documentType', typeNames)}</TextField>)} />
         <TextField label="Review interval (months)" type="number" {...register('reviewIntervalMonths')} error={!!errors.reviewIntervalMonths} />
         <Controller name="siteId" control={control} render={({ field }) => (
           <TextField select label="Site" {...field} error={!!errors.siteId} helperText={errors.siteId?.message}>

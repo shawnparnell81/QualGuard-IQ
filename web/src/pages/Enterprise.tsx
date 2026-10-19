@@ -209,7 +209,7 @@ export function StandardDetail() {
         inputs={[{ name: 'site', label: 'Site', type: 'select', setup: 'site', options: (sites.data ?? []).map((x) => [x.id, `${x.code} — ${x.name}`]) }, { name: 'dueOn', label: 'Adopt by', type: 'date' }]}
         onConfirm={async (v) => { await post(`/api/enterprise/standards/${id}/rollouts`, { siteIds: [v.site], dueOn: v.dueOn || null }); refresh(); }} />
       <StepDialog open={dlg?.kind === 'adopt'} onClose={() => setDlg(null)} title="Adopt at site" confirm="Adopt" intro="Pick the rollout training course and who must be trained; assignments are created immediately."
-        inputs={[{ name: 'course', label: 'Training course', type: 'select', options: [['', 'No training'], ...courseRows.map((c) => [c.id, `${c.number} — ${c.title}`] as [string, string])] }, { name: 'trainees', label: 'Trainees', type: 'users' }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
+        inputs={[{ name: 'course', label: 'Training course', type: 'select', setup: 'course', options: [['', 'No training'], ...courseRows.map((c) => [c.id, `${c.number} — ${c.title}`] as [string, string])] }, { name: 'trainees', label: 'Trainees', type: 'users' }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
         onConfirm={async (v) => { await post(`/api/enterprise/rollouts/${dlg!.id}/adopt`, { localDocumentId: null, trainingCourseId: v.course || null, traineeIds: v.trainees ? v.trainees.split(',') : [], notes: v.notes }); refresh(); }} />
       <StepDialog open={dlg?.kind === 'verify'} onClose={() => setDlg(null)} title="Verify rollout" confirm="Verify" intro="Verification is refused while rollout training is still open."
         inputs={[{ name: 'notes', label: 'Verification notes', type: 'multiline' }]} onConfirm={async (v) => { await post(`/api/enterprise/rollouts/${dlg!.id}/verify`, { notes: v.notes }); refresh(); }} />
@@ -253,7 +253,7 @@ export function SkillsMatrix() {
           { header: '', id: 'act', cell: (x) => can('training.edit') && <Button size="small" onClick={() => setDlg({ certify: (x.row.original as any).id })}>Record certification</Button> }]} />}
       <StepDialog open={dlg === 'skill'} onClose={() => setDlg(null)} title="New skill or qualification" confirm="Create"
         inputs={[{ name: 'code', label: 'Code' }, { name: 'name', label: 'Name' }, { name: 'kind', label: 'Kind', type: 'select', options: skillKinds.map((k, i) => [i, k]), initial: '1' },
-          { name: 'course', label: 'Qualifying course', type: 'select', options: [['', 'None'], ...courseRows.map((c) => [c.id, `${c.number} — ${c.title}`] as [string, string])] },
+          { name: 'course', label: 'Qualifying course', type: 'select', setup: 'course', options: [['', 'None'], ...courseRows.map((c) => [c.id, `${c.number} — ${c.title}`] as [string, string])] },
           { name: 'cert', label: 'Requires certification', type: 'checkbox' }, { name: 'auditTypes', label: 'Audit types (auditor qualifications, comma separated)' }, { name: 'require', label: 'Required for everyone at this site', type: 'checkbox' }]}
         onConfirm={async (v) => {
           const r = await post<{ id: string }>('/api/training/skills', { code: v.code, name: v.name, kind: Number(v.kind || 1), siteId: site, courseIds: v.course ? [v.course] : [], requiresCertification: v.cert === 'true', auditTypes: v.auditTypes ? v.auditTypes.split(',').map((x) => x.trim()) : [], minimumAudits: 0 });
