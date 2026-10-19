@@ -57,9 +57,14 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
           </Breadcrumbs>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pb: tabs ? 0.5 : 2.5, flexWrap: 'wrap' }}>
             <Box aria-hidden sx={{ width: qg.icon.size, height: qg.icon.size, flexShrink: 0, display: { xs: 'none', sm: 'grid' }, placeItems: 'center', background: qg.gradient, color: '#FFFFFF', borderRadius: `${qg.icon.radius}px`, '& svg': { fontSize: qg.icon.size * 0.56 }, boxShadow: `0 8px 20px ${qg.glow}` }}>{module.icon}</Box>
-            <Typography variant="h1" sx={{ flex: 1, minWidth: 0, color: qg.header.fg }}>{title}</Typography>
-            {tools && <PageTools area={area} title={titleText} record={record} />}
-            {actions}
+            <Typography variant="h1" sx={{ flex: '1 1 320px', minWidth: 0, color: qg.header.fg }}>{title}</Typography>
+            {/* page tools and the page's own buttons wrap together under a long record title instead of squeezing it */}
+            {(tools || actions) && (
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end', ml: 'auto' }}>
+                {tools && <PageTools area={area} title={titleText} record={record} />}
+                {actions}
+              </Box>
+            )}
           </Box>
           {tabs && (
             <Tabs value={tab} onChange={(_, v) => onTab?.(v)} variant="scrollable" textColor="inherit" sx={{ mt: 0.5, minHeight: 40, '& .MuiTab-root': { minHeight: 40, color: qg.header.muted, opacity: 1 }, '& .MuiTab-root.Mui-selected': { color: 'primary.main' } }}>

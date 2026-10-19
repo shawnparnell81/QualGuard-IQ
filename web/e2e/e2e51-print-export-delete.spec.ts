@@ -9,7 +9,7 @@ const DOCX = 'application/vnd.openxmlformats-officedocument.wordprocessingml.doc
 const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
 const button = (p: Page, name: string | RegExp) => p.getByRole('button', { name, exact: typeof name === 'string' ? true : undefined });
 /** Screenshots for review go in features-shots when E2E_SCREENSHOT_DIR is set. */
-const capture = (p: Page, name: string) => shot(p, `features-shots/${name}`);
+const capture = (p: Page, name: string, fullPage?: boolean) => shot(p, `features-shots/${name}`, { fullPage });
 /** An open menu, captured once it has finished fading in. */
 const menuOpen = (p: Page) => expect(p.locator('.MuiMenu-paper')).toHaveCSS('opacity', '1');
 /** When screenshots are being taken, the exported files are kept beside them so they can be opened and checked by eye. */
@@ -41,9 +41,9 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     await page.addInitScript(() => { (window as unknown as { __printed: number }).__printed = 0; window.print = () => { (window as unknown as { __printed: number }).__printed++; }; });
     await page.goto(`/ncr/${ncr.id}`);
     await expect(button(page, 'Download PDF')).toBeVisible();
+    await capture(page, '01-record-toolbar'); // before Print is clicked, so its tooltip isn't in the picture
     await button(page, 'Print').click();
     expect(await page.evaluate(() => (window as unknown as { __printed: number }).__printed)).toBe(1);
-    await capture(page, '01-record-toolbar');
     await page.emulateMedia({ media: 'print' });
     await expect(page.getByTestId('print-heading')).toBeVisible();
     await expect(button(page, 'Download PDF')).toBeHidden();
@@ -58,7 +58,7 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     await button(page, 'Export').click();
     await expect(page.getByRole('menuitem', { name: /Excel workbook/ })).toBeVisible();
     await menuOpen(page);
-    await capture(page, '03-record-save-as-menu');
+    await capture(page, '03-record-save-as-menu', false);
     const xlsx = await download(page, () => page.getByRole('menuitem', { name: /Excel workbook/ }).click());
     expect(xlsx.name).toMatch(/\.xlsx$/);
     expect(xlsx.bytes.subarray(0, 2).toString()).toBe('PK');
@@ -77,7 +77,7 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     await button(page, 'Export list').click();
     await expect(page.getByRole('menuitem', { name: /CSV file/ })).toBeVisible();
     await menuOpen(page);
-    await capture(page, '04b-list-export-menu');
+    await capture(page, '04b-list-export-menu', false);
     const list = await download(page, () => page.getByRole('menuitem', { name: /CSV file/ }).click());
     expect(list.name).toMatch(/\.csv$/);
     const text = list.bytes.toString('utf8');
@@ -139,7 +139,7 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     await button(page, 'Delete').click();
     await expect(dialog(page).getByRole('button', { name: 'Delete' })).toBeDisabled();
     await page.getByTestId('delete-reason').fill('Duplicate of an NCR raised by the night shift');
-    await capture(page, '05-delete-reason');
+    await capture(page, '05-delete-reason', false);
     await dialog(page).getByRole('button', { name: 'Delete' }).click();
     await expect(page).toHaveURL(/\/ncr$/);
     await expect(page.getByTestId('arrival-notice')).toContainText('Deleted');
@@ -156,7 +156,7 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     await capture(page, '06-deleted-records');
     await row.getByRole('button', { name: 'Restore' }).click();
     await page.getByTestId('restore-reason').fill('Not a duplicate after all');
-    await capture(page, '07-restore-reason');
+    await capture(page, '07-restore-reason', false);
     await page.getByTestId('restore-confirm').click();
     await expect(page.getByTestId('restore-done')).toContainText('Restored');
     const back = await author.get(`/api/ncrs/${ncr.id}`);
