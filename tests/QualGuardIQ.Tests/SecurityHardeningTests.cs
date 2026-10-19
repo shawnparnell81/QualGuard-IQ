@@ -200,7 +200,8 @@ public sealed class SecurityHardeningTests(TestApp app)
                     Assert.Equal(1, await Run("""INSERT INTO qms.audit_entries ("OccurredAt","UserName","Action","EntityType","EntityId","Description") VALUES (now(), 'Test', 'Created', 'Test', gen_random_uuid(), 'Created test entry')"""));
                     await Run("""UPDATE qms.organization_settings SET "UpdatedAt" = "UpdatedAt" """); // ordinary data can be changed
                     foreach (var sql in new[] { """UPDATE qms.audit_entries SET "Description" = 'edited'""", "DELETE FROM qms.audit_entries", "TRUNCATE qms.security_events",
-                                 "CREATE TABLE qms.not_allowed (id int)", "DROP TABLE qms.ncrs", """DELETE FROM qms."__ef_migrations" """ })
+                                 "CREATE TABLE qms.not_allowed (id int)", "DROP TABLE qms.ncrs", """DELETE FROM qms."__ef_migrations" """,
+                                 "CREATE SCHEMA not_allowed" })
                         Assert.Equal(PostgresErrorCodes.InsufficientPrivilege, (await Assert.ThrowsAsync<PostgresException>(() => Run(sql))).SqlState);
                     await Run("CREATE TABLE IF NOT EXISTS jobs.job_probe (id int)"); // the job library manages its own tables
                 }
@@ -219,7 +220,7 @@ public sealed class SecurityHardeningTests(TestApp app)
         finally
         {
             using (var scope = factory.Services.CreateScope())
-                await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureDeletedAsync();
+                await TestDatabases.DropAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>());
             await using var conn = new NpgsqlConnection(TestApp.ConnectionString);
             await conn.OpenAsync();
             await using var drop = new NpgsqlCommand($"DROP ROLE IF EXISTS \"{role}\"", conn);
