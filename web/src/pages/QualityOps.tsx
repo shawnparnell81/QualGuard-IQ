@@ -973,7 +973,7 @@ export function QualityAnalyticsPage() {
       actions={<Stack direction="row" gap={1}><TextField size="small" type="date" label="From" value={from} slotProps={{ inputLabel: { shrink: true } }} onChange={(e) => setFrom(e.target.value)} /><TextField size="small" type="date" label="To" value={to} slotProps={{ inputLabel: { shrink: true } }} onChange={(e) => setTo(e.target.value)} /></Stack>}>
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
         {(ready.data ?? []).map((r) => <Section key={r.kind} title={/readiness$/i.test(r.kind) ? r.kind : `${r.kind} readiness`}>
-          <Stack direction="row" alignItems="baseline" gap={1}><Typography sx={{ fontSize: 36, fontWeight: 700, fontFamily: mono, color: r.score >= 85 ? 'success.main' : r.score >= 65 ? 'warning.main' : 'error.main' }}>{Math.round(r.score)}</Typography><Typography color="text.secondary">{r.band}</Typography></Stack>
+          <Stack direction="row" alignItems="baseline" gap={1}><Typography sx={{ fontSize: 36, fontWeight: 700, fontFamily: mono, color: r.factors.length === 0 ? 'text.secondary' : r.score >= 85 ? 'success.main' : r.score >= 65 ? 'warning.main' : 'error.main' }}>{r.factors.length === 0 ? '–' : Math.round(r.score)}</Typography><Typography color="text.secondary">{r.band}</Typography></Stack>
           <Table size="small"><TableBody>{r.factors.map((f) => <TableRow key={f.key}><TableCell>{f.label}</TableCell><TableCell>{f.late} late of {f.total}</TableCell><TableCell sx={{ fontFamily: mono }}>{Math.round(f.score)}</TableCell></TableRow>)}</TableBody></Table>
         </Section>)}
       </Box>

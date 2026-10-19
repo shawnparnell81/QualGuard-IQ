@@ -224,7 +224,9 @@ public sealed class QualityAnalyticsService(AppDbContext db, ModuleSupport m, Qu
     static ReadinessScore Score(string kind, List<ScoreFactor> f)
     {
         var w = f.Sum(x => x.Weight);
-        var score = w == 0 ? 100 : Math.Round(f.Sum(x => x.Score * x.Weight) / w, 1);
+        // nothing the person can see to measure: say so instead of reporting a perfect score
+        if (w == 0) return new(kind, 0, "No data", f);
+        var score = Math.Round(f.Sum(x => x.Score * x.Weight) / w, 1);
         return new(kind, score, Band(score), f);
     }
 
@@ -292,9 +294,10 @@ public sealed class QualityAnalyticsService(AppDbContext db, ModuleSupport m, Qu
         if (!await m.CanAnyAsync(Permissions.SuppliersView, ct)) throw new ForbiddenException();
         var today = await m.TodayAsync(null, ct);
         var since = m.Now.AddDays(-180);
-        var suppliers = await db.Suppliers.AsNoTracking().Where(s => s.Status != SupplierStatus.Disqualified).Select(s => new { s.Id, s.Code, s.LegalName, s.Status, s.Risk }).ToListAsync(ct);
+        // only suppliers (and their corrective actions) at sites where the person may view suppliers
+        var suppliers = await (await Scope(db.Suppliers.AsNoTracking(), Permissions.SuppliersView, ct)).Where(s => s.Status != SupplierStatus.Disqualified).Select(s => new { s.Id, s.Code, s.LegalName, s.Status, s.Risk }).ToListAsync(ct);
         var perf = await db.SupplierPerformance.AsNoTracking().GroupBy(p => p.SupplierId).Select(g => g.OrderByDescending(p => p.PeriodEnd).First()).ToListAsync(ct);
-        var scars = await db.SupplierCorrectiveActions.AsNoTracking().Where(x => x.Status != ScarStatus.Closed && x.Status != ScarStatus.Cancelled).Select(x => new { x.SupplierId, Late = x.ResponseDueOn < today }).ToListAsync(ct);
+        var scars = await (await Scope(db.SupplierCorrectiveActions.AsNoTracking(), Permissions.SuppliersView, ct)).Where(x => x.Status != ScarStatus.Closed && x.Status != ScarStatus.Cancelled).Select(x => new { x.SupplierId, Late = x.ResponseDueOn < today }).ToListAsync(ct);
         var ncrs = await (await Scope(db.Ncrs.AsNoTracking(), Permissions.NcrView, ct)).Where(n => n.SupplierId != null && n.CreatedAt >= since).GroupBy(n => n.SupplierId!.Value).Select(g => new { g.Key, Count = g.Count() }).ToListAsync(ct);
         var certs = await db.SupplierCertifications.AsNoTracking().Select(c => new { c.SupplierId, c.ExpiresOn }).ToListAsync(ct);
         var result = new List<SupplierRisk>();
