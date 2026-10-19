@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Alert, Button, Chip, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -164,7 +165,7 @@ function RoutesTab({ siteId, manage, refresh }: { siteId: string; manage: boolea
         <TextField select size="small" label="Location" value={check.location} onChange={(x) => setCheck({ ...check, location: x.target.value })} sx={{ minWidth: 220 }}>
           <MenuItem value="">Any</MenuItem>{zones.map((l) => <MenuItem key={l.id} value={l.id}>{l.path ?? l.code}</MenuItem>)}</TextField>
         <TextField select size="small" label="User" value={check.user} onChange={(x) => setCheck({ ...check, user: x.target.value })} sx={{ minWidth: 200 }}>
-          <MenuItem value="">Anyone</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+          <MenuItem value="">Anyone</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>
       </Stack>
       <Typography variant="body2" sx={{ mt: 1 }} data-testid="route-explanation">{resolved.data?.explanation}{getWorkstation() ? ` (this workstation: ${getWorkstation()})` : ''}</Typography>
     </Section>
@@ -175,7 +176,7 @@ function RoutesTab({ siteId, manage, refresh }: { siteId: string; manage: boolea
         { name: 'printer', label: 'Printer', type: 'select', initial: e?.printerId ?? '', options: (printers.data ?? []).map((p) => [p.id, `${p.code} — ${p.name}`]) },
         { name: 'location', label: 'Warehouse, zone or bin (blank = whole site)', type: 'select', initial: e?.locationId ?? '', options: [['', 'Whole site'], ...zones.map((l) => [l.id, l.path ?? l.code] as [string, string])] },
         { name: 'ws', label: 'Workstation (blank = any)', initial: e?.workstation ?? '' },
-        { name: 'user', label: 'User (blank = anyone)', type: 'select', initial: e?.userId ?? '', options: [['', 'Anyone'], ...(users.data ?? []).map((u) => [u.id, u.displayName] as [string, string])] },
+        { name: 'user', label: 'User (blank = anyone)', type: 'select', setup: 'user', initial: e?.userId ?? '', options: [['', 'Anyone'], ...(users.data ?? []).map((u) => [u.id, u.displayName] as [string, string])] },
         { name: 'copies', label: 'Copies', initial: String(e?.copies ?? 1) },
         { name: 'auto', label: 'Print automatically', type: 'checkbox', initial: String(e?.autoPrint ?? true) },
         { name: 'mode', label: 'Mode', type: 'select', initial: String(e?.mode ?? 0), options: printModes.map((m, i) => [i, m]) },

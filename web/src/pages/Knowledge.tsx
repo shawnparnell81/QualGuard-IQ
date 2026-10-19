@@ -59,7 +59,7 @@ export function KnowledgeLibrary() {
       <StepDialog open={open} onClose={() => setOpen(false)} title="New knowledge entry" confirm="Create" intro="For a 5 Why put one why per line. For a fishbone use lines like 'Machine: worn spindle'."
         inputs={[{ name: 'kind', label: 'Kind', type: 'select', options: knowledgeKinds.map((k, i) => [i, k]), initial: '0' }, { name: 'title', label: 'Title' }, { name: 'body', label: 'Content', type: 'multiline' },
           { name: 'analysis', label: 'Whys / fishbone causes', type: 'multiline' }, { name: 'rc', label: 'Root cause' }, { name: 'ca', label: 'Corrective action' }, { name: 'tags', label: 'Tags' },
-          { name: 'site', label: 'Site', type: 'select', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) }]}
+          { name: 'site', label: 'Site', type: 'select', setup: 'site', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) }]}
         onConfirm={async (v) => {
           const k = Number(v.kind); const an = lines(v.analysis);
           const fish = k === 5 ? Object.fromEntries(fishboneCats.map((c) => [c, an.filter((l) => l.toLowerCase().startsWith(c.toLowerCase() + ':')).map((l) => l.slice(c.length + 1).trim())]).filter(([, x]) => (x as string[]).length)) : null;
@@ -118,7 +118,7 @@ export function Playbooks() {
         inputs={[{ name: 'title', label: 'Title' }, { name: 'trigger', label: 'Trigger', type: 'select', options: triggers.map((t, i) => [i, t]), initial: '0' }, { name: 'steps', label: 'Steps', type: 'multiline' }]}
         onConfirm={async (v) => { await post('/api/knowledge/playbooks', { title: v.title, trigger: Number(v.trigger), steps: lines(v.steps).map((l) => { const [t, g, d] = l.split('|').map((x) => x.trim()); return { title: t, guidance: g || t, dueDays: d ? Number(d) : null }; }) }); qc.invalidateQueries({ queryKey: ['playbooks'] }); }} />
       <StepDialog open={typeof dlg === 'object' && dlg !== null} onClose={() => setDlg(null)} title="Apply playbook" confirm="Create actions" intro="Each step becomes an action item on the record, linked back to the playbook."
-        inputs={[{ name: 'type', label: 'Record type', type: 'select', options: [['SupplierCorrectiveAction', 'SCAR'], ['Complaint', 'Complaint'], ['AuditFinding', 'Audit finding'], ['Ncr', 'NCR'], ['Capa', 'CAPA']] }, { name: 'rid', label: 'Record ID' }, { name: 'who', label: 'Assignee', type: 'select', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }]}
+        inputs={[{ name: 'type', label: 'Record type', type: 'select', options: [['SupplierCorrectiveAction', 'SCAR'], ['Complaint', 'Complaint'], ['AuditFinding', 'Audit finding'], ['Ncr', 'NCR'], ['Capa', 'CAPA']] }, { name: 'rid', label: 'Record ID' }, { name: 'who', label: 'Assignee', type: 'select', setup: 'user', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }]}
         onConfirm={async (v) => { const res = await post<any>(`/api/knowledge/playbooks/${(dlg as any).apply.id}/apply`, { recordType: v.type, recordId: v.rid.trim(), assigneeId: v.who }); setDone(`${res.actions.length} action item(s) created.`); }} />
     </ModuleWorkspace>
   );
@@ -147,7 +147,7 @@ export function ProcessMap() {
         <DataTable data={det.data.reviews} empty="No reviews." columns={[{ header: 'Reviewed', accessorKey: 'reviewedOn', cell: (x) => fmtDate(x.getValue()) }, { header: 'Outcome', accessorKey: 'outcome' }, { header: 'Notes', accessorKey: 'notes' }]} />
       </Section></Box>}
       <StepDialog open={dlg === 'new'} onClose={() => setDlg(null)} title="New business process" confirm="Create"
-        inputs={[{ name: 'code', label: 'Code' }, { name: 'name', label: 'Name' }, { name: 'purpose', label: 'Purpose', type: 'multiline' }, { name: 'site', label: 'Site', type: 'select', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]), initial: site }, { name: 'owner', label: 'Owner', type: 'select', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }, { name: 'days', label: 'Review interval (days)', initial: '365' }]}
+        inputs={[{ name: 'code', label: 'Code' }, { name: 'name', label: 'Name' }, { name: 'purpose', label: 'Purpose', type: 'multiline' }, { name: 'site', label: 'Site', type: 'select', setup: 'site', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]), initial: site }, { name: 'owner', label: 'Owner', type: 'select', setup: 'user', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }, { name: 'days', label: 'Review interval (days)', initial: '365' }]}
         onConfirm={async (v) => { await post('/api/processes', { code: v.code, name: v.name, purpose: v.purpose || null, siteId: v.site, ownerId: v.owner || null, reviewIntervalDays: Number(v.days) }); refresh(); }} />
       <StepDialog open={dlg === 'review'} onClose={() => setDlg(null)} title="Record process review" confirm="Save" inputs={[{ name: 'on', label: 'Reviewed on', type: 'date' }, { name: 'outcome', label: 'Outcome' }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
         onConfirm={async (v) => { await post(`/api/processes/${sel}/reviews`, { reviewedOn: v.on, outcome: v.outcome, notes: v.notes || null }); refresh(); }} />

@@ -1,3 +1,4 @@
+import { setupOptions } from './SetupLink';
 import { useRef, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { Alert, Autocomplete, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Link, MenuItem, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
@@ -213,6 +214,7 @@ export function ActionsPanel({ type, id, canEdit, canVerifyAs, onChanged }: { ty
           <Controller name="assigneeId" control={control} render={({ field }) => (
             <TextField select label="Assignee" {...field} error={!!errors.assigneeId} helperText={errors.assigneeId?.message}>
               {(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}
+              {setupOptions('user', users.data)}
             </TextField>)} />
           <TextField type="date" label="Due date" slotProps={{ inputLabel: { shrink: true } }} {...register('dueDate')} error={!!errors.dueDate} helperText={errors.dueDate?.message} />
           <Controller name="requiresVerification" control={control} render={({ field }) => (

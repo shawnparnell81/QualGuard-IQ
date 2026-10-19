@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Box, Button, Chip, MenuItem, Paper, Slider, Stack, TextField, Typography } from '@mui/material';
@@ -174,7 +175,7 @@ export function DigitalTwin() {
           <TextField select size="small" label="FMEA" value={fmea} onChange={(e) => setFmea(e.target.value)}>{(fmeas.data ?? []).map((f) => <MenuItem key={f.document.id} value={f.document.id}>{f.document.number} — {f.document.title}</MenuItem>)}</TextField>
           <Button variant="contained" disabled={!fmea} onClick={() => r.run(async () => setRes(await post('/api/qos/twin/product', { pfmeaId: fmea })))}>Simulate actions</Button></Side>}
         {tab === 'supplier' && <Side>
-          <TextField select size="small" label="Supplier" value={sup} onChange={(e) => setSup(e.target.value)}>{(suppliers.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{lookupLabel(s)}</MenuItem>)}</TextField>
+          <TextField select size="small" label="Supplier" value={sup} onChange={(e) => setSup(e.target.value)}>{(suppliers.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{lookupLabel(s)}</MenuItem>)}{setupOptions('supplier', suppliers.data)}</TextField>
           {Object.entries(w).map(([k, v]) => <Box key={k}><Typography variant="caption">{k} weight: {v}%</Typography><Slider size="small" min={0} max={60} value={v} onChange={(_, x) => setW({ ...w, [k]: x as number })} /></Box>)}
           <Button variant="contained" disabled={!sup} onClick={() => r.run(async () => setRes(await post('/api/qos/twin/supplier', { supplierId: sup, weights: Object.fromEntries(Object.entries(w).map(([k, v]) => [k, v / 100])) })))}>Re-weight</Button></Side>}
         <Box sx={{ flex: 1 }} data-testid="twin-result">

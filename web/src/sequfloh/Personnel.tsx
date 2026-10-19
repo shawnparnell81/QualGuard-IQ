@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link as RouterLink, Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, FormControlLabel, List, ListItemButton, ListItemText, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
@@ -216,7 +217,7 @@ export function DevelopmentPanel({ id, doc, canEdit, onSaved }: { id: string; do
       {!canEdit && <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>Development details are kept by Engineering until the instruction is released.</Typography>}
       <Grid cols={3}>
         <TextField select size="small" label="Assigned engineer" value={users.data ? f.assignedEngineerId ?? '' : ''} disabled={!canEdit || busy} onChange={(e) => setF({ ...f, assignedEngineerId: e.target.value })}>
-          <MenuItem value=""><em>Not assigned</em></MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+          <MenuItem value=""><em>Not assigned</em></MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>
         {fld('targetCompletionDate', 'Target completion date', { type: 'date', InputLabelProps: { shrink: true } })}
         {fld('project', 'Related project')}
         {fld('developmentStatus', 'Development status')}

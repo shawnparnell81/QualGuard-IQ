@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Link, List, ListItemButton, ListItemText, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
@@ -50,7 +51,7 @@ function DateUserFilters({ v, set }: { v: (k: string) => string; set: (k: string
     <TextField size="small" type="date" label="From" InputLabelProps={{ shrink: true }} value={v('from')} onChange={(e) => set('from', e.target.value)} sx={{ width: 160 }} />
     <TextField size="small" type="date" label="To" InputLabelProps={{ shrink: true }} value={v('to')} onChange={(e) => set('to', e.target.value)} sx={{ width: 160 }} />
     <TextField select size="small" label="User" value={users.data ? v('user') : ''} onChange={(e) => set('user', e.target.value)} sx={{ minWidth: 170 }}>
-      <MenuItem value="">All</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+      <MenuItem value="">All</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>
   </>;
 }
 

@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Pagination, Paper, Stack, Switch, TextField, Typography } from '@mui/material';
@@ -110,10 +111,10 @@ export function UsersPage() {
           </TextField>
           <TextField select label="Site scope" value={assign.siteId} onChange={(e) => setAssign({ ...assign, siteId: e.target.value, departmentId: '' })}>
             <MenuItem value="">All sites</MenuItem>{(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}
-          </TextField>
+          {setupOptions('site', sites.data)}</TextField>
           <TextField select label="Department scope" value={assign.departmentId} disabled={!selSite} onChange={(e) => setAssign({ ...assign, departmentId: e.target.value })}>
             <MenuItem value="">Whole site</MenuItem>{(selSite?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.code} — {d.name}</MenuItem>)}
-          </TextField>
+          {selSite && setupOptions('department', selSite.departments)}</TextField>
         </DialogContent>
         <DialogActions><Button onClick={() => setAssignFor(null)}>Cancel</Button>
           <Button variant="contained" disabled={!assign.roleId} onClick={async () => {

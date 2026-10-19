@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useEffect, useRef, useState } from 'react';
 import { Box, Button, LinearProgress, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
@@ -47,6 +48,7 @@ export function LocationSelect({ label, value, onChange, siteId, purposes: only,
     <TextField select size={size} label={label} value={value} onChange={(e) => onChange(e.target.value)}>
       {allowNone && <MenuItem value="">None</MenuItem>}
       {list.map((l) => <MenuItem key={l.id} value={l.id}><span style={{ fontFamily: mono }}>{l.path}</span>&nbsp;· {purposes[l.purpose]}{l.frozen ? ' · frozen' : ''}</MenuItem>)}
+      {setupOptions('location', list)}
     </TextField>
   );
 }

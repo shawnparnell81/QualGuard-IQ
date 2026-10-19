@@ -1,3 +1,4 @@
+import { SetupHint } from './SetupLink';
 import { Autocomplete, CircularProgress, TextField } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { get } from '../api';
@@ -27,7 +28,7 @@ export function SitePicker({ permission, value, onChange, label = 'Site', helper
       noOptionsText={empty ? 'You have no active sites for this work' : 'No matching site'} loadingText="Loading sites…"
       onChange={(_, s) => onChange(s?.id ?? null)}
       renderInput={(p) => <TextField {...p} label={label} required={required} error={empty}
-        helperText={empty ? 'Ask an administrator for access to a site.' : helperText}
+        helperText={empty ? <>No sites available for this work. <SetupHint kind="site" count={1} fallback="Ask an administrator for access to a site." /></> : <>{helperText}{helperText ? ' ' : ''}<SetupHint kind="site" count={options.length} /></>}
         slotProps={{ htmlInput: { ...p.inputProps, 'data-testid': testId ?? 'site-picker' }, input: { ...p.InputProps, endAdornment: <>{q.isLoading ? <CircularProgress size={16} /> : null}{p.InputProps.endAdornment}</> } }} />}
     />
   );

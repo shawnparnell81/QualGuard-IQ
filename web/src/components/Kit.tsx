@@ -1,3 +1,4 @@
+import { setupOptions, type SetupKind } from './SetupLink';
 import { useState, type ReactNode } from 'react';
 import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
@@ -114,7 +115,7 @@ export function useLookup(kind: LookupKind | undefined, enabled = true) {
 function LookupField(props: Record<string, unknown> & { kind: LookupKind }) {
   const { kind, ...p } = props;
   const rows = useLookup(kind);
-  return <TextField {...(p as object)} select><MenuItem value="">None</MenuItem>{(rows.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>)}</TextField>;
+  return <TextField {...(p as object)} select><MenuItem value="">None</MenuItem>{(rows.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>)}{setupOptions(kind, rows.data)}</TextField>;
 }
 
 /** Create form driven by a Zod schema (validated with React Hook Form) and a field list. */
@@ -142,10 +143,10 @@ export function SchemaForm<S extends z.ZodType<FieldValues, FieldValues>>({ sche
             case 'number': return <TextField {...p} type="number" />;
             case 'date': return <TextField {...p} type="date" slotProps={{ inputLabel: { shrink: true } }} />;
             case 'select': return <TextField {...p} select>{(f.options ?? []).map(([v, l]) => <MenuItem key={v} value={v}>{l}</MenuItem>)}</TextField>;
-            case 'site': return <TextField {...p} select>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
-            case 'department': return <TextField {...p} select disabled={!site}><MenuItem value="">None</MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.code} — {d.name}</MenuItem>)}</TextField>;
+            case 'site': return <TextField {...p} select>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>;
+            case 'department': return <TextField {...p} select disabled={!site}><MenuItem value="">None</MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.code} — {d.name}</MenuItem>)}{site && setupOptions('department', site.departments)}</TextField>;
             case 'lookup': return <LookupField {...p} kind={f.lookup!} />;
-            case 'user': return <TextField {...p} select><MenuItem value="">Me</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>;
+            case 'user': return <TextField {...p} select><MenuItem value="">Me</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>;
             default: return <TextField {...p} />;
           }
         }} />
@@ -161,7 +162,7 @@ export function SchemaForm<S extends z.ZodType<FieldValues, FieldValues>>({ sche
 /** Small dialog with free-form inputs for a state transition. */
 export function StepDialog({ open, title, intro, inputs, confirm, onClose, onConfirm, danger }: {
   open: boolean; title: string; intro?: string; confirm: string; danger?: boolean;
-  inputs: { name: string; label: string; type?: 'text' | 'multiline' | 'date' | 'select' | 'multiselect' | 'password' | 'checkbox' | 'users' | 'site'; options?: [string | number, string][]; initial?: string; helper?: string; permission?: string }[];
+  inputs: { name: string; label: string; type?: 'text' | 'multiline' | 'date' | 'select' | 'multiselect' | 'password' | 'checkbox' | 'users' | 'site'; options?: [string | number, string][]; initial?: string; helper?: string; permission?: string; setup?: SetupKind }[];
   onClose: () => void; onConfirm: (v: Record<string, string>) => Promise<void>;
 }) {
   const [v, setV] = useState<Record<string, string>>({});
@@ -180,13 +181,13 @@ export function StepDialog({ open, title, intro, inputs, confirm, onClose, onCon
             : i.type === 'users'
             ? <TextField key={i.name} select label={i.label} helperText={i.helper} value={val(i.name, i.initial).split(',').filter(Boolean)} slotProps={{ select: { multiple: true } }}
                 onChange={(e) => setV((prev) => ({ ...prev, [i.name]: ([] as string[]).concat(e.target.value as unknown as string[]).join(',') }))}>
-                {(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+                {(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>
             : i.type === 'multiselect'
             ? <TextField key={i.name} select label={i.label} helperText={i.helper} value={val(i.name, i.initial).split(',').filter(Boolean)} slotProps={{ select: { multiple: true } }}
                 onChange={(e) => setV((prev) => ({ ...prev, [i.name]: ([] as string[]).concat(e.target.value as unknown as string[]).join(',') }))}>
                 {(i.options ?? []).map(([o, l]) => <MenuItem key={o} value={String(o)}>{l}</MenuItem>)}</TextField>
             : i.type === 'select'
-            ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial)} onChange={(e) => setV((prev) => ({ ...prev, [i.name]: e.target.value }))}>{(i.options ?? []).map(([o, l]) => <MenuItem key={o} value={String(o)}>{l}</MenuItem>)}</TextField>
+            ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial)} onChange={(e) => setV((prev) => ({ ...prev, [i.name]: e.target.value }))}>{(i.options ?? []).map(([o, l]) => <MenuItem key={o} value={String(o)}>{l}</MenuItem>)}{i.setup && setupOptions(i.setup, (i.options ?? []).filter(([o]) => o !== ''))}</TextField>
             : i.type === 'checkbox'
               ? <TextField key={i.name} select label={i.label} value={val(i.name, i.initial ?? 'false')} onChange={(e) => setV((prev) => ({ ...prev, [i.name]: e.target.value }))}><MenuItem value="true">Yes</MenuItem><MenuItem value="false">No</MenuItem></TextField>
               : <TextField key={i.name} label={i.label} helperText={i.helper} type={i.type === 'date' ? 'date' : i.type === 'password' ? 'password' : 'text'} multiline={i.type === 'multiline'} minRows={i.type === 'multiline' ? 3 : undefined}

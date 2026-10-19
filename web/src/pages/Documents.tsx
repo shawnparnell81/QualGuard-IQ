@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Pagination, Paper, Stack, TextField, Typography } from '@mui/material';
@@ -125,7 +126,7 @@ export function DocumentNew({ kind }: { kind: Kind }) {
         <Controller name="departmentId" control={control} render={({ field }) => (
           <TextField select label="Department (optional)" {...field} disabled={!site}>
             <MenuItem value="">None</MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.code} — {d.name}</MenuItem>)}
-          </TextField>)} />
+          {site && setupOptions('department', site.departments)}</TextField>)} />
         <TextField label="Initial revision" {...register('initialRevision')} />
         {kind === 1 && <TextField label="Part number" {...register('partNumber')} />}
         {kind === 1 && <TextField label="Drawing size" {...register('drawingSize')} />}

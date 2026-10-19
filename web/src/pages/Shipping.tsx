@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
@@ -107,22 +108,22 @@ export function ShipmentNew() {
       {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
       <Paper sx={{ p: 2.5, mb: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
         <TextField select label="Type" value={h.kind} onChange={set('kind')}>{shipKinds.map((s, i) => <MenuItem key={s} value={String(i)}>{s}</MenuItem>)}</TextField>
-        {(k === 0 || k === 3) && <TextField select label="Customer" value={h.customerId} onChange={set('customerId')}>{(custs.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{lookupLabel(c)}</MenuItem>)}</TextField>}
-        {k === 1 && <TextField select label="Supplier" value={h.supplierId} onChange={set('supplierId')}>{(sups.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{lookupLabel(c)}</MenuItem>)}</TextField>}
-        {k === 2 && <TextField select label="Destination site" value={h.toSiteId} onChange={set('toSiteId')}>{(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}</TextField>}
+        {(k === 0 || k === 3) && <TextField select label="Customer" value={h.customerId} onChange={set('customerId')}>{(custs.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{lookupLabel(c)}</MenuItem>)}{setupOptions('customer', custs.data)}</TextField>}
+        {k === 1 && <TextField select label="Supplier" value={h.supplierId} onChange={set('supplierId')}>{(sups.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{lookupLabel(c)}</MenuItem>)}{setupOptions('supplier', sups.data)}</TextField>}
+        {k === 2 && <TextField select label="Destination site" value={h.toSiteId} onChange={set('toSiteId')}>{(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>}
         <TextField label="Customer PO" value={h.customerPo} onChange={set('customerPo')} />
         <TextField label="Ship-to address" multiline value={h.shipTo} onChange={set('shipTo')} />
         <TextField label="Promised date" type="date" value={h.promisedOn} onChange={set('promisedOn')} slotProps={{ inputLabel: { shrink: true } }} />
-        <TextField select label="Ship from site" value={siteId} onChange={set('siteId')}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}</TextField>
+        <TextField select label="Ship from site" value={siteId} onChange={set('siteId')}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>
         <LocationSelect label="Staging / shipping dock" value={h.stagingLocationId} onChange={(v) => setH({ ...h, stagingLocationId: v })} siteId={siteId || undefined} purposes={[6]} />
-        <TextField select label="Carrier" value={h.carrierId} onChange={set('carrierId')}><MenuItem value="">Decide at ship</MenuItem>{(carriers.data ?? []).filter((c) => c.active).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}</TextField>
+        <TextField select label="Carrier" value={h.carrierId} onChange={set('carrierId')}><MenuItem value="">Decide at ship</MenuItem>{(carriers.data ?? []).filter((c) => c.active).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}{setupOptions('carrier', carriers.data)}</TextField>
         <TextField label="Service level" value={h.serviceLevel} onChange={set('serviceLevel')} />
         <TextField label="Notes" value={h.notes} onChange={set('notes')} sx={{ gridColumn: { md: 'span 2' } }} />
       </Paper>
       <Section title="Lines" action={<Button onClick={() => setLines([...lines, { partId: '', revision: '', qty: '' }])}>Add line</Button>}>
         <Stack gap={1.5}>{lines.map((l, i) => (
           <Stack key={i} direction={{ xs: 'column', md: 'row' }} gap={1}>
-            <TextField select size="small" label="Part" value={l.partId} sx={{ flex: 2 }} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, partId: e.target.value } : x)))}>{(parts.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{lookupLabel(x)}</MenuItem>)}</TextField>
+            <TextField select size="small" label="Part" value={l.partId} sx={{ flex: 2 }} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, partId: e.target.value } : x)))}>{(parts.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{lookupLabel(x)}</MenuItem>)}{setupOptions('part', parts.data)}</TextField>
             <TextField size="small" label="Rev" value={l.revision} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, revision: e.target.value } : x)))} />
             <TextField size="small" label="Quantity" type="number" value={l.qty} onChange={(e) => setLines(lines.map((x, j) => (j === i ? { ...x, qty: e.target.value } : x)))} />
             <Button color="inherit" aria-label="Remove line" onClick={() => setLines(lines.filter((_, j) => j !== i))}>✕</Button>
@@ -194,13 +195,13 @@ export function ShipmentDetail() {
           ['Gross weight', s.grossWeight != null ? `${qty(s.grossWeight)} kg` : undefined], ['Shipped', s.shippedAt ? fmtDateTime(s.shippedAt) : undefined], ['Delivered', s.deliveredOn ? fmtDate(s.deliveredOn) : undefined], ['Ship to', s.shipTo], ['Notes', s.notes]]} />
       </Box>
       <StepDialog open={dlg === 'ship'} title={`Ship ${s.number}`} confirm="Ship" onClose={() => setDlg(null)} intro="Shipping posts the picked stock out of inventory and assigns a bill of lading number."
-        inputs={[{ name: 'carrierId', label: 'Carrier', type: 'select', initial: s.carrierId, options: (carriers.data ?? []).filter((c) => c.active).map((c) => [c.id, c.name]) }, { name: 'tracking', label: 'Tracking / PRO number' }, { name: 'service', label: 'Service level', initial: s.serviceLevel }, { name: 'weight', label: 'Gross weight (kg)' }]}
+        inputs={[{ name: 'carrierId', label: 'Carrier', type: 'select', setup: 'carrier', initial: s.carrierId, options: (carriers.data ?? []).filter((c) => c.active).map((c) => [c.id, c.name]) }, { name: 'tracking', label: 'Tracking / PRO number' }, { name: 'service', label: 'Service level', initial: s.serviceLevel }, { name: 'weight', label: 'Gross weight (kg)' }]}
         onConfirm={async (v) => { await post(`/api/shipping/shipments/${id}/ship`, { carrierId: v.carrierId, trackingNumber: v.tracking || null, serviceLevel: v.service || null, grossWeight: v.weight ? Number(v.weight) : null }); refresh(); }} />
       <StepDialog open={dlg === 'delivered'} title="Confirm delivery" confirm="Record delivery" onClose={() => setDlg(null)} inputs={[{ name: 'on', label: 'Delivered on', type: 'date', initial: localDate() }]}
         onConfirm={async (v) => { await post(`/api/shipping/shipments/${id}/delivered`, { deliveredOn: v.on }); refresh(); }} />
       <StepDialog open={dlg === 'cancel'} danger title={`Cancel ${s.number}?`} confirm="Cancel shipment" onClose={() => setDlg(null)}
         intro={staged ? 'Open picks are released. Picked stock is staged and goes back, as available stock, to the location you choose.' : 'Open picks are released and reserved stock becomes available again.'}
-        inputs={staged ? [{ name: 'returnLocationId', label: 'Return staged stock to', type: 'select', options: (locs.data ?? []).filter((l) => l.active && l.purpose === 0 && l.id !== s.stagingLocationId).map((l) => [l.id, `${l.code} · ${l.name}`]) }, { name: 'reason', label: 'Reason' }] : [{ name: 'reason', label: 'Reason' }]}
+        inputs={staged ? [{ name: 'returnLocationId', label: 'Return staged stock to', type: 'select', setup: 'location', options: (locs.data ?? []).filter((l) => l.active && l.purpose === 0 && l.id !== s.stagingLocationId).map((l) => [l.id, `${l.code} · ${l.name}`]) }, { name: 'reason', label: 'Reason' }] : [{ name: 'reason', label: 'Reason' }]}
         onConfirm={async (v) => { await post(`/api/shipping/shipments/${id}/cancel`, { returnLocationId: v.returnLocationId || null, reason: v.reason || null }); refresh(); }} />
     </ModuleWorkspace>
   );

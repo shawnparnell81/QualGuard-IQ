@@ -1,3 +1,4 @@
+import { SetupHint, setupOptions } from '../components/SetupLink';
 import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Autocomplete, Box, Button, Card, CardActions, CardContent, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Link, List,
@@ -138,7 +139,7 @@ export function PartPicker({ value, label, onChange, disabled, repairable }: { v
   return <Autocomplete size="small" options={opts} value={current} disabled={disabled} loading={q.isLoading} filterOptions={(x) => x}
     isOptionEqualToValue={(a, b) => a.id === b.id} getOptionLabel={(o) => `${o.partNumber}${o.name ? ' — ' + o.name : ''}`}
     onInputChange={(_, t, reason) => { if (reason === 'input') setText(t); }} onChange={(_, o) => onChange(o)}
-    renderInput={(p) => <TextField {...p} label={label} />} />;
+    renderInput={(p) => <TextField {...p} label={label} helperText={q.isLoading ? undefined : <SetupHint kind="sqfPart" count={opts.length || (text ? 1 : 0)} />} />} />;
 }
 
 export function NewInstructionPage() {
@@ -178,9 +179,9 @@ export function NewInstructionPage() {
         <Grid cols={2}>
           <TextField label="Title" value={title} onChange={(e) => setTitle(e.target.value)} required sx={{ gridColumn: '1 / -1' }} disabled={!type} />
           <TextField select label="Site" value={siteId} onChange={(e) => { setSiteId(e.target.value); setDepartmentId(''); }} disabled={!type}>
-            {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}</TextField>
+            {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>
           <TextField select label="Department" value={departmentId} onChange={(e) => setDepartmentId(e.target.value)} disabled={!type}>
-            <MenuItem value=""><em>None</em></MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}</TextField>
+            <MenuItem value=""><em>None</em></MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}{site && setupOptions('department', site.departments)}</TextField>
           <Box sx={{ gridColumn: '1 / -1' }}><TemplatePicker type={type || undefined} value={templateId} onChange={setTemplateId} disabled={!type} /></Box>
           <Box sx={{ gridColumn: '1 / -1' }}><PartPicker label={type === 'RepairWork' ? 'Part being repaired' : 'Part (optional)'} value={part} onChange={setPart} disabled={!type} repairable={type === 'RepairWork'} /></Box>
         </Grid>
@@ -399,15 +400,15 @@ function ControlFields({ doc, upd, ro }: { doc: WiDoc; upd: (p: Partial<WiDoc>) 
   const users = useUsers();
   const site = sites.data?.find((s) => s.id === doc.siteId);
   const userSel = (k: 'ownerId' | 'reviewerId' | 'approverId', label: string) => <TextField select size="small" label={label} value={users.data ? (doc[k] ?? '') : ''} disabled={ro} onChange={(e) => upd({ [k]: e.target.value || null })}>
-    <MenuItem value=""><em>None</em></MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>;
+    <MenuItem value=""><em>None</em></MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>;
   return (
     <Grid cols={3}>
       <TextField size="small" label="Title" value={doc.title} disabled={ro} onChange={(e) => upd({ title: e.target.value })} sx={{ gridColumn: { md: 'span 2' } }} />
       <TextField size="small" type="date" label="Effective date" value={doc.effectiveDate ?? ''} disabled={ro} InputLabelProps={{ shrink: true }} onChange={(e) => upd({ effectiveDate: e.target.value || null })} />
       <TextField select size="small" label="Site" value={sites.data ? doc.siteId : ''} disabled={ro} onChange={(e) => upd({ siteId: e.target.value, departmentId: null })}>
-        {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}</TextField>
+        {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>
       <TextField select size="small" label="Department" value={site ? (doc.departmentId ?? '') : ''} disabled={ro} onChange={(e) => upd({ departmentId: e.target.value || null })}>
-        <MenuItem value=""><em>None</em></MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}</TextField>
+        <MenuItem value=""><em>None</em></MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}{site && setupOptions('department', site.departments)}</TextField>
       {userSel('ownerId', 'Owner')}{userSel('reviewerId', 'Reviewer')}{userSel('approverId', 'Approver')}
     </Grid>
   );
@@ -509,7 +510,7 @@ function PartsMulti({ value, onChange }: { value: PartOpt[]; onChange: (v: PartO
   const [text, setText] = useState('');
   const q = useQuery({ queryKey: ['sqf-part-pick', text, false], queryFn: () => get<Paged<PartOpt>>(`${S}/parts?${qs({ q: text, status: 'Active', pageSize: 20, sort: 'partNumber:asc' })}`) });
   return <Autocomplete multiple size="small" options={q.data?.items ?? []} value={value} filterOptions={(x) => x} isOptionEqualToValue={(a, b) => a.id === b.id}
-    getOptionLabel={(o) => `${o.partNumber} — ${o.name}`} onInputChange={(_, t, r) => { if (r === 'input') setText(t); }} onChange={(_, v) => onChange(v)} renderInput={(p) => <TextField {...p} label="Parts" />} />;
+    getOptionLabel={(o) => `${o.partNumber} — ${o.name}`} onInputChange={(_, t, r) => { if (r === 'input') setText(t); }} onChange={(_, v) => onChange(v)} renderInput={(p) => <TextField {...p} label="Parts" helperText={q.isLoading ? undefined : <SetupHint kind="sqfPart" count={(q.data?.items.length ?? 0) || (text ? 1 : 0)} />} />} />;
 }
 
 /** Copy characteristics from another instruction or revision, or import them from an inspection plan (existing application data). */

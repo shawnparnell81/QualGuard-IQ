@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Chip, LinearProgress, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
@@ -103,7 +104,7 @@ export function WorkOrderList() {
 function SitePicker({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const sites = useSites();
   const active = (sites.data ?? []).filter((s) => !s.isArchived);
-  return <TextField select label="Site" value={value} onChange={(e) => onChange(e.target.value)}>{value && !active.some((s) => s.id === value) && <MenuItem value={value}>{sites.isLoading ? 'Loading…' : 'Archived site'}</MenuItem>}{active.map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
+  return <TextField select label="Site" value={value} onChange={(e) => onChange(e.target.value)}>{value && !active.some((s) => s.id === value) && <MenuItem value={value}>{sites.isLoading ? 'Loading…' : 'Archived site'}</MenuItem>}{active.map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}{setupOptions('site', active)}</TextField>;
 }
 
 export function WorkOrderNew() {
@@ -120,7 +121,7 @@ export function WorkOrderNew() {
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
           <TextField label="Number (blank = next)" value={v.number} onChange={set('number')} />
           <TextField select label="Kind" value={v.kind} onChange={set('kind')}>{woKind.map((k, i) => <MenuItem key={k} value={i}>{k}</MenuItem>)}</TextField>
-          <TextField select label="Part" value={v.partId} onChange={set('partId')}>{(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}</TextField>
+          <TextField select label="Part" value={v.partId} onChange={set('partId')}>{(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}{setupOptions('part', parts.data)}</TextField>
           <TextField label="Revision" value={v.revision} onChange={set('revision')} />
           <TextField label="Quantity" type="number" value={v.quantity} onChange={set('quantity')} />
           <TextField label="Routing reference" value={v.routingRef} onChange={set('routingRef')} />
@@ -237,14 +238,14 @@ export function PurchaseOrderNew() {
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
         <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
           <TextField label="PO number" value={v.number} onChange={(e) => setV({ ...v, number: e.target.value })} />
-          <TextField select label="Supplier" value={v.supplierId} onChange={(e) => setV({ ...v, supplierId: e.target.value })}>{(sups.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{lookupLabel(s)}</MenuItem>)}</TextField>
+          <TextField select label="Supplier" value={v.supplierId} onChange={(e) => setV({ ...v, supplierId: e.target.value })}>{(sups.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{lookupLabel(s)}</MenuItem>)}{setupOptions('supplier', sups.data)}</TextField>
           <TextField label="Ordered" type="date" value={v.orderedOn} onChange={(e) => setV({ ...v, orderedOn: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
           <SitePicker value={v.siteId} onChange={(s) => setV({ ...v, siteId: s })} />
         </Box>
         <Typography variant="overline" color="text.secondary" sx={{ display: 'block', mt: 3 }}>Lines</Typography>
         {lines.map((l, i) => <Stack key={i} direction="row" gap={1} sx={{ mb: 1 }}>
           <TextField size="small" label="Line" type="number" value={l.lineNumber} sx={{ width: 80 }} onChange={(e) => setLine(i, 'lineNumber', e.target.value)} />
-          <TextField size="small" select label="Part" value={l.partId} sx={{ minWidth: 220 }} onChange={(e) => setLine(i, 'partId', e.target.value)}><MenuItem value="">Not in master data</MenuItem>{(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}</TextField>
+          <TextField size="small" select label="Part" value={l.partId} sx={{ minWidth: 220 }} onChange={(e) => setLine(i, 'partId', e.target.value)}><MenuItem value="">Not in master data</MenuItem>{(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}{setupOptions('part', parts.data)}</TextField>
           <TextField size="small" label="Item" value={l.itemNumber} onChange={(e) => setLine(i, 'itemNumber', e.target.value)} />
           <TextField size="small" label="Rev" value={l.revision} sx={{ width: 80 }} onChange={(e) => setLine(i, 'revision', e.target.value)} />
           <TextField size="small" label="Qty" type="number" value={l.quantity} sx={{ width: 100 }} onChange={(e) => setLine(i, 'quantity', e.target.value)} />

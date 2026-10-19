@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
@@ -53,9 +54,9 @@ export function RequirementList() {
         </Box></>}
       <StepDialog open={open} onClose={() => setOpen(false)} title="New requirement" confirm="Create"
         inputs={[{ name: 'title', label: 'Title' }, { name: 'text', label: 'Requirement text', type: 'multiline' }, { name: 'source', label: 'Source', type: 'select', options: sources.map((s, i) => [i, s]), initial: '0' },
-          { name: 'site', label: 'Site', type: 'select', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) },
-          { name: 'product', label: 'Product', type: 'select', options: [['', 'None'], ...(products.data ?? []).map((p) => [p.id, lookupLabel(p)] as [string, string])] },
-          { name: 'customer', label: 'Customer', type: 'select', options: [['', 'None'], ...(customers.data ?? []).map((p) => [p.id, lookupLabel(p)] as [string, string])] }, { name: 'ref', label: 'Customer / standard reference' }]}
+          { name: 'site', label: 'Site', type: 'select', setup: 'site', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) },
+          { name: 'product', label: 'Product', type: 'select', setup: 'product', options: [['', 'None'], ...(products.data ?? []).map((p) => [p.id, lookupLabel(p)] as [string, string])] },
+          { name: 'customer', label: 'Customer', type: 'select', setup: 'customer', options: [['', 'None'], ...(customers.data ?? []).map((p) => [p.id, lookupLabel(p)] as [string, string])] }, { name: 'ref', label: 'Customer / standard reference' }]}
         onConfirm={async (v) => { const r = await post<any>('/api/engineering/requirements', { title: v.title, text: v.text, source: Number(v.source), siteId: v.site, productId: v.product || null, customerId: v.customer || null, reference: v.ref || null }); qc.invalidateQueries({ queryKey: ['requirements'] }); nav(`/engineering/requirements/${r.id}`); }} />
     </ModuleWorkspace>
   );
@@ -123,8 +124,8 @@ export function DesignReviewList() {
           </Paper>))}
       </Box>
       <StepDialog open={open} onClose={() => setOpen(false)} title="Plan design review" confirm="Plan"
-        inputs={[{ name: 'title', label: 'Title' }, { name: 'kind', label: 'Gate', type: 'select', options: reviewKinds.map((k, i) => [i, k]), initial: '2' }, { name: 'site', label: 'Site', type: 'select', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) },
-          { name: 'product', label: 'Product', type: 'select', options: [['', 'None'], ...(products.data ?? []).map((p) => [p.id, lookupLabel(p)] as [string, string])] }]}
+        inputs={[{ name: 'title', label: 'Title' }, { name: 'kind', label: 'Gate', type: 'select', options: reviewKinds.map((k, i) => [i, k]), initial: '2' }, { name: 'site', label: 'Site', type: 'select', setup: 'site', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) },
+          { name: 'product', label: 'Product', type: 'select', setup: 'product', options: [['', 'None'], ...(products.data ?? []).map((p) => [p.id, lookupLabel(p)] as [string, string])] }]}
         onConfirm={async (v) => { const r = await post<any>('/api/engineering/reviews', { title: v.title, kind: Number(v.kind), siteId: v.site, productId: v.product || null }); qc.invalidateQueries({ queryKey: ['design-reviews'] }); nav(`/engineering/reviews/${r.id}`); }} />
     </ModuleWorkspace>
   );
@@ -160,7 +161,7 @@ export function DesignReviewDetail() {
       <StepDialog open={dlg === 'hold'} onClose={() => setDlg(null)} title="Record review meeting" confirm="Save" inputs={[{ name: 'on', label: 'Held on', type: 'date' }, { name: 'decision', label: 'Decision', type: 'multiline' }]}
         onConfirm={async (v) => { await post(`/api/engineering/reviews/${id}/hold`, { heldOn: v.on, decision: v.decision }); refresh(); }} />
       <StepDialog open={dlg === 'action'} onClose={() => setDlg(null)} title="Add action" confirm="Add"
-        inputs={[{ name: 'title', label: 'Action' }, { name: 'who', label: 'Assignee', type: 'select', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }, { name: 'due', label: 'Due', type: 'date' }]}
+        inputs={[{ name: 'title', label: 'Action' }, { name: 'who', label: 'Assignee', type: 'select', setup: 'user', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }, { name: 'due', label: 'Due', type: 'date' }]}
         onConfirm={async (v) => { await post(`/api/engineering/reviews/${id}/actions`, { title: v.title, assigneeId: v.who, dueOn: v.due }); refresh(); }} />
     </ModuleWorkspace>
   );
@@ -179,7 +180,7 @@ export function BomQuality() {
       tabs={[{ label: 'Engineering BOM', value: '1' }, { label: 'Manufacturing BOM', value: '0' }, { label: 'Change history', value: 'h' }]} tab={tab} onTab={setTab}
       actions={part && tab !== 'h' ? <Button variant="contained" onClick={() => setOpen(true)}>Add line</Button> : undefined}>
       <TextField select size="small" label="Parent part" value={part} onChange={(e) => setPart(e.target.value)} sx={{ minWidth: 320, mb: 2 }}>
-        {(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}</TextField>
+        {(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}{setupOptions('part', parts.data)}</TextField>
       {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}
       {part && tab !== 'h' && q.data && <Stack direction={{ xs: 'column', md: 'row' }} gap={2}>
         <Box sx={{ flex: 2 }}><DataTable data={lines} empty="No lines."
@@ -190,8 +191,8 @@ export function BomQuality() {
         </Section></Box></Stack>}
       {part && tab === 'h' && <DataTable data={h.data ?? []} empty="No changes recorded." columns={[{ header: 'When', accessorKey: 'occurredAt', cell: (x) => fmtDateTime(x.getValue()) }, { header: 'Action', accessorKey: 'action' }, { header: 'By', accessorKey: 'userName' }, { header: 'Description', accessorKey: 'description' }]} />}
       <StepDialog open={open} onClose={() => setOpen(false)} title="Add BOM line" confirm="Add"
-        inputs={[{ name: 'comp', label: 'Component', type: 'select', options: (parts.data ?? []).filter((p) => p.id !== part).map((p) => [p.id, lookupLabel(p)]) }, { name: 'rev', label: 'Component revision' }, { name: 'qty', label: 'Quantity', initial: '1' }, { name: 'op', label: 'Operation' },
-          { name: 'sup', label: 'Supplier', type: 'select', options: [['', 'None'], ...(suppliers.data ?? []).map((p) => [p.id, lookupLabel(p)] as [string, string])] }]}
+        inputs={[{ name: 'comp', label: 'Component', type: 'select', setup: 'part', options: (parts.data ?? []).filter((p) => p.id !== part).map((p) => [p.id, lookupLabel(p)]) }, { name: 'rev', label: 'Component revision' }, { name: 'qty', label: 'Quantity', initial: '1' }, { name: 'op', label: 'Operation' },
+          { name: 'sup', label: 'Supplier', type: 'select', setup: 'supplier', options: [['', 'None'], ...(suppliers.data ?? []).map((p) => [p.id, lookupLabel(p)] as [string, string])] }]}
         onConfirm={async (v) => { await put(`/api/engineering/parts/${part}/bom?type=${tab}`, [...lines.map((l: any) => ({ componentPartId: l.componentPartId, componentRevision: l.componentRevision, quantity: l.quantity, operation: l.operation, supplierId: l.supplierId })), { componentPartId: v.comp, componentRevision: v.rev || null, quantity: Number(v.qty), operation: v.op || null, supplierId: v.sup || null }]); qc.invalidateQueries({ queryKey: ['bom', part] }); }} />
     </ModuleWorkspace>
   );
@@ -206,7 +207,7 @@ export function Variants() {
   return (
     <ModuleWorkspace module={mod('product-design')} crumbs={crumbs('Variants')} title="Product configuration and variants" actions={product ? <Button variant="contained" onClick={() => setOpen(true)}>New variant</Button> : undefined}>
       <TextField select size="small" label="Product" value={product} onChange={(e) => setProduct(e.target.value)} sx={{ minWidth: 320, mb: 2 }}>
-        {(products.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}</TextField>
+        {(products.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}{setupOptions('product', products.data)}</TextField>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
         {(q.data ?? []).map((v) => <Paper key={v.id} sx={{ p: 1.5, borderTop: 3, borderColor: 'secondary.main' }}>
           <Typography sx={{ fontFamily: mono, fontWeight: 700 }}>{v.code} <Typography component="span" variant="caption">rev {v.revision}</Typography></Typography><Typography variant="body2">{v.name}</Typography>

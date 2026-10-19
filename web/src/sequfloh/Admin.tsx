@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Link, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell,
@@ -114,9 +115,9 @@ function SettingsSection({ section }: { section: string }) {
                 case 'number': return <TextField key={f.key} type="number" label={f.label} value={v ?? ''} onChange={(e) => set(f.key, e.target.value === '' ? 0 : Number(e.target.value))} />;
                 case 'select': return <TextField key={f.key} select label={f.label} value={v ?? ''} onChange={(e) => set(f.key, e.target.value)}>{f.options!.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}</TextField>;
                 case 'site': return <TextField key={f.key} select label={f.label} value={v ?? ''} onChange={(e) => { setSaved(false); setDraft({ ...current, defaultSiteId: e.target.value || null, defaultDepartmentId: null }); }}>
-                  <MenuItem value="">None</MenuItem>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
+                  <MenuItem value="">None</MenuItem>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>;
                 case 'department': return <TextField key={f.key} select label={f.label} value={v ?? ''} disabled={!siteId} onChange={(e) => set(f.key, e.target.value || null)}>
-                  <MenuItem value="">None</MenuItem>{(sites.data?.find((s) => s.id === siteId)?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.code} — {d.name}</MenuItem>)}</TextField>;
+                  <MenuItem value="">None</MenuItem>{(sites.data?.find((s) => s.id === siteId)?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.code} — {d.name}</MenuItem>)}{setupOptions('department', sites.data?.find((s) => s.id === siteId)?.departments)}</TextField>;
                 case 'csv': return <TextField key={f.key} sx={sx} label={f.label} value={((v as string[]) ?? []).join(', ')} onChange={(e) => set(f.key, e.target.value.split(',').map((x) => x.trim()).filter(Boolean))} />;
                 case 'lines': return <TextField key={f.key} sx={sx} multiline minRows={4} label={f.label} defaultValue={toLines(v)} onChange={(e) => set(f.key, fromLines(e.target.value, f.key === 'includedColumns'))} />;
                 case 'permissions': return <TextField key={f.key} sx={sx} select label={f.label} helperText={f.helper} value={(v as string[]) ?? []} slotProps={{ select: { multiple: true } }}

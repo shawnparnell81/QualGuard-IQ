@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Chip, LinearProgress, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
@@ -35,7 +36,7 @@ export function Tile({ label, value, color, hint }: { label: string; value: Reac
 export function SiteSelect({ value, onChange, label = 'Site' }: { value: string; onChange: (v: string) => void; label?: string }) {
   const sites = useSites();
   return <TextField select size="small" label={label} value={value} onChange={(e) => onChange(e.target.value)} sx={{ minWidth: 240 }}>
-    {(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
+    {(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>;
 }
 export function useSite(): [string, (v: string) => void] {
   const sites = useSites();
@@ -142,7 +143,7 @@ export function OrgStructure() {
       <StepDialog open={open} onClose={() => setOpen(false)} title="Add organization unit" confirm="Add"
         inputs={[{ name: 'code', label: 'Code' }, { name: 'name', label: 'Name' }, { name: 'level', label: 'Level', type: 'select', options: orgLevels.map((l, i) => [i, l]), initial: '0' },
           { name: 'parentId', label: 'Parent', type: 'select', options: [['', 'None (top level)'], ...rows.map((r) => [r.id, `${r.code} — ${r.name}`] as [string, string])] },
-          { name: 'siteId', label: 'Site (plants, warehouses, labs)', type: 'select', options: [['', 'None'], ...(sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`] as [string, string])] }]}
+          { name: 'siteId', label: 'Site (plants, warehouses, labs)', type: 'select', setup: 'site', options: [['', 'None'], ...(sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`] as [string, string])] }]}
         onConfirm={async (v) => { await post('/api/enterprise/units', { code: v.code, name: v.name, level: Number(v.level || 0), parentId: v.parentId || null, siteId: v.siteId || null }); qc.invalidateQueries({ queryKey: ['org-rollup'] }); }} />
     </ModuleWorkspace>
   );
@@ -205,7 +206,7 @@ export function StandardDetail() {
         <Facts items={[['Number', s.number], ['Local procedure', s.allowLocalProcedure ? 'Allowed' : 'Adopt as issued'], ['Published', fmtDate(s.createdAt)]]} />
       </Box>
       <StepDialog open={dlg?.kind === 'rollout'} onClose={() => setDlg(null)} title="Roll out to a site" confirm="Roll out" intro="The site's enterprise managers are notified to adopt the standard."
-        inputs={[{ name: 'site', label: 'Site', type: 'select', options: (sites.data ?? []).map((x) => [x.id, `${x.code} — ${x.name}`]) }, { name: 'dueOn', label: 'Adopt by', type: 'date' }]}
+        inputs={[{ name: 'site', label: 'Site', type: 'select', setup: 'site', options: (sites.data ?? []).map((x) => [x.id, `${x.code} — ${x.name}`]) }, { name: 'dueOn', label: 'Adopt by', type: 'date' }]}
         onConfirm={async (v) => { await post(`/api/enterprise/standards/${id}/rollouts`, { siteIds: [v.site], dueOn: v.dueOn || null }); refresh(); }} />
       <StepDialog open={dlg?.kind === 'adopt'} onClose={() => setDlg(null)} title="Adopt at site" confirm="Adopt" intro="Pick the rollout training course and who must be trained; assignments are created immediately."
         inputs={[{ name: 'course', label: 'Training course', type: 'select', options: [['', 'No training'], ...courseRows.map((c) => [c.id, `${c.number} — ${c.title}`] as [string, string])] }, { name: 'trainees', label: 'Trainees', type: 'users' }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
@@ -285,7 +286,7 @@ export function CurriculumList() {
           { header: 'Auto-assign', accessorKey: 'autoAssign', cell: (x) => (x.getValue() ? 'Yes' : 'No') }, { header: '', id: 'a', cell: (x) => can('training.edit') && <Button size="small" onClick={() => setDlg({ assign: x.row.original.id })}>Assign</Button> }]} />
       <StepDialog open={dlg === 'new'} onClose={() => setDlg(null)} title="New curriculum" confirm="Create" intro="Training paths release courses one at a time, in order. Certification programs issue a certification when complete."
         inputs={[{ name: 'title', label: 'Title' }, { name: 'kind', label: 'Kind', type: 'select', options: curriculumKinds.map((k, i) => [i, k]), initial: '0' },
-          { name: 'site', label: 'Site', type: 'select', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) },
+          { name: 'site', label: 'Site', type: 'select', setup: 'site', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) },
           { name: 'courses', label: 'Course numbers, in order (comma separated)', helper: courseRows.slice(0, 12).map((c) => c.number).join(', ') }, { name: 'auto', label: 'Auto-assign to people who require it', type: 'checkbox' }]}
         onConfirm={async (v) => {
           const ids = v.courses.split(',').map((n) => courseRows.find((c) => c.number === n.trim())?.id).filter(Boolean);
@@ -315,7 +316,7 @@ export function AuditProgramList() {
       <DataTable data={q.data ?? []} onRowClick={(r) => nav(`/audits/programs/${r.id}`)} empty="No audit programs."
         columns={[{ header: 'Number', accessorKey: 'number', cell: num }, { header: 'Title', accessorKey: 'title' }, { header: 'Year', accessorKey: 'year' }, { header: 'Approved', accessorKey: 'approvedAt', cell: (x) => (x.getValue() ? fmtDate(x.getValue()) : 'Draft') }]} />
       <StepDialog open={open} onClose={() => setOpen(false)} title="New audit program" confirm="Create"
-        inputs={[{ name: 'title', label: 'Title' }, { name: 'year', label: 'Year', initial: String(new Date().getFullYear()) }, { name: 'site', label: 'Site', type: 'select', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) }, { name: 'objectives', label: 'Objectives', type: 'multiline' }]}
+        inputs={[{ name: 'title', label: 'Title' }, { name: 'year', label: 'Year', initial: String(new Date().getFullYear()) }, { name: 'site', label: 'Site', type: 'select', setup: 'site', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) }, { name: 'objectives', label: 'Objectives', type: 'multiline' }]}
         onConfirm={async (v) => { const r = await post<{ id: string }>('/api/audits/programs', { title: v.title, year: Number(v.year), siteId: v.site, objectives: v.objectives }); qc.invalidateQueries({ queryKey: ['audit-programs'] }); nav(`/audits/programs/${r.id}`); }} />
     </ModuleWorkspace>
   );
@@ -349,7 +350,7 @@ export function AuditProgramDetail() {
       <StepDialog open={dlg === 'item'} onClose={() => setDlg(null)} title="Add planned audit" confirm="Add"
         inputs={[{ name: 'type', label: 'Audit type', type: 'select', options: auditTypes.map((t) => [t, t]), initial: 'Internal' }, { name: 'subject', label: 'Subject / area' }, { name: 'criteria', label: 'Criteria' },
           { name: 'month', label: 'Planned month', type: 'select', options: months.map((m, i) => [i + 1, m]), initial: String(new Date().getMonth() + 1) },
-          { name: 'lead', label: 'Lead auditor', type: 'select', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }]}
+          { name: 'lead', label: 'Lead auditor', type: 'select', setup: 'user', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }]}
         onConfirm={async (v) => { await post(`/api/audits/programs/${id}/items`, { auditType: v.type, subject: v.subject, criteria: v.criteria, plannedMonth: Number(v.month), leadAuditorId: v.lead || null }); qc.invalidateQueries({ queryKey: ['audit-program', id] }); }} />
       <StepDialog open={typeof dlg === 'object' && dlg !== null} onClose={() => setDlg(null)} title="Schedule audit" confirm="Schedule"
         inputs={[{ name: 'start', label: 'Start', type: 'date' }, { name: 'end', label: 'End', type: 'date' }, { name: 'scope', label: 'Scope' }, { name: 'q', label: 'First checklist question' }]}

@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Chip, LinearProgress, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
@@ -46,7 +47,7 @@ export function KpiLibrary() {
   return (
     <ModuleWorkspace module={insights} crumbs={[{ label: 'KPI library' }]} title="KPI library"
       actions={<Stack direction="row" gap={1}>
-        <TextField select size="small" label="Site" value={site} onChange={(e) => setSite(e.target.value)} sx={{ width: 180 }}><MenuItem value="">All my sites</MenuItem>{(sites.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.name}</MenuItem>)}</TextField>
+        <TextField select size="small" label="Site" value={site} onChange={(e) => setSite(e.target.value)} sx={{ width: 180 }}><MenuItem value="">All my sites</MenuItem>{(sites.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>
         <TextField size="small" type="date" label="From" value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
         <TextField size="small" type="date" label="To" value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
       </Stack>}>
@@ -250,7 +251,7 @@ export function AlertsAdmin() {
           { name: 'recipients', label: 'Recipients', type: 'users', initial: dlg.r ? (JSON.parse(dlg.r.recipients) as string[]).join(',') : '' },
           { name: 'inApp', label: 'In-app', type: 'checkbox', initial: String(dlg.r?.inApp ?? true) }, { name: 'email', label: 'Email', type: 'checkbox', initial: String(dlg.r?.email ?? false) },
           { name: 'sms', label: 'SMS', type: 'checkbox', initial: String(dlg.r?.sms ?? false) }, { name: 'teams', label: 'Teams', type: 'checkbox', initial: String(dlg.r?.teams ?? false) },
-          { name: 'active', label: 'Active', type: 'checkbox', initial: String(dlg.r?.active ?? true) }, { name: 'siteId', label: 'Site', type: 'select', initial: dlg.r?.siteId ?? '', options: (sites.data ?? []).map((s) => [s.id, s.name]) }]}
+          { name: 'active', label: 'Active', type: 'checkbox', initial: String(dlg.r?.active ?? true) }, { name: 'siteId', label: 'Site', type: 'select', setup: 'site', initial: dlg.r?.siteId ?? '', options: (sites.data ?? []).map((s) => [s.id, s.name]) }]}
         onConfirm={async (v) => { if (dlg.r) await put(`/api/alerts/rules/${dlg.r.id}`, ruleBody(v)); else await post('/api/alerts/rules', ruleBody(v)); refresh(); }} />}
       {dlg?.kind === 'ep' && <StepDialog open title={dlg.e ? `Edit ${dlg.e.name}` : 'New integration point'} confirm="Save" onClose={() => setDlg(null)} intro="https only. Each POST is signed with HMAC-SHA256 in X-QualGuard-Signature. The secret is write-only."
         inputs={[{ name: 'name', label: 'Name', initial: dlg.e?.name }, { name: 'kind', label: 'Kind', type: 'select', initial: dlg.e?.kind ?? 'Teams', options: [['Sms', 'SMS gateway'], ['Teams', 'Microsoft Teams webhook'], ['DataLake', 'Data lake / webhook']] },

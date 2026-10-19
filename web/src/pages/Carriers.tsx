@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Alert, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -75,7 +76,7 @@ function ConnectionDialog({ open, edit, onClose, onSaved }: { open: boolean; edi
       {err && <Alert severity="error">{err}</Alert>}
       <Alert severity="info">New connections are disabled and unverified. Changing any setting later switches the connection off until a new test passes.</Alert>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
-        <TextField select size="small" label="Carrier" value={v.carrierId} onChange={set('carrierId')}>{(carriers.data ?? []).filter((c) => c.active || c.id === v.carrierId).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}</TextField>
+        <TextField select size="small" label="Carrier" value={v.carrierId} onChange={set('carrierId')}>{(carriers.data ?? []).filter((c) => c.active || c.id === v.carrierId).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}{setupOptions('carrier', carriers.data)}</TextField>
         <TextField size="small" label="Connection name" value={v.name} onChange={set('name')} />
         <TextField select size="small" label="Adapter" value={v.provider} onChange={set('provider')}>{carrierProviders.map((x, i) => <MenuItem key={x} value={String(i)}>{x}</MenuItem>)}</TextField>
         <TextField select size="small" label="Environment" value={v.environment} onChange={set('environment')} helperText={p === 0 ? 'The fixture carrier runs in sandbox only.' : undefined}>
