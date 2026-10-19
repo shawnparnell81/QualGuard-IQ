@@ -91,6 +91,8 @@ public sealed class RecordDeletionService(AppDbContext db, IRecordRegistry recor
         var e = await db.DeletedRecords.FirstOrDefaultAsync(x => x.Id == entryId, ct) ?? throw new NotFoundException("Deleted record");
         if (!await access.CanAccessAsync(UserId, e.DeletePermission, e.SiteId, e.DepartmentId, ct)) throw new NotFoundException("Deleted record");
         if (e.RestoredAt is not null) throw new ConflictException("The record has already been restored.");
+        if (e.WasLocked && !await access.CanAccessAsync(UserId, Permissions.RecordsDeleteLocked, e.SiteId, e.DepartmentId, ct))
+            throw new ForbiddenException("This record was closed, approved or signed when it was deleted. Restoring it needs the \"delete locked records\" permission.");
         var now = clock.UtcNow;
         e.RestoredAt = now;
         e.RestoredById = UserId;
