@@ -29,7 +29,9 @@ public static class DependencyInjection
         services.AddScoped<AuditInterceptor>();
         services.AddDbContext<AppDbContext>((sp, o) =>
             o.UseNpgsql(cs, n => n.MigrationsHistoryTable("__ef_migrations", "qms"))
-             .AddInterceptors(sp.GetRequiredService<AuditInterceptor>()));
+             .AddInterceptors(sp.GetRequiredService<AuditInterceptor>())
+             // A deleted record hides its child rows too (revisions of a deleted document, lines of a deleted NCR). That is intended.
+             .ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.CoreEventId.PossibleIncorrectRequiredNavigationWithQueryFilterInteractionWarning)));
         services.AddScoped<IAccessService, AccessService>();
         Microsoft.Extensions.DependencyInjection.Extensions.ServiceCollectionDescriptorExtensions.TryAddScoped<ICallerRestriction, NoCallerRestriction>(services);
         services.AddScoped<ISecurityEventLogger, SecurityEventLogger>();
