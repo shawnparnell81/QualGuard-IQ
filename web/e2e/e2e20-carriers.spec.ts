@@ -77,7 +77,7 @@ test.describe('E2E 20: carrier connections', () => {
     await choose(page, 'Carrier connection', new RegExp(`Sandbox ${t}`));
     await expect(page.getByText('Sandbox connection: rates and labels are test results')).toBeVisible();
     await button(page, 'Validate with carrier').click();
-    await expect(page.getByText(/Address valid/)).toBeVisible();
+    await expect(page.getByRole('alert').filter({ hasText: /Address valid[:.]/ })).toBeVisible();
     await expect(page.getByText(/^Validated /)).toBeVisible();
     await button(page, 'Get rates').click();
     const rates = page.getByRole('table', { name: 'Rate quotes' });
