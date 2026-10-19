@@ -227,6 +227,9 @@ public sealed class FormRecordImportTarget(AppDbContext db, INumberingService nu
         if (rec.Status != FormRecordStatus.Draft) return $"{rec.Number} has been submitted.";
         if (await db.FormSignatures.AnyAsync(s => s.FormRecordId == id, ct)) return $"{rec.Number} has been signed.";
         if (rec.UpdatedAt > rec.CreatedAt.AddSeconds(5)) return $"{rec.Number} was changed after the import.";
+        // the field values go with a bulk delete, which skips the automatic audit; the entry below keeps them
+        AuditLog.Add(db, m.Current, m.Now, "Deleted", "FormRecord", rec.Id, rec.SiteId, $"Removed form record {rec.Number} and its field values when import {job.Number} was rolled back",
+            new { values = rec.ValuesJson });
         await db.FormRecordValues.Where(v => v.FormRecordId == id).ExecuteDeleteAsync(ct);
         db.FormRecords.Remove(rec);
         await db.SaveChangesAsync(ct);

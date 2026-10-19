@@ -16,16 +16,16 @@ namespace QualGuardIQ.Infrastructure.Modules.Enterprise;
 public sealed record ProjectInput(string Title, QualityProjectKind Kind, Guid SiteId, Guid? DepartmentId, Guid? OwnerId, Guid? ProductId, Guid? PartId, Guid? CustomerId, Guid? SupplierId, Guid? TargetSiteId, DateOnly? TargetLaunchOn);
 public sealed record DeliverableInput(int Phase, string Name, DateOnly? DueOn, Guid? OwnerId);
 public sealed record DeliverableUpdate(DeliverableStatus Status, string? LinkedType, Guid? LinkedId);
-public sealed record GateInput(GateDecision Decision, string Password, string? Notes);
+public sealed record GateInput(GateDecision Decision, string Password, string? Notes, string? MfaCode = null);
 public sealed record PpapInput(Guid PartId, string? PartRevision, Guid? CustomerId, Guid? ProjectId, int Level, string Reason, Guid SiteId, Guid? DepartmentId);
 public sealed record PpapElementUpdate(PpapElementStatus Status, string? LinkedType, Guid? LinkedId, string? Notes);
-public sealed record CustomerDecisionInput(PpapStatus Decision, string CustomerName, DateOnly DecidedOn, string? Comments, string Password);
+public sealed record CustomerDecisionInput(PpapStatus Decision, string CustomerName, DateOnly DecidedOn, string? Comments, string Password, string? MfaCode = null);
 public sealed record CapabilityInput(string Title, string Characteristic, Guid SiteId, Guid? DepartmentId, Guid? ProductId, Guid? PartId, Guid? ControlPlanId, string? Process,
     decimal? Lsl, decimal? Usl, int SubgroupSize, List<decimal> Values, decimal RequiredCpk = 1.33m);
 
 /// <summary>Project quality planning and APQP (phase gates, deliverables, readiness), PPAP submissions and capability studies.</summary>
-public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingService numbers, IRecordRegistry records, UserManager<ApplicationUser> users, INotifier notifier, ComplianceMappingService mappings,
-    WorkflowService workflow, ICurrentUser current)
+public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingService numbers, IRecordRegistry records, INotifier notifier, ComplianceMappingService mappings,
+    WorkflowService workflow, ICurrentUser current, SignerVerification signer)
 {
     public const string ProjectType = "QualityProject", PpapType = "Ppap", CapabilityType = "CapabilityStudy";
     public static readonly string[] PhaseNames = ["", "Plan and define program", "Product design and development", "Process design and development", "Product and process validation", "Launch", "Feedback, assessment and corrective action"];
@@ -145,10 +145,10 @@ public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingS
         await db.SaveChangesAsync(ct);
     }
 
-    async Task<ApplicationUser> ReauthAsync(string password, string what, CancellationToken ct)
+    async Task<ApplicationUser> ReauthAsync(string password, string? mfaCode, string what, CancellationToken ct)
     {
-        var user = await users.FindByIdAsync(m.UserId.ToString()) ?? throw new ForbiddenException();
-        if (string.IsNullOrEmpty(password) || !await users.CheckPasswordAsync(user, password)) throw new AppException($"Password is incorrect. The {what} was not signed.", 401);
+        // Same signature check as approvals: lockout, security log and the authenticator code when the account has one.
+        var (user, _) = await signer.VerifyAsync(m.UserId, password, mfaCode, false, $"Project {what}", "Set up an authenticator app first.");
         return user;
     }
 
@@ -163,7 +163,7 @@ public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingS
         var open = await db.ProjectDeliverables.Where(d => d.ProjectId == id && d.Phase == p.CurrentPhase && d.Status == DeliverableStatus.Open).Select(d => d.Name).ToListAsync(ct);
         if (r.Decision == GateDecision.Go && open.Count > 0) throw new AppException($"Phase {p.CurrentPhase} still has open deliverables: {string.Join(", ", open)}.");
         if (r.Decision != GateDecision.Go && string.IsNullOrWhiteSpace(r.Notes)) throw new AppException("Notes are required for a conditional or no-go decision.");
-        var user = await ReauthAsync(r.Password, "gate decision", ct);
+        var user = await ReauthAsync(r.Password, r.MfaCode, "gate decision", ct);
         db.PhaseGates.Add(new PhaseGate { ProjectId = id, Phase = p.CurrentPhase, Decision = r.Decision, DecidedById = user.Id, DecidedByName = user.DisplayName, DecidedAt = m.Now, Notes = r.Notes?.Trim() });
         if (r.Decision != GateDecision.NoGo)
         {
@@ -389,7 +389,7 @@ public sealed class ProjectService(AppDbContext db, ModuleSupport m, INumberingS
         if (r.Decision is not (PpapStatus.Approved or PpapStatus.InterimApproved or PpapStatus.Rejected)) throw new AppException("The decision must be approved, interim approval or rejected.");
         ModuleSupport.Required(r.CustomerName, "Customer representative", 200);
         if (r.Decision != PpapStatus.Approved && string.IsNullOrWhiteSpace(r.Comments)) throw new AppException("Record the customer's comments for an interim approval or rejection.");
-        await ReauthAsync(r.Password, "customer decision", ct);
+        await ReauthAsync(r.Password, r.MfaCode, "customer decision", ct);
         s.Status = r.Decision; s.CustomerDecisionBy = r.CustomerName.Trim(); s.CustomerDecisionOn = r.DecidedOn; s.CustomerComments = r.Comments?.Trim();
         if (r.Decision == PpapStatus.Approved && s.ProjectId is { } pid)
             foreach (var d in await db.ProjectDeliverables.Where(d => d.ProjectId == pid && d.Name == "PPAP approval" && d.Status == DeliverableStatus.Open).ToListAsync(ct))

@@ -43,6 +43,10 @@ public sealed class RolesController(AppDbContext db) : ControllerBase
         var role = new Role { Name = req.Name, Description = req.Description, RequiresMfa = req.RequiresMfa ?? false };
         role.Permissions.AddRange(req.Permissions.Distinct().Select(p => new RolePermission { RoleId = role.Id, Permission = p }));
         db.QmsRoles.Add(role);
+        var granted = role.Permissions.Select(p => p.Permission).Order().ToList();
+        // saved together with the role, so the role never exists without a record of what it grants
+        AuditLog.Add(db, HttpContext.RequestServices.GetRequiredService<ICurrentUser>(), DateTimeOffset.UtcNow, "PermissionsChanged", nameof(Role), role.Id, null,
+            $"Created role {role.Name} with {granted.Count} permission{(granted.Count == 1 ? "" : "s")}: {(granted.Count == 0 ? "none" : string.Join(", ", granted))}", new { from = "", to = string.Join(", ", granted) });
         await db.SaveChangesAsync(ct);
         return role.Id;
     }
@@ -64,18 +68,20 @@ public sealed class RolesController(AppDbContext db) : ControllerBase
         var after = string.Join(", ", role.Permissions.Select(p => p.Permission).Order());
         if (before != after) role.Description = req.Description; // permission list changes are audited below
         db.Entry(role).Property(r => r.UpdatedAt).IsModified = true;
-        await db.SaveChangesAsync(ct);
         if (before != after)
         {
-            db.AuditEntries.Add(new Domain.Audit.AuditEntry
-            {
-                OccurredAt = DateTimeOffset.UtcNow, UserId = HttpContext.RequestServices.GetRequiredService<ICurrentUser>().UserId,
-                UserName = HttpContext.RequestServices.GetRequiredService<ICurrentUser>().UserName, Action = "PermissionsChanged",
-                EntityType = nameof(Role), EntityId = role.Id, Description = $"Changed permissions of role {role.Name}",
-                Changes = System.Text.Json.JsonSerializer.Serialize(new { from = before, to = after })
-            });
-            await db.SaveChangesAsync(ct);
+            // in the same save as the change itself
+            var was = before.Split(", ", StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+            var now = after.Split(", ", StringSplitOptions.RemoveEmptyEntries).ToHashSet();
+            var added = now.Except(was).Order().ToList();
+            var removed = was.Except(now).Order().ToList();
+            var parts = new List<string>();
+            if (added.Count > 0) parts.Add("added " + string.Join(", ", added));
+            if (removed.Count > 0) parts.Add("removed " + string.Join(", ", removed));
+            AuditLog.Add(db, HttpContext.RequestServices.GetRequiredService<ICurrentUser>(), DateTimeOffset.UtcNow, "PermissionsChanged", nameof(Role), role.Id, null,
+                $"Changed permissions of role {role.Name}: {string.Join("; ", parts)}", new { from = before, to = after });
         }
+        await db.SaveChangesAsync(ct);
         return NoContent();
     }
 

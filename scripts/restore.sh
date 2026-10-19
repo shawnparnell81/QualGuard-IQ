@@ -11,8 +11,18 @@ expected=$(python3 -c "import json; print(json.load(open('$DIR/manifest.json'))[
 actual=$(sha256sum "$DIR/database.dump" | cut -d' ' -f1)
 [[ "$expected" == "$actual" ]] || { echo "Checksum mismatch: the backup is damaged. Use another backup."; exit 3; }
 psql -d postgres -v ON_ERROR_STOP=1 -q -c "DROP DATABASE IF EXISTS \"$TARGET\" WITH (FORCE)" -c "CREATE DATABASE \"$TARGET\""
-pg_restore --no-owner --exit-on-error --dbname="$TARGET" "$DIR/database.dump"
+pg_restore --no-owner --no-privileges --exit-on-error --dbname="$TARGET" "$DIR/database.dump"
 if [[ -d "$DIR/files" && -n "${QGIQ_S3_ALIAS:-}" && -n "${QGIQ_S3_BUCKET:-}" ]] && command -v mc >/dev/null; then
   mc mirror --overwrite --quiet "$DIR/files" "$QGIQ_S3_ALIAS/$QGIQ_S3_BUCKET"
 fi
-echo "Restored $DIR into $TARGET."
+if [[ -f "$DIR/keys.tar.gz" ]]; then
+  kexpected=$(python3 -c "import json; print(json.load(open('$DIR/manifest.json')).get('keys', {}).get('sha256', ''))")
+  [[ "$kexpected" == "$(sha256sum "$DIR/keys.tar.gz" | cut -d' ' -f1)" ]] || { echo "Checksum mismatch on keys.tar.gz."; exit 3; }
+  if [[ -n "${QGIQ_KEYS_DIR:-}" ]]; then
+    mkdir -p "$QGIQ_KEYS_DIR" && tar -xzf "$DIR/keys.tar.gz" -C "$QGIQ_KEYS_DIR"
+    echo "Data Protection keys restored to $QGIQ_KEYS_DIR."
+  else
+    echo "Put the keys back before starting the API: extract $DIR/keys.tar.gz into the key folder (QGIQ_KEYS_DIR, or the dpkeys volume)."
+  fi
+fi
+echo "Restored $DIR into $TARGET. Start the stack so the migrate step sets the app login's permissions again."

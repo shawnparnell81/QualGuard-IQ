@@ -34,6 +34,7 @@ public sealed class TestApp : WebApplicationFactory<Program>, IAsyncLifetime
         builder.UseSetting("Storage:SecretKey", Environment.GetEnvironmentVariable("QMS_TEST_S3_SECRET") ?? "qgiqminio-local-dev");
         builder.UseSetting("Storage:Bucket", "qms-test");
         builder.UseSetting("Sso:AllowHttp", "true"); // the fake identity provider runs on http://127.0.0.1
+        builder.UseSetting("Sso:AllowedNetworks", "127.0.0.0/8"); // ... which the outbound guard refuses unless listed
         builder.UseSetting("Licensing:PublicKeyPem", LicenseSigner.ExportSubjectPublicKeyInfoPem());
         // sign-in emails (reset links) are captured instead of sent
         builder.ConfigureServices(s => s.AddSingleton<QualGuardIQ.Infrastructure.Security.IAuthMailer>(Mail));

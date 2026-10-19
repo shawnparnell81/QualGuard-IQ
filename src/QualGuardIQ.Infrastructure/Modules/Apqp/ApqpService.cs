@@ -158,7 +158,7 @@ public sealed class ApqpService(AppDbContext db, ModuleSupport m, INumberingServ
 
     public async Task SaveStepsAsync(Guid id, List<FlowStepInput> steps, CancellationToken ct)
     {
-        await LoadDraftAsync(FlowType, id, ct);
+        var doc = await LoadDraftAsync(FlowType, id, ct);
         if (steps.GroupBy(s => s.Sequence).Any(g => g.Count() > 1)) throw new AppException("Step sequence numbers must be unique.");
         string[] kinds = ["Operation", "Inspection", "Transport", "Storage", "Delay"];
         foreach (var s in steps)
@@ -169,20 +169,26 @@ public sealed class ApqpService(AppDbContext db, ModuleSupport m, INumberingServ
             if (s.InspectionPlanId is { } ip && !await db.InspectionPlans.AnyAsync(x => x.Id == ip, ct)) throw new AppException("Select an existing inspection plan.");
             if (s.WorkInstructionId is { } wi && !await db.Documents.AnyAsync(x => x.Id == wi, ct)) throw new AppException("Select an existing work instruction document.");
         }
+        var before = await db.ProcessFlowSteps.AsNoTracking().Where(x => x.FlowId == id).OrderBy(x => x.Sequence).ToListAsync(ct);
+        var after = steps.Select(s => new ProcessFlowStep { FlowId = id, Sequence = s.Sequence, Name = s.Name.Trim(), StepType = s.StepType, Inputs = s.Inputs, Outputs = s.Outputs, OwnerId = s.OwnerId, WorkInstructionId = s.WorkInstructionId, InspectionPlanId = s.InspectionPlanId }).ToList();
+        LineAudit.Write(db, m.Current, m.Now, FlowType, id, doc.SiteId, "process flow steps", doc.AuditLabel, before, after, nameof(ProcessFlowStep.FlowId),
+            s => s.Sequence.ToString(System.Globalization.CultureInfo.InvariantCulture), s => $"step {s.Sequence} \"{s.Name}\"");
         db.ProcessFlowSteps.RemoveRange(db.ProcessFlowSteps.Where(x => x.FlowId == id));
-        db.ProcessFlowSteps.AddRange(steps.Select(s => new ProcessFlowStep { FlowId = id, Sequence = s.Sequence, Name = s.Name.Trim(), StepType = s.StepType, Inputs = s.Inputs, Outputs = s.Outputs, OwnerId = s.OwnerId, WorkInstructionId = s.WorkInstructionId, InspectionPlanId = s.InspectionPlanId }));
+        db.ProcessFlowSteps.AddRange(after);
         await db.SaveChangesAsync(ct);
     }
 
     public async Task SavePfmeaLinesAsync(Guid id, List<PfmeaLineInput> lines, CancellationToken ct)
     {
-        await LoadDraftAsync(PfmeaType, id, ct);
+        var doc = await LoadDraftAsync(PfmeaType, id, ct);
         var rows = new List<PfmeaLine>();
         foreach (var l in lines)
         {
             if ((await PfmeaLineErrorsAsync(l, ct)).FirstOrDefault() is { } error) throw new AppException(error);
             rows.Add(NewPfmeaLine(id, l));
         }
+        var before = await db.PfmeaLines.AsNoTracking().Where(x => x.PfmeaId == id).OrderBy(x => x.StepSequence).ThenBy(x => x.CreatedAt).ToListAsync(ct);
+        LineAudit.Write(db, m.Current, m.Now, PfmeaType, id, doc.SiteId, "FMEA lines", doc.AuditLabel, before, rows, nameof(PfmeaLine.PfmeaId), PfmeaKey, PfmeaName);
         db.PfmeaLines.RemoveRange(db.PfmeaLines.Where(x => x.PfmeaId == id));
         db.PfmeaLines.AddRange(rows);
         await db.SaveChangesAsync(ct);
@@ -243,10 +249,19 @@ public sealed class ApqpService(AppDbContext db, ModuleSupport m, INumberingServ
         var plan = (ControlPlan)await LoadDraftAsync(PlanType, id, ct);
         foreach (var l in lines)
             if ((await PlanLineErrorsAsync(plan, l, ct)).FirstOrDefault() is { } error) throw new AppException(error);
+        var before = await db.ControlPlanLines.AsNoTracking().Where(x => x.PlanId == id).OrderBy(x => x.StepSequence).ThenBy(x => x.CreatedAt).ToListAsync(ct);
+        var after = lines.Select(l => NewPlanLine(id, l)).ToList();
+        LineAudit.Write(db, m.Current, m.Now, PlanType, id, plan.SiteId, "control plan lines", plan.AuditLabel, before, after, nameof(ControlPlanLine.PlanId), PlanKey, PlanName);
         db.ControlPlanLines.RemoveRange(db.ControlPlanLines.Where(x => x.PlanId == id));
-        db.ControlPlanLines.AddRange(lines.Select(l => NewPlanLine(id, l)));
+        db.ControlPlanLines.AddRange(after);
         await db.SaveChangesAsync(ct);
     }
+
+    // how lines are matched across saves and named in the audit trail
+    internal static string PfmeaKey(PfmeaLine l) => $"{l.StepSequence}|{l.FailureMode.Trim().ToLowerInvariant()}";
+    internal static string PfmeaName(PfmeaLine l) => $"step {l.StepSequence} \"{l.FailureMode}\"";
+    internal static string PlanKey(ControlPlanLine l) => $"{l.StepSequence}|{l.Operation}|{l.Characteristic.Trim().ToLowerInvariant()}|{l.ProcessCharacteristic?.Trim().ToLowerInvariant()}";
+    internal static string PlanName(ControlPlanLine l) => $"step {l.StepSequence} \"{l.Characteristic}\"";
 
     /// <summary>Every rule a control plan line must meet (shared by the editor and bulk import). Empty when the line is valid.</summary>
     public async Task<List<string>> PlanLineErrorsAsync(ControlPlan plan, ControlPlanLineInput l, CancellationToken ct)

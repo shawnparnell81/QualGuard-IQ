@@ -67,7 +67,8 @@ builder.Services.AddAuthentication(AuthSelector)
     .AddBearerToken(IdentityConstants.BearerScheme, o =>
     {
         o.BearerTokenExpiration = TimeSpan.FromMinutes(builder.Configuration.GetValue("Auth:BearerTokenMinutes", 30));
-        o.RefreshTokenExpiration = TimeSpan.FromHours(builder.Configuration.GetValue("Auth:RefreshTokenHours", 8));
+        // There is no refresh endpoint: the refresh token the handler issues is never accepted, and it expires with the access token.
+        o.RefreshTokenExpiration = o.BearerTokenExpiration;
     })
     .AddIdentityCookies(c => c.ApplicationCookie!.Configure(o =>
     {
@@ -76,6 +77,7 @@ builder.Services.AddAuthentication(AuthSelector)
         o.Cookie.SameSite = SameSiteMode.Strict;
         o.Cookie.SecurePolicy = builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing")
             ? CookieSecurePolicy.SameAsRequest : CookieSecurePolicy.Always;
+        // 8 hours idle; SessionRevocation adds the fixed maximum length (Auth:SessionAbsoluteHours, 12 by default).
         o.ExpireTimeSpan = TimeSpan.FromHours(8);
         o.SlidingExpiration = true;
         o.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = 401; return Task.CompletedTask; };
@@ -97,6 +99,7 @@ builder.Services.AddAntiforgery(o =>
 builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = 429;
+    // Keyed on the client address the trusted proxy reported (see ForwardedHeaders below), so each computer has its own bucket.
     o.AddPolicy("login", ctx => RateLimitPartition.GetFixedWindowLimiter(
         ctx.Connection.RemoteIpAddress?.ToString() ?? "unknown",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = builder.Configuration.GetValue("RateLimits:LoginPerMinute", 10), Window = TimeSpan.FromMinutes(1) }));
@@ -118,21 +121,23 @@ builder.Services.AddControllers();
 builder.Services.AddProblemDetails(o => o.CustomizeProblemDetails = c => c.ProblemDetails.Extensions["traceId"] = c.HttpContext.TraceIdentifier);
 builder.Services.AddExceptionHandler<ErrorHandler>();
 builder.Services.AddOpenApi(o => QualGuardIQ.Api.OpenApi.OpenApiSetup.Configure(o, builder.Configuration));
-builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database");
-builder.Services.Configure<ForwardedHeadersOptions>(o => o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto);
+builder.Services.AddHealthChecks().AddCheck<DatabaseHealthCheck>("database").AddCheck<QualGuardIQ.Api.Infrastructure.MalwareScannerHealthCheck>("malware-scanner");
+builder.Services.Configure<ForwardedHeadersOptions>(o => QualGuardIQ.Api.Infrastructure.ProxySettings.Apply(o, builder.Configuration));
 
 builder.Services.AddMemoryCache();
 // sends sign-in emails (reset links, change notices) queued by SignInSecurityService
 builder.Services.AddHostedService(sp => sp.GetRequiredService<QualGuardIQ.Infrastructure.Security.AuthMailQueue>());
 var app = builder.Build();
 
-if (app.Configuration.GetValue("Database:MigrateOnStartup", false))
+// "migrate": brings the database up to date as the owner login, seeds it, sets up the app login (Database:AppRole) and exits.
+// Docker compose runs this once before the API starts, so the API itself never holds the owner password.
+if (args.Length > 0 && args[0] == "migrate")
 {
-    using var scope = app.Services.CreateScope();
-    await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.MigrateAsync();
-    await scope.ServiceProvider.GetRequiredService<Seeder>().SeedAsync();
-    await scope.ServiceProvider.GetRequiredService<QualGuardIQ.Infrastructure.Services.AttachmentService>().BackfillScopeAsync(CancellationToken.None);
+    await MigrateAsync(app);
+    return 0;
 }
+if (app.Configuration.GetValue("Database:MigrateOnStartup", false)) await MigrateAsync(app);
+else await WarnWhenOutOfDateAsync(app);
 await app.Services.GetRequiredService<QualGuardIQ.Infrastructure.Storage.IFileStorage>().EnsureReadyAsync(CancellationToken.None);
 
 app.UseCorrelationId();
@@ -205,5 +210,30 @@ app.MapControllers();
 
 app.Run();
 return 0;
+
+// the migrate step was skipped (or failed): say so at start-up; /health/ready stays Unhealthy until it has run
+static async Task WarnWhenOutOfDateAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var log = scope.ServiceProvider.GetRequiredService<ILogger<DatabaseHealthCheck>>();
+    try
+    {
+        var pending = (await DatabaseHealthCheck.PendingAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), CancellationToken.None)).ToList();
+        if (pending.Count > 0) log.LogError("{Message} ({Count} pending, the newest is {Latest}).", DatabaseHealthCheck.OutOfDate, pending.Count, pending[^1]);
+    }
+    catch (Exception e) when (e is Npgsql.NpgsqlException or InvalidOperationException) { log.LogWarning(e, "Could not check the database version at start-up."); }
+}
+
+static async Task MigrateAsync(WebApplication app)
+{
+    using var scope = app.Services.CreateScope();
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.SetConnectionString(DatabaseRoles.ForMigrate(db.Database.GetConnectionString()!));
+    await db.Database.MigrateAsync();
+    if (app.Configuration["Database:AppRole"] is { Length: > 0 } appRole)
+        await DatabaseRoles.ApplyAsync(db, appRole, app.Configuration["Database:AppRolePassword"], app.Configuration.GetConnectionString("Default"));
+    await scope.ServiceProvider.GetRequiredService<Seeder>().SeedAsync();
+    await scope.ServiceProvider.GetRequiredService<QualGuardIQ.Infrastructure.Services.AttachmentService>().BackfillScopeAsync(CancellationToken.None);
+}
 
 public partial class Program;

@@ -14,7 +14,7 @@ public sealed class OpenApiTests(TestApp app)
     private static string Root()
     {
         var d = new DirectoryInfo(AppContext.BaseDirectory);
-        while (d is not null && !Directory.Exists(Path.Combine(d.FullName, ".git"))) d = d.Parent;
+        while (d is not null && !Directory.Exists(Path.Combine(d.FullName, ".git")) && !File.Exists(Path.Combine(d.FullName, ".git"))) d = d.Parent; // a worktree has a .git file
         return d?.FullName ?? throw new InvalidOperationException("Repository root not found.");
     }
 

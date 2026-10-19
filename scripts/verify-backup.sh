@@ -22,11 +22,14 @@ expected_sha=$(json "d['database']['sha256']")
 actual_sha=$(sha256sum "$DIR/database.dump" | cut -d' ' -f1)
 result=PASS; notes=""
 if [[ "$expected_sha" != "$actual_sha" ]]; then result=FAIL; notes="Checksum mismatch."; fi
+if [[ -f "$DIR/keys.tar.gz" ]] && [[ "$(json "d.get('keys', {}).get('sha256', '')")" != "$(sha256sum "$DIR/keys.tar.gz" | cut -d' ' -f1)" ]]; then
+  result=FAIL; notes="$notes Key ring checksum mismatch."
+fi
 
 started=$(date +%s)
 if [[ $result == PASS ]]; then
   psql -d postgres -v ON_ERROR_STOP=1 -q -c "DROP DATABASE IF EXISTS \"$SCRATCH\" WITH (FORCE)" -c "CREATE DATABASE \"$SCRATCH\""
-  pg_restore --no-owner --exit-on-error --dbname="$SCRATCH" "$DIR/database.dump"
+  pg_restore --no-owner --no-privileges --exit-on-error --dbname="$SCRATCH" "$DIR/database.dump"
   migration=$(latest_migration "$SCRATCH")
   [[ "$migration" == "$(json "d['fingerprint']['migration']")" ]] || { result=FAIL; notes="$notes Migration differs ($migration)."; }
   for t in $(json "' '.join(d['fingerprint']['counts'].keys())"); do

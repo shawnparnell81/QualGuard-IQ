@@ -32,12 +32,21 @@ public sealed record GenerationResult(Guid LogId, string Function, string Text, 
 public sealed record GenerationLogRow(Guid Id, string Function, Guid UserId, string? User, string? RecordType, Guid? RecordId, string? ProviderName, string? Model, GenerationOutcome Outcome, string? FallbackReason, DateTimeOffset CreatedAt, int DurationMs,
     int SourceCount, int ExcludedSources, List<string> SourceRefs, int Redactions, int InjectionFlags, int PromptChars, int ResponseChars, string? PromptHash, string? ResponseHash, string? PromptText, string? ResponseText, DateTimeOffset? ContentPurgedAt, GenerationReview Review, DateTimeOffset? ReviewedAt);
 
-/// <summary>Supplies the HTTP handler for generation providers; tests replace it.</summary>
-public sealed class GenerationHttpProvider
+/// <summary>
+/// Supplies the HTTP handler for generation providers; tests replace it. Every connection goes through <see cref="OutboundGuard"/>:
+/// an external provider may only reach public addresses (plus Outbound:AllowedNetworks), and a local model server may also use
+/// Generation:LocalNetworks (default: loopback and the private ranges). Cloud metadata and other link-local addresses are never reachable.
+/// </summary>
+public sealed class GenerationHttpProvider(Security.OutboundGuard guard, IConfiguration config)
 {
-    static readonly SocketsHttpHandler Shared = new() { UseCookies = false, PooledConnectionLifetime = TimeSpan.FromMinutes(5) };
+    public const string DefaultLocalNetworks = "127.0.0.0/8,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7";
+    static void Configure(SocketsHttpHandler h) { h.UseCookies = false; h.PooledConnectionLifetime = TimeSpan.FromMinutes(5); }
+    readonly SocketsHttpHandler _external = guard.Handler(Configure);
+    readonly SocketsHttpHandler _local = guard.Handler(
+        Security.OutboundGuard.Parse(config["Generation:LocalNetworks"] is { Length: > 0 } n ? n : DefaultLocalNetworks, "Generation:LocalNetworks"), Configure);
     public Func<HttpMessageHandler>? Override { get; set; }
-    public HttpClient Create(TimeSpan timeout) => Override is { } f ? new HttpClient(f(), true) { Timeout = timeout } : new HttpClient(Shared, false) { Timeout = timeout };
+    public HttpClient Create(TimeSpan timeout, GenerationProviderKind kind) => Override is { } f ? new HttpClient(f(), true) { Timeout = timeout }
+        : new HttpClient(kind == GenerationProviderKind.LocalHttp ? _local : _external, false) { Timeout = timeout };
 }
 
 /// <summary>
@@ -435,7 +444,7 @@ public sealed partial class DraftGenerationService(AppDbContext db, ModuleSuppor
         secret ??= ResolveSecret(p);
         if (p.Kind == GenerationProviderKind.Fixture) return await FixtureAsync(p, input, timeoutSeconds, ct);
         if (p.SecretReference is not null && string.IsNullOrEmpty(secret)) throw new GenerationProviderException("The provider secret is not available (check the configuration reference).");
-        using var client = http.Create(TimeSpan.FromSeconds(timeoutSeconds));
+        using var client = http.Create(TimeSpan.FromSeconds(timeoutSeconds), p.Kind);
         using var req = new HttpRequestMessage(HttpMethod.Post, p.Endpoint) { Content = JsonContent.Create(new { model = p.Model, instructions, input, maxOutputCharacters = 4000 }) };
         if (!string.IsNullOrEmpty(secret)) req.Headers.Authorization = new("Bearer", secret);
         using var res = await client.SendAsync(req, ct);

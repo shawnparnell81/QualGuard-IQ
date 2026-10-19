@@ -316,12 +316,17 @@ public sealed class PlatformDesignerTests(TestApp app)
         var (_, viewer) = await app.CreateUserAsync([Permissions.NcrView], site);
         var (_, outsider) = await app.CreateUserAsync([Permissions.NcrView], await app.CreateSiteAsync());
         var ncr = (await (await editor.PostOkAsync("/api/ncrs", new { title = "Video NCR " + Guid.NewGuid().ToString("N")[..6], description = "Setup issue on line 3", source = "In-process", siteId = site, detectedOn = Today, severity = 1 })).JsonAsync()).Id();
-        var bytes = Enumerable.Range(0, 70_000).Select(i => (byte)(i % 251)).ToArray();
+        var body = Enumerable.Range(0, 70_000).Select(i => (byte)(i % 251)).ToArray();
+        // uploads must start like the format they claim: an MP4 "ftyp" box, a WebM header
+        static byte[] Mp4(IEnumerable<byte> b) => [0, 0, 0, 0x18, .. "ftypisom"u8, .. b];
+        static byte[] WebM(IEnumerable<byte> b) => [0x1A, 0x45, 0xDF, 0xA3, .. b];
+        var bytes = Mp4(body);
+        var bytes2 = Mp4(body.Reverse());
 
         var v1 = await (await UploadFileAsync(editor, "Ncr", ncr, "line3-setup.mp4", bytes)).Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal("video/mp4", v1.GetProperty("contentType").GetString());
         Assert.Equal("Video", v1.GetProperty("kind").GetString());
-        var v2r = await UploadFileAsync(editor, "Ncr", ncr, "line3-setup.mp4", bytes.Reverse().ToArray(), replaces: v1.Id());
+        var v2r = await UploadFileAsync(editor, "Ncr", ncr, "line3-setup.mp4", bytes2, replaces: v1.Id());
         Assert.Equal(HttpStatusCode.OK, v2r.StatusCode);
         var v2 = await v2r.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(2, v2.GetProperty("version").GetInt32());
@@ -333,7 +338,7 @@ public sealed class PlatformDesignerTests(TestApp app)
         var part = await viewer.Http.SendAsync(req);
         Assert.Equal(HttpStatusCode.PartialContent, part.StatusCode);
         Assert.Equal("video/mp4", part.Content.Headers.ContentType!.MediaType);
-        Assert.Equal(bytes.Reverse().Skip(100).Take(10).ToArray(), await part.Content.ReadAsByteArrayAsync());
+        Assert.Equal(bytes2.Skip(100).Take(10).ToArray(), await part.Content.ReadAsByteArrayAsync());
 
         // library: current versions only, only records the caller can view
         var lib = await viewer.GetElAsync("/api/files?kind=Video");
@@ -352,7 +357,7 @@ public sealed class PlatformDesignerTests(TestApp app)
         var policy = (await (await admin.PostOkAsync("/api/governance/retention/policies", new { name = "NCR evidence " + Guid.NewGuid().ToString("N")[..4], recordType = "Ncr", productFamily = (string?)null, regulatoryCategory = (string?)null, retainYears = 10, action = 0 })).JsonAsync()).Id();
         try
         {
-            var kept = await (await UploadFileAsync(editor, "Ncr", ncr, "teardown.webm", bytes)).Content.ReadFromJsonAsync<JsonElement>();
+            var kept = await (await UploadFileAsync(editor, "Ncr", ncr, "teardown.webm", WebM(body))).Content.ReadFromJsonAsync<JsonElement>();
             Assert.Equal("video/webm", kept.GetProperty("contentType").GetString());
             var until = DateOnly.Parse(kept.GetProperty("retainUntil").GetString()!);
             Assert.True(until >= DateOnly.FromDateTime(DateTime.UtcNow).AddYears(10).AddDays(-2));
@@ -360,7 +365,7 @@ public sealed class PlatformDesignerTests(TestApp app)
             Assert.Equal(HttpStatusCode.Forbidden, (await viewer.PostAsync($"/api/files/{kept.Id()}/retention", new { retainUntil = until.AddYears(2), reason = "Customer contract" })).StatusCode);
             Assert.Equal(HttpStatusCode.BadRequest, (await admin.PostAsync($"/api/files/{kept.Id()}/retention", new { retainUntil = until.AddYears(-5), reason = "Shorter" })).StatusCode);
             Assert.Equal(HttpStatusCode.NoContent, (await admin.PostAsync($"/api/files/{kept.Id()}/retention", new { retainUntil = until.AddYears(2), reason = "Customer contract requires 12 years" })).StatusCode);
-            var next = await (await UploadFileAsync(editor, "Ncr", ncr, "teardown.webm", bytes.Reverse().ToArray(), replaces: kept.Id())).Content.ReadFromJsonAsync<JsonElement>();
+            var next = await (await UploadFileAsync(editor, "Ncr", ncr, "teardown.webm", WebM(body.Reverse()), replaces: kept.Id())).Content.ReadFromJsonAsync<JsonElement>();
             Assert.Equal(until.AddYears(2), DateOnly.Parse(next.GetProperty("retainUntil").GetString()!)); // new version keeps the longer retention
         }
         finally
