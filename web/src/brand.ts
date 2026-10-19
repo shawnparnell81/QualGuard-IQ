@@ -1,3 +1,10 @@
+import logoFull from './assets/brand/logo-full.svg';
+import logoFullDark from './assets/brand/logo-full-dark.svg';
+import mark from './assets/brand/mark.svg';
+import markDark from './assets/brand/mark-dark.svg';
+import wordmark from './assets/brand/wordmark.svg';
+import wordmarkDark from './assets/brand/wordmark-dark.svg';
+
 /**
  * QualGuard IQ brand tokens. One place for the logo colours so the theme, charts and status tones never repeat hex values.
  * Contrast (WCAG): white on blue 6.59:1, white on hover 8.19:1, white on dark 9.75:1, dark text on light blue 5.78:1,
@@ -15,11 +22,14 @@ export const brand = {
   copper: '#B4632A',
 } as const;
 
-/** Logo files served from web/public/brand (vector first; PNGs for places that cannot draw SVG). */
+/**
+ * Logo files in src/assets/brand. Importing them lets the build give each file a name that changes with its content, so a
+ * browser never keeps showing an old logo after an update. PNG copies for places that cannot draw SVG stay in public/brand.
+ */
 export const logos = {
-  full: { light: '/brand/logo-full.svg', dark: '/brand/logo-full-dark.svg' },
-  mark: { light: '/brand/mark.svg', dark: '/brand/mark-dark.svg' },
-  wordmark: { light: '/brand/wordmark.svg', dark: '/brand/wordmark-dark.svg' },
+  full: { light: logoFull, dark: logoFullDark },
+  mark: { light: mark, dark: markDark },
+  wordmark: { light: wordmark, dark: wordmarkDark },
 } as const;
 
 /** Neutral tones for status and data visualisation, readable on light and dark surfaces. */
