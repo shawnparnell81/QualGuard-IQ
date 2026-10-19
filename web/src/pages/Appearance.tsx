@@ -111,13 +111,13 @@ export function AppearanceSettings({ scope }: { scope: Scope }) {
             const effective = own ?? familyInherited(f);
             const c = colours(effective);
             return (
-              <Box key={f} data-testid={`family-${f}`} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '220px 230px 1fr' }, gap: 1.5, alignItems: 'center', py: 1, borderTop: 1, borderColor: 'divider' }}>
+              <Box key={f} data-testid={`family-${f}`} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '220px 260px 1fr' }, gap: 1.5, alignItems: 'center', py: 1, borderTop: 1, borderColor: 'divider' }}>
                 <Typography fontWeight={600}>{familyNames[f]}</Typography>
-                <TextField select size="small" label="Palette" disabled={readOnly} value={own?.palette ?? 'inherit'} slotProps={{ htmlInput: { 'aria-label': `${familyNames[f]} palette` } }}
+                <TextField select size="small" label="Palette" fullWidth disabled={readOnly} value={own?.palette ?? 'inherit'} slotProps={{ htmlInput: { 'aria-label': `${familyNames[f]} palette` } }}
                   onChange={(e) => { const k = e.target.value as PaletteKey | 'inherit'; setFamily(f, k === 'inherit' ? null : k === 'custom' ? { palette: 'custom', edge: c.edge, accent: c.accent } : { palette: k }); }}>
-                  <MenuItem value="inherit">{inheritLabel} ({paletteNames[familyInherited(f).palette]})</MenuItem>
-                  <MenuItem value="palette1">Palette 1: {paletteNames.palette1}</MenuItem>
-                  <MenuItem value="palette2">Palette 2: {paletteNames.palette2}</MenuItem>
+                  <MenuItem value="inherit">Default: {paletteNames[familyInherited(f).palette].replace(' and ', ' & ').toLowerCase()}</MenuItem>
+                  <MenuItem value="palette1">Palette 1: green & blue</MenuItem>
+                  <MenuItem value="palette2">Palette 2: slate & blue</MenuItem>
                   <MenuItem value="custom">{paletteNames.custom}</MenuItem>
                 </TextField>
                 <Stack direction="row" gap={1.5} alignItems="center" flexWrap="wrap">
