@@ -63,7 +63,7 @@ test.describe('E2E 13: platform studio, recovery, marketplace and content (Promp
     const author = await Api.as(users.author);
     const ncr = await author.post('/api/ncrs', { title: unique('Video NCR'), description: 'Setup', source: 'In-process', siteId: state().siteId, detectedOn: localDate(), severity: 1 });
     const name = `${unique('line-setup').replace(/\s+/g, '-')}.mp4`;
-    const v1 = await author.upload('Ncr', ncr.id, name, 'not really a video, but bytes '.repeat(50), 'video/mp4');
+    const v1 = await author.upload('Ncr', ncr.id, name, '\x00\x00\x00\x18ftypisom\x00\x00\x02\x00isommp41' + 'not really a video, but bytes '.repeat(50), 'video/mp4');
     expect(v1.contentType).toBe('video/mp4');
     await signIn(page, users.author);
     await page.goto('/documents/content');
