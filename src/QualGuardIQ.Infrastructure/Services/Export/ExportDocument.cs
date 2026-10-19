@@ -182,12 +182,13 @@ public static class ExportRenderer
     static string Para(string? text, bool bold = false, int halfPoints = 0, string? style = null) =>
         "<w:p>" + (style is null ? "" : $"<w:pPr><w:pStyle w:val=\"{style}\"/></w:pPr>") + Run(text, bold, halfPoints) + "</w:p>";
 
-    static string Cell(string? text, bool header, int width) =>
-        $"<w:tc><w:tcPr><w:tcW w:w=\"{width}\" w:type=\"dxa\"/>{(header ? "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"E8EDF3\"/>" : "")}</w:tcPr><w:p>{Run(text, header, 18)}</w:p></w:tc>";
+    static string Cell(string? text, bool header, int width, bool bold = false) =>
+        $"<w:tc><w:tcPr><w:tcW w:w=\"{width}\" w:type=\"dxa\"/>{(header ? "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"E8EDF3\"/>" : "")}</w:tcPr><w:p>{Run(text, header || bold, 18)}</w:p></w:tc>";
 
     static string Table(IReadOnlyList<string> head, IEnumerable<IReadOnlyList<string>> rows, int totalWidth, int[]? widths = null)
     {
-        var n = Math.Max(1, head.Count);
+        // label and value tables have no heading row, so their column count comes from the widths
+        var n = head.Count > 0 ? head.Count : widths?.Length ?? Math.Max(1, rows.Select(r => r.Count).DefaultIfEmpty(1).Max());
         widths ??= Enumerable.Repeat(totalWidth / n, n).ToArray();
         var sb = new StringBuilder("<w:tbl><w:tblPr><w:tblW w:w=\"0\" w:type=\"auto\"/><w:tblBorders>");
         foreach (var side in new[] { "top", "left", "bottom", "right", "insideH", "insideV" }) sb.Append($"<w:{side} w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"B8C2CC\"/>");
@@ -203,7 +204,7 @@ public static class ExportRenderer
         foreach (var r in rows)
         {
             sb.Append("<w:tr><w:trPr><w:cantSplit/></w:trPr>");
-            for (var i = 0; i < n; i++) sb.Append(Cell(i < r.Count ? r[i] : "", false, widths[i]));
+            for (var i = 0; i < n; i++) sb.Append(Cell(i < r.Count ? r[i] : "", false, widths[i], bold: head.Count == 0 && i == 0 && n > 1));
             sb.Append("</w:tr>");
         }
         return sb.Append("</w:tbl>").ToString();

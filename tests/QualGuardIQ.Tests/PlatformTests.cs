@@ -28,9 +28,15 @@ public sealed class PlatformTests(TestApp app)
 
         var title = "Evt NCR " + Guid.NewGuid().ToString("N")[..6];
         var ncr = await NcrAsync(user, site, title);
-        Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync("/api/platform/events/pump")).StatusCode);
-        var feed = await user.GetElAsync("/api/platform/activity?recordType=Ncr");
-        Assert.Contains(feed.EnumerateArray(), e => e.Str("type") == "record.created" && e.GetProperty("recordId").GetGuid() == ncr);
+        // one pump publishes up to 2000 audit entries; in a full test run other tests leave a backlog, so pump until it is reached
+        var published = false;
+        for (var i = 0; i < 30 && !published; i++)
+        {
+            Assert.Equal(HttpStatusCode.OK, (await admin.PostAsync("/api/platform/events/pump")).StatusCode);
+            var feed = await user.GetElAsync("/api/platform/activity?recordType=Ncr&take=500");
+            published = feed.EnumerateArray().Any(e => e.Str("type") == "record.created" && e.GetProperty("recordId").GetGuid() == ncr);
+        }
+        Assert.True(published, "the NCR's created event was published");
         var deliveries = await admin.GetElAsync($"/api/platform/webhooks/{hook.Id()}/deliveries");
         Assert.True(deliveries.GetArrayLength() >= 1); // unreachable host: attempted and scheduled for retry, never lost
         Assert.All(deliveries.EnumerateArray(), d => Assert.NotEqual(1, d.Int("status")));
