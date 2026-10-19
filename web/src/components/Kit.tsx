@@ -5,6 +5,8 @@ import { useForm, Controller, type FieldValues, type Path, type DefaultValues } 
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { z } from 'zod';
 import { get } from '../api';
+import { Link as RouterLink } from 'react-router-dom';
+import { mono } from '../theme';
 import { SitePicker } from './SitePicker';
 
 export interface Site { id: string; code: string; name: string; isArchived: boolean; departments: { id: string; code: string; name: string }[] }
@@ -25,27 +27,57 @@ export function useTypeLabel() {
 }
 export const useUsers = () => useQuery({ queryKey: ['userlookup'], queryFn: () => get<{ id: string; displayName: string }[]>('/api/users/lookup') });
 
-/** Label/value list used in record side panels. */
+/** Label/value list used in record side panels: a ruled two-column sheet with labels on the left. */
 export function Facts({ items, children }: { items: [string, ReactNode][]; children?: ReactNode }) {
   return (
-    <Paper sx={{ p: 2, alignSelf: 'start' }}>
-      <Typography variant="overline" color="text.secondary">Details</Typography>
-      {items.map(([k, v]) => (
-        <Box key={k} sx={{ py: 0.75, borderTop: 1, borderColor: 'divider' }}>
-          <Typography variant="caption" color="text.secondary">{k}</Typography>
-          <Typography variant="body2" component="div" sx={{ whiteSpace: 'pre-wrap' }}>{v ?? '—'}</Typography>
-        </Box>
-      ))}
-      {children}
+    <Paper sx={{ alignSelf: 'start', overflow: 'hidden' }}>
+      <PanelHead title="Details" />
+      <Box component="dl" sx={{ m: 0, display: 'grid', gridTemplateColumns: 'minmax(96px, 38%) 1fr' }}>
+        {items.map(([k, v]) => (
+          <Box key={k} sx={{ display: 'contents', '& > *': { px: 2, py: 0.9, borderTop: 1, borderColor: 'divider' } }}>
+            <Typography component="dt" variant="caption" color="text.secondary" sx={{ fontWeight: 600, bgcolor: 'background.band' }}>{k}</Typography>
+            <Typography component="dd" variant="body2" sx={{ m: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{v ?? '—'}</Typography>
+          </Box>
+        ))}
+      </Box>
+      {children && <Box sx={{ px: 2, pb: 2 }}>{children}</Box>}
     </Paper>
+  );
+}
+
+/** Panel header band: small uppercase label on a tinted strip with a rule underneath, optional action on the right. */
+export function PanelHead({ title, action }: { title: ReactNode; action?: ReactNode }) {
+  return (
+    <Stack direction="row" alignItems="center" gap={1} sx={{ px: 2, minHeight: 38, bgcolor: 'background.band', borderBottom: 1, borderColor: 'divider' }}>
+      <Typography variant="overline" component="h3" color="text.secondary" sx={{ flex: 1 }}>{title}</Typography>
+      {action}
+    </Stack>
+  );
+}
+
+/**
+ * Key figure readout: an uppercase label over a large monospaced number on a flat band with a coloured top rule.
+ * Used for dashboard counts in place of floating cards. Opens the list behind it when `to` or `onClick` is given.
+ */
+export function Readout({ label, value, hint, color, to, onClick, title, children }: { label: string; value: ReactNode; hint?: ReactNode; color?: string; to?: string; onClick?: () => void; title?: string; children?: ReactNode }) {
+  const link = to ? { component: RouterLink, to } : {};
+  return (
+    <Box {...link} onClick={onClick} title={title} aria-label={label}
+      sx={{ display: 'block', color: 'inherit', textDecoration: 'none', bgcolor: 'background.paper', borderTop: '3px solid', borderTopColor: color ?? 'text.secondary', borderBottom: 1, borderBottomColor: 'divider', px: 1.75, pt: 1.25, pb: 1.25, minWidth: 0,
+        cursor: to || onClick ? 'pointer' : 'default', '&:hover': to || onClick ? { bgcolor: 'action.hover' } : undefined }}>
+      <Typography component="div" sx={{ fontSize: 10.5, fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: 'text.secondary', lineHeight: 1.4 }}>{label}</Typography>
+      <Typography component="div" sx={{ fontFamily: mono, fontSize: 26, lineHeight: 1.25, mt: 0.25 }}>{value}</Typography>
+      {hint && <Typography variant="caption" color="text.secondary" component="div">{hint}</Typography>}
+      {children}
+    </Box>
   );
 }
 
 export function Section({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
   return (
-    <Paper sx={{ p: 2.5 }}>
-      <Stack direction="row" alignItems="center" sx={{ mb: 1.5 }}><Typography variant="h3" sx={{ flex: 1 }}>{title}</Typography>{action}</Stack>
-      {children}
+    <Paper sx={{ overflow: 'hidden' }}>
+      <PanelHead title={title} action={action} />
+      <Box sx={{ p: 2 }}>{children}</Box>
     </Paper>
   );
 }

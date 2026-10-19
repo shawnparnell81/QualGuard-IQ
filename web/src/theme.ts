@@ -1,12 +1,13 @@
 import { alpha, createTheme, useTheme, type PaletteMode } from '@mui/material/styles';
-import '@fontsource/ibm-plex-sans/400.css';
-import '@fontsource/ibm-plex-sans/500.css';
-import '@fontsource/ibm-plex-sans/600.css';
+import '@fontsource/manrope/400.css';
+import '@fontsource/manrope/500.css';
+import '@fontsource/manrope/600.css';
+import '@fontsource/manrope/700.css';
 import '@fontsource/ibm-plex-mono/400.css';
 import { brand } from './brand';
 
 declare module '@mui/material/styles' {
-  interface TypeBackground { sidebar: string; bar: string }
+  interface TypeBackground { sidebar: string; bar: string; band: string }
 }
 
 const valid = (c?: string | null) => (c && /^#[0-9a-fA-F]{6}$/.test(c) ? c : null);
@@ -21,7 +22,7 @@ export const makeTheme = (primary?: string | null, mode: PaletteMode = 'light') 
   const custom = dark ? null : valid(primary);
   const main = custom ?? (dark ? brand.blueOnDark : brand.blue);
   const focus = dark ? '#8DB8F7' : brand.blue;
-  const divider = dark ? '#2A3340' : '#E1E5EA';
+  const divider = dark ? '#28313D' : '#D9DEE5';
   return createTheme({
     palette: {
       mode,
@@ -32,8 +33,8 @@ export const makeTheme = (primary?: string | null, mode: PaletteMode = 'light') 
           : { main: brand.blue, light: brand.blueLight, dark: brand.blueDark, contrastText: '#FFFFFF' },
       secondary: dark ? { main: '#D08A55', contrastText: '#1A1208' } : { main: brand.copper, contrastText: '#FFFFFF' },
       background: dark
-        ? { default: '#121821', paper: '#1A212C', sidebar: '#161D27', bar: '#161D27' }
-        : { default: '#F4F6F8', paper: '#FFFFFF', sidebar: '#EDF1F6', bar: '#FFFFFF' },
+        ? { default: '#0F141B', paper: '#171D26', sidebar: '#131922', bar: '#161D27', band: '#1D2530' }
+        : { default: '#ECEFF3', paper: '#FFFFFF', sidebar: '#F7F8FA', bar: '#FFFFFF', band: '#F3F5F8' },
       text: dark ? { primary: '#E6EAF0', secondary: '#A8B3C2' } : { primary: brand.charcoal, secondary: '#5B6676' },
       divider,
       success: { main: dark ? '#5DBB83' : '#2E7D4F' },
@@ -42,15 +43,17 @@ export const makeTheme = (primary?: string | null, mode: PaletteMode = 'light') 
       info: { main: dark ? '#7FB0DA' : '#2F6690' },
       action: dark ? { hover: alpha('#FFFFFF', 0.06), selected: alpha(brand.blueOnDark, 0.16) } : { hover: alpha(brand.blue, 0.05), selected: alpha(brand.blue, 0.1) },
     },
-    shape: { borderRadius: 6 },
+    // Squared panels, hairline rules and a compact type scale: a dense instrument-panel look rather than soft cards.
+    shape: { borderRadius: 3 },
     typography: {
-      fontFamily: '"IBM Plex Sans", system-ui, sans-serif',
-      fontSize: 13.5,
-      h1: { fontSize: '1.6rem', fontWeight: 600 },
-      h2: { fontSize: '1.3rem', fontWeight: 600 },
-      h3: { fontSize: '1.1rem', fontWeight: 600 },
-      button: { textTransform: 'none', fontWeight: 500 },
-      overline: { letterSpacing: '0.08em', fontWeight: 600 },
+      fontFamily: '"Manrope", system-ui, sans-serif',
+      fontSize: 13,
+      h1: { fontSize: '1.45rem', fontWeight: 700, letterSpacing: '-0.015em' },
+      h2: { fontSize: '1.2rem', fontWeight: 700, letterSpacing: '-0.01em' },
+      h3: { fontSize: '0.98rem', fontWeight: 700 },
+      button: { textTransform: 'none', fontWeight: 600, letterSpacing: '0.01em' },
+      overline: { fontSize: '0.68rem', letterSpacing: '0.14em', fontWeight: 700, lineHeight: 1.8 },
+      caption: { letterSpacing: '0.01em' },
     },
     components: {
       MuiCssBaseline: {
@@ -60,7 +63,26 @@ export const makeTheme = (primary?: string | null, mode: PaletteMode = 'light') 
           a: { color: main },
         },
       },
-      MuiPaper: { defaultProps: { elevation: 0 }, styleOverrides: { root: { border: `1px solid ${divider}`, backgroundImage: 'none' } } },
+      // Panels: hairline border with a soft shadow. Clickable cards lift on hover, pick up the brand colour on the border and show an accent edge.
+      MuiPaper: { defaultProps: { elevation: 0 }, styleOverrides: { root: { border: `1px solid ${divider}`, backgroundImage: 'none', boxShadow: dark ? 'none' : '0 1px 2px rgba(16, 24, 40, 0.05)' }, rounded: { borderRadius: 6 } } },
+      MuiCard: {
+        styleOverrides: {
+          root: {
+            borderRadius: 8, position: 'relative', overflow: 'hidden',
+            transition: 'transform .18s ease, box-shadow .18s ease, border-color .18s ease',
+            '&:has(.MuiCardActionArea-root)::after': { content: '""', position: 'absolute', left: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(180deg, ${main}, ${brand.copper})`, opacity: 0, transition: 'opacity .18s ease' },
+            '&:has(.MuiCardActionArea-root):hover': { transform: 'translateY(-2px)', borderColor: alpha(main, 0.55), boxShadow: dark ? `0 8px 22px ${alpha('#000000', 0.45)}` : `0 10px 24px ${alpha(main, 0.14)}` },
+            '&:has(.MuiCardActionArea-root):hover::after': { opacity: 1 },
+          },
+        },
+      },
+      MuiCardActionArea: { styleOverrides: { focusHighlight: { opacity: '0 !important' } } },
+      MuiMenu: { styleOverrides: { paper: { boxShadow: dark ? 'none' : '0 6px 18px rgba(20, 32, 50, 0.12)' } } },
+      MuiDialog: { styleOverrides: { paper: { borderRadius: 4, borderTop: `3px solid ${main}` } } },
+      MuiTab: { styleOverrides: { root: { textTransform: 'none', fontWeight: 600, minWidth: 0, paddingLeft: 14, paddingRight: 14 } } },
+      MuiTabs: { styleOverrides: { indicator: { height: 3 } } },
+      MuiOutlinedInput: { styleOverrides: { root: { borderRadius: 3 } } },
+      MuiTooltip: { styleOverrides: { tooltip: { borderRadius: 2, fontSize: 12 } } },
       MuiAppBar: { styleOverrides: { root: { border: 'none' } } },
       MuiButtonBase: { styleOverrides: { root: { '&.Mui-focusVisible': { outline: `2px solid ${focus}`, outlineOffset: 2 } } } },
       MuiButton: {
@@ -69,8 +91,14 @@ export const makeTheme = (primary?: string | null, mode: PaletteMode = 'light') 
           containedPrimary: custom ? {} : { '&:hover': { backgroundColor: dark ? '#7AAEF5' : brand.blueHover }, '&:active': { backgroundColor: dark ? '#2F74D6' : brand.blueDark } },
         },
       },
-      MuiTableCell: { styleOverrides: { head: { fontWeight: 600, color: dark ? '#A8B3C2' : '#5B6676', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.04em' } } },
-      MuiChip: { styleOverrides: { root: { fontWeight: 500 } } },
+      MuiTableCell: {
+        styleOverrides: {
+          root: { borderColor: divider },
+          head: { fontWeight: 700, color: dark ? '#A8B3C2' : '#4B5563', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.1em', backgroundColor: dark ? '#1D2530' : '#F3F5F8' },
+        },
+      },
+      MuiTableRow: { styleOverrides: { root: { '&.MuiTableRow-hover:hover': { backgroundColor: dark ? alpha(brand.blueOnDark, 0.08) : alpha(brand.blue, 0.04) } } } },
+      MuiChip: { styleOverrides: { root: { fontWeight: 600, borderRadius: 3 }, sizeSmall: { height: 22, fontSize: 11.5 } } },
       MuiLink: { defaultProps: { underline: 'hover' } },
     },
   });
