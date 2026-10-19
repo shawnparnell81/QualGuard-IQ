@@ -247,17 +247,20 @@ export function MySettingsPage() {
   const { preference, setPreference } = useColorMode();
   const q = useQuery({ queryKey: ['preferences'], queryFn: () => get<Prefs>('/api/account/preferences') });
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // the switch shows the new value straight away; the shared copy of the settings catches up a moment later
+  const [email, setEmail] = useState<boolean | null>(null);
   const p = q.data;
   const save = async (patch: Partial<Prefs>) => {
     if (!p) return;
+    if (patch.emailNotifications !== undefined) setEmail(patch.emailNotifications);
     const next = { ...p, ...patch };
-    await qc.cancelQueries({ queryKey: ['preferences'] }); // a load still in flight would put the old value back
+    void qc.cancelQueries({ queryKey: ['preferences'] }); // a load still in flight would put the old value back
     qc.setQueryData(['preferences'], next);
     try {
       const r = await put<Prefs>('/api/account/preferences', { emailNotifications: next.emailNotifications, dateFormat: next.dateFormat, theme: next.theme });
-      qc.setQueryData(['preferences'], r); setDateFormat(r.effectiveDateFormat);
+      qc.setQueryData(['preferences'], r); setDateFormat(r.effectiveDateFormat); setEmail(null);
       setMsg({ ok: true, text: 'Saved.' });
-    } catch (e) { qc.setQueryData(['preferences'], p); setMsg({ ok: false, text: (e as Error).message }); }
+    } catch (e) { qc.setQueryData(['preferences'], p); setEmail(null); setMsg({ ok: false, text: (e as Error).message }); }
   };
   return (
     <Box sx={{ maxWidth: 960, mx: 'auto', p: { xs: 2, sm: 4 }, display: 'grid', gap: 2.5 }}>
@@ -277,7 +280,7 @@ export function MySettingsPage() {
         </TextField>}
       </Card>
       <Card icon={<NotificationsNoneOutlined />} title="Notifications" intro="Notifications always appear under the bell at the top of the page.">
-        {p && <FormControlLabel control={<Switch checked={p.emailNotifications} disabled={!p.organizationEmailEnabled} onChange={(e) => save({ emailNotifications: e.target.checked })} />}
+        {p && <FormControlLabel control={<Switch checked={email ?? p.emailNotifications} disabled={!p.organizationEmailEnabled} onChange={(e) => save({ emailNotifications: e.target.checked })} />}
           label="Also send them to me by e-mail" />}
         {p && !p.organizationEmailEnabled && <Alert severity="info" sx={{ mt: 1 }}>Your organization has turned off e-mail notifications for everyone.</Alert>}
         <Box sx={{ mt: 1 }}><Link component={RouterLink} to="/account/messaging">Text message and push notification settings</Link></Box>
