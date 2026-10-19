@@ -1,6 +1,6 @@
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { Box, Button, Card, CardActionArea, Chip, Paper, Stack, Typography } from '@mui/material';
-import { alpha } from '@mui/material/styles';
+import { alpha, useTheme } from '@mui/material/styles';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { useAuth } from '../auth';
 import { visibleModules } from '../modules/registry';
@@ -23,6 +23,7 @@ function dueBuckets(items: WorkAction[]) {
 
 export function Home() {
   const cc = useChartColors();
+  const qg = useTheme().qg;
   const { me, can } = useAuth();
   const nav = useNavigate();
   const work = useWork();
@@ -36,16 +37,15 @@ export function Home() {
   return (
     <Box sx={{ maxWidth: 1240, mx: 'auto', p: { xs: 2, sm: 3, md: 4 } }}>
       <Typography variant="overline" color="text.secondary">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</Typography>
-      <Typography variant="h1" sx={{ mb: 3 }}>Good to see you, {me?.displayName.split(' ')[0]}</Typography>
+      <Typography variant="h1" sx={{ mb: 3, fontSize: '2.3rem', background: qg.greeting, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' }}>Good to see you, {me?.displayName.split(' ')[0]}</Typography>
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, minmax(0, 1fr))' }, gap: 2, mb: 3 }}>
         {tiles.map((t) => (
           <Paper key={t.label} sx={(th) => {
             const c = t.tone.split('.').reduce<any>((o, k) => o?.[k], th.palette) as string;
-            return { p: 2, pl: 2.5, position: 'relative', overflow: 'hidden', backgroundImage: `linear-gradient(135deg, ${alpha(c, th.palette.mode === 'dark' ? 0.16 : 0.08)} 0%, transparent 60%)`,
-              '&::before': { content: '""', position: 'absolute', left: 0, top: 0, bottom: 0, width: 4, background: `linear-gradient(180deg, ${c}, ${alpha(c, 0.45)})` } };
+            return { p: 2.5, pb: 3, position: 'relative', overflow: 'hidden', borderRadius: '20px', '&::after': { content: '""', position: 'absolute', left: 20, right: 20, bottom: 12, height: 5, borderRadius: 5, background: `linear-gradient(90deg, ${c}, ${alpha(c, 0.15)})` } };
           }}>
-            <Typography sx={{ fontFamily: mono, fontSize: 30, fontWeight: 500, color: t.tone }}>{t.value ?? '–'}</Typography>
+            <Typography sx={{ fontSize: 36, fontWeight: 700, color: t.tone, letterSpacing: '-0.02em' }}>{t.value ?? '–'}</Typography>
             <Typography variant="body2" color="text.secondary">{t.label}</Typography>
           </Paper>
         ))}
@@ -76,7 +76,8 @@ export function Home() {
                 <XAxis dataKey="name" tick={{ fontSize: 12 }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 12 }} width={28} />
                 <Tooltip />
-                <Bar dataKey="count" fill={cc.primary} radius={[4, 4, 0, 0]} />
+                <defs><linearGradient id="qgbar" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor={cc.accent} /><stop offset="100%" stopColor={cc.primary} /></linearGradient></defs>
+                <Bar dataKey="count" fill="url(#qgbar)" radius={[10, 10, 10, 10]} barSize={34} />
               </BarChart>
             </ResponsiveContainer>
           </Box>
@@ -87,8 +88,9 @@ export function Home() {
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 2 }}>
         {visibleModules(can).map((m) => (
           <Card key={m.key} variant="outlined">
-            <CardActionArea onClick={() => nav(m.basePath)} sx={{ p: 2, height: '100%', display: 'flex', alignItems: 'flex-start', gap: 1.5, '&:hover .module-tile': { bgcolor: 'primary.main', color: 'primary.contrastText' }, '&:hover .module-name': { color: 'primary.main' } }}>
-              <Box className="module-tile" sx={(th) => ({ flexShrink: 0, width: 40, height: 40, borderRadius: 2, display: 'grid', placeItems: 'center', color: 'primary.main', bgcolor: alpha(th.palette.primary.main, th.palette.mode === 'dark' ? 0.18 : 0.1), transition: 'background-color .18s, color .18s', '& svg': { fontSize: 22 } })}>{m.icon}</Box>
+            <CardActionArea onClick={() => nav(m.basePath)} sx={{ p: 2.5, height: '100%', display: 'flex', alignItems: 'flex-start', gap: 2, '&:hover .module-tile': { background: qg.icon.hoverBg, color: '#FFFFFF' }, '&:hover .module-name': { color: 'primary.main' } }}>
+              <Box className="module-tile" sx={{ flexShrink: 0, width: qg.icon.size, height: qg.icon.size, borderRadius: `${qg.icon.radius}px`, display: 'grid', placeItems: 'center', color: '#FFFFFF', background: qg.gradient, transition: 'background .18s, color .18s', '& svg': { fontSize: qg.icon.size * 0.52 },
+                boxShadow: `0 8px 18px ${qg.glow}, inset 0 1px 0 rgba(255,255,255,0.35)` }}>{m.icon}</Box>
               <Box sx={{ minWidth: 0 }}>
                 <Typography className="module-name" fontWeight={700} sx={{ mb: 0.25, transition: 'color .18s' }}>{m.label}</Typography>
                 <Typography variant="body2" color="text.secondary">{m.description}</Typography>

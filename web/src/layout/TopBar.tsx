@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
 import { AppBar, Badge, Box, Button, IconButton, InputBase, Menu, MenuItem, Toolbar, Tooltip, Divider, ListItemIcon, ListItemText, ListSubheader } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import ExpandMore from '@mui/icons-material/ExpandMore';
@@ -21,6 +22,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { me, logout } = useAuth();
   const { preference, setPreference } = useColorMode();
   const { data: brand } = useBranding();
+  const qg = useTheme().qg;
   const nav = useNavigate();
   const qc = useQueryClient();
   const [q, setQ] = useState('');
@@ -36,7 +38,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
 
   return (
     <AppBar position="sticky" color="inherit" elevation={0}
-      sx={{ bgcolor: 'background.bar', color: 'text.primary', borderBottom: 1, borderColor: 'divider', boxShadow: (t) => t.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(18, 38, 70, 0.04)' }}>
+      sx={{ background: qg.bar.bg, color: qg.bar.fg, borderBottom: 1, borderColor: 'divider', backdropFilter: 'blur(18px) saturate(160%)', boxShadow: (t) => t.palette.mode === 'dark' ? 'none' : '0 1px 2px rgba(18, 38, 70, 0.04)' }}>
       <Toolbar variant="dense" sx={{ gap: 1, minHeight: 56 }}>
         {/* Mark + wordmark; narrow screens keep the mark only so the bar never outgrows a phone. */}
         <Box component={RouterLink} to="/" aria-label={`${brand?.applicationName ?? 'QualGuard IQ'} home`} data-testid="brand-home"
@@ -46,17 +48,17 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
         </Box>
         <ModuleNav />
         <Box component="form" onSubmit={(e) => { e.preventDefault(); if (q.trim()) nav(`/search?q=${encodeURIComponent(q.trim())}`); }}
-          sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', bgcolor: 'action.hover', border: 1, borderColor: 'divider', borderRadius: 1, px: 1, py: 0.25, width: 220, flexShrink: 0, ml: 1, '&:focus-within': { borderColor: 'primary.main' } }}>
-          <SearchIcon fontSize="small" sx={{ color: 'text.secondary' }} />
+          sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', bgcolor: qg.glass.field, border: 1, borderColor: 'divider', borderRadius: 999, overflow: 'hidden', px: 1.25, py: 0.25, width: 220, flexShrink: 0, ml: 1, '&:focus-within': { borderColor: 'primary.main' } }}>
+          <SearchIcon fontSize="small" sx={{ color: qg.bar.muted }} />
           <InputBase value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search records" sx={{ color: 'inherit', ml: 1, flex: 1, fontSize: 13 }} inputProps={{ 'aria-label': 'Search records' }} />
           <Tooltip title="Command palette"><Box component="button" type="button" onClick={onOpenPalette}
-            sx={{ fontFamily: mono, fontSize: 11, border: 1, borderColor: 'divider', borderRadius: 0.5, px: 0.6, color: 'text.secondary', bgcolor: 'transparent', cursor: 'pointer' }}>Ctrl K</Box></Tooltip>
+            sx={{ fontFamily: mono, fontSize: 11, border: 1, borderColor: 'divider', borderRadius: 0.5, px: 0.6, color: qg.bar.muted, bgcolor: 'transparent', cursor: 'pointer' }}>Ctrl K</Box></Tooltip>
         </Box>
         {/* Narrow screens: the search box would push the bar wider than the phone; the palette searches records too. */}
-        <Tooltip title="Search"><IconButton onClick={onOpenPalette} aria-label="Search" sx={{ color: 'text.secondary', display: { xs: 'inline-flex', md: 'none' } }}><SearchIcon /></IconButton></Tooltip>
-        <Tooltip title="My Work"><IconButton sx={{ color: 'text.secondary' }} component={RouterLink} to="/my-work"><AssignmentIndOutlined /></IconButton></Tooltip>
+        <Tooltip title="Search"><IconButton onClick={onOpenPalette} aria-label="Search" sx={{ color: qg.bar.muted, display: { xs: 'inline-flex', md: 'none' } }}><SearchIcon /></IconButton></Tooltip>
+        <Tooltip title="My Work"><IconButton sx={{ color: qg.bar.muted }} component={RouterLink} to="/my-work"><AssignmentIndOutlined /></IconButton></Tooltip>
         <Tooltip title="Notifications">
-          <IconButton sx={{ color: 'text.secondary' }} onClick={(e) => setNotifEl(e.currentTarget)}>
+          <IconButton sx={{ color: qg.bar.muted }} onClick={(e) => setNotifEl(e.currentTarget)}>
             <Badge badgeContent={notifs.data?.unread ?? 0} color="secondary"><NotificationsNoneOutlined /></Badge>
           </IconButton>
         </Tooltip>
@@ -70,13 +72,14 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
           <Divider />
           <MenuItem onClick={async () => { await post('/api/my/notifications/read-all'); qc.invalidateQueries({ queryKey: ['notifications'] }); }}>Mark all as read</MenuItem>
         </Menu>
-        <IconButton sx={{ color: 'text.secondary' }} onClick={(e) => setUserEl(e.currentTarget)} aria-label="User menu"><AccountCircleOutlined /></IconButton>
+        <IconButton sx={{ color: qg.bar.muted }} onClick={(e) => setUserEl(e.currentTarget)} aria-label="User menu"><AccountCircleOutlined /></IconButton>
         <Menu anchorEl={userEl} open={!!userEl} onClose={() => setUserEl(null)}>
           <MenuItem disabled><ListItemText primary={me?.displayName} secondary={me?.email} /></MenuItem>
           <Divider />
           <MenuItem onClick={() => { setUserEl(null); nav('/account/security'); }}>Security</MenuItem>
           <MenuItem onClick={() => { setUserEl(null); nav('/account/sign-ins'); }}>Sign-in history</MenuItem>
           <MenuItem onClick={() => { setUserEl(null); nav('/account/messaging'); }}>Text and push notifications</MenuItem>
+          <MenuItem onClick={() => { setUserEl(null); nav('/account/appearance'); }}>My appearance</MenuItem>
           <Divider />
           <ListSubheader sx={{ lineHeight: '32px', bgcolor: 'transparent' }}>Appearance</ListSubheader>
           {([['light', 'Light'], ['dark', 'Dark'], ['system', 'Match device']] as [ColorPreference, string][]).map(([v, l]) => (
@@ -95,6 +98,7 @@ export function TopBar({ onOpenPalette }: { onOpenPalette: () => void }) {
 /** Top module menu. Modules that do not fit the bar move into a "More" menu instead of scrolling out of sight. */
 function ModuleNav() {
   const { can } = useAuth();
+  const qg = useTheme().qg;
   const loc = useLocation();
   const mods = visibleModules(can);
   const navRef = useRef<HTMLDivElement>(null);
@@ -127,7 +131,8 @@ function ModuleNav() {
   }, [mods.length, loc.pathname]);
   const btn = (m: (typeof mods)[number], active: boolean) => (
     <Button key={m.key} component={RouterLink} to={m.basePath} startIcon={m.icon} color="inherit" size="small" aria-current={active ? 'page' : undefined}
-      sx={{ px: 1.25, minHeight: 56, whiteSpace: 'nowrap', flexShrink: 0, color: active ? 'primary.main' : 'text.secondary', fontWeight: active ? 600 : 500, borderBottom: '2px solid', borderColor: active ? 'primary.main' : 'transparent', borderRadius: 0, '&:hover': { color: 'primary.main', bgcolor: 'action.hover' } }}>
+      sx={{ px: 1.25, minHeight: 56, whiteSpace: 'nowrap', flexShrink: 0, color: active ? 'primary.main' : qg.bar.muted, fontWeight: active ? 700 : 500, borderBottom: '3px solid', borderColor: active ? qg.bar.activeLine : 'transparent', borderRadius: 0,
+        '&:hover': { color: 'primary.main', bgcolor: 'action.hover' } }}>
       {m.label}
     </Button>
   );
@@ -139,7 +144,7 @@ function ModuleNav() {
       {shown.map((m) => btn(m, isActive(m)))}
       {rest.length > 0 && <>
         <Button color="inherit" size="small" endIcon={<ExpandMore />} onClick={(e) => setMoreEl(e.currentTarget)} aria-label="More modules"
-          sx={{ px: 1.25, minHeight: 56, whiteSpace: 'nowrap', flexShrink: 0, borderRadius: 0, borderBottom: '2px solid', color: restActive ? 'primary.main' : 'text.secondary', borderColor: restActive ? 'primary.main' : 'transparent', '&:hover': { color: 'primary.main', bgcolor: 'action.hover' } }}>{restActive ? restActive.label : shown.length === 0 ? 'Modules' : 'More'}</Button>
+          sx={{ px: 1.25, minHeight: 56, whiteSpace: 'nowrap', flexShrink: 0, borderRadius: 0, borderBottom: '2px solid', color: restActive ? 'primary.main' : qg.bar.muted, borderColor: restActive ? qg.bar.activeLine : 'transparent', '&:hover': { color: 'primary.main', bgcolor: 'action.hover' } }}>{restActive ? restActive.label : shown.length === 0 ? 'Modules' : 'More'}</Button>
         <Menu anchorEl={moreEl} open={!!moreEl} onClose={() => setMoreEl(null)}>
           {rest.map((m) => <MenuItem key={m.key} component={RouterLink} to={m.basePath} onClick={() => setMoreEl(null)} selected={isActive(m)} sx={{ gap: 1.5 }}>{m.icon}<ListItemText primary={m.label} /></MenuItem>)}
         </Menu>
