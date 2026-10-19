@@ -80,7 +80,7 @@ test.describe('SEQUFLOH work instructions', () => {
     await expect(ap.getByText('Released', { exact: true }).first()).toBeVisible();
     await expect(ap.getByRole('button', { name: 'Save draft' })).toHaveCount(0);
     await ap.getByRole('tab', { name: 'History' }).click();
-    await expect(ap.getByRole('cell', { name: 'Add the test pressure unit' })).toBeVisible();
+    await expect(ap.getByRole('cell', { name: 'Add the test pressure unit', exact: true })).toBeVisible();
     await shot(ap, 'sequfloh/s3-lifecycle-history');
 
     await page.reload();
