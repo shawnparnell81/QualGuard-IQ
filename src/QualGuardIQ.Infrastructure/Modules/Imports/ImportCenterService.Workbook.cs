@@ -166,6 +166,8 @@ public sealed partial class ImportCenterService
         var full = await db.Documents.Include(d => d.Revisions).FirstAsync(d => d.Id == doc.Id, ct);
         full.Source = job.FileType switch { "xlsx" or "xlsm" or "xls" => TemplateSource.Excel, "docx" or "doc" => TemplateSource.Word, "pdf" or "image" => TemplateSource.Pdf, "csv" => TemplateSource.Csv, _ => TemplateSource.Native };
         full.Description = $"Imported by {job.Number} from {job.OriginalFileName} (SHA-256 {job.FileHash[..12]}…).";
+        // imported as reference content: a reference copy (stored and controlled, no approval or revision workflow)
+        if (kind == DocumentKind.Document && PurposeOf(job) == "reference-content") full.IsReference = true;
         if (kind == DocumentKind.FormTemplate && Conversion.ConversionEngine.Profile(ConversionTarget(job)) is { } family)
         {
             // converted as an NCR, CAPA, calibration, supplier, audit, APQP or PPAP form: the template is filed with that module

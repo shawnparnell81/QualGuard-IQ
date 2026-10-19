@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
-import { Box, Breadcrumbs, Collapse, IconButton, Link, List, ListItemButton, ListItemText, Tab, Tabs, Tooltip, Typography, useMediaQuery } from '@mui/material';
+import { Alert, Box, Breadcrumbs, Chip, Collapse, IconButton, Link, List, ListItemButton, ListItemText, Tab, Tabs, Tooltip, Typography, useMediaQuery } from '@mui/material';
 import ChevronLeft from '@mui/icons-material/ChevronLeft';
 import ChevronRight from '@mui/icons-material/ChevronRight';
 import ExpandLess from '@mui/icons-material/ExpandLess';
 import ExpandMore from '@mui/icons-material/ExpandMore';
 import { useAuth } from '../auth';
 import type { ModuleDef, NavItem } from '../modules/registry';
-import { ArrivalNotice, PageTools, PrintHeading } from '../tools/PageTools';
+import { ArrivalNotice, PageTools, PrintHeading, usePageRecord } from '../tools/PageTools';
 import { useTheme } from '@mui/material/styles';
 
 export interface Crumb { label: string; to?: string }
@@ -32,6 +32,9 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
   const [peek, setPeek] = useState(false);
   const loc = useLocation();
   const qg = useTheme().qg;
+  // historical records brought in by an import: shown as imported and read-only (print, export and delete stay available in the page tools)
+  const pageRecord = usePageRecord(tools ? record : false);
+  const importedReadOnly = !!pageRecord.data?.importedReadOnly;
   useEffect(() => setPeek(false), [loc.pathname, loc.search]);
   const collapsed = narrow ? !peek : stored;
   const toggle = () => { if (narrow) { setPeek(!peek); return; } localStorage.setItem('ws.collapsed', stored ? '0' : '1'); setStored(!stored); };
@@ -57,12 +60,13 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
           </Breadcrumbs>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pb: tabs ? 0.5 : 2.5, flexWrap: 'wrap' }}>
             <Box aria-hidden sx={{ width: qg.icon.size, height: qg.icon.size, flexShrink: 0, display: { xs: 'none', sm: 'grid' }, placeItems: 'center', background: qg.gradient, color: '#FFFFFF', borderRadius: `${qg.icon.radius}px`, '& svg': { fontSize: qg.icon.size * 0.56 }, boxShadow: `0 8px 20px ${qg.glow}` }}>{module.icon}</Box>
-            <Typography variant="h1" sx={{ flex: '1 1 320px', minWidth: 0, color: qg.header.fg }}>{title}</Typography>
+            <Typography variant="h1" sx={{ flex: '1 1 320px', minWidth: 0, color: qg.header.fg }}>{title}
+              {importedReadOnly && <Chip size="small" color="warning" variant="outlined" label="Imported (read-only)" data-testid="imported-read-only" sx={{ ml: 1.5, verticalAlign: 'middle', fontWeight: 700 }} />}</Typography>
             {/* page tools and the page's own buttons wrap together under a long record title instead of squeezing it */}
             {(tools || actions) && (
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap', justifyContent: 'flex-end', ml: 'auto' }}>
                 {tools && <PageTools area={area} title={titleText} record={record} />}
-                {actions}
+                {!importedReadOnly && actions}
               </Box>
             )}
           </Box>
@@ -72,7 +76,15 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
             </Tabs>
           )}
         </Box>
-        <Box sx={{ p: { xs: 1.5, sm: 2.5, md: 3.5 }, maxWidth: 1600 }}>{children}</Box>
+        <Box sx={{ p: { xs: 1.5, sm: 2.5, md: 3.5 }, maxWidth: 1600 }}>
+          {importedReadOnly ? <>
+            <Alert severity="warning" className="qg-no-print" sx={{ mb: 2 }} data-testid="imported-read-only-notice">
+              This record was imported as a historical record and is kept exactly as imported. It can't be edited, signed or sent for approval. You can still print it, save it as PDF, Excel, Word or CSV, or delete it if you have permission.
+            </Alert>
+            {/* every button and field on the page is switched off; links and tabs still open */}
+            <Box component="fieldset" disabled sx={{ border: 0, p: 0, m: 0, minWidth: 0, '& .MuiButtonBase-root:not(.MuiTab-root):not(a), & .MuiInputBase-root': { opacity: 0.6 } }}>{children}</Box>
+          </> : children}
+        </Box>
         <ArrivalNotice />
       </Box>
     </Box>

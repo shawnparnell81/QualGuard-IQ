@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Pagination, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Pagination, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,9 +31,9 @@ const cfg = (kind: Kind) => kind === 2
   : { module: modules.find((m) => m.key === 'documents')!, path: '/documents', noun: 'document', plural: 'Documents', docType: 'Document', revType: 'DocumentRevision', edit: 'documents.edit',
       types: ['Policy', 'Manual', 'Procedure', 'Work Instruction', 'Specification', 'Form', 'Standard', 'Plan'] };
 
-interface ListItem { id: string; number: string; title: string; documentType: string; status: number; currentRevision: string | null; effectiveDate: string | null; siteCode: string; partNumber: string | null; nextReviewDue: string | null; ownerName: string }
+interface ListItem { id: string; number: string; title: string; documentType: string; status: number; currentRevision: string | null; effectiveDate: string | null; siteCode: string; partNumber: string | null; nextReviewDue: string | null; ownerName: string; isReference?: boolean }
 interface Rev { id: string; revision: string; sequence: number; status: number; changeSummary: string; effectiveDate: string | null; supersededOn: string | null; approvedAt: string | null; trainingRequired: boolean; rowVersion: number; fieldSchema?: string | null; readyToSubmit: boolean }
-interface Detail { id: string; kind: Kind; number: string; title: string; documentType: string; status: number; siteId: string; ownerName: string; reviewIntervalMonths: number; nextReviewDue: string | null; partNumber: string | null; drawingSize: string | null; sheetCount: number | null; revisions: Rev[]; canEdit: boolean; canApprove: boolean; rowVersion: number; formFamily?: FormTheme | null }
+interface Detail { id: string; kind: Kind; number: string; title: string; documentType: string; status: number; siteId: string; ownerName: string; reviewIntervalMonths: number; nextReviewDue: string | null; partNumber: string | null; drawingSize: string | null; sheetCount: number | null; revisions: Rev[]; canEdit: boolean; canApprove: boolean; rowVersion: number; formFamily?: FormTheme | null; isReference?: boolean }
 
 export function DocumentList({ kind }: { kind: Kind }) {
   const c = cfg(kind);
@@ -51,7 +51,7 @@ export function DocumentList({ kind }: { kind: Kind }) {
     { header: 'Number', accessorKey: 'number', cell: (x) => <span style={{ fontFamily: mono }}>{x.getValue()}</span> },
     { header: 'Title', accessorKey: 'title' },
     ...(kind === 1 ? [{ header: 'Part number', accessorKey: 'partNumber' } as ColumnDef<ListItem, any>] : []),
-    { header: 'Type', accessorKey: 'documentType' },
+    { header: 'Type', accessorKey: 'documentType', cell: (x) => <Stack direction="row" gap={1} alignItems="center"><span>{x.getValue()}</span>{x.row.original.isReference && <ReferenceChip />}</Stack> },
     { header: 'Rev', accessorKey: 'currentRevision', cell: (x) => x.getValue() ?? '—' },
     { header: 'Effective', accessorKey: 'effectiveDate', cell: (x) => fmtDate(x.getValue()) },
     { header: 'Status', accessorKey: 'status', cell: (x) => <StatusChip status={docStatus[x.getValue()]} /> },
@@ -153,6 +153,8 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
   const [obsolete, setObsolete] = useState(false);
   const [reason, setReason] = useState('');
   const [signing, setSigning] = useState(false);
+  const [replace, setReplace] = useState(false);
+  const [edition, setEdition] = useState('');
   const work = useWork();
   const doc = useQuery({ queryKey: ['doc', id], queryFn: () => get<Detail>(`/api/documents/${id}`) });
   const d = doc.data;
@@ -172,28 +174,36 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
     { header: 'Superseded', accessorKey: 'supersededOn', cell: (x) => fmtDate(x.getValue()) },
   ];
   const tabs = [
-    { label: 'Revisions', value: 'revisions' }, { label: 'Files', value: 'files' }, { label: 'Approvals', value: 'approvals' },
+    { label: d.isReference ? 'Copies' : 'Revisions', value: 'revisions' }, { label: 'Files', value: 'files' }, ...(d.isReference ? [] : [{ label: 'Approvals', value: 'approvals' }]),
     { label: 'Actions', value: 'actions' }, { label: 'Links', value: 'links' }, { label: 'Comments', value: 'comments' }, { label: 'History', value: 'history' },
   ];
   return (
     <ModuleWorkspace module={c.module} crumbs={[{ label: kind === 0 ? 'Library' : c.plural, to: c.path }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={docStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={docStatus[d.status]} />{d.isReference && <ReferenceChip />}</Stack>}
       tabs={tabs} tab={tab} onTab={setTab}
       actions={
         <Stack direction="row" gap={1}>
           {pendingApproval && <Button variant="contained" color="secondary" onClick={() => setSigning(true)}>Review and sign</Button>}
-          {draftEditable && rev.readyToSubmit && <Button variant="contained" onClick={() => run(() => post(`/api/documents/revisions/${rev.id}/submit`))}>Submit Rev {rev.revision} for approval</Button>}
-          {d.canEdit && d.status === 1 && !d.revisions.some((r) => r.status <= 1) && <Button variant="outlined" onClick={() => { setSummary(''); setRevise(true); }}>Start new revision</Button>}
+          {d.isReference ? <>
+            {draftEditable && rev.readyToSubmit && <Button variant="contained" data-testid="release-reference" onClick={() => run(() => post(`/api/documents/revisions/${rev.id}/release-reference`))}>Release copy {rev.revision}</Button>}
+            {d.canEdit && d.status === 1 && !d.revisions.some((r) => r.status === 0) && <Button variant="outlined" data-testid="replace-reference" onClick={() => { setSummary(''); setEdition(''); setReplace(true); }}>Replace copy</Button>}
+          </> : <>
+            {draftEditable && rev.readyToSubmit && <Button variant="contained" onClick={() => run(() => post(`/api/documents/revisions/${rev.id}/submit`))}>Submit Rev {rev.revision} for approval</Button>}
+            {d.canEdit && d.status === 1 && !d.revisions.some((r) => r.status <= 1) && <Button variant="outlined" onClick={() => { setSummary(''); setRevise(true); }}>Start new revision</Button>}
+          </>}
           {d.canApprove && d.status === 1 && !d.revisions.some((r) => r.status <= 1) && <Button color="error" onClick={() => { setReason(''); setObsolete(true); }}>Make obsolete</Button>}
         </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      {draftEditable && !rev.readyToSubmit && <Alert severity="info" sx={{ mb: 2 }}>{kind === 2 ? 'Define and save the form fields' : 'Attach the controlled file'} on revision {rev.revision} before submitting it for approval.</Alert>}
+      {d.isReference && <Alert severity="info" icon={false} data-testid="reference-notice" sx={{ mb: 2, borderLeft: 4, borderColor: 'info.main' }}>
+        <b>Reference copy.</b> Kept and controlled here for reference, with every change in the history. It isn't sent for approval and has no revision workflow: when a newer edition comes out, use Replace copy and the earlier copy is kept as superseded.
+      </Alert>}
+      {draftEditable && !rev.readyToSubmit && <Alert severity="info" sx={{ mb: 2 }}>{d.isReference ? `Attach the reference file to copy ${rev.revision} before releasing it.` : `${kind === 2 ? 'Define and save the form fields' : 'Attach the controlled file'} on revision ${rev.revision} before submitting it for approval.`}</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
         <Paper sx={{ p: 2, alignSelf: 'start' }}>
           <Typography variant="overline" color="text.secondary">Details</Typography>
           {[
             ['Type', d.documentType], ['Owner', d.ownerName], ['Current revision', effective ? `${effective.revision} (effective ${fmtDate(effective.effectiveDate)})` : 'None released'],
-            ['Review every', `${d.reviewIntervalMonths} months`], ['Next review', fmtDate(d.nextReviewDue)],
+            ...(d.isReference ? [['Control', 'Reference copy (no approval)']] : [['Review every', `${d.reviewIntervalMonths} months`], ['Next review', fmtDate(d.nextReviewDue)]]),
             ...(kind === 1 ? [['Part number', d.partNumber ?? '—'], ['Size / sheets', `${d.drawingSize ?? '—'} / ${d.sheetCount ?? '—'}`]] : []),
           ].map(([k, v]) => (
             <Box key={k} sx={{ py: 0.75, borderTop: 1, borderColor: 'divider' }}>
@@ -235,6 +245,16 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
           <TextField fullWidth multiline minRows={3} label="What is changing and why" value={summary} onChange={(e) => setSummary(e.target.value)} /></DialogContent>
         <DialogActions><Button onClick={() => setRevise(false)}>Cancel</Button>
           <Button variant="contained" disabled={!summary.trim()} onClick={() => { setRevise(false); run(async () => { const nid = await post<string>(`/api/documents/${d.id}/revisions`, { changeSummary: summary }); setRevId(nid); }); }}>Create draft</Button></DialogActions>
+      </Dialog>
+      <Dialog open={replace} onClose={() => setReplace(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Replace the reference copy</DialogTitle>
+        <DialogContent><Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>File a newer edition. The current copy stays in use until you attach the new file and release it, then it is kept as superseded.</Typography>
+          <Stack gap={2}>
+            <TextField label="Edition or issue (optional)" value={edition} onChange={(e) => setEdition(e.target.value)} helperText="For example 2024 or Issue 7. Left empty, the next label is used." slotProps={{ htmlInput: { maxLength: 10 } }} />
+            <TextField fullWidth multiline minRows={2} label="Note (optional)" value={summary} onChange={(e) => setSummary(e.target.value)} />
+          </Stack></DialogContent>
+        <DialogActions><Button onClick={() => setReplace(false)}>Cancel</Button>
+          <Button variant="contained" onClick={() => { setReplace(false); run(async () => { const nid = await post<string>(`/api/documents/${d.id}/replace-reference`, { revision: edition || null, changeSummary: summary }); setRevId(nid); setTab('files'); }); }}>Add newer copy</Button></DialogActions>
       </Dialog>
       <Dialog open={obsolete} onClose={() => setObsolete(false)} fullWidth maxWidth="sm">
         <DialogTitle>Make {d.number} obsolete</DialogTitle>
@@ -293,7 +313,7 @@ function DraftEditor({ rev, onSaved, formTemplate, family }: { rev: Rev; onSaved
   );
 }
 
-interface DocType { id: string; kind: Kind; name: string; description: string | null; isSystem: boolean; isActive: boolean; sortOrder: number }
+interface DocType { id: string; kind: Kind; name: string; description: string | null; isSystem: boolean; isActive: boolean; sortOrder: number; isReference?: boolean }
 const kindNames = ['Documents', 'Drawings', 'Form templates'];
 /** Governed document type library: shipped types (seeded once, never duplicated) plus your own; rename or retire without losing history. */
 export function DocumentTypesPage() {
@@ -305,8 +325,8 @@ export function DocumentTypesPage() {
   const save = async () => {
     setError(null);
     try {
-      if (edit!.id) await put(`/api/document-types/${edit!.id}`, { name: edit!.name, description: edit!.description || null, isActive: edit!.isActive ?? true, sortOrder: edit!.sortOrder ?? 0 });
-      else await post('/api/document-types', { kind, name: edit!.name, description: edit!.description || null });
+      if (edit!.id) await put(`/api/document-types/${edit!.id}`, { name: edit!.name, description: edit!.description || null, isActive: edit!.isActive ?? true, sortOrder: edit!.sortOrder ?? 0, isReference: kind === 0 ? !!edit!.isReference : undefined });
+      else await post('/api/document-types', { kind, name: edit!.name, description: edit!.description || null, isReference: kind === 0 && !!edit!.isReference });
       setEdit(null); qc.invalidateQueries({ queryKey: ['document-types-admin'] }); qc.invalidateQueries({ queryKey: ['document-types'] });
     } catch (e) { setError((e as Error).message); }
   };
@@ -319,6 +339,7 @@ export function DocumentTypesPage() {
         { header: 'Type', accessorKey: 'name' },
         { header: 'Source', accessorKey: 'isSystem', cell: (c) => (c.getValue() ? 'Shipped' : 'Your organization') },
         { header: 'State', accessorKey: 'isActive', cell: (c) => (c.getValue() ? 'In use' : 'Retired') },
+        ...(kind === 0 ? [{ header: 'Control', accessorKey: 'isReference', cell: (c: { getValue: () => unknown }) => (c.getValue() ? 'Reference copy' : 'Approval and revisions') }] : []),
         { header: 'Description', accessorKey: 'description' },
       ]} />
       <Dialog open={!!edit} onClose={() => setEdit(null)} fullWidth maxWidth="sm">
@@ -328,6 +349,8 @@ export function DocumentTypesPage() {
           <TextField label="Name" value={edit?.name ?? ''} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
           <TextField label="Description" value={edit?.description ?? ''} onChange={(e) => setEdit({ ...edit, description: e.target.value })} />
           {edit?.id && <FormControlLabel control={<Checkbox checked={edit.isActive ?? true} onChange={(e) => setEdit({ ...edit, isActive: e.target.checked })} />} label="In use for new documents" />}
+          {kind === 0 && <FormControlLabel control={<Checkbox checked={!!edit?.isReference} onChange={(e) => setEdit({ ...edit, isReference: e.target.checked })} />}
+            label="Reference copy: stored and controlled with a history, but no approval or revision workflow (standards, customer and external documents)" />}
         </DialogContent>
         <DialogActions><Button onClick={() => setEdit(null)}>Cancel</Button><Button variant="contained" disabled={!edit?.name?.trim()} onClick={save}>Save</Button></DialogActions>
       </Dialog>
@@ -358,4 +381,9 @@ function OfflineWorkbook({ templateId, siteId }: { templateId: string; siteId: s
       {error && <Alert severity="error" sx={{ py: 0 }}>{error}</Alert>}
     </>
   );
+}
+
+/** Marks a reference copy (standard, customer or external document): controlled and audited, but no approval or revision workflow. */
+function ReferenceChip() {
+  return <Chip size="small" variant="outlined" color="info" label="Reference copy" data-testid="reference-chip" sx={{ fontWeight: 600 }} />;
 }

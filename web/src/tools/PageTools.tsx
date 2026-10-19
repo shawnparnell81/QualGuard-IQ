@@ -18,7 +18,7 @@ import { fileName, formatLabel, saveFile, type SaveFormat } from './saveFile';
 import { findTables, readFilters, readTable } from './tableText';
 
 export interface DeleteCheck { deletable: boolean; canDelete: boolean; locked: boolean; reason: string | null; deletePermission: string | null }
-export interface RecordCapabilities { type: string; typeLabel: string; id: string; number: string; title: string; status: string | null; url: string; delete: DeleteCheck }
+export interface RecordCapabilities { type: string; typeLabel: string; id: string; number: string; title: string; status: string | null; url: string; delete: DeleteCheck; importedReadOnly?: boolean }
 
 const GUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
