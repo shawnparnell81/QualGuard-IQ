@@ -39956,6 +39956,257 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/records/{type}/{id}/capabilities':
+    get:
+      tags:
+        - RecordTools
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CapabilitiesDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilitiesDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CapabilitiesDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/records/locate/{id}':
+    get:
+      tags:
+        - RecordTools
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: path
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CapabilitiesDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CapabilitiesDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CapabilitiesDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/records/{type}/{id}/delete':
+    post:
+      tags:
+        - RecordTools
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/DeletedRecordDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedRecordDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/DeletedRecordDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/records/{type}/{id}/export':
+    get:
+      tags:
+        - RecordTools
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: format
+          in: query
+          schema:
+            type: string
+        - name: inline
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/deleted-records:
+    get:
+      tags:
+        - DeletedRecords
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: query
+          schema:
+            type: string
+        - name: q
+          in: query
+          schema:
+            type: string
+        - name: includeRestored
+          in: query
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeletedRecordDto'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeletedRecordDto'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DeletedRecordDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/deleted-records/{id}/restore':
+    post:
+      tags:
+        - DeletedRecords
+      description: Requires an authenticated user.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/ReasonRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/DeletedRecordDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeletedRecordDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/DeletedRecordDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/export/table:
+    post:
+      tags:
+        - Export
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TableExportRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/TableExportRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/TableExportRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   /api/record-types:
     get:
       tags:
@@ -40694,6 +40945,180 @@ paths:
       responses:
         '200':
           description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/settings/logo:
+    get:
+      tags:
+        - Settings
+      responses:
+        '200':
+          description: OK
+      security: [ ]
+    post:
+      tags:
+        - Settings
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  $ref: '#/components/schemas/IFormFile'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    delete:
+      tags:
+        - Settings
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/settings/numbering:
+    get:
+      tags:
+        - Settings
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NumberingDto'
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NumberingDto'
+            text/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/NumberingDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  '/api/settings/numbering/{recordType}':
+    put:
+      tags:
+        - Settings
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      parameters:
+        - name: recordType
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveNumberingRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SaveNumberingRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SaveNumberingRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/NumberingDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NumberingDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/NumberingDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/settings/system:
+    get:
+      tags:
+        - Settings
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/account/preferences:
+    get:
+      tags:
+        - Preferences
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PreferencesDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+    put:
+      tags:
+        - Preferences
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SavePreferencesRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/SavePreferencesRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/SavePreferencesRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/PreferencesDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/PreferencesDto'
         '401':
           description: Not signed in
         '403':
@@ -52591,6 +53016,9 @@ components:
           type:
             - 'null'
             - string
+        hasLogo:
+          type: boolean
+          default: false
     BreakGlassRequest:
       required:
         - enabled
@@ -52920,6 +53348,37 @@ components:
           type:
             - 'null'
             - string
+    CapabilitiesDto:
+      required:
+        - type
+        - typeLabel
+        - id
+        - number
+        - title
+        - status
+        - url
+        - delete
+      type: object
+      properties:
+        type:
+          type: string
+        typeLabel:
+          type: string
+        id:
+          type: string
+          format: uuid
+        number:
+          type: string
+        title:
+          type: string
+        status:
+          type:
+            - 'null'
+            - string
+        url:
+          type: string
+        delete:
+          $ref: '#/components/schemas/DeleteCheck'
     CapabilityInput:
       required:
         - title
@@ -57224,6 +57683,91 @@ components:
             - string
         reason:
           type: string
+    DeleteCheck:
+      required:
+        - deletable
+        - canDelete
+        - locked
+        - reason
+        - deletePermission
+      type: object
+      properties:
+        deletable:
+          type: boolean
+        canDelete:
+          type: boolean
+        locked:
+          type: boolean
+        reason:
+          type:
+            - 'null'
+            - string
+        deletePermission:
+          type:
+            - 'null'
+            - string
+    DeletedRecordDto:
+      required:
+        - id
+        - recordType
+        - typeLabel
+        - recordId
+        - number
+        - title
+        - status
+        - siteId
+        - reason
+        - deletedByName
+        - deletedAt
+        - wasLocked
+        - restoredAt
+        - restoredByName
+        - restoreReason
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        recordType:
+          type: string
+        typeLabel:
+          type: string
+        recordId:
+          type: string
+          format: uuid
+        number:
+          type: string
+        title:
+          type: string
+        status:
+          type:
+            - 'null'
+            - string
+        siteId:
+          type: string
+          format: uuid
+        reason:
+          type: string
+        deletedByName:
+          type: string
+        deletedAt:
+          type: string
+          format: date-time
+        wasLocked:
+          type: boolean
+        restoredAt:
+          type:
+            - 'null'
+            - string
+          format: date-time
+        restoredByName:
+          type:
+            - 'null'
+            - string
+        restoreReason:
+          type:
+            - 'null'
+            - string
     DeliverableInput:
       required:
         - phase
@@ -66998,6 +67542,39 @@ components:
       type: integer
     NotificationScope:
       type: integer
+    NumberingDto:
+      required:
+        - recordType
+        - label
+        - prefix
+        - padding
+        - resetYearly
+        - nextValue
+        - example
+      type: object
+      properties:
+        recordType:
+          type: string
+        label:
+          type: string
+        prefix:
+          type: string
+        padding:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        resetYearly:
+          type: boolean
+        nextValue:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int64
+        example:
+          type: string
     ObjectiveInput:
       required:
         - title
@@ -69629,6 +70206,32 @@ components:
             - integer
             - string
           format: uint32
+    PreferencesDto:
+      required:
+        - emailNotifications
+        - dateFormat
+        - theme
+        - organizationDateFormat
+        - organizationEmailEnabled
+        - effectiveDateFormat
+      type: object
+      properties:
+        emailNotifications:
+          type: boolean
+        dateFormat:
+          type:
+            - 'null'
+            - string
+        theme:
+          type:
+            - 'null'
+            - string
+        organizationDateFormat:
+          type: string
+        organizationEmailEnabled:
+          type: boolean
+        effectiveDateFormat:
+          type: string
     PrefillRequest:
       required:
         - sourceType
@@ -76156,6 +76759,23 @@ components:
           type: string
         isDefault:
           type: boolean
+    SaveNumberingRequest:
+      required:
+        - prefix
+        - padding
+        - resetYearly
+      type: object
+      properties:
+        prefix:
+          type: string
+        padding:
+          pattern: '^-?(?:0|[1-9]\d*)$'
+          type:
+            - integer
+            - string
+          format: int32
+        resetYearly:
+          type: boolean
     SavePartRequest:
       required:
         - partNumber
@@ -76214,6 +76834,23 @@ components:
             - string
           format: uint32
           default: 0
+    SavePreferencesRequest:
+      required:
+        - emailNotifications
+        - dateFormat
+        - theme
+      type: object
+      properties:
+        emailNotifications:
+          type: boolean
+        dateFormat:
+          type:
+            - 'null'
+            - string
+        theme:
+          type:
+            - 'null'
+            - string
     SaveProductRequest:
       required:
         - number
@@ -77487,6 +78124,17 @@ components:
             - integer
             - string
           format: uint32
+        dateFormat:
+          type:
+            - 'null'
+            - string
+        emailNotificationsEnabled:
+          type:
+            - 'null'
+            - boolean
+        hasLogo:
+          type: boolean
+          default: false
     SettingsSaveRequest:
       required:
         - value
@@ -80758,6 +81406,32 @@ components:
             - string
     SyncRunStatus:
       type: integer
+    TableExportRequest:
+      required:
+        - title
+        - format
+        - columns
+        - rows
+      type: object
+      properties:
+        title:
+          type: string
+        format:
+          type: string
+        columns:
+          type: array
+          items:
+            type: string
+        rows:
+          type: array
+          items:
+            type: array
+            items:
+              type: string
+        filters:
+          type:
+            - 'null'
+            - string
     TableTotal:
       type: object
       properties:
@@ -83879,9 +84553,14 @@ tags:
   - name: QualityOps
   - name: Records
   - name: Files
+  - name: RecordTools
+  - name: DeletedRecords
+  - name: Export
   - name: RecordTypes
   - name: Risks
   - name: Roles
+  - name: Settings
+  - name: Preferences
   - name: SignInPolicy
   - name: Sso
   - name: SsoAdmin
