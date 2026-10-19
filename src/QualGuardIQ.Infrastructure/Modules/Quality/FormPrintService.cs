@@ -7,6 +7,7 @@ using QualGuardIQ.Domain.Audit;
 using QualGuardIQ.Domain.Documents;
 using QualGuardIQ.Domain.Quality;
 using QualGuardIQ.Infrastructure.Modules.Documents;
+using QualGuardIQ.Infrastructure.Modules.Appearance;
 using QualGuardIQ.Infrastructure.Persistence;
 
 namespace QualGuardIQ.Infrastructure.Modules.Quality;
@@ -24,7 +25,7 @@ public sealed class FormPrintService(AppDbContext db, ModuleSupport m, ICurrentU
         await m.ViewAsync(FormService.RecordType, id, ct);
         var r = await db.FormRecords.AsNoTracking().FirstAsync(x => x.Id == id, ct);
         var schema = await db.DocumentRevisions.Where(x => x.Id == r.TemplateRevisionId).Select(x => x.FieldSchema).FirstAsync(ct);
-        var def = FormDefinitions.Parse(schema!);
+        var def = await FormFamily.ApplyAsync(db, r.TemplateId, FormDefinitions.Parse(schema!), ct);
         var values = JsonSerializer.Deserialize<Dictionary<string, string?>>(r.ValuesJson) ?? [];
         var zone = await m.ZoneAsync(r.SiteId, ct);
         string Local(DateTimeOffset t) => $"{TimeZoneInfo.ConvertTime(t, zone):yyyy-MM-dd HH:mm} {Abbrev(zone, t)}";
@@ -34,7 +35,8 @@ public sealed class FormPrintService(AppDbContext db, ModuleSupport m, ICurrentU
             r.Status == FormRecordStatus.Approved ? "OFFICIAL RECORD - approved electronically in QualGuard IQ" : "UNCONTROLLED WHEN PRINTED - record not yet approved",
             r.Status switch { FormRecordStatus.Draft => "DRAFT", FormRecordStatus.Rejected => "REJECTED", FormRecordStatus.Submitted => "IN REVIEW", _ => null },
             $"QG:REC:{FormService.RecordType}:{r.Id}");
-        var renderer = new FormPdfRenderer(def, values, sigs.Select(s => new PrintedSignature(s.SignatureKey, s.SignerName, Local(s.SignedAt), s.Meaning, s.Verification, !s.IsInvalidated)), ctx);
+        var renderer = new FormPdfRenderer(def, values, sigs.Select(s => new PrintedSignature(s.SignatureKey, s.SignerName, Local(s.SignedAt), s.Meaning, s.Verification, !s.IsInvalidated)), ctx)
+            { Palette = await AppearanceModel.PrintColoursAsync(db, FormThemes.Of(def), ct) };
         var used = renderer.Effective(style);
         var pdf = renderer.Render(used);
         await AuditAsync(nameof(FormRecord), id, r.SiteId, $"Printed form record {r.Number} ({used} output) as PDF", ct);
@@ -49,14 +51,14 @@ public sealed class FormPrintService(AppDbContext db, ModuleSupport m, ICurrentU
         var doc = rev.Document!;
         if (doc.Kind != DocumentKind.FormTemplate || string.IsNullOrWhiteSpace(rev.FieldSchema)) throw new AppException("This revision is not a form template.");
         await records.RequireViewAsync(DocumentRecordTypes.ForDocument(doc.Kind), doc.Id, ct);
-        var def = FormDefinitions.Parse(rev.FieldSchema);
+        var def = await FormFamily.ApplyAsync(db, doc.Id, FormDefinitions.Parse(rev.FieldSchema), ct);
         var zone = await m.ZoneAsync(doc.SiteId, ct);
         var ctx = new FormPrintContext(await OrgAsync(ct), doc.Title, doc.Number, rev.Revision, null, rev.Status.ToString(), await SiteAsync(doc.SiteId, ct),
             $"{TimeZoneInfo.ConvertTime(m.Now, zone):yyyy-MM-dd HH:mm} {Abbrev(zone, m.Now)}", current.UserName, def.Page.Confidentiality,
             rev.Status == RevisionStatus.Effective ? "CONTROLLED COPY - verify this is the current revision before use" : "UNCONTROLLED COPY",
             rev.Status switch { RevisionStatus.Draft or RevisionStatus.InReview => "DRAFT", RevisionStatus.Approved => "NOT YET EFFECTIVE", RevisionStatus.Superseded => "SUPERSEDED", RevisionStatus.Obsolete => "OBSOLETE", _ => null },
             $"QG:REC:{DocumentRecordTypes.ForDocument(doc.Kind)}:{doc.Id}");
-        var renderer = new FormPdfRenderer(def, new Dictionary<string, string?>(), [], ctx);
+        var renderer = new FormPdfRenderer(def, new Dictionary<string, string?>(), [], ctx) { Palette = await AppearanceModel.PrintColoursAsync(db, FormThemes.Of(def), ct) };
         var used = renderer.Effective(style);
         var pdf = renderer.Render(used);
         await AuditAsync(nameof(DocumentRevision), rev.Id, doc.SiteId, $"Printed form template {doc.Number} rev {rev.Revision} ({used} output) as PDF", ct);
@@ -73,7 +75,7 @@ public sealed class FormPrintService(AppDbContext db, ModuleSupport m, ICurrentU
         var computed = values is { Count: > 0 } ? FormDefinitions.Apply(def, values, requireComplete: false) : new Dictionary<string, string?>();
         var ctx = new FormPrintContext(await OrgAsync(ct), "Form preview", "PREVIEW", "-", null, "Preview", null, $"{m.Now:yyyy-MM-dd HH:mm} UTC", current.UserName, def.Page.Confidentiality,
             "UNCONTROLLED - design preview", "PREVIEW", null);
-        var r = new FormPdfRenderer(def, computed, [], ctx);
+        var r = new FormPdfRenderer(def, computed, [], ctx) { Palette = await AppearanceModel.PrintColoursAsync(db, FormThemes.Of(def), ct) };
         var used = r.Effective(style);
         return new PrintResult(r.Render(used), "form-preview.pdf", used);
     }

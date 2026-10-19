@@ -123,7 +123,7 @@ export function FormRecordDetail() {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '260px minmax(0, 1fr)' }, gap: { xs: 2, md: 3 } }}>
         <Facts items={[['Template', `${d.templateNumber} revision ${d.templateRevision}`], ['Status', formStatus[d.status]], ['Submitted', fmtDateTime(d.submittedAt)]]} />
         <Box sx={{ minWidth: 0 }}>
-          {tab === 'form' && <Paper sx={{ p: 3 }}><FormView def={def} values={values} onChange={setValues} readOnly={!d.canEdit} recordType="FormRecord" recordId={d.id} siteId={d.siteId}
+          {tab === 'form' && <Paper sx={(t) => ({ p: t.qg.form.paperPad })}><FormView def={def} values={values} onChange={setValues} readOnly={!d.canEdit} recordType="FormRecord" recordId={d.id} siteId={d.siteId}
             signatures={d.signatures ?? []} onSign={setSignBlock} canSign={(k) => { const b = def.signatures.find((x) => x.key === k); return !!b && (preSubmit.includes(b.role) ? d.canEdit : d.status === 1); }} /></Paper>}
           {tab === 'approvals' && <ApprovalsPanel type="FormRecord" id={d.id} />}
           {tab === 'more' && <AttachmentsAndHistory type="FormRecord" id={d.id} canEdit={d.canEdit} />}

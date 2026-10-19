@@ -397,6 +397,76 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/appearance:
+    get:
+      tags:
+        - Appearance
+      description: Requires an authenticated user.
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/AppearanceDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AppearanceDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/AppearanceDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/appearance/organization:
+    put:
+      tags:
+        - Appearance
+      description: 'Requires permission: `admin.organization` (site/department scoped).'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppearanceValues'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AppearanceValues'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AppearanceValues'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
+  /api/appearance/me:
+    put:
+      tags:
+        - Appearance
+      description: Requires an authenticated user.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AppearanceValues'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/AppearanceValues'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/AppearanceValues'
+        required: true
+      responses:
+        '200':
+          description: OK
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/apqp/{kind}':
     get:
       tags:
@@ -51066,6 +51136,52 @@ components:
             - array
           items:
             type: string
+    AppearanceDto:
+      required:
+        - organization
+        - personal
+        - canEditOrganization
+        - defaults
+      type: object
+      properties:
+        organization:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/AppearanceValues'
+        personal:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/AppearanceValues'
+        canEditOrganization:
+          type: boolean
+        defaults:
+          $ref: '#/components/schemas/Defaults'
+    AppearanceValues:
+      required:
+        - mode
+        - primaryColor
+        - accentColor
+        - formPalettes
+      type: object
+      properties:
+        mode:
+          type:
+            - 'null'
+            - string
+        primaryColor:
+          type:
+            - 'null'
+            - string
+        accentColor:
+          type:
+            - 'null'
+            - string
+        formPalettes:
+          type:
+            - 'null'
+            - object
+          additionalProperties:
+            $ref: '#/components/schemas/FamilyPalette'
     ApplyPlaybookInput:
       required:
         - recordType
@@ -57602,6 +57718,29 @@ components:
           type: boolean
         notes:
           type: string
+    Defaults:
+      required:
+        - mode
+        - primaryColor
+        - accentColor
+        - formPalettes
+        - palettes
+      type: object
+      properties:
+        mode:
+          type: string
+        primaryColor:
+          type: string
+        accentColor:
+          type: string
+        formPalettes:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/FamilyPalette'
+        palettes:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/PaletteColours'
     DefectCategory:
       required:
         - id
@@ -58888,6 +59027,10 @@ components:
           type: boolean
         canApprove:
           type: boolean
+        formFamily:
+          type:
+            - 'null'
+            - string
     DocumentKind:
       type: integer
     DocumentListItem:
@@ -60655,6 +60798,21 @@ components:
             - 'null'
             - string
           description: Extension. Justification when the supplier is restricted.
+    FamilyPalette:
+      required:
+        - palette
+      type: object
+      properties:
+        palette:
+          type: string
+        edge:
+          type:
+            - 'null'
+            - string
+        accent:
+          type:
+            - 'null'
+            - string
     FamilyRequest:
       required:
         - code
@@ -68700,6 +68858,16 @@ components:
           type:
             - 'null'
             - string
+    PaletteColours:
+      required:
+        - edge
+        - accent
+      type: object
+      properties:
+        edge:
+          type: string
+        accent:
+          type: string
     PartExecutionInput:
       required:
         - productFamily
@@ -84476,6 +84644,7 @@ tags:
   - name: MyWork
   - name: Search
   - name: UserLookup
+  - name: Appearance
   - name: Apqp
   - name: Spc
   - name: Lpa

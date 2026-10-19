@@ -172,6 +172,52 @@ public static class FormThemes
     /// <summary>Section styles that override the theme's default for one section.</summary>
     public static readonly string[] SectionStyles = ["standard", "panel", "callout", "titleblock", "steps", "checklist", "ledger", "signoff"];
     public static string Of(FormDefinition d) => d.Page.Theme is { Length: > 0 } t && Themes.Contains(t) ? t : "report";
+
+    /// <summary>
+    /// The family look of a form that does not name one: by what the form is (a warrant or approval reads as a certificate, a list or matrix as
+    /// a register, a checklist or audit as a checklist, a study or results sheet as a worksheet), then by its template category. The key is a
+    /// library template key, or a template title (it is reduced to the same lowercase-hyphen form).
+    /// </summary>
+    public static string Infer(string? keyOrTitle, string? category)
+    {
+        var key = Slug(keyOrTitle);
+        bool Has(params string[] w) => w.Any(k => key.Contains(k, StringComparison.Ordinal));
+        if (Has("warrant", "certificate", "approval", "authorization", "concession", "cover", "commitment")) return "certificate";
+        if (Has("register", "-list", "matrix", "schedule", "log", "inventory", "index", "program")) return "register";
+        if (Has("checklist", "audit", "inspection", "review", "verification")) return "checklist";
+        if (Has("results", "study", "pfmea", "control-plan", "process-flow", "balloon", "characteristic", "gage", "linearity", "bias", "stability", "yield", "worksheet", "run-at-rate")) return "worksheet";
+        var byCategory = (category ?? "").Trim().ToUpperInvariant() switch
+        {
+            "NONCONFORMANCE" or "CAPA" or "ROOT_CAUSE" or "CUSTOMER_QUALITY" => "investigation",
+            "APQP" or "RISK_CHANGE" or "DESIGN_DEVICE" => "plan",
+            "PPAP" or "FAI" or "CALIBRATION" or "CONFIGURATION" => "worksheet",
+            "INSPECTION" or "AUDIT" => "checklist",
+            "DOCUMENT_CONTROL" or "TRAINING" => "register",
+            _ => null,
+        };
+        if (byCategory is not null) return byCategory;
+        if (!string.IsNullOrWhiteSpace(category)) return "report";
+        // forms without a category (built in the designer, converted from a file): recognise investigations and plans by name
+        if (Has("capa", "corrective", "preventive", "8d", "8-d", "nonconform", "ncr", "root-cause", "5-why", "fishbone", "complaint", "deviation", "investigation")) return "investigation";
+        if (Has("plan", "apqp", "timing", "risk", "fmea", "change")) return "plan";
+        return "report";
+    }
+
+    /// <summary>Gives a definition without a look its family look (see <see cref="Infer"/>). Only the in-memory copy changes; stored revisions stay as approved.</summary>
+    public static FormDefinition WithFamily(FormDefinition d, string? keyOrTitle, string? category)
+    {
+        if (d.Page.Theme is { Length: > 0 } t && Themes.Contains(t)) return d;
+        d.Page.Theme = Infer(keyOrTitle, category);
+        return d;
+    }
+
+    static string Slug(string? s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return "";
+        var sb = new System.Text.StringBuilder(s.Length);
+        foreach (var ch in s.Trim().ToLowerInvariant()) sb.Append(char.IsLetterOrDigit(ch) ? ch : '-');
+        return System.Text.RegularExpressions.Regex.Replace(sb.ToString(), "-+", "-").Trim('-');
+    }
 }
 
 /// <summary>Header or footer text. Tokens: {template}, {revision}, {record}, {title}, {page}, {pages}, {site}, {printed}, {printedBy}, {status}, {confidentiality}.</summary>

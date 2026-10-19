@@ -846,6 +846,7 @@ export const modules: ModuleDef[] = [
         { label: 'Settings', path: '/admin/organization', permission: 'admin.organization' },
         { label: 'Sites & departments', path: '/admin/sites', permission: 'admin.organization' },
         { label: 'Approval routes', path: '/admin/routes', permission: 'admin.organization' },
+        { label: 'Appearance', path: '/admin/appearance', permission: 'admin.organization' },
       ] },
       { label: 'Logs', path: '/admin/audit', children: [
         { label: 'Audit trail', path: '/admin/audit', permission: 'audittrail.view' },

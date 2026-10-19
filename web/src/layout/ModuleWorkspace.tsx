@@ -8,6 +8,7 @@ import ExpandMore from '@mui/icons-material/ExpandMore';
 import { useAuth } from '../auth';
 import type { ModuleDef, NavItem } from '../modules/registry';
 import { ArrivalNotice, PageTools, PrintHeading } from '../tools/PageTools';
+import { useTheme } from '@mui/material/styles';
 
 export interface Crumb { label: string; to?: string }
 export interface WorkspaceTab { label: string; value: string }
@@ -30,13 +31,14 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
   const narrow = useMediaQuery('(max-width:899.95px)');
   const [peek, setPeek] = useState(false);
   const loc = useLocation();
+  const qg = useTheme().qg;
   useEffect(() => setPeek(false), [loc.pathname, loc.search]);
   const collapsed = narrow ? !peek : stored;
   const toggle = () => { if (narrow) { setPeek(!peek); return; } localStorage.setItem('ws.collapsed', stored ? '0' : '1'); setStored(!stored); };
   return (
     <Box sx={{ display: 'flex', minHeight: 'calc(100vh - 52px)', position: 'relative' }}>
       {narrow && <Box sx={{ width: 48, flexShrink: 0 }} />}
-      <Box component="aside" sx={{ width: collapsed ? 48 : 248, flexShrink: 0, borderRight: 1, borderColor: 'divider', bgcolor: 'background.sidebar', transition: 'width 150ms',
+      <Box component="aside" sx={{ width: collapsed ? 48 : 248, flexShrink: 0, borderRight: 1, background: qg.glass.side, backdropFilter: 'blur(14px)', borderColor: qg.glass.edge, transition: 'width 150ms',
         ...(narrow ? { position: 'absolute', top: 0, bottom: 0, left: 0, zIndex: 20, boxShadow: peek ? 6 : 0 } : {}) }}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'space-between', px: collapsed ? 0 : 2, py: 1.5 }}>
           {!collapsed && <Typography variant="overline" color="text.secondary" sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>{module.icon}{module.label}</Typography>}
@@ -47,20 +49,20 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
       <Box component="main" ref={area} sx={{ flex: 1, minWidth: 0 }}>
         <PrintHeading title={titleText} />
         {/* Page header: module tag and crumbs on one quiet line, then a large title beside a blue module badge. */}
-        <Box sx={{ px: { xs: 2, md: 4 }, pt: 2, bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider' }}>
-          <Breadcrumbs separator="/" sx={{ fontSize: 11.5, mb: 1.25, letterSpacing: '0.04em', '& .MuiBreadcrumbs-separator': { mx: 0.75, color: 'divider' } }}>
-            <Link component={RouterLink} to="/" underline="hover" color="text.secondary">Home</Link>
-            <Link component={RouterLink} to={module.basePath} underline="hover" color="text.secondary">{module.label}</Link>
-            {crumbs.filter((c, i) => !(i === 0 && c.label === module.label)).map((c, i) => c.to ? <Link key={i} component={RouterLink} to={c.to} underline="hover" color="text.secondary">{c.label}</Link> : <Typography key={i} fontSize={11.5} fontWeight={600} color="text.primary">{c.label}</Typography>)}
+        <Box sx={{ px: { xs: 2, md: 4 }, pt: 3, color: qg.header.fg }}>
+          <Breadcrumbs separator="/" sx={{ fontSize: 11.5, mb: 1.25, letterSpacing: '0.04em', color: qg.header.muted, '& .MuiBreadcrumbs-separator': { mx: 0.75, color: 'divider' } }}>
+            <Link component={RouterLink} to="/" underline="hover" sx={{ color: qg.header.muted }}>Home</Link>
+            <Link component={RouterLink} to={module.basePath} underline="hover" sx={{ color: qg.header.muted }}>{module.label}</Link>
+            {crumbs.filter((c, i) => !(i === 0 && c.label === module.label)).map((c, i) => c.to ? <Link key={i} component={RouterLink} to={c.to} underline="hover" sx={{ color: qg.header.muted }}>{c.label}</Link> : <Typography key={i} fontSize={11.5} fontWeight={600} sx={{ color: qg.header.fg }}>{c.label}</Typography>)}
           </Breadcrumbs>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, pb: tabs ? 0.5 : 2, flexWrap: 'wrap' }}>
-            <Box aria-hidden sx={{ width: 34, height: 34, flexShrink: 0, display: { xs: 'none', sm: 'grid' }, placeItems: 'center', bgcolor: 'primary.main', color: 'primary.contrastText', borderRadius: 0.75, '& svg': { fontSize: 20 } }}>{module.icon}</Box>
-            <Typography variant="h1" sx={{ flex: 1, minWidth: 0 }}>{title}</Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pb: tabs ? 0.5 : 2.5, flexWrap: 'wrap' }}>
+            <Box aria-hidden sx={{ width: qg.icon.size, height: qg.icon.size, flexShrink: 0, display: { xs: 'none', sm: 'grid' }, placeItems: 'center', background: qg.gradient, color: '#FFFFFF', borderRadius: `${qg.icon.radius}px`, '& svg': { fontSize: qg.icon.size * 0.56 }, boxShadow: `0 8px 20px ${qg.glow}` }}>{module.icon}</Box>
+            <Typography variant="h1" sx={{ flex: 1, minWidth: 0, color: qg.header.fg }}>{title}</Typography>
             {tools && <PageTools area={area} title={titleText} record={record} />}
             {actions}
           </Box>
           {tabs && (
-            <Tabs value={tab} onChange={(_, v) => onTab?.(v)} variant="scrollable" sx={{ mt: 0.5, minHeight: 40, '& .MuiTab-root': { minHeight: 40 } }}>
+            <Tabs value={tab} onChange={(_, v) => onTab?.(v)} variant="scrollable" textColor="inherit" sx={{ mt: 0.5, minHeight: 40, '& .MuiTab-root': { minHeight: 40, color: qg.header.muted, opacity: 1 }, '& .MuiTab-root.Mui-selected': { color: 'primary.main' } }}>
               {tabs.map((t) => <Tab key={t.value} value={t.value} label={t.label} />)}
             </Tabs>
           )}
@@ -85,6 +87,7 @@ function SideNav({ items, depth = 0 }: { items: NavItem[]; depth?: number }) {
 
 function SideItem({ item, depth, current }: { item: NavItem; depth: number; current: string }) {
   const [open, setOpen] = useState(true);
+  const qg = useTheme().qg;
   const selected = current === item.path;
   if (item.children) {
     return (
@@ -99,7 +102,7 @@ function SideItem({ item, depth, current }: { item: NavItem; depth: number; curr
   }
   return (
     <ListItemButton component={RouterLink} to={item.path} selected={selected}
-      sx={{ ml: 1, mr: 1, pl: 1 + depth * 2, borderRadius: 0.75, '&.Mui-selected': { bgcolor: 'primary.main', color: 'primary.contrastText', '&:hover': { bgcolor: 'primary.dark' } } }}>
+      sx={{ ml: 1, mr: 1, pl: 1 + depth * 2, borderRadius: '10px', '&.Mui-selected': { background: qg.gradient, color: '#FFFFFF', boxShadow: `0 6px 14px ${qg.glow}`, '&:hover': { background: qg.gradient, filter: 'brightness(1.08)' } } }}>
       <ListItemText primary={item.label} slotProps={{ primary: { fontSize: 13, fontWeight: selected ? 600 : 500 } }} />
     </ListItemButton>
   );
