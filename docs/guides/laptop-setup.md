@@ -1,6 +1,6 @@
 # Run QualGuard IQ on a Windows laptop
 
-These steps put the whole application (web app, API, background worker, database and file storage) on one Windows computer with Docker Desktop. Virus scanning of uploads is optional and only runs on Intel/AMD laptops (see step 6b). Everything runs in containers; nothing is installed into Windows itself.
+These steps put the whole application (web app, API, background worker, database and file storage) on one Windows computer with Docker Desktop. Virus scanning of uploads is optional (see step 6b). Everything runs in containers; nothing is installed into Windows itself.
 
 The steps use `C:\QualGuard-IQ` as the folder. Every command is written with the full folder path, so you can run each one from any PowerShell window.
 
@@ -68,7 +68,7 @@ A PostgreSQL server already installed on the laptop (for example PostgreSQL 18 o
 
      `STORAGE_SERVICE_URL` is the **S3 API** address from the bucket's settings page without `/qms-files` on the end. With `COMPOSE_PROFILES` empty, MinIO is not started at all. The bucket must already exist; the app only checks it and never tries to create it.
 
-6b. Virus scanning (optional). It is off by default: uploads are stored and marked "Not scanned", and administrators see a notice on the Users and Organization pages. ClamAV has no ARM version, so leave it off on ARM laptops (for example Snapdragon). On an Intel or AMD laptop you can turn it on with `MALWARE_SCANNER=ClamAV` and by adding `clamav` to the profiles, for example `COMPOSE_PROFILES=minio,clamav`.
+6b. Virus scanning (optional). It is off by default: uploads are stored and marked "Not scanned", and administrators see a notice on the Users and Organization pages. To turn it on, set `MALWARE_SCANNER=ClamAV` and add `clamav` to the profiles, for example `COMPOSE_PROFILES=minio,clamav` (or `COMPOSE_PROFILES=clamav` with R2). It works on Intel, AMD and ARM laptops (for example Snapdragon) and needs about 3 GB of extra memory. If the scanner stops answering, administrators see a red notice and uploads are refused until it is back.
 
 7. Build and start everything with one command. The first run downloads and builds the images and takes about 10 to 20 minutes. Later starts take under a minute.
 
@@ -142,6 +142,25 @@ What happens on the first start after the update:
 - The existing database, files and key ring are kept. `migrate` signs in with the existing owner login (`POSTGRES_PASSWORD`), applies the update and creates the limited `qgiq_app` login inside the same database. `minio-init` creates the bucket-only `qgiq-app` storage login next to the existing files.
 - Everyone, including you, is signed out once and signs in again with their usual password.
 - Your administrator account is not switched to two-step verification. `ADMIN_REQUIRES_MFA` only applies to new installations; to require it, turn on **Requires two-step verification** for the Administrator role in Admin › Roles.
+
+## Backing up
+
+Make a backup before every update and regularly, for example once a week. Docker Desktop and the app must be running. This command saves the database and the key ring (the keys that unlock two-step verification and saved integration passwords) into a new dated folder in `C:\QualGuard-IQ\backups`:
+
+```powershell
+docker compose -f C:\QualGuard-IQ\docker-compose.yml run --rm backup
+```
+
+It finishes with `Backup written to /backups/qgiq-<date and time>`. To see your backups:
+
+```powershell
+Get-ChildItem C:\QualGuard-IQ\backups
+```
+
+- Copy each new folder somewhere off the laptop, for example OneDrive or a USB drive. A backup that only lives on the laptop is lost with the laptop.
+- Keep the folders private. `keys.tar.gz` unlocks your two-step verification and saved passwords, so treat it like a password.
+- Uploaded files are not in this backup. With Cloudflare R2 they stay safe in R2. With MinIO they are in Docker's `miniodata` volume; see the recovery guide (`docs/guides/recovery-guide.md`) for copying them.
+- To restore, follow the recovery guide.
 
 ## Troubleshooting
 

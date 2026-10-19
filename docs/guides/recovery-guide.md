@@ -10,7 +10,7 @@ that is currently true and lists every gap.
 |---|---|
 | PostgreSQL database (all records, audit trail, signatures, job queue) | `scripts/backup.sh` (pg_dump custom format) |
 | Object storage bucket (attachments, document files) | `scripts/backup.sh` mirrors it when `QGIQ_S3_ALIAS` and `QGIQ_S3_BUCKET` are set (needs `mc`), or use the provider's own replication |
-| Data Protection key ring (sign-in sessions, two-step verification secrets, saved integration secrets) | `scripts/backup.sh` with `QGIQ_KEYS_CONTAINER` (compose: the API container, for example `qualguard-iq-api-1`) or `QGIQ_KEYS_DIR`. Without it, a restored database can't read authenticator keys or stored secrets |
+| Data Protection key ring (sign-in sessions, two-step verification secrets, saved integration secrets) | `scripts/backup.sh` saves it by default: `docker compose run --rm backup` mounts the `dpkeys` volume, and on a host it finds the compose API container (or set `QGIQ_KEYS_CONTAINER` / `QGIQ_KEYS_DIR`). The backup stops if no keys are found, unless `QGIQ_SKIP_KEYS=1`. Without the keys, a restored database can't read authenticator keys or stored secrets |
 | Configuration (`.env`, reverse proxy, certificates, the key ring certificate if `DataProtection:CertificatePath` is used) | Your configuration management or secret store |
 
 ## Taking a backup
