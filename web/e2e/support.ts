@@ -52,6 +52,15 @@ export class Api {
     if (!r.ok()) throw new Error(`upload: ${r.status()} ${await r.text()}`);
     return r.json();
   }
+  /** Starts an import of a file into a module (records mode); returns the import id. */
+  async importFile(siteId: string, name: string, body: string, targetModule: string, mimeType = 'text/csv') {
+    const r = await this.ctx.post('/api/imports', {
+      headers: { 'X-CSRF-TOKEN': this.csrf },
+      multipart: { file: { name, mimeType, buffer: Buffer.from(body) }, siteId, mode: 'records', targetModule },
+    });
+    if (!r.ok()) throw new Error(`import: ${r.status()} ${await r.text()}`);
+    return (await r.json()) as string;
+  }
   /** Signs the pending approval for a record number (as this user). */
   async sign(recordNumber: string, password: string, approve = true, comment: string | null = null) {
     const work = await this.get('/api/my/work');
