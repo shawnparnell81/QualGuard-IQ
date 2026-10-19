@@ -123,7 +123,7 @@ public sealed class SequflohFoundationTests(TestApp app)
         var root = await app.AdminAsync();
         var roleId = await (await root.PostOkAsync("/api/admin/roles", new { name = "Repair bench " + Guid.NewGuid().ToString("N")[..6], description = (string?)null, permissions = new[] { Permissions.DocumentsView } })).Content.ReadFromJsonAsync<Guid>();
         var access = await admin.GetElAsync("/api/sequfloh/module-access");
-        Assert.Equal(40, access.GetProperty("permissions").GetArrayLength());
+        Assert.Equal(41, access.GetProperty("permissions").GetArrayLength());
         Assert.Contains(access.GetProperty("suggestions").EnumerateArray(), s => s.Str("name") == "Technician");
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync($"/api/sequfloh/module-access/roles/{roleId}", new { permissions = new[] { Permissions.DocumentsEdit } })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await admin.PutAsync($"/api/sequfloh/module-access/roles/{roleId}", new { permissions = new[] { Permissions.SequflohStartTask } })).StatusCode);
