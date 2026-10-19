@@ -7,6 +7,7 @@ interface Outcome { jobId: string; status: number; printer?: string; error?: str
 
 test.describe('E2E 19: label printing', () => {
   test('a supervisor sets up printers and routes, a bin label prints, a failed hold label is retried and reprinted with a reason, and labels without a printer download as PDF', async ({ page, browser }) => {
+    test.setTimeout(180_000);
     const api = await Api.as(users.author);
     const { siteId } = state();
     const t = Date.now().toString(36).toUpperCase();
@@ -33,12 +34,25 @@ test.describe('E2E 19: label printing', () => {
     await page.getByRole('tab', { name: 'Printers' }).click();
     for (const [code, address] of [[`ZD-${t}`, 'ok'], [`BAD-${t}`, 'error']]) {
       await button(page, 'Add printer').click();
-      await dialog(page).getByLabel('Code').fill(code);
-      await dialog(page).getByLabel('Name', { exact: true }).fill(`Printer ${code}`);
-      await choose(page, 'Connection', 'Virtual (test)');
-      await dialog(page).getByLabel('Address (host:port or https URL)').fill(address);
-      await dialog(page).getByRole('button', { name: 'Save' }).click();
-      await expect(dialog(page)).toBeHidden();
+      const d = dialog(page);
+      await expect(d.getByRole('heading', { name: 'Add printer' })).toBeVisible();
+      await d.getByLabel('Code').click();
+      await d.getByLabel('Code').fill(code);
+      await d.getByLabel('Name', { exact: true }).click();
+      await d.getByLabel('Name', { exact: true }).fill(`Printer ${code}`);
+      await d.getByRole('combobox', { name: 'Connection' }).click();
+      await page.getByRole('option', { name: 'Virtual (test)' }).click();
+      await expect(page.getByRole('listbox')).toHaveCount(0);
+      await d.getByLabel('Address (host:port or https URL)').click();
+      await d.getByLabel('Address (host:port or https URL)').fill(address);
+      await expect(d.getByLabel('Code')).toHaveValue(code);
+      await expect(d.getByLabel('Name', { exact: true })).toHaveValue(`Printer ${code}`);
+      await expect(d.getByRole('combobox', { name: 'Connection' })).toContainText('Virtual (test)');
+      const saved = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/api/labels/printers') && !r.url().includes('/test') && r.ok());
+      await d.getByRole('button', { name: 'Save' }).click();
+      await saved;
+      await expect(d).toBeHidden();
+      await expect(page.getByTestId('printer-row').filter({ hasText: code })).toBeVisible();
     }
     const zd = page.getByTestId('printer-row').filter({ hasText: `ZD-${t}` });
     await zd.getByRole('button', { name: 'Print test label' }).click();
@@ -53,11 +67,20 @@ test.describe('E2E 19: label printing', () => {
     await page.getByRole('tab', { name: 'Routing' }).click();
     const addRoute = async (label: string, printer: string, location?: string) => {
       await button(page, 'Add route').click();
+      const d = dialog(page);
+      await expect(d.getByRole('heading', { name: /route/i })).toBeVisible();
       await choose(page, 'Label', new RegExp(`^${label}$`));
+      await expect(page.getByRole('listbox')).toHaveCount(0);
       await choose(page, 'Printer', new RegExp(printer));
-      if (location) await choose(page, 'Warehouse, zone or bin (blank = whole site)', new RegExp(location));
-      await dialog(page).getByRole('button', { name: 'Save' }).click();
-      await expect(dialog(page)).toBeHidden();
+      await expect(page.getByRole('listbox')).toHaveCount(0);
+      if (location) {
+        await choose(page, 'Warehouse, zone or bin (blank = whole site)', new RegExp(location));
+        await expect(page.getByRole('listbox')).toHaveCount(0);
+      }
+      const saved = page.waitForResponse((r) => r.request().method() === 'POST' && r.url().includes('/api/labels/routes') && r.ok());
+      await d.getByRole('button', { name: 'Save' }).click();
+      await saved;
+      await expect(d).toBeHidden();
     };
     await addRoute('Bin', `ZD-${t}`, `LWH-${t}$`);
     await addRoute('Hold', `BAD-${t}`);
