@@ -121,7 +121,7 @@ public sealed class ErpValidationService(AppDbContext db, ModuleSupport m, ErpAd
         catch (System.Text.Json.JsonException) { return json; }
     }
 
-    static bool NoHttp(ErpSystem s) => s == ErpSystem.CsvExchange;
+    public static bool NoHttp(ErpSystem s) => s == ErpSystem.CsvExchange;
 
     async Task<string> NameAsync(CancellationToken ct) => await db.Users.Where(u => u.Id == m.UserId).Select(u => u.DisplayName).FirstOrDefaultAsync(ct) ?? "unknown";
 

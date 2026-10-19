@@ -4,6 +4,11 @@ Per-vendor files: [quickbooks](quickbooks.md) · [sage-intacct](sage-intacct.md)
 
 Rule: every claim cites a vendor URL. Anything marked **UNVERIFIED** has to be confirmed against official docs (or the customer's tenant metadata) before an adapter relies on it. Every vendor has a connector and a setup screen that asks for exactly the fields that vendor needs (see `ErpSetupProfiles`).
 
+## Addresses and test results
+- Every address typed into a connection (base URL, token URL, NetSuite RESTlet URL, Entra authority, generic REST URLs) must be an absolute `https://` URL. The check runs when the connection is saved and again on every call, so token and next-page calls are covered too. Plain `http://` is refused, including loopback addresses.
+- For a local development or test setup only, set `Integrations__AllowHttpUrls=true` (appsettings `Integrations:AllowHttpUrls`) to accept plain `http://`. It is off by default and should never be on in production. Which hosts and networks can be reached is decided separately by the outbound network guard.
+- **Test connection** stores and shows only a short status, such as `Signed in OK`, `Authentication failed (401)`, `Could not reach host` or `Timed out reaching host`, plus the connector's own guidance when a setting is missing. Whatever the ERP sends back goes to the server log only, never to the screen, the validation history or the audit trail.
+
 ## Comparison matrix
 | ERP | M2M auth | Main API | Delta sync | Outbound events | Public docs | Sandbox |
 |---|---|---|---|---|---|---|

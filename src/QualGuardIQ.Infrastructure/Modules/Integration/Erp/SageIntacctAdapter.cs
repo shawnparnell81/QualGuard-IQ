@@ -73,14 +73,14 @@ public sealed class SageIntacctAdapter : IErpAdapter
         var (_, body) = await c.Http.SendAsync(() => new HttpRequestMessage(HttpMethod.Post, url) { Content = new StringContent(xml, Encoding.UTF8, "application/xml") }, ct);
         XElement root;
         try { root = XElement.Parse(body); }
-        catch (XmlException) { throw new ErpException("The response was not XML: " + ErpHttp.Trim(body)); }
+        catch (XmlException) { throw new ErpException("The response was not XML: " + ErpHttp.Trim(body)) { Summary = ErpTestStatus.Unreadable }; }
         string Err(XElement? scope) => scope?.Descendants("error").FirstOrDefault() is { } e
             ? $"{e.Element("errorno")?.Value}: {e.Element("description2")?.Value ?? e.Element("description")?.Value}".Trim() : "request failed";
-        if (root.Element("control")?.Element("status")?.Value != "success") throw new ErpException("Sender rejected: " + Err(root));
+        if (root.Element("control")?.Element("status")?.Value != "success") throw new ErpException("Sender rejected: " + Err(root)) { Summary = "Authentication failed (Web Services sender rejected)" };
         var op = root.Element("operation");
-        if (op?.Element("authentication")?.Element("status")?.Value != "success") throw new ErpException("Sign-in rejected: " + Err(op));
+        if (op?.Element("authentication")?.Element("status")?.Value != "success") throw new ErpException("Sign-in rejected: " + Err(op)) { Summary = "Authentication failed (user sign-in rejected)" };
         var result = op.Element("result") ?? throw new ErpException("The response has no result.");
-        if (result.Element("status")?.Value != "success") throw new ErpException(Err(result));
+        if (result.Element("status")?.Value != "success") throw new ErpException(Err(result)) { Summary = ErpTestStatus.Rejected };
         return result.Element("data") ?? new XElement("data");
     }
 
