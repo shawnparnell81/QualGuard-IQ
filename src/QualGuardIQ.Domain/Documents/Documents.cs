@@ -7,7 +7,7 @@ public enum DocumentStatus { Draft = 0, Active = 1, Obsolete = 2 }
 public enum RevisionStatus { Draft = 0, InReview = 1, Approved = 2, Effective = 3, Superseded = 4, Obsolete = 5 }
 
 /// <summary>Controlled document or engineering drawing. Content lives in immutable revisions.</summary>
-public class ControlledDocument : Entity, IAudited, ISiteScoped, IArchivable
+public class ControlledDocument : Entity, IAudited, ISiteScoped, IArchivable, ISoftDeletable
 {
     public DocumentKind Kind { get; set; }
     public string Number { get; set; } = "";

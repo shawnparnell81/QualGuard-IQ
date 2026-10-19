@@ -13,6 +13,7 @@ public sealed class RecordRegistry(IEnumerable<IRecordTypeProvider> providers, I
 
     public bool IsKnownType(string type) => _providers.ContainsKey(type);
     public IReadOnlyCollection<string> KnownTypes => _providers.Keys;
+    public Type? EntityTypeOf(string type) => _providers.TryGetValue(type, out var p) ? p.EntityType : null;
 
     public async Task<RecordInfo> GetAsync(string type, Guid id, CancellationToken ct = default)
     {

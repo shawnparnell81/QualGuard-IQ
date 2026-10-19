@@ -248,6 +248,53 @@ public static class Permissions
     public const string SequflohManageDropdowns = "sequfloh.manage_dropdowns";
     public const string SequflohManageModuleAccess = "sequfloh.manage_module_access";
 
+    // Deleting records. Deletion hides the record (it is never removed) and can be undone by anyone holding the same permission.
+    // Each module has its own delete permission; records that are closed, approved or signed also need RecordsDeleteLocked.
+    public const string DocumentsDelete = "documents.delete";
+    public const string DrawingsDelete = "drawings.delete";
+    public const string FormsDelete = "forms.delete";
+    public const string NcrDelete = "ncr.delete";
+    public const string CapaDelete = "capa.delete";
+    public const string AuditsDelete = "audits.delete";
+    public const string TrainingDelete = "training.delete";
+    public const string CalibrationDelete = "calibration.delete";
+    public const string MasterDataDelete = "masterdata.delete";
+    public const string SuppliersDelete = "suppliers.delete";
+    public const string ComplaintsDelete = "complaints.delete";
+    public const string InspectionDelete = "inspection.delete";
+    public const string ChangesDelete = "changes.delete";
+    public const string MaintenanceDelete = "maintenance.delete";
+    public const string ObjectivesDelete = "objectives.delete";
+    public const string ReviewsDelete = "reviews.delete";
+    public const string RisksDelete = "risks.delete";
+    public const string FaiDelete = "fai.delete";
+    public const string ApqpDelete = "apqp.delete";
+    public const string SpcDelete = "spc.delete";
+    public const string LpaDelete = "lpa.delete";
+    public const string InventoryDelete = "inventory.delete";
+    public const string RecallsDelete = "recalls.delete";
+    public const string ReturnsDelete = "returns.delete";
+    public const string EnterpriseDelete = "enterprise.delete";
+    public const string ComplianceDelete = "compliance.delete";
+    public const string ValidationDelete = "validation.delete";
+    public const string GovernanceDelete = "governance.delete";
+    public const string EngineeringDelete = "engineering.delete";
+    public const string KnowledgeDelete = "knowledge.delete";
+    public const string QualityOpsDelete = "qualityops.delete";
+    public const string SequflohDeleteRecords = "sequfloh.delete_records";
+    /// <summary>Delete records that are closed, approved, effective or signed (on top of the module's delete permission).</summary>
+    public const string RecordsDeleteLocked = "records.delete_locked";
+
+    /// <summary>The delete permission that goes with a module's edit permission, or null when the module has none.</summary>
+    public static string? DeleteFor(string editPermission)
+    {
+        var dot = editPermission.IndexOf('.');
+        if (dot <= 0) return null;
+        var module = editPermission[..dot];
+        var candidate = module == "sequfloh" ? SequflohDeleteRecords : module + ".delete";
+        return All.Contains(candidate) ? candidate : null;
+    }
+
     public static readonly IReadOnlyList<string> All = typeof(Permissions)
         .GetFields(System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static)
         .Where(f => f.IsLiteral && f.FieldType == typeof(string))

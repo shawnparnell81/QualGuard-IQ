@@ -7,7 +7,7 @@ public enum MaintenanceKind { Preventive = 0, Repair = 1, Breakdown = 2, Qualifi
 public enum CalibrationResult { Pass = 0, PassAfterAdjustment = 1, OutOfTolerance = 2, Fail = 3 }
 public enum ImpactStatus { Open = 0, Completed = 1 }
 
-public class Equipment : Entity, IAudited, ISiteScoped
+public class Equipment : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Name { get; set; } = "";

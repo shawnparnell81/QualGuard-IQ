@@ -7,7 +7,7 @@ public enum Criticality { Low = 0, Medium = 1, High = 2, Critical = 3 }
 /// <summary>What happens when a record references a supplier in a restricted state.</summary>
 public enum SupplierRestriction { None = 0, Warn = 1, Block = 2 }
 
-public class Supplier : Entity, IAudited, ISiteScoped
+public class Supplier : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Code { get; set; } = "";
     public string LegalName { get; set; } = "";
@@ -68,7 +68,7 @@ public class SupplierOverride : Entity, IAudited
 public enum ScarStatus { Issued = 0, ResponseReceived = 1, Verification = 2, Closed = 3, Cancelled = 4 }
 
 /// <summary>Supplier corrective action request (SCAR): issued to a supplier, answered by the supplier, reviewed and verified by us.</summary>
-public class SupplierCorrectiveAction : Entity, IAudited, ISiteScoped
+public class SupplierCorrectiveAction : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public Guid SupplierId { get; set; }

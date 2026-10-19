@@ -9,7 +9,7 @@ public enum RequirementStatus { Draft = 0, Approved = 1, Obsolete = 2 }
 public enum VerificationState { NotStarted = 0, InProgress = 1, Passed = 2, Failed = 3 }
 
 /// <summary>A product requirement. Traceability to products, drawings, specifications, tests, validations and releases uses shared record links ("Traces").</summary>
-public class ProductRequirement : Entity, IAudited, ISiteScoped
+public class ProductRequirement : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -43,7 +43,7 @@ public enum DesignReviewKind { Concept = 0, Feasibility = 1, Design = 2, Validat
 public enum DesignReviewStatus { Planned = 0, Held = 1, PendingApproval = 2, Approved = 3, Rejected = 4, Cancelled = 5 }
 
 /// <summary>A design review. Findings are stored here; actions use shared action items; approval uses the shared approval engine.</summary>
-public class DesignReview : Entity, IAudited, ISiteScoped
+public class DesignReview : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -112,7 +112,7 @@ public class BusinessProcessReview : Entity, IAudited
 public enum KnowledgeKind { LessonLearned = 0, BestPractice = 1, RootCause = 2, TroubleshootingGuide = 3, FiveWhy = 4, Fishbone = 5 }
 
 /// <summary>Quality knowledge: lessons, practices, root-cause analyses (5 Why chain, fishbone categories) and guides, optionally captured from a source record.</summary>
-public class KnowledgeArticle : Entity, IAudited, ISiteScoped
+public class KnowledgeArticle : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public KnowledgeKind Kind { get; set; }

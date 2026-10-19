@@ -14,7 +14,7 @@ public enum TrackingStatus { NotStarted = 0, Assigned = 1, InProgress = 2, Pause
 /// created from, with steps, characteristics and parts copied at creation, so later revisions never change history. Timing is persisted: the time spent in
 /// each state is accumulated from stored timestamps at every transition, and a state version guards every change.
 /// </summary>
-public class SequflohTrackingRecord : Entity, IAudited, ISiteScoped
+public class SequflohTrackingRecord : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public TrackingType Type { get; set; }

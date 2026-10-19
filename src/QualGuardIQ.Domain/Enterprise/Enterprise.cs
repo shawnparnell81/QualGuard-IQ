@@ -27,7 +27,7 @@ public enum StandardStatus { Draft = 0, Published = 1, Retired = 2 }
 public enum RolloutStatus { Planned = 0, Adopted = 1, Training = 2, Verified = 3, Waived = 4 }
 
 /// <summary>Corporate standard (a controlled document owned at corporate level) rolled out to plants.</summary>
-public class CorporateStandard : Entity, IAudited, ISiteScoped
+public class CorporateStandard : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -108,7 +108,7 @@ public class EmployeeCertification : Entity, IAudited, ISiteScoped
 
 public enum CurriculumKind { Curriculum = 0, TrainingPath = 1, CertificationProgram = 2, QualificationProgram = 3 }
 
-public class TrainingCurriculum : Entity, IAudited, ISiteScoped, IArchivable
+public class TrainingCurriculum : Entity, IAudited, ISiteScoped, IArchivable, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -131,7 +131,7 @@ public class TrainingCurriculum : Entity, IAudited, ISiteScoped, IArchivable
 // ---------- audit programs ----------
 public enum AuditProgramStatus { Draft = 0, Approved = 1, Closed = 2 }
 
-public class AuditProgram : Entity, IAudited, ISiteScoped
+public class AuditProgram : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -165,7 +165,7 @@ public class AuditPlanItem : Entity, IAudited, ISiteScoped
 public enum ObligationSource { Customer = 0, Regulatory = 1, Industry = 2, Contractual = 3 }
 
 /// <summary>A requirement the organization must meet. Pack clauses become obligations when a pack is enabled; mappings to procedures, forms, records and audits are record links.</summary>
-public class ComplianceObligation : Entity, IAudited, ISiteScoped
+public class ComplianceObligation : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public ObligationSource Source { get; set; }
@@ -238,7 +238,7 @@ public class CompliancePackActivation : Entity, IAudited
 public enum ValidationKind { Process = 0, Equipment = 1, Software = 2, TestMethod = 3, DesignVerification = 4, DesignValidation = 5 }
 public enum ValidationStatus { Planning = 0, ProtocolApproval = 1, Execution = 2, ResultsApproval = 3, Released = 4, Cancelled = 5 }
 
-public class ValidationProject : Entity, IAudited, ISiteScoped
+public class ValidationProject : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -290,7 +290,7 @@ public enum DeliverableStatus { Open = 0, Done = 1, NotApplicable = 2 }
 public enum GateDecision { Go = 0, Conditional = 1, NoGo = 2 }
 
 /// <summary>APQP program / launch / transfer project. Phases 1–6: plan, product design, process design, validation, launch, feedback.</summary>
-public class QualityProject : Entity, IAudited, ISiteScoped
+public class QualityProject : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -342,7 +342,7 @@ public enum PpapStatus { Draft = 0, Submitted = 1, Approved = 2, InterimApproved
 public enum PpapRequirement { None = 0, Submit = 1, Retain = 2, SubmitOnRequest = 3 }
 public enum PpapElementStatus { Missing = 0, Ready = 1, NotApplicable = 2 }
 
-public class PpapSubmission : Entity, IAudited, ISiteScoped
+public class PpapSubmission : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public Guid PartId { get; set; }
@@ -375,7 +375,7 @@ public class PpapElement : Entity, IAudited
     public string AuditLabel => $"PPAP element {Code}";
 }
 
-public class CapabilityStudy : Entity, IAudited, ISiteScoped
+public class CapabilityStudy : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
@@ -474,7 +474,7 @@ public class RetentionDecision : Entity, IAudited, IAppendOnly
 public enum ContinuityKind { BackupVerification = 0, DisasterRecoveryTest = 1, RecoveryAudit = 2, SystemReadinessTest = 3 }
 public enum ContinuityResult { Planned = 0, Passed = 1, PassedWithIssues = 2, Failed = 3 }
 
-public class ContinuityExercise : Entity, IAudited, ISiteScoped
+public class ContinuityExercise : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public ContinuityKind Kind { get; set; }

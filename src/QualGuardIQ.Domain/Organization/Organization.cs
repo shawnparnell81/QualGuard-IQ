@@ -11,6 +11,10 @@ public class OrganizationSettings : Entity, IAudited
     public Guid? LogoAttachmentId { get; set; }
     public string TimeZone { get; set; } = "America/New_York";
     public bool LoginHistoryEnabled { get; set; }
+    /// <summary>How dates are shown across the app unless a person picks their own format ("auto" follows the browser).</summary>
+    public string DateFormat { get; set; } = "auto";
+    /// <summary>Organization-wide switch for email copies of notifications (people can also turn their own off).</summary>
+    public bool EmailNotificationsEnabled { get; set; } = true;
     /// <summary>Supplier restriction policy: what happens when a record references a supplier in this condition.</summary>
     public QualGuardIQ.Domain.MasterData.SupplierRestriction SupplierSuspendedPolicy { get; set; } = QualGuardIQ.Domain.MasterData.SupplierRestriction.Block;
     public QualGuardIQ.Domain.MasterData.SupplierRestriction SupplierDisqualifiedPolicy { get; set; } = QualGuardIQ.Domain.MasterData.SupplierRestriction.Block;

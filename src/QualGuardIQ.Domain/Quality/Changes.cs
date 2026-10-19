@@ -8,7 +8,7 @@ public enum ChangeItemStatus { Open = 0, Completed = 1, Waived = 2 }
 /// <summary>Change request / engineering change. Categories and types are free text so any industry can use it.</summary>
 public enum ChangeClass { ChangeRequest = 0, Engineering = 1, Product = 2, Process = 3, Supplier = 4 }
 
-public class ChangeRequest : Entity, IAudited, ISiteScoped
+public class ChangeRequest : Entity, IAudited, ISiteScoped, ISoftDeletable
 {
     public string Number { get; set; } = "";
     public string Title { get; set; } = "";
