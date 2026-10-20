@@ -1,5 +1,5 @@
-import type { MouseEvent, ReactNode } from 'react';
-import { Box, Link, Typography } from '@mui/material';
+import { forwardRef, useMemo, type HTMLAttributes, type MouseEvent, type ReactNode } from 'react';
+import { Box, GlobalStyles, Link, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useAuth } from '../auth';
@@ -53,16 +53,20 @@ function AddLink({ kind, def, open }: { kind: SetupKind; def: SetupList; open: (
   );
 }
 
+/* The row is appended after the options but shown first: its list becomes a column and the row takes the first place. */
+const topRow = { 'ul:has(> [data-setup-row])': { display: 'flex', flexDirection: 'column' } } as const;
+
 /**
- * Footer row placed inside a picker's option list. It is not an option: it ignores the select's click handler,
- * shows "No parts yet" when the list is empty, and keeps the add shortcut once items exist.
+ * Row placed inside a picker's option list. It is not an option: it ignores the select's click handler,
+ * sits at the top of the list, shows "No parts yet" when the list is empty, and keeps the add shortcut once items exist.
  */
 function SetupRow({ kind, count }: { kind: SetupKind; count: number; value?: string }) {
   const { def, allowed, open } = useSetupLink(kind);
   if (count > 0 && !allowed) return null;
   return (
-    <Box role="presentation" data-testid={`setup-row-${kind}`} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}
-      sx={{ px: 2, py: 1, borderTop: count > 0 ? 1 : 0, borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+    <Box role="presentation" data-setup-row="" data-testid={`setup-row-${kind}`} onClick={(e) => e.stopPropagation()} onKeyDown={(e) => e.stopPropagation()}
+      sx={{ order: -1, px: 2, py: 1, borderBottom: count > 0 ? 1 : 0, borderColor: 'divider', display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+      <GlobalStyles styles={topRow} />
       {count === 0 && <Typography variant="body2" color="text.secondary">No {def.many} yet</Typography>}
       {allowed ? <AddLink kind={kind} def={def} open={open} />
         : <Typography variant="caption" color="text.secondary">Ask an administrator to add {def.many}.</Typography>}
@@ -75,7 +79,17 @@ SetupRow.muiSkipListHighlight = true;
 export const setupOptions = (kind: SetupKind, rows: readonly unknown[] | undefined | null): ReactNode[] =>
   [<SetupRow key={`setup-${kind}`} kind={kind} count={rows?.length ?? 0} value="__setup__" />];
 
-/** Same shortcut as a line under a field, for searchable pickers and anything that is not a plain select. */
+/**
+ * Listbox for searchable pickers that puts the add shortcut at the top of the open list.
+ * Pair it with `noOptionsText={<SetupHint ... count={0} />}` so an empty list shows the note.
+ */
+export function useSetupListbox(kind: SetupKind) {
+  return useMemo(() => forwardRef<HTMLUListElement, HTMLAttributes<HTMLElement> & { ownerState?: unknown }>(function SetupListbox({ children, ownerState: _ownerState, ...props }, ref) {
+    return <ul {...props} ref={ref}><li role="presentation"><SetupRow kind={kind} count={1} /></li>{children}</ul>;
+  }), [kind]);
+}
+
+/** Same shortcut as a line, for searchable pickers and anything that is not a plain select. */
 export function SetupHint({ kind, count, fallback }: { kind: SetupKind; count: number; fallback?: string }) {
   const { def, allowed, open } = useSetupLink(kind);
   if (count > 0 && !allowed) return fallback ? <span>{fallback}</span> : null;

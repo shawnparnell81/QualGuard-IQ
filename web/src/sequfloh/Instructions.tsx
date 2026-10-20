@@ -1,4 +1,4 @@
-import { SetupHint, setupOptions } from '../components/SetupLink';
+import { SetupHint, setupOptions, useSetupListbox } from '../components/SetupLink';
 import { useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Autocomplete, Box, Button, Card, CardActions, CardContent, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Link, List,
@@ -135,11 +135,12 @@ export function PartPicker({ value, label, onChange, disabled, repairable }: { v
   const [text, setText] = useState('');
   const q = useQuery({ queryKey: ['sqf-part-pick', text, repairable], queryFn: () => get<Paged<PartOpt>>(`${S}/parts?${qs({ q: text, status: 'Active', view: repairable ? 'repairable' : '', pageSize: 20, sort: 'partNumber:asc' })}`) });
   const opts: PartOpt[] = q.data?.items ?? [];
+  const listbox = useSetupListbox('sqfPart');
   const current = value ? (opts.find((o) => o.id === value.id) ?? ({ id: value.id, partNumber: value.partNumber, name: value.name ?? '', revision: '', partType: '', status: 'Active' } as PartOpt)) : null;
-  return <Autocomplete size="small" options={opts} value={current} disabled={disabled} loading={q.isLoading} filterOptions={(x) => x}
+  return <Autocomplete size="small" options={opts} value={current} slots={{ listbox }} noOptionsText={text ? 'No matching part' : <SetupHint kind="sqfPart" count={0} />} disabled={disabled} loading={q.isLoading} filterOptions={(x) => x}
     isOptionEqualToValue={(a, b) => a.id === b.id} getOptionLabel={(o) => `${o.partNumber}${o.name ? ' — ' + o.name : ''}`}
     onInputChange={(_, t, reason) => { if (reason === 'input') setText(t); }} onChange={(_, o) => onChange(o)}
-    renderInput={(p) => <TextField {...p} label={label} helperText={q.isLoading ? undefined : <SetupHint kind="sqfPart" count={opts.length || (text ? 1 : 0)} />} />} />;
+    renderInput={(p) => <TextField {...p} label={label} />} />;
 }
 
 export function NewInstructionPage() {
@@ -507,10 +508,11 @@ function CopyPartsButton({ withSave, id }: { withSave: (fn: () => Promise<unknow
   </>;
 }
 function PartsMulti({ value, onChange }: { value: PartOpt[]; onChange: (v: PartOpt[]) => void }) {
+  const listbox = useSetupListbox('sqfPart');
   const [text, setText] = useState('');
   const q = useQuery({ queryKey: ['sqf-part-pick', text, false], queryFn: () => get<Paged<PartOpt>>(`${S}/parts?${qs({ q: text, status: 'Active', pageSize: 20, sort: 'partNumber:asc' })}`) });
-  return <Autocomplete multiple size="small" options={q.data?.items ?? []} value={value} filterOptions={(x) => x} isOptionEqualToValue={(a, b) => a.id === b.id}
-    getOptionLabel={(o) => `${o.partNumber} — ${o.name}`} onInputChange={(_, t, r) => { if (r === 'input') setText(t); }} onChange={(_, v) => onChange(v)} renderInput={(p) => <TextField {...p} label="Parts" helperText={q.isLoading ? undefined : <SetupHint kind="sqfPart" count={(q.data?.items.length ?? 0) || (text ? 1 : 0)} />} />} />;
+  return <Autocomplete multiple size="small" options={q.data?.items ?? []} value={value} slots={{ listbox }} noOptionsText={text ? 'No matching part' : <SetupHint kind="sqfPart" count={0} />} filterOptions={(x) => x} isOptionEqualToValue={(a, b) => a.id === b.id}
+    getOptionLabel={(o) => `${o.partNumber} — ${o.name}`} onInputChange={(_, t, r) => { if (r === 'input') setText(t); }} onChange={(_, v) => onChange(v)} renderInput={(p) => <TextField {...p} label="Parts" />} />;
 }
 
 /** Copy characteristics from another instruction or revision, or import them from an inspection plan (existing application data). */

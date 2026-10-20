@@ -4,6 +4,12 @@ import { Api, shot, signIn, state, unique, users } from './support';
 const capture = (p: Page, name: string) => shot(p, `dropdowns-shots/${name}`);
 const openSelect = (p: Page, label: string) => p.getByLabel(label, { exact: true }).click();
 /** Makes a setup list look empty for this page only, so the empty note can be checked on any database. */
+/** The shortcut row is shown above the first option. */
+async function expectOnTop(p: Page, row: string, option: RegExp) {
+  const r = await p.getByTestId(row).boundingBox();
+  const o = await p.getByRole('option', { name: option }).first().boundingBox();
+  expect(r && o && r.y < o.y).toBeTruthy();
+}
 const emptyList = (p: Page, url: string) => p.route(`**${url}?*`, (r) => r.fulfill({ json: { items: [], total: 0 } }));
 
 test.describe('E2E 53: pickers link to the page where their items are added', () => {
@@ -37,6 +43,7 @@ test.describe('E2E 53: pickers link to the page where their items are added', ()
     await expect(page.getByRole('option', { name: new RegExp(pn) })).toBeVisible();
     await expect(page.getByTestId('setup-row-part')).not.toContainText('No parts yet');
     await expect(page.getByTestId('setup-add-part')).toBeVisible();
+    await expectOnTop(page, 'setup-row-part', new RegExp(pn));
     await capture(page, '02-filled-dropdown-work-order');
     await page.getByRole('option', { name: new RegExp(pn) }).click();
     const part = page.getByRole('combobox', { name: 'Part' });
@@ -83,7 +90,14 @@ test.describe('E2E 53: pickers link to the page where their items are added', ()
     await page.goto('/ncr/new');
     await openSelect(page, 'Site');
     await expect(page.getByTestId('setup-add-site')).toHaveAttribute('href', '/admin/sites');
+    await expectOnTop(page, 'setup-row-site', /Test Plant/);
     await capture(page, '05-filled-dropdown-ncr-site-admin');
+    await page.keyboard.press('Escape');
+    // searchable site picker: the shortcut heads the open list as well
+    await page.goto('/admin/industry-packs');
+    await page.getByTestId('pack-site').click();
+    await expect(page.getByTestId('setup-add-site')).toBeVisible();
+    await expectOnTop(page, 'setup-row-site', /Test Plant/);
   });
 
   test('the entry log offers Record entry to people who may record', async ({ page }) => {
