@@ -53266,6 +53266,10 @@ components:
         hasLogo:
           type: boolean
           default: false
+        timeZone:
+          type:
+            - 'null'
+            - string
     BreakGlassRequest:
       required:
         - enabled
