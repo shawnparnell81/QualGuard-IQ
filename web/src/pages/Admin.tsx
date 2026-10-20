@@ -212,7 +212,13 @@ export function RolesPage() {
           <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
             {groups.map(([g, perms]) => (
               <Paper key={g} sx={{ p: 1.5 }}>
-                <Typography variant="overline">{g}</Typography>
+                {(() => {
+                  const have = perms.filter((p) => edit?.permissions?.includes(p)).length;
+                  return <FormControlLabel sx={{ display: 'flex', borderBottom: 1, borderColor: 'divider', mb: 0.5 }} label={<Typography variant="overline">{g}</Typography>}
+                    control={<Checkbox size="small" checked={have === perms.length} indeterminate={have > 0 && have < perms.length}
+                      inputProps={{ 'aria-label': `Select all ${g} permissions` }} data-testid={`select-all-${g}`}
+                      onChange={(e) => { const rest = (edit!.permissions ?? []).filter((x) => !perms.includes(x)); setEdit({ ...edit!, permissions: e.target.checked ? [...rest, ...perms] : rest }); }} />} />;
+                })()}
                 {perms.map((p) => (
                   <FormControlLabel key={p} sx={{ display: 'flex' }} label={<span style={{ fontFamily: mono, fontSize: 12 }}>{p}</span>}
                     control={<Checkbox size="small" checked={!!edit?.permissions?.includes(p)} onChange={(e) => setEdit({ ...edit!, permissions: e.target.checked ? [...(edit!.permissions ?? []), p] : edit!.permissions!.filter((x) => x !== p) })} />} />

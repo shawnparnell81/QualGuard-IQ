@@ -1,4 +1,4 @@
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { Box, Button, Card, CardActionArea, Chip, Paper, Stack, Typography } from '@mui/material';
 import { alpha, useTheme } from '@mui/material/styles';
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
@@ -26,7 +26,6 @@ export function Home() {
   const cc = useChartColors();
   const qg = useTheme().qg;
   const { me, can } = useAuth();
-  const nav = useNavigate();
   const work = useWork();
   const w = work.data;
   const tiles = [
@@ -90,7 +89,7 @@ export function Home() {
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 2 }}>
         {visibleModules(can).map((m) => (
           <Card key={m.key} variant="outlined">
-            <CardActionArea onClick={() => nav(m.basePath)} sx={{ p: 2.5, height: '100%', display: 'flex', alignItems: 'flex-start', gap: 2, '&:hover .module-tile': { background: qg.icon.hoverBg, color: '#FFFFFF' }, '&:hover .module-name': { color: 'primary.main' } }}>
+            <CardActionArea component={RouterLink} to={m.basePath} sx={{ p: 2.5, height: '100%', display: 'flex', alignItems: 'flex-start', gap: 2, '&:hover .module-tile': { background: qg.icon.hoverBg, color: '#FFFFFF' }, '&:hover .module-name': { color: 'primary.main' } }}>
               <Box className="module-tile" sx={{ flexShrink: 0, width: qg.icon.size, height: qg.icon.size, borderRadius: `${qg.icon.radius}px`, display: 'grid', placeItems: 'center', color: '#FFFFFF', background: qg.gradient, transition: 'background .18s, color .18s', '& svg': { fontSize: qg.icon.size * 0.52 },
                 boxShadow: `0 8px 18px ${qg.glow}, inset 0 1px 0 rgba(255,255,255,0.35)` }}>{m.icon}</Box>
               <Box sx={{ minWidth: 0 }}>
