@@ -99,6 +99,9 @@ function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
   const [menu, setMenu] = useState<{ x: number; y: number; target: string | (() => void) } | null>(null);
   const goingBack = useRef(false);
   const stateRef = useRef(state); stateRef.current = state;
+  // quick successive moves read the newest tabs, not the last rendered ones
+  const commit = useCallback((n: TabState) => { stateRef.current = n; setState(n); }, []);
+  const update = useCallback((fn: (s: TabState) => TabState) => { const n = fn(stateRef.current); if (n !== stateRef.current) commit(n); }, [commit]);
 
   useEffect(() => saveState(key, state), [key, state]);
   const active = state.tabs.find((t) => t.id === state.activeId) ?? state.tabs[0];
@@ -110,21 +113,21 @@ function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
     const back = goingBack.current; goingBack.current = false;
     if (samePage(cur.url, here)) return;
     const hit = s.tabs.find((t) => samePage(t.url, here) && t.id !== cur.id);
-    if (here === '/' || hit && cur.id === HOME_ID) { setState({ ...s, activeId: hit?.id ?? HOME_ID }); return; }
+    if (here === '/' || hit && cur.id === HOME_ID) { commit({ ...s, activeId: hit?.id ?? HOME_ID }); return; }
     if (cur.id === HOME_ID) {
-      if (s.tabs.length >= MAX_TABS) { setNotice(`You can have up to ${MAX_TABS} tabs open. This page opened in your last tab; close a tab to open more.`); const last = s.tabs[s.tabs.length - 1]; setState({ tabs: s.tabs.map((t) => t.id === last.id ? { ...t, url: here, title: undefined, back: [...(t.back ?? []), t.url].slice(-50) } : t), activeId: last.id }); return; }
+      if (s.tabs.length >= MAX_TABS) { setNotice(`You can have up to ${MAX_TABS} tabs open. This page opened in your last tab; close a tab to open more.`); const last = s.tabs[s.tabs.length - 1]; commit({ tabs: s.tabs.map((t) => t.id === last.id ? { ...t, url: here, title: undefined, back: [...(t.back ?? []), t.url].slice(-50) } : t), activeId: last.id }); return; }
       const t: WorkTab = { id: newId(), url: here, back: [] };
-      setState({ tabs: [...s.tabs, t], activeId: t.id }); return;
+      commit({ tabs: [...s.tabs, t], activeId: t.id }); return;
     }
     // browser back to the page before: pop it instead of piling it on
     const stack = cur.back ?? [];
     const popping = back || (stack.length > 0 && samePage(stack[stack.length - 1], here));
     const nextBack = popping ? stack.slice(0, -1) : [...stack, cur.url].slice(-50);
-    setState({ ...s, tabs: s.tabs.map((t) => t.id === cur.id ? { ...t, url: here, title: undefined, back: nextBack } : t) });
+    commit({ ...s, tabs: s.tabs.map((t) => t.id === cur.id ? { ...t, url: here, title: undefined, back: nextBack } : t) });
     setDirty((d) => { if (!d.has(cur.id)) return d; const n = new Set(d); n.delete(cur.id); return n; });
   }, [here]);
 
-  const activate = useCallback((t: WorkTab) => { if (t.id !== stateRef.current.activeId) { setState((s) => ({ ...s, activeId: t.id })); nav(t.url); } }, [nav]);
+  const activate = useCallback((t: WorkTab) => { if (t.id !== stateRef.current.activeId) { commit({ ...stateRef.current, activeId: t.id }); nav(t.url); } }, [nav]);
 
   const openInTab = useCallback((url: string) => {
     const s = stateRef.current;
@@ -133,7 +136,7 @@ function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
     if (s.tabs.length >= MAX_TABS) { setNotice(`You can have up to ${MAX_TABS} tabs open. Close one to open another.`); return; }
     const insertAt = Math.max(s.tabs.findIndex((t) => t.id === s.activeId) + 1, 1);
     const tabs = [...s.tabs]; tabs.splice(insertAt, 0, { id: newId(), url });
-    setState({ ...s, tabs });
+    commit({ ...s, tabs });
   }, []);
   const openHandlerInTab = useCallback((run: () => void) => { const url = captureNavigation(run); if (url) openInTab(url); }, [openInTab]);
 
@@ -143,8 +146,8 @@ function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
     const tabs = s.tabs.filter((t) => t.id !== tab.id);
     setDirty((d) => { const n = new Set(d); n.delete(tab.id); return n; });
     setMounted((m) => { const n = new Set(m); n.delete(tab.id); return n; });
-    if (s.activeId === tab.id) { const next = tabs[Math.min(i, tabs.length - 1)] ?? tabs[0]; setState({ tabs, activeId: next.id }); nav(next.url); }
-    else setState({ ...s, tabs });
+    if (s.activeId === tab.id) { const next = tabs[Math.min(i, tabs.length - 1)] ?? tabs[0]; commit({ tabs, activeId: next.id }); nav(next.url); }
+    else commit({ ...s, tabs });
   }, [nav]);
   const close = useCallback((tab: WorkTab) => { if (tab.id === HOME_ID) return; if (dirty.has(tab.id)) setConfirm(tab); else reallyClose(tab); }, [dirty, reallyClose]);
 
@@ -156,7 +159,7 @@ function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
     nav(prev);
   }, [nav]);
   const goHome = useCallback(() => { activate(stateRef.current.tabs[0]); }, [activate]);
-  const setTitle = useCallback((id: string, title: string) => setState((s) => s.tabs.some((t) => t.id === id && t.title !== title) ? { ...s, tabs: s.tabs.map((t) => t.id === id ? { ...t, title } : t) } : s), []);
+  const setTitle = useCallback((id: string, title: string) => update((s) => s.tabs.some((t) => t.id === id && t.title !== title) ? { ...s, tabs: s.tabs.map((t) => t.id === id ? { ...t, title } : t) } : s), []);
   const showOpenMenu = useCallback((e: React.MouseEvent, target: string | (() => void)) => { e.preventDefault(); setMenu({ x: e.clientX, y: e.clientY, target }); }, []);
 
   // successful saves clear the "unsaved changes" mark of the tab being worked in
@@ -208,7 +211,7 @@ function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
   return (
     <Ctx.Provider value={api}>
       <TabStrip tabs={state.tabs} activeId={state.activeId} dirty={dirty} onActivate={activate} onClose={close}
-        onReorder={(from, to) => setState((s) => { const tabs = [...s.tabs]; const [m] = tabs.splice(from, 1); tabs.splice(Math.max(1, to), 0, m); return { ...s, tabs }; })} />
+        onReorder={(from, to) => update((s) => { const tabs = [...s.tabs]; const [m] = tabs.splice(from, 1); tabs.splice(Math.max(1, to), 0, m); return { ...s, tabs }; })} />
       {state.tabs.filter((t) => mounted.has(t.id) || t.id === state.activeId).map((t) => (
         <TabIdCtx.Provider key={t.id} value={t.id}>
           <Box data-testid={`tab-view-${t.id}`} data-active={t.id === state.activeId} hidden={t.id !== state.activeId} onInput={markDirty(t)} onChange={markDirty(t)}

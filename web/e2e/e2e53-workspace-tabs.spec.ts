@@ -21,11 +21,13 @@ test.describe('E2E 53: tabs inside the application', () => {
     await expect(tabs(page)).toHaveCount(2);
     const box = view(page).getByRole('textbox').first();
     await box.fill('Burr on housing flange');
-    await page.getByTestId('page-home').click();
+    await view(page).getByTestId('page-home').click();
     await expect(page).toHaveURL(/\/$/);
     await go(page, '/capa');
+    await expect(tabFor(page, '/capa')).toHaveCount(1);
     await go(page, '/audits');
-    await page.getByTestId('page-home').click();
+    await expect(tabFor(page, '/audits')).toHaveCount(1);
+    await view(page).getByTestId('page-home').click();
     await go(page, '/calibration/equipment');
     await expect(tabs(page)).toHaveCount(4);
     await capture(page, '01-several-tabs');
@@ -38,14 +40,14 @@ test.describe('E2E 53: tabs inside the application', () => {
 
     // Back belongs to the tab: the CAPA tab went to Audits, the equipment tab has nowhere to go back to
     await tabFor(page, '/audits').click();
-    await expect(page.getByTestId('page-back')).toBeEnabled();
+    await expect(view(page).getByTestId('page-back')).toBeEnabled();
     await tabFor(page, '/calibration/equipment').click();
-    await expect(page.getByTestId('page-back')).toBeDisabled();
+    await expect(view(page).getByTestId('page-back')).toBeDisabled();
     await tabFor(page, '/audits').click();
-    await page.getByTestId('page-back').click();
+    await view(page).getByTestId('page-back').click();
     await expect(page).toHaveURL(/\/capa$/);
     await expect(tabFor(page, '/capa')).toHaveAttribute('aria-selected', 'true');
-    await expect(page.getByTestId('page-back')).toBeDisabled();
+    await expect(view(page).getByTestId('page-back')).toBeDisabled();
     await capture(page, '02-back-and-home');
     // the browser's own back stays in step with the window address
     await page.goBack();
@@ -113,10 +115,10 @@ test.describe('E2E 53: tabs inside the application', () => {
   test('tabs can be switched off in My appearance', async ({ page }) => {
     await signIn(page, users.admin);
     await page.goto('/account/appearance');
-    await page.getByRole('checkbox', { name: 'Use tabs' }).uncheck();
+    await page.getByRole('switch', { name: 'Use tabs' }).uncheck();
     await expect(page.getByTestId('tab-strip')).toHaveCount(0);
     await expect(page.getByTestId('page-back')).toBeVisible();
-    await page.getByRole('checkbox', { name: 'Use tabs' }).check();
+    await page.getByRole('switch', { name: 'Use tabs' }).check();
     await expect(page.getByTestId('tab-strip')).toBeVisible();
   });
 });
