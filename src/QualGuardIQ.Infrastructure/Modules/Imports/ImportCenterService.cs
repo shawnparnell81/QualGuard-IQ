@@ -67,7 +67,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         [ImportJobStatus.SecurityScanPending] = [ImportJobStatus.SecurityScanFailed, ImportJobStatus.Inspecting, ImportJobStatus.Canceled],
         [ImportJobStatus.SecurityScanFailed] = [ImportJobStatus.Archived],
         [ImportJobStatus.Inspecting] = [ImportJobStatus.Parsing, ImportJobStatus.Failed, ImportJobStatus.Canceled],
-        [ImportJobStatus.Parsing] = [ImportJobStatus.MappingRequired, ImportJobStatus.PreviewReady, ImportJobStatus.Failed, ImportJobStatus.Canceled],
+        [ImportJobStatus.Parsing] = [ImportJobStatus.MappingRequired, ImportJobStatus.PreviewReady, ImportJobStatus.ValidationFailed, ImportJobStatus.Failed, ImportJobStatus.Canceled],
         [ImportJobStatus.MappingRequired] = [ImportJobStatus.Parsing, ImportJobStatus.PreviewReady, ImportJobStatus.ValidationFailed, ImportJobStatus.MappingRequired, ImportJobStatus.Canceled],
         [ImportJobStatus.PreviewReady] = [ImportJobStatus.MappingRequired, ImportJobStatus.Parsing, ImportJobStatus.PreviewReady, ImportJobStatus.ValidationFailed, ImportJobStatus.AwaitingApproval, ImportJobStatus.Canceled],
         [ImportJobStatus.ValidationFailed] = [ImportJobStatus.MappingRequired, ImportJobStatus.Parsing, ImportJobStatus.PreviewReady, ImportJobStatus.ValidationFailed, ImportJobStatus.AwaitingApproval, ImportJobStatus.Canceled],
@@ -695,6 +695,7 @@ public sealed partial class ImportCenterService(AppDbContext db, IAccessService 
         var job = await LoadAsync(id, Permissions.ImportsEdit, ct);
         if (job.Status == ImportJobStatus.ValidationFailed && !skipInvalidRows) throw new AppException("Some rows have problems. Fix them, or choose to import only the rows without problems.");
         if (job.Status is not (ImportJobStatus.PreviewReady or ImportJobStatus.ValidationFailed)) throw new ConflictException("Validate the import before submitting it.");
+        if (job.ImportMode == "template" && IsWorkbook(job) && ConvertedDefinition(job) is null) throw new AppException("The workbook has not been converted yet. Choose the worksheets to convert first.");
         CheckConversionReview(job);
         job.Settings = SetFlag(job.Settings, "skipInvalidRows", skipInvalidRows);
         Transition(job, ImportJobStatus.AwaitingApproval, skipInvalidRows ? "Rows with problems will be skipped." : null);

@@ -83,3 +83,13 @@ export function receivingInspectionWorkbook(): Buffer {
   for (let r = 8; r <= 10; r++) { cells[`D${r}`] = { f: `IF(C${r}="","",C${r}-B${r})` }; for (const c of 'ABCD') st[`${c}${r}`] = 4; }
   return workbook([{ name: 'Receiving inspection', cells, styles: st, merges: ['A1:E1'], widths: { 1: 18, 2: 14, 3: 14, 4: 14, 5: 12 }, lists: [{ ref: 'B5', values: ['Accept', 'Reject', 'Hold'] }] }]);
 }
+
+/** A long questionnaire spread over several worksheets: together more fields than one form may hold, each worksheet on its own well within it. */
+export function longQuestionnaireWorkbook(sheetCount = 7, rowsPerSheet = 100): Buffer {
+  return workbook(Array.from({ length: sheetCount }, (_, s) => {
+    const cells: Record<string, Cell> = { A1: `SECTION ${s + 1}` };
+    const st: Record<string, number> = { A1: 1 };
+    for (let r = 3; r < 3 + rowsPerSheet; r++) { cells[`A${r}`] = `Question ${s + 1}.${r - 2}:`; st[`B${r}`] = 2; }
+    return { name: `Section ${s + 1}`, cells, styles: st, widths: { 1: 24, 2: 30 } };
+  }));
+}
