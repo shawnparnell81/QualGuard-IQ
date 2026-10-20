@@ -57,7 +57,11 @@ const moduleFor = (url: string) => {
   return best;
 };
 const iconFor = (t: WorkTab) => t.id === HOME_ID ? <HomeOutlined sx={{ fontSize: 16 }} /> : moduleFor(t.url)?.icon ?? <ArticleOutlined sx={{ fontSize: 16 }} />;
-const labelFor = (t: WorkTab) => t.title || titleFromUrl(t.url);
+const navLabels = new Map<string, string>();
+const collect = (items: { label: string; path: string; children?: { label: string; path: string }[] }[]) => items.forEach((i) => { if (!navLabels.has(i.path)) navLabels.set(i.path, i.label); if (i.children) collect(i.children); });
+modules.forEach((m) => { navLabels.set(m.basePath, m.label); collect(m.sidebar); });
+/** The page's own heading once shown; until then the menu name of the address, else one made from the address. */
+const labelFor = (t: WorkTab) => t.title || navLabels.get(t.url.split(/[?#]/)[0]) || titleFromUrl(t.url);
 const toLocation = (url: string, key: string): Location => {
   const u = new URL(url, 'http://x');
   return { pathname: u.pathname, search: u.search, hash: u.hash, state: null, key };
@@ -281,7 +285,7 @@ function TabStrip({ tabs, activeId, dirty, onActivate, onClose, onReorder }: {
         <MenuItem key={t.id} selected={t.id === activeId} onClick={() => { setListEl(null); onActivate(t); }} sx={{ gap: 1 }}>
           <ListItemIcon sx={{ minWidth: 0, color: 'primary.main' }}>{iconFor(t)}</ListItemIcon>
           <ListItemText primaryTypographyProps={{ noWrap: true, fontSize: 13, maxWidth: 260 }}>{labelFor(t)}{dirty.has(t.id) ? ' •' : ''}</ListItemText>
-          {t.id !== HOME_ID && <IconButton size="small" aria-label={`Close ${labelFor(t)}`} onClick={(e) => { e.stopPropagation(); onClose(t); }}><Close sx={{ fontSize: 14 }} /></IconButton>}
+          {t.id !== HOME_ID && <IconButton size="small" aria-label={`Remove ${labelFor(t)} tab`} onClick={(e) => { e.stopPropagation(); onClose(t); }}><Close sx={{ fontSize: 14 }} /></IconButton>}
         </MenuItem>
       ))}
       <Typography variant="caption" color="text.secondary" sx={{ display: 'block', px: 2, pt: 1 }}>{tabs.length} of {MAX_TABS} tabs</Typography>
@@ -298,20 +302,20 @@ function TabStrip({ tabs, activeId, dirty, onActivate, onClose, onReorder }: {
         <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1, textAlign: 'left' }}>{labelFor(active)}</Box>
         <Box component="span" sx={{ ml: 1, px: 0.75, borderRadius: 999, fontSize: 11, fontWeight: 700, color: '#fff', background: 'linear-gradient(90deg, #1257C4, #0E8550)' }}>{tabs.length}</Box>
       </Button>
-      {active.id !== HOME_ID && <IconButton aria-label="Close tab" onClick={() => onClose(active)}><Close fontSize="small" /></IconButton>}
+      {active.id !== HOME_ID && <IconButton aria-label="Remove tab" onClick={() => onClose(active)}><Close fontSize="small" /></IconButton>}
       {list}
     </Box>
   );
 
   return (
-    <Box data-tab-strip data-testid="tab-strip" role="tablist" aria-label="Open tabs" sx={shell}>
+    <Box component="nav" data-tab-strip data-testid="tab-strip" aria-label="Open tabs" sx={shell}>
       <Box ref={scroller} sx={{ display: 'flex', alignItems: 'flex-end', gap: 0.5, overflowX: 'auto', overflowY: 'hidden', flex: 1, minWidth: 0, scrollbarWidth: 'none', '&::-webkit-scrollbar': { display: 'none' } }}>
         {tabs.map((t, i) => {
           const on = t.id === activeId, pinned = t.id === HOME_ID;
           return (
-            <Box key={t.id} role="tab" aria-selected={on} data-active={on} data-testid={`tab-${pinned ? 'home' : i}`} data-tab-url={t.url} tabIndex={0}
+            <Box key={t.id} aria-current={on ? 'page' : undefined} aria-selected={on} data-active={on} data-testid={`tab-${pinned ? 'home' : i}`} data-tab-url={t.url} tabIndex={0}
               title={labelFor(t)} draggable={!pinned}
-              onClick={() => onActivate(t)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivate(t); } }}
+              onClick={() => onActivate(t)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onActivate(t); } else if (e.key === 'Delete') { e.preventDefault(); onClose(t); } }}
               onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); onClose(t); } }} onMouseDown={(e) => { if (e.button === 1) e.preventDefault(); }}
               onDragStart={(e) => { setDrag(i); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', String(i)); }}
               onDragOver={(e) => { if (drag != null) e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); if (drag != null && drag !== i) onReorder(drag, i); setDrag(null); }} onDragEnd={() => setDrag(null)}
@@ -326,10 +330,10 @@ function TabStrip({ tabs, activeId, dirty, onActivate, onClose, onReorder }: {
               {!pinned && <Box component="span" sx={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{labelFor(t)}</Box>}
               {pinned && <Box component="span" sx={{ display: { xs: 'none', md: 'inline' } }}>Home</Box>}
               {!pinned && (dirty.has(t.id)
-                ? <Tooltip title="Unsaved changes — click to close"><Box component="button" aria-label={`Close ${labelFor(t)}`} data-testid="tab-close" onClick={(e) => { e.stopPropagation(); onClose(t); }}
+                ? <Tooltip title="Unsaved changes — click to close"><Box component="span" aria-hidden data-testid="tab-close" onClick={(e) => { e.stopPropagation(); onClose(t); }}
                     sx={{ width: 20, height: 20, border: 0, borderRadius: 999, bgcolor: 'transparent', cursor: 'pointer', display: 'grid', placeItems: 'center', '& .dot': { width: 8, height: 8, borderRadius: 999, bgcolor: '#0E8550' }, '& svg': { display: 'none' }, '&:hover .dot': { display: 'none' }, '&:hover svg': { display: 'block' } }}>
                     <span className="dot" /><Close sx={{ fontSize: 14 }} /></Box></Tooltip>
-                : <Box component="button" aria-label={`Close ${labelFor(t)}`} data-testid="tab-close" onClick={(e) => { e.stopPropagation(); onClose(t); }}
+                : <Box component="span" aria-hidden data-testid="tab-close" onClick={(e) => { e.stopPropagation(); onClose(t); }}
                     sx={{ width: 20, height: 20, border: 0, borderRadius: 999, bgcolor: 'transparent', color: 'inherit', cursor: 'pointer', display: 'grid', placeItems: 'center', opacity: on ? 0.8 : 0.5, '&:hover': { opacity: 1, bgcolor: qg.glass.field } }}>
                     <Close sx={{ fontSize: 14 }} /></Box>)}
             </Box>

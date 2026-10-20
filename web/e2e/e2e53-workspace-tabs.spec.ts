@@ -2,19 +2,19 @@ import { test, expect, type Page } from '@playwright/test';
 import { shot, signIn, users } from './support';
 
 /** Screenshots for review go in tabs-shots when E2E_SCREENSHOT_DIR is set. */
-const capture = (p: Page, name: string, fullPage = false) => shot(p, `tabs-shots/${name}`, { fullPage });
+const capture = async (p: Page, name: string, fullPage = false) => { await p.waitForTimeout(500); await shot(p, `tabs-shots/${name}`, { fullPage }); };
 const view = (p: Page) => p.locator('[data-testid^="tab-view-"][data-active="true"]');
 const strip = (p: Page) => p.getByTestId('tab-strip');
-const tabs = (p: Page) => strip(p).getByRole('tab');
+const tabs = (p: Page) => strip(p).locator('[data-tab-url]');
 /** Moves within the application the way a link does (no page reload). */
 const go = (p: Page, url: string) => p.evaluate((u) => { history.pushState({}, '', u); dispatchEvent(new PopStateEvent('popstate')); }, url);
-const tabFor = (p: Page, path: string) => strip(p).locator(`[role="tab"][data-tab-url="${path}"]`);
+const tabFor = (p: Page, path: string) => strip(p).locator(`[data-tab-url="${path}"]`);
 
 test.describe('E2E 53: tabs inside the application', () => {
   test('several tabs keep their typing, Back follows each tab, unsaved tabs ask before closing, tabs come back after a reload', async ({ page }) => {
     await signIn(page, users.admin);
     await expect(tabs(page)).toHaveCount(1);
-    await expect(page.getByTestId('tab-home')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('tab-home')).toHaveAttribute('data-active', 'true');
 
     // from Home every page opens in its own tab
     await go(page, '/ncr/new');
@@ -46,7 +46,7 @@ test.describe('E2E 53: tabs inside the application', () => {
     await tabFor(page, '/audits').click();
     await view(page).getByTestId('page-back').click();
     await expect(page).toHaveURL(/\/capa$/);
-    await expect(tabFor(page, '/capa')).toHaveAttribute('aria-selected', 'true');
+    await expect(tabFor(page, '/capa')).toHaveAttribute('data-active', 'true');
     await expect(view(page).getByTestId('page-back')).toBeDisabled();
     await capture(page, '02-back-and-home');
     // the browser's own back stays in step with the window address
