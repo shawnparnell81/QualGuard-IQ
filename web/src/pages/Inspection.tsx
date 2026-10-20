@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, Chip, IconButton, Link, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Tooltip, Typography } from '@mui/material';
@@ -98,8 +99,8 @@ export function PlanNew() {
           <TextField size="small" label="Inspection type" value={h.inspectionType} onChange={(e) => setH({ ...h, inspectionType: e.target.value })} helperText="Pick or type a custom type"
             slotProps={{ htmlInput: { list: 'insp-types' } }} />
           <datalist id="insp-types">{(types.data ?? []).map((t) => <option key={t} value={t} />)}</datalist>
-          <TextField size="small" select label="Site" value={h.siteId} onChange={(e) => setH({ ...h, siteId: e.target.value })}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>
-          <TextField size="small" select label="Part" value={h.partId} onChange={(e) => setH({ ...h, partId: e.target.value })}><MenuItem value="">None</MenuItem>{(parts.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>)}</TextField>
+          <TextField size="small" select label="Site" value={h.siteId} onChange={(e) => setH({ ...h, siteId: e.target.value })}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>
+          <TextField size="small" select label="Part" value={h.partId} onChange={(e) => setH({ ...h, partId: e.target.value })}><MenuItem value="">None</MenuItem>{(parts.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>)}{setupOptions('part', parts.data)}</TextField>
           {f('partRevision', 'Part revision (defaults to current)')}
           {f('samplingPlan', 'Sampling plan (e.g. Z1.4 GII AQL 1.0)')}
         </Box>
@@ -207,7 +208,7 @@ function StartInspectionDialog({ open, planId, onClose }: { open: boolean; planI
   const nav = useNavigate();
   const suppliers = useLookup('supplier', open);
   return <StepDialog open={open} title="Start inspection" intro="The inspection uses the effective plan revision and stays tied to it. Restricted suppliers need an override reason and permission." confirm="Start" onClose={onClose}
-    inputs={[{ name: 'supplierId', label: 'Supplier (receiving)', type: 'select', initial: '', options: [['', '— none —'], ...(suppliers.data ?? []).map((s) => [s.id, lookupLabel(s)] as [string, string])] },
+    inputs={[{ name: 'supplierId', label: 'Supplier (receiving)', type: 'select', setup: 'supplier', initial: '', options: [['', '— none —'], ...(suppliers.data ?? []).map((s) => [s.id, lookupLabel(s)] as [string, string])] },
       { name: 'purchaseOrder', label: 'Purchase order' }, { name: 'workOrder', label: 'Work order' }, { name: 'lotNumber', label: 'Lot' }, { name: 'batchNumber', label: 'Batch' }, { name: 'serialNumber', label: 'Serial number' },
       { name: 'quantityReceived', label: 'Quantity received' }, { name: 'sampleSize', label: 'Sample size' }, { name: 'inspectedOn', label: 'Inspection date', type: 'date', initial: localDate() },
       { name: 'supplierOverrideReason', label: 'Override reason (only if the supplier is restricted)', type: 'multiline' }]}
@@ -308,7 +309,7 @@ export function InspectionDetail() {
                     : r ? <Stack direction="row" gap={1} alignItems="center"><Chip size="small" label={r.pass ? 'Pass' : 'Fail'} color={r.pass ? 'success' : 'error'} />{c.kind === 0 ? <span style={{ fontFamily: mono, fontSize: 13 }}>{r.values?.split(';').join('  ')}</span> : `${r.defects} defect(s)`}</Stack> : '—'}
                     {editing && r && <Chip size="small" sx={{ mt: 0.5 }} label={r.pass ? 'Saved · pass' : 'Saved · fail'} color={r.pass ? 'success' : 'error'} variant="outlined" />}</TableCell>
                   <TableCell sx={{ minWidth: 170 }}>{editing ? <TextField size="small" variant="standard" select fullWidth value={e.equipmentId} onChange={(ev) => setE({ equipmentId: ev.target.value })} slotProps={{ htmlInput: { 'aria-label': `${c.name} equipment` } }}>
-                      <MenuItem value="">{c.requiresEquipment ? '— choose —' : 'None'}</MenuItem>{(equipment.data ?? []).map((q2) => <MenuItem key={q2.id} value={q2.id}>{q2.number} {q2.name}</MenuItem>)}</TextField>
+                      <MenuItem value="">{c.requiresEquipment ? '— choose —' : 'None'}</MenuItem>{(equipment.data ?? []).map((q2) => <MenuItem key={q2.id} value={q2.id}>{q2.number} {q2.name}</MenuItem>)}{setupOptions('equipment', equipment.data)}</TextField>
                     : r?.equipmentNumber ? <Tooltip title={`Calibration due ${fmtDate(r.equipmentCalibrationDueOn)}`}><span style={{ fontFamily: mono }}>{r.equipmentNumber}</span></Tooltip> : '—'}</TableCell>
                   <TableCell>{editing ? <TextField size="small" variant="standard" value={e.notes} onChange={(ev) => setE({ notes: ev.target.value })} slotProps={{ htmlInput: { 'aria-label': `${c.name} notes` } }} /> : r?.notes ?? ''}</TableCell>
                 </TableRow>;

@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Alert, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, MenuItem, Paper, Stack, Tab, Table, TableBody, TableCell, TableHead, TableRow, Tabs, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,7 +9,7 @@ import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { Section, lookupLabel, useLookup } from '../components/Kit';
 import { SitePicker } from '../components/SitePicker';
-import { fmtDate, fmtDateTime } from '../components/Status';
+import { fmtDate, fmtDateTime, localDate } from '../components/Status';
 import { mono } from '../theme';
 import { useCarriers } from '../warehouse/common';
 
@@ -83,7 +84,7 @@ function NewTemplateDialog({ onClose, onCreated }: { onClose: () => void; onCrea
 
 function ManifestPanel() {
   const carriers = useCarriers();
-  const [v, setV] = useState({ siteId: '', carrierId: '', date: new Date().toLocaleDateString('en-CA') });
+  const [v, setV] = useState({ siteId: '', carrierId: '', date: localDate() });
   const issued = useQuery({ queryKey: ['manifests', v.siteId], enabled: !!v.siteId, queryFn: () => get<GeneratedRow[]>(`/api/shipping/generated-documents?siteId=${v.siteId}&kind=2`) });
   const [err, setErr] = useState<string | null>(null);
   const qc = useQueryClient();
@@ -101,7 +102,7 @@ function ManifestPanel() {
         {err && <Alert severity="error">{err}</Alert>}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr auto' }, gap: 1.5, alignItems: 'start' }}>
           <SitePicker permission="shipping.view" value={v.siteId} onChange={(id) => setV({ ...v, siteId: id ?? '' })} label="Site" required />
-          <TextField select size="small" label="Carrier" value={v.carrierId} onChange={(e) => setV({ ...v, carrierId: e.target.value })}>{(carriers.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}</TextField>
+          <TextField select size="small" label="Carrier" value={v.carrierId} onChange={(e) => setV({ ...v, carrierId: e.target.value })}>{(carriers.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}{setupOptions('carrier', carriers.data)}</TextField>
           <TextField size="small" type="date" label="Ship date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
           <Button variant="contained" disabled={!v.siteId || !v.carrierId || !v.date} onClick={generate}>Generate manifest</Button>
         </Box>
@@ -194,8 +195,8 @@ function RevisionPanel({ t, r, run }: { t: TemplateRow; r: RevisionRow; run: (f:
       <Stack gap={2}>
         {draft && <Typography variant="body2" color="text.secondary">Save the draft before previewing. Placeholders: {(cat.data?.placeholders ?? []).map((p) => `{${p}}`).join(' ')}</Typography>}
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
-          {t.kind !== 2 && <TextField select size="small" label="Customer" disabled={!draft} value={rule.customerId} onChange={(e) => setRule({ ...rule, customerId: e.target.value })}><MenuItem value="">Any customer</MenuItem>{r.customerId && !(customers.data ?? []).some((c) => c.id === r.customerId) && <MenuItem value={r.customerId}>{r.customer}</MenuItem>}{(customers.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{lookupLabel(c)}</MenuItem>)}</TextField>}
-          <TextField select size="small" label="Carrier" disabled={!draft} value={rule.carrierId} onChange={(e) => setRule({ ...rule, carrierId: e.target.value })}><MenuItem value="">Any carrier</MenuItem>{r.carrierId && !(carriers.data ?? []).some((c) => c.id === r.carrierId) && <MenuItem value={r.carrierId}>{r.carrier}</MenuItem>}{(carriers.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}</TextField>
+          {t.kind !== 2 && <TextField select size="small" label="Customer" disabled={!draft} value={rule.customerId} onChange={(e) => setRule({ ...rule, customerId: e.target.value })}><MenuItem value="">Any customer</MenuItem>{r.customerId && !(customers.data ?? []).some((c) => c.id === r.customerId) && <MenuItem value={r.customerId}>{r.customer}</MenuItem>}{(customers.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{lookupLabel(c)}</MenuItem>)}{setupOptions('customer', customers.data)}</TextField>}
+          <TextField select size="small" label="Carrier" disabled={!draft} value={rule.carrierId} onChange={(e) => setRule({ ...rule, carrierId: e.target.value })}><MenuItem value="">Any carrier</MenuItem>{r.carrierId && !(carriers.data ?? []).some((c) => c.id === r.carrierId) && <MenuItem value={r.carrierId}>{r.carrier}</MenuItem>}{(carriers.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}{setupOptions('carrier', carriers.data)}</TextField>
           <TextField size="small" type="number" label="Priority" disabled={!draft} value={rule.priority} onChange={(e) => setRule({ ...rule, priority: e.target.value })} helperText="1 is tried first" />
           <TextField size="small" type="date" label="Effective from" disabled={!draft} value={rule.effectiveFrom} onChange={(e) => setRule({ ...rule, effectiveFrom: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} helperText="Empty = on approval" />
         </Box>

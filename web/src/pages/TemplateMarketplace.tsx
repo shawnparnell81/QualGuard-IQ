@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useMemo, useRef, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { Alert, Box, Button, Card, CardActions, CardContent, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, LinearProgress, Link, List, ListItemButton, ListItemText, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
@@ -189,6 +190,7 @@ function InstallDialog({ target, onClose, onDone }: { target: { key: string; nam
         <Typography variant="body2" sx={{ mb: 2 }}>{target.count} template{target.count === 1 ? '' : 's'} will be created as draft form templates owned by you. Templates already installed are skipped.</Typography>
         <TextField select fullWidth label="Site" value={site} onChange={(e) => setSiteId(e.target.value)}>
           {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}
+          {setupOptions('site', sites.data)}
         </TextField>
         {busy && <LinearProgress sx={{ mt: 2 }} />}
       </DialogContent>

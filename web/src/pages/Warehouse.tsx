@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
@@ -29,7 +30,7 @@ export function SitePicker({ value, onChange, label = 'Site', allowAll }: { valu
   const sites = useSites();
   return <TextField select size="small" label={label} value={value} onChange={(e) => onChange(e.target.value)} sx={{ minWidth: 200 }}>
     {allowAll && <MenuItem value="">All sites</MenuItem>}
-    {(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
+    {(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>;
 }
 
 export function MirrorBanner({ siteId }: { siteId?: string }) {
@@ -297,7 +298,7 @@ const emptyLine: DraftLine = { partId: '', revision: '', poLineId: '', qty: '', 
 
 function SiteField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const sites = useSites();
-  return <TextField select label="Site" value={value} onChange={(e) => onChange(e.target.value)}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
+  return <TextField select label="Site" value={value} onChange={(e) => onChange(e.target.value)}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>;
 }
 
 export function ReceiptNew() {
@@ -334,20 +335,20 @@ export function ReceiptNew() {
       <Paper sx={{ p: 2.5, mb: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
         <TextField select label="Receipt type" value={h.kind} onChange={set('kind')} helperText={blindOk ? undefined : 'Blind receipts need the blind receiving permission.'}>{receiptKinds.map((k, i) => <MenuItem key={k} value={String(i)} disabled={i === 3 && !blindOk}>{k}</MenuItem>)}</TextField>
         <TextField select label="Purchase order" value={h.purchaseOrderId} onChange={set('purchaseOrderId')}><MenuItem value="">None</MenuItem>{(pos.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.number}</MenuItem>)}</TextField>
-        <TextField select label="Supplier" value={h.supplierId || po.data?.purchaseOrder.supplierId || ''} onChange={set('supplierId')}><MenuItem value="">None (blind)</MenuItem>{(sups.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{lookupLabel(s)}</MenuItem>)}</TextField>
+        <TextField select label="Supplier" value={h.supplierId || po.data?.purchaseOrder.supplierId || ''} onChange={set('supplierId')}><MenuItem value="">None (blind)</MenuItem>{(sups.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{lookupLabel(s)}</MenuItem>)}{setupOptions('supplier', sups.data)}</TextField>
         <TextField label="Received on" type="date" value={h.receivedOn} onChange={set('receivedOn')} slotProps={{ inputLabel: { shrink: true } }} />
         <SiteField value={siteId} onChange={(v) => setH({ ...h, siteId: v })} />
         <LocationSelect label="Receiving dock" value={h.receivingLocationId} onChange={(v) => setH({ ...h, receivingLocationId: v })} siteId={siteId || undefined} purposes={[1, 2]} />
         <TextField label="ASN number" value={h.asnNumber} onChange={set('asnNumber')} />
         <TextField label="Packing slip" value={h.packingSlip} onChange={set('packingSlip')} />
-        <TextField select label="Carrier" value={h.carrierId} onChange={set('carrierId')}><MenuItem value="">None</MenuItem>{(carriers.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}</TextField>
+        <TextField select label="Carrier" value={h.carrierId} onChange={set('carrierId')}><MenuItem value="">None</MenuItem>{(carriers.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}{setupOptions('carrier', carriers.data)}</TextField>
         <TextField label="Tracking / PRO number" value={h.trackingNumber} onChange={set('trackingNumber')} />
         <TextField label="Notes" value={h.notes} onChange={set('notes')} sx={{ gridColumn: { md: 'span 2' } }} />
       </Paper>
       <Section title="Lines" action={<Stack direction="row" gap={1}>{po.data && <Button onClick={fromPo}>Fill from PO {po.data.purchaseOrder.number}</Button>}<Button onClick={() => setLines([...lines, { ...emptyLine }])}>Add line</Button></Stack>}>
         <Stack gap={1.5}>{lines.map((l, i) => (
           <Box key={i} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: '2fr 70px 90px 1fr 1fr 1.3fr 110px 1.3fr 40px' }, gap: 1, alignItems: 'center' }}>
-            <TextField select size="small" label="Part" value={l.partId} onChange={(e) => setLine(i, 'partId', e.target.value)}>{(parts.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{lookupLabel(x)}</MenuItem>)}</TextField>
+            <TextField select size="small" label="Part" value={l.partId} onChange={(e) => setLine(i, 'partId', e.target.value)}>{(parts.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{lookupLabel(x)}</MenuItem>)}{setupOptions('part', parts.data)}</TextField>
             <TextField size="small" label="Rev" value={l.revision} onChange={(e) => setLine(i, 'revision', e.target.value)} />
             <TextField size="small" label="Qty" type="number" value={l.qty} onChange={(e) => setLine(i, 'qty', e.target.value)} />
             <TextField size="small" label="Supplier lot / heat" value={l.supplierLot} onChange={(e) => setLine(i, 'supplierLot', e.target.value)} />
@@ -446,8 +447,8 @@ export function HoldList() {
         columns={[{ header: 'Hold', accessorKey: 'number', cell: mnum }, { header: 'Kind', accessorFn: (r) => holdKinds[r.kind] }, { header: 'Part', accessorFn: (r) => { const x = parts.data?.find((q) => q.id === r.partId); return x ? lookupLabel(x) : r.lotId ? 'Lot scope' : 'Location scope'; } },
           { header: 'Reason', accessorKey: 'reason' }, { header: 'Status', accessorFn: (r) => holdStatus[r.status], cell: (x) => <StatusChip status={x.getValue()} /> }]} />
       <StepDialog open={open} title="Place an inventory hold" confirm="Place hold" onClose={() => setOpen(false)} intro="Held stock cannot be moved, issued or shipped until the release is approved."
-        inputs={[{ name: 'kind', label: 'Kind', type: 'select', initial: '0', options: holdKinds.map((k, i) => [i, k]) }, { name: 'partId', label: 'Part', type: 'select', options: (parts.data ?? []).map((x) => [x.id, lookupLabel(x)]) },
-          { name: 'lot', label: 'Lot number (optional; blank holds every lot of the part)' }, { name: 'siteId', label: 'Site', type: 'select', initial: sites.data?.[0]?.id, options: (sites.data ?? []).map((s) => [s.id, s.name]) }, { name: 'reason', label: 'Reason', type: 'multiline' }]}
+        inputs={[{ name: 'kind', label: 'Kind', type: 'select', initial: '0', options: holdKinds.map((k, i) => [i, k]) }, { name: 'partId', label: 'Part', type: 'select', setup: 'part', options: (parts.data ?? []).map((x) => [x.id, lookupLabel(x)]) },
+          { name: 'lot', label: 'Lot number (optional; blank holds every lot of the part)' }, { name: 'siteId', label: 'Site', type: 'select', setup: 'site', initial: sites.data?.[0]?.id, options: (sites.data ?? []).map((s) => [s.id, s.name]) }, { name: 'reason', label: 'Reason', type: 'multiline' }]}
         onConfirm={async (v) => {
           let lotId: string | null = null;
           if (v.lot) { const s = await get<StockRow[]>(`/api/warehouse/stock?q=${encodeURIComponent(v.lot)}`); lotId = s.find((x) => x.lotNumber === v.lot)?.lotId ?? null; if (!lotId) throw new Error(`No stock found for lot ${v.lot}.`); }
@@ -582,7 +583,7 @@ export function MrbDetail() {
       <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>{d.ncrId && <Button component={RouterLink} to={`/ncr/${d.ncrId}`}>NCR</Button>}{d.holdId && <Button component={RouterLink} to={`/warehouse/holds/${d.holdId}`}>Hold</Button>}</Box>
       <StepDialog open={prop} title="Propose disposition" confirm="Submit for approval" onClose={() => setProp(false)}
         inputs={[{ name: 'disposition', label: 'Disposition', type: 'select', initial: '1', options: mrbDisp.map((k, i) => [i, k] as [number, string]).slice(1) },
-          { name: 'target', label: 'Target location (accept / use as is / rework)', type: 'select', options: [['', 'Default'] as [string, string], ...(locs.data ?? []).filter((l) => l.active).map((l) => [l.id, `${l.code} — ${purposes[l.purpose]}`] as [string, string])] },
+          { name: 'target', label: 'Target location (accept / use as is / rework)', type: 'select', setup: 'location', options: [['', 'Default'] as [string, string], ...(locs.data ?? []).filter((l) => l.active).map((l) => [l.id, `${l.code} — ${purposes[l.purpose]}`] as [string, string])] },
           { name: 'justification', label: 'Justification', type: 'multiline' }]}
         onConfirm={async (v) => { await post(`/api/warehouse/mrb/${id}/propose`, { disposition: Number(v.disposition), justification: v.justification, targetLocationId: v.target || null }); qc.invalidateQueries({ queryKey: ['wh-mrb-case', id] }); }} />
     </ModuleWorkspace>
@@ -638,7 +639,7 @@ export function RtvDetail() {
           ['Shipped', d.shippedOn ? fmtDate(d.shippedOn) : undefined], ['Credit', d.creditAmount != null ? `${d.creditAmount.toFixed(2)} (${d.creditReference})` : undefined], ['Credited', d.creditedOn ? fmtDate(d.creditedOn) : undefined]]} />
       </Box>
       <StepDialog open={dlg === 'ship'} title="Ship to supplier" confirm="Ship" onClose={() => setDlg(null)} intro="Shipping posts the stock out of inventory as a supplier return."
-        inputs={[{ name: 'carrierId', label: 'Carrier', type: 'select', options: (carriers.data ?? []).map((c) => [c.id, c.name]) }, { name: 'tracking', label: 'Tracking number' }, { name: 'rma', label: 'Supplier RMA', initial: d.supplierRma }, { name: 'on', label: 'Shipped on', type: 'date', initial: localDate() }]}
+        inputs={[{ name: 'carrierId', label: 'Carrier', type: 'select', setup: 'carrier', options: (carriers.data ?? []).map((c) => [c.id, c.name]) }, { name: 'tracking', label: 'Tracking number' }, { name: 'rma', label: 'Supplier RMA', initial: d.supplierRma }, { name: 'on', label: 'Shipped on', type: 'date', initial: localDate() }]}
         onConfirm={async (v) => { await post(`/api/warehouse/supplier-returns/${id}/ship`, { carrierId: v.carrierId || null, trackingNumber: v.tracking || null, shippedOn: v.on, supplierRma: v.rma || null }); refresh(); }} />
       <StepDialog open={dlg === 'credit'} title="Record supplier credit" confirm="Record" onClose={() => setDlg(null)}
         inputs={[{ name: 'amount', label: 'Credit amount' }, { name: 'ref', label: 'Credit memo / reference' }, { name: 'on', label: 'Credited on', type: 'date', initial: localDate() }]}
@@ -682,8 +683,8 @@ export function CountList() {
         columns={[{ header: 'Count', accessorKey: 'number', cell: mnum }, { header: 'Type', accessorFn: (r) => countFreq[r.frequency] }, { header: 'Location', accessorFn: (r) => locs.data?.find((l) => l.id === r.locationId)?.path ?? '', cell: mnum },
           { header: 'Scheduled', accessorKey: 'scheduledOn', cell: (x) => fmtDate(x.getValue()) }, { header: 'Freeze', accessorFn: (r) => (r.freeze ? 'Frozen' : '') }, { header: 'Status', accessorFn: (r) => countStatus[r.status], cell: (x) => <StatusChip status={x.getValue()} /> }]} />
       <StepDialog open={open} title="Schedule a count" confirm="Create count" onClose={() => setOpen(false)} intro="The count snapshots system quantities for the location and everything inside it. Freezing blocks all movements in or out until the count is posted or cancelled."
-        inputs={[{ name: 'frequency', label: 'Type', type: 'select', initial: '0', options: countFreq.map((k, i) => [i, k]) }, { name: 'locationId', label: 'Location', type: 'select', options: (locs.data ?? []).filter((l) => l.active).map((l) => [l.id, l.path]) },
-          { name: 'partId', label: 'Only this part (optional)', type: 'select', options: [['', 'All parts'] as [string, string], ...(parts.data ?? []).map((x) => [x.id, lookupLabel(x)] as [string, string])] }, { name: 'freeze', label: 'Freeze the location during the count', type: 'checkbox', initial: 'false' },
+        inputs={[{ name: 'frequency', label: 'Type', type: 'select', initial: '0', options: countFreq.map((k, i) => [i, k]) }, { name: 'locationId', label: 'Location', type: 'select', setup: 'location', options: (locs.data ?? []).filter((l) => l.active).map((l) => [l.id, l.path]) },
+          { name: 'partId', label: 'Only this part (optional)', type: 'select', setup: 'part', options: [['', 'All parts'] as [string, string], ...(parts.data ?? []).map((x) => [x.id, lookupLabel(x)] as [string, string])] }, { name: 'freeze', label: 'Freeze the location during the count', type: 'checkbox', initial: 'false' },
           { name: 'on', label: 'Scheduled on', type: 'date', initial: localDate() }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
         onConfirm={async (v) => { const r = await post<{ id: string }>('/api/warehouse/counts', { frequency: Number(v.frequency), locationId: v.locationId, partId: v.partId || null, freeze: v.freeze === 'true', scheduledOn: v.on, notes: v.notes || null }); qc.invalidateQueries({ queryKey: ['wh-counts'] }); nav(`/warehouse/counts/${r.id}`); }} />
     </ModuleWorkspace>
@@ -814,7 +815,7 @@ export function TransferDetail() {
           ['Carrier', carriers.data?.find((c) => c.id === d.carrierId)?.name], ['Tracking', d.trackingNumber], ['Shipped', d.shippedAt ? fmtDateTime(d.shippedAt) : undefined], ['Received', d.receivedAt ? fmtDateTime(d.receivedAt) : undefined], ['Notes', d.notes]]} />
       </Box>
       <StepDialog open={ship} title={`Ship ${d.number}`} confirm="Ship" onClose={() => setShip(false)}
-        inputs={[{ name: 'carrierId', label: 'Carrier (optional)', type: 'select', options: [['', 'None / internal'] as [string, string], ...(carriers.data ?? []).map((c) => [c.id, c.name] as [string, string])] }, { name: 'tracking', label: 'Tracking number' }, { name: 'notes', label: 'Notes' }]}
+        inputs={[{ name: 'carrierId', label: 'Carrier (optional)', type: 'select', setup: 'carrier', options: [['', 'None / internal'] as [string, string], ...(carriers.data ?? []).map((c) => [c.id, c.name] as [string, string])] }, { name: 'tracking', label: 'Tracking number' }, { name: 'notes', label: 'Notes' }]}
         onConfirm={async (v) => { await post(`/api/warehouse/transfers/${id}/ship`, { carrierId: v.carrierId || null, trackingNumber: v.tracking || null, notes: v.notes || null }); refresh(); }} />
     </ModuleWorkspace>
   );
@@ -847,7 +848,7 @@ export function LotMergePage() {
       {res && <Alert severity={res.ok ? 'success' : 'error'} sx={{ mb: 2 }} action={res.lotId && <Button color="inherit" onClick={() => nav(`/trace/lots/${res.lotId}`)}>Genealogy</Button>}>{res.text}</Alert>}
       <Stack direction={{ xs: 'column', md: 'row' }} gap={2} sx={{ mb: 2 }}>
         <SitePicker value={siteId} onChange={setSite} />
-        <TextField select size="small" label="Part" value={part} onChange={(e) => { setPart(e.target.value); setPicked([]); }} sx={{ minWidth: 260 }}>{(parts.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{lookupLabel(x)}</MenuItem>)}</TextField>
+        <TextField select size="small" label="Part" value={part} onChange={(e) => { setPart(e.target.value); setPicked([]); }} sx={{ minWidth: 260 }}>{(parts.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{lookupLabel(x)}</MenuItem>)}{setupOptions('part', parts.data)}</TextField>
       </Stack>
       <Paper sx={{ mb: 2 }}><Table size="small"><TableHead><TableRow><TableCell padding="checkbox" /><TableCell>Lot</TableCell><TableCell>Rev</TableCell><TableCell>Location</TableCell><TableCell>Status</TableCell><TableCell align="right">On hand</TableCell><TableCell align="right">Reserved</TableCell></TableRow></TableHead>
         <TableBody>{rows.map((r) => (
@@ -949,8 +950,8 @@ export function ReceivingRulesPage() {
         onConfirm={async (v) => { await put('/api/warehouse/receiving/policy', { siteId, overReceiptPercent: Number(v.pct || 0), overReceiptQuantity: Number(v.qty || 0), allowPartialReceipt: v.partial === 'true' }); refresh(); }} />
       <StepDialog open={dlg === 'req'} title={edit ? `Receiving requirement · ${edit.partNumber}` : 'Add receiving requirement'} confirm="Save" onClose={() => setDlg(null)}
         inputs={[
-          { name: 'part', label: 'Part', type: 'select', initial: edit?.partId ?? '', options: (parts.data ?? []).map((x) => [x.id, lookupLabel(x)]) },
-          { name: 'supplier', label: 'Supplier (blank = any supplier)', type: 'select', initial: edit?.supplierId ?? '', options: [['', 'Any supplier'], ...(sups.data ?? []).map((x) => [x.id, lookupLabel(x)] as [string, string])] },
+          { name: 'part', label: 'Part', type: 'select', setup: 'part', initial: edit?.partId ?? '', options: (parts.data ?? []).map((x) => [x.id, lookupLabel(x)]) },
+          { name: 'supplier', label: 'Supplier (blank = any supplier)', type: 'select', setup: 'supplier', initial: edit?.supplierId ?? '', options: [['', 'Any supplier'], ...(sups.data ?? []).map((x) => [x.id, lookupLabel(x)] as [string, string])] },
           { name: 'inspect', label: 'Receiving inspection required', type: 'checkbox', initial: String(edit?.inspectionRequired ?? true) },
           { name: 'plan', label: 'Inspection plan', type: 'select', initial: edit?.inspectionPlanId ?? '', options: [['', 'Effective receiving plan of the part, if any'], ...(plans.data ?? []).filter((x) => !x.isObsolete && x.inspectionType === 'Receiving').map((x) => [x.id, `${x.number} — ${x.title}`] as [string, string])] },
           { name: 'aql', label: 'AQL sampling plan', type: 'select', initial: edit?.aqlPlanId ?? '', options: [['', 'No AQL sampling'], ...(aql.data ?? []).map((x) => [x.id, `${x.name} (${x.severity})`] as [string, string])] },

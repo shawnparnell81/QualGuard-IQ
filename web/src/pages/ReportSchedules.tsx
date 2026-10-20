@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { Fragment, useState } from 'react';
 import { Alert, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -61,7 +62,7 @@ export function ScheduleDialog({ open, onClose, existing, savedReportId, onSaved
             <TextField label="Frequency (cron: minute hour day month weekday)" value={v.cron} onChange={(e) => setV({ ...v, cron: e.target.value })} helperText="0 7 * * 1 = Mondays 07:00 · 0 6 1 * * = 1st of the month 06:00" fullWidth />
             <TextField select label="Time zone" value={v.timeZone} onChange={(e) => setV({ ...v, timeZone: e.target.value })} sx={{ minWidth: 240 }} SelectProps={{ MenuProps: { PaperProps: { sx: { maxHeight: 360 } } } }}>{(zones.includes(v.timeZone) ? zones : [v.timeZone, ...zones]).map((z) => <MenuItem key={z} value={z}>{z}</MenuItem>)}</TextField>
           </Stack>
-          <TextField select label="People" value={v.recipients} SelectProps={{ multiple: true }} onChange={(e) => setV({ ...v, recipients: ([] as string[]).concat(e.target.value as unknown as string[]) })}>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+          <TextField select label="People" value={v.recipients} SelectProps={{ multiple: true }} onChange={(e) => setV({ ...v, recipients: ([] as string[]).concat(e.target.value as unknown as string[]) })}>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>
           <TextField select label="Recipient groups (roles)" value={v.recipientRoleIds} SelectProps={{ multiple: true }} helperText="Every active member at the time of each run, if their permissions allow." onChange={(e) => setV({ ...v, recipientRoleIds: ([] as string[]).concat(e.target.value as unknown as string[]) })}>{(groups.data ?? []).map((g) => <MenuItem key={g.id} value={g.id}>{g.name} ({g.members})</MenuItem>)}</TextField>
           <Stack direction={{ xs: 'column', sm: 'row' }} gap={2}>
             <TextField select label="Delivery" value={v.deliveryMode} onChange={(e) => setV({ ...v, deliveryMode: Number(e.target.value) })} sx={{ minWidth: 220 }}

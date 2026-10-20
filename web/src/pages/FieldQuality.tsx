@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, FormControlLabel, MenuItem, Paper, Stack, Step, StepLabel, Stepper, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
@@ -39,7 +40,7 @@ function useNames() {
 }
 function SiteSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const sites = useSites();
-  return <TextField select label="Site" value={value} onChange={(e) => onChange(e.target.value)}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
+  return <TextField select label="Site" value={value} onChange={(e) => onChange(e.target.value)}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>;
 }
 const Loading = ({ to, label, error }: { to: string; label: string; error: unknown }) =>
   <ModuleWorkspace module={mod} crumbs={[{ label, to }]} title="Loading…">{error ? <Alert severity="error">{(error as Error).message}</Alert> : null}</ModuleWorkspace>;

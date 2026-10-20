@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Pagination, Paper, Stack, TextField, Typography } from '@mui/material';
@@ -116,7 +117,7 @@ export function DocumentNew({ kind }: { kind: Kind }) {
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Title" sx={{ gridColumn: '1 / -1' }} {...register('title')} error={!!errors.title} helperText={errors.title?.message} />
         <Controller name="documentType" control={control} render={({ field }) => (
-          <TextField select label="Type" {...field} error={!!errors.documentType} helperText={errors.documentType?.message}>{typeNames.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>)} />
+          <TextField select label="Type" {...field} error={!!errors.documentType} helperText={errors.documentType?.message}>{typeNames.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}{setupOptions('documentType', typeNames)}</TextField>)} />
         <TextField label="Review interval (months)" type="number" {...register('reviewIntervalMonths')} error={!!errors.reviewIntervalMonths} />
         <Controller name="siteId" control={control} render={({ field }) => (
           <TextField select label="Site" {...field} error={!!errors.siteId} helperText={errors.siteId?.message}>
@@ -125,7 +126,7 @@ export function DocumentNew({ kind }: { kind: Kind }) {
         <Controller name="departmentId" control={control} render={({ field }) => (
           <TextField select label="Department (optional)" {...field} disabled={!site}>
             <MenuItem value="">None</MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.code} — {d.name}</MenuItem>)}
-          </TextField>)} />
+          {site && setupOptions('department', site.departments)}</TextField>)} />
         <TextField label="Initial revision" {...register('initialRevision')} />
         {kind === 1 && <TextField label="Part number" {...register('partNumber')} />}
         {kind === 1 && <TextField label="Drawing size" {...register('drawingSize')} />}

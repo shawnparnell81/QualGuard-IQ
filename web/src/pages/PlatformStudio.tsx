@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { isV2 } from '../forms/definition';
 import { useMemo, useState } from 'react';
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Paper, Stack, Switch, TextField, Typography } from '@mui/material';
@@ -370,8 +371,8 @@ export function DataGovernance() {
         <DialogActions><Button onClick={() => setRule(null)}>Cancel</Button><Button variant="contained" onClick={() => run(async () => { await post('/api/governance/data/rules', { domainKey: key, ...rule, parameter: rule.parameter || null }); setRule(null); }, 'Rule added.')}>Add</Button></DialogActions></Dialog>
       <Dialog open={!!stew} onClose={() => setStew(null)} fullWidth maxWidth="xs"><DialogTitle>Stewardship: {d?.name}</DialogTitle>
         {stew && <DialogContent sx={{ display: 'grid', gap: 2, pt: '8px !important' }}>
-          <TextField select label="Data steward" value={stew.stewardId} onChange={(e) => setStew({ ...stew, stewardId: e.target.value })}><MenuItem value="">Unassigned</MenuItem>{(users.data ?? []).map((u: any) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
-          <TextField select label="Data owner" value={stew.ownerId} onChange={(e) => setStew({ ...stew, ownerId: e.target.value })}><MenuItem value="">Unassigned</MenuItem>{(users.data ?? []).map((u: any) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+          <TextField select label="Data steward" value={stew.stewardId} onChange={(e) => setStew({ ...stew, stewardId: e.target.value })}><MenuItem value="">Unassigned</MenuItem>{(users.data ?? []).map((u: any) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>
+          <TextField select label="Data owner" value={stew.ownerId} onChange={(e) => setStew({ ...stew, ownerId: e.target.value })}><MenuItem value="">Unassigned</MenuItem>{(users.data ?? []).map((u: any) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>
           <TextField select label="Classification" value={stew.classification} onChange={(e) => setStew({ ...stew, classification: Number(e.target.value) })}>{classes.map((c, i) => <MenuItem key={c} value={i}>{c}</MenuItem>)}</TextField>
           <TextField label="Description" multiline minRows={2} value={stew.description} onChange={(e) => setStew({ ...stew, description: e.target.value })} /></DialogContent>}
         <DialogActions><Button onClick={() => setStew(null)}>Cancel</Button><Button variant="contained" onClick={() => run(async () => { await put(`/api/governance/data/domains/${key}`, { ...stew, stewardId: stew.stewardId || null, ownerId: stew.ownerId || null }); setStew(null); }, 'Stewardship saved.')}>Save</Button></DialogActions></Dialog>

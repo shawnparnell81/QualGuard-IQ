@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useEffect, useRef, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableRow, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
@@ -98,7 +99,7 @@ export function SerialList() {
 
 function SiteSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const sites = useSites();
-  return <TextField select label="Site" value={value} onChange={(e) => onChange(e.target.value)}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>;
+  return <TextField select label="Site" value={value} onChange={(e) => onChange(e.target.value)}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>;
 }
 
 export function LotNew() {
@@ -113,11 +114,11 @@ export function LotNew() {
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Lot number (blank = next)" value={v.number} onChange={set('number')} />
         <TextField select label="Kind" value={v.kind} onChange={set('kind')}>{lotKind.map((k, i) => <MenuItem key={k} value={String(i)}>{k}</MenuItem>)}</TextField>
-        <TextField select label="Part" value={v.partId} onChange={set('partId')}>{(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}</TextField>
+        <TextField select label="Part" value={v.partId} onChange={set('partId')}>{(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}{setupOptions('part', parts.data)}</TextField>
         <TextField label="Revision" value={v.revision} onChange={set('revision')} />
         <TextField label="Quantity" type="number" value={v.quantity} onChange={set('quantity')} />
         <TextField label="Unit" value={v.unitOfMeasure} onChange={set('unitOfMeasure')} />
-        <TextField select label="Supplier" value={v.supplierId} onChange={set('supplierId')}><MenuItem value="">None</MenuItem>{(sups.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{lookupLabel(s)}</MenuItem>)}</TextField>
+        <TextField select label="Supplier" value={v.supplierId} onChange={set('supplierId')}><MenuItem value="">None</MenuItem>{(sups.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{lookupLabel(s)}</MenuItem>)}{setupOptions('supplier', sups.data)}</TextField>
         <TextField label="Supplier lot" value={v.supplierLotNumber} onChange={set('supplierLotNumber')} />
         <TextField label="Made on" type="date" value={v.manufacturedOn} onChange={set('manufacturedOn')} slotProps={{ inputLabel: { shrink: true } }} />
         <TextField label="Expires on" type="date" value={v.expiresOn} onChange={set('expiresOn')} slotProps={{ inputLabel: { shrink: true } }} />
@@ -149,7 +150,7 @@ export function SerialNew() {
       <Paper sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Serial number" value={v.serialNumber} onChange={set('serialNumber')} />
-        <TextField select label="Part" value={v.partId} onChange={set('partId')}>{(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}</TextField>
+        <TextField select label="Part" value={v.partId} onChange={set('partId')}>{(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}{setupOptions('part', parts.data)}</TextField>
         <TextField label="Revision" value={v.revision} onChange={set('revision')} />
         <TextField select label="Lot of origin" value={v.lotId} onChange={set('lotId')}><MenuItem value="">None</MenuItem>{(lots.data ?? []).map((l) => <MenuItem key={l.id} value={l.id}>{l.number}</MenuItem>)}</TextField>
         <TextField label="Built on" type="date" value={v.manufacturedOn} onChange={set('manufacturedOn')} slotProps={{ inputLabel: { shrink: true } }} />
@@ -231,7 +232,7 @@ export function TraceRecord({ kind }: { kind: 'lot' | 'serial' }) {
       <StepDialog open={dlg} title="Record a movement" confirm="Record" onClose={() => setDlg(false)}
         intro="Consumption and assembly link this record (input) to the record it goes into. Shipments name the customer. A hold or scrap changes the status."
         inputs={[{ name: 'kind', label: 'Event', type: 'select', initial: '1', options: traceKind.map((k, i) => [i, k]) }, { name: 'target', label: 'Goes into (consumption / assembly / transfer)', type: 'select', initial: '', options: [['', 'None'], ...targets] },
-          { name: 'customerId', label: 'Customer (shipment)', type: 'select', initial: '', options: [['', 'None'], ...(custs.data ?? []).map((c) => [c.id, lookupLabel(c)] as [string, string])] }, { name: 'quantity', label: 'Quantity', initial: '1' }, { name: 'ref', label: 'Reference (shipment, PO, order)' }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
+          { name: 'customerId', label: 'Customer (shipment)', type: 'select', setup: 'customer', initial: '', options: [['', 'None'], ...(custs.data ?? []).map((c) => [c.id, lookupLabel(c)] as [string, string])] }, { name: 'quantity', label: 'Quantity', initial: '1' }, { name: 'ref', label: 'Reference (shipment, PO, order)' }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
         onConfirm={async (v) => {
           const [tk, tid] = v.target ? v.target.split(':') : [null, null];
           await post('/api/trace/events', { kind: Number(v.kind), fromLotId: kind === 'lot' ? id : null, fromSerialId: kind === 'serial' ? id : null, toLotId: tk === 'lot' ? tid : null, toSerialId: tk === 'serial' ? tid : null,

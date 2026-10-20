@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Chip, Link, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
@@ -222,7 +223,7 @@ function ConnectionForm({ initial, onSaved }: { initial?: Conn; onSaved: (id: st
           {fields.filter((f) => f.group === g).map(input)}
         </Box>)}
         <Typography variant="overline" color="text.secondary" sx={{ gridColumn: '1 / -1', borderBottom: 1, borderColor: 'divider', lineHeight: 2 }}>Ownership and limits</Typography>
-        <TextField select label="Site" value={v.siteId} onChange={set('siteId')}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>
+        <TextField select label="Site" value={v.siteId} onChange={set('siteId')}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>
         <TextField select label="Environment" value={v.environment} onChange={set('environment')} helperText="Changing it puts every validation gate back to not run.">{environments.map((e) => <MenuItem key={e} value={e}>{e}</MenuItem>)}</TextField>
         <TextField label="Max concurrency" type="number" value={v.maxConcurrency} onChange={set('maxConcurrency')} helperText={ed ? `Default ${ed.capabilities.defaultConcurrency}` : undefined} />
         <TextField label="Requests per minute" type="number" value={v.requestsPerMinute} onChange={set('requestsPerMinute')} helperText={ed ? `Default ${ed.capabilities.defaultRequestsPerMinute}` : undefined} />

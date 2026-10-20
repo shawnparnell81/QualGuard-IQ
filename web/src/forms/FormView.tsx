@@ -1,3 +1,4 @@
+import { setupOptions, type SetupKind } from '../components/SetupLink';
 import { Fragment, useMemo, useState } from 'react';
 import { Box, Button, Checkbox, Chip, FormControlLabel, IconButton, MenuItem, Paper, Radio, RadioGroup, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, ToggleButton, ToggleButtonGroup, Tooltip, Typography } from '@mui/material';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
@@ -27,6 +28,7 @@ export function displayValue(f: ColumnDef, v: string | null | undefined): string
   return v;
 }
 
+const setupKinds: string[] = ['user', 'site', 'department', 'equipment', 'part', 'product', 'supplier', 'customer'];
 function RefSelect({ kind, ...p }: { kind: string; value: string; onChange: (v: string) => void; label: string; disabled: boolean; required: boolean; siteId?: string | null }) {
   const users = useUsers();
   const sites = useSites();
@@ -45,6 +47,7 @@ function RefSelect({ kind, ...p }: { kind: string; value: string; onChange: (v: 
       <MenuItem value="">—</MenuItem>
       {options.map(([id, l]) => <MenuItem key={id} value={id}>{l}</MenuItem>)}
       {p.value && !options.some(([id]) => id === p.value) && <MenuItem value={p.value}>{p.value}</MenuItem>}
+      {setupKinds.includes(kind as SetupKind) && setupOptions(kind as SetupKind, options)}
     </TextField>
   );
 }

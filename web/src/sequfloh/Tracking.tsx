@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Autocomplete, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Paper, Stack, Table, TableBody, TableCell,
@@ -152,11 +153,11 @@ export function NewTrackingPage() {
           <PartPicker label={type === 'Repair' ? 'Repairable part' : 'Part'} repairable={type === 'Repair'} value={part} onChange={(p) => setPart(p)} />
           <TextField size="small" label="Part description" value={part?.name ?? ''} disabled InputLabelProps={{ shrink: true }} />
           <TextField select size="small" label="Site" value={sites.data ? siteId : ''} onChange={(e) => { setSiteId(e.target.value); setDepartmentId(''); }}>
-            {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}</TextField>
+            {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>
           <TextField select size="small" label="Department" value={site ? departmentId : ''} onChange={(e) => setDepartmentId(e.target.value)}>
-            <MenuItem value=""><em>None</em></MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}</TextField>
+            <MenuItem value=""><em>None</em></MenuItem>{(site?.departments ?? []).map((d) => <MenuItem key={d.id} value={d.id}>{d.name}</MenuItem>)}{site && setupOptions('department', site.departments)}</TextField>
           <TextField select size="small" label="Assigned user" value={users.data ? assigned : ''} onChange={(e) => setAssigned(e.target.value)} helperText="Assigning dispatches the task.">
-            <MenuItem value=""><em>Not assigned</em></MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+            <MenuItem value=""><em>Not assigned</em></MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>
           <TextField select size="small" label="Priority" value={priorities.data ? f.priority : ''} onChange={(e) => setF({ ...f, priority: e.target.value })}>
             {(priorities.data ?? []).map((p) => <MenuItem key={p} value={p}>{p}</MenuItem>)}</TextField>
           {fld('serialNumber', 'Serial number')}{fld('lotNumber', 'Lot number')}
@@ -445,7 +446,7 @@ export function TaskActionDialog({ action, record, onClose, onRun }: { action: T
         <Typography variant="body2" sx={{ mb: 2 }}>{actionText[action.action] ?? ''}</Typography>
         {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
         {needsUser && <TextField select fullWidth size="small" label="Assign to" value={users.data ? user : ''} onChange={(e) => setUser(e.target.value)} sx={{ mb: 2 }}>
-          {(users.data ?? []).filter((u) => action.action !== 'reassign' || u.id !== record.assignedUserId).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>}
+          {(users.data ?? []).filter((u) => action.action !== 'reassign' || u.id !== record.assignedUserId).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>}
         {opts.length > 0 && <TextField select fullWidth size="small" label="Reason" value={opts.includes(reason) ? reason : ''} onChange={(e) => setReason(e.target.value)} sx={{ mb: 2 }}>
           {opts.map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}</TextField>}
         {action.reasonRequired && opts.length === 0 && <TextField fullWidth size="small" label="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} sx={{ mb: 2 }} />}

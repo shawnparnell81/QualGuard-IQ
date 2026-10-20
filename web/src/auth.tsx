@@ -4,6 +4,7 @@ import { get, post, resetCsrf } from './api';
 import { setQueueUser } from './offline';
 import { clearPickWork } from './offlinePicks';
 import { clearVerifyWork } from './offlineVerifications';
+import { setBusinessZone } from './components/Status';
 
 export interface Grant { permission: string; siteId: string | null; departmentId: string | null }
 export interface Me { id: string; email: string; displayName: string; grants: Grant[]; portalKind?: string | null }
@@ -60,6 +61,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export const useAuth = () => useContext(Ctx);
 
-export interface Branding { applicationName: string; organizationName: string; primaryColor: string | null; hasLogo?: boolean }
+export interface Branding { applicationName: string; organizationName: string; primaryColor: string | null; hasLogo?: boolean; timeZone?: string }
 export const useBranding = () =>
-  useQuery({ queryKey: ['branding'], queryFn: () => get<Branding>('/api/organization/branding'), staleTime: 300_000 });
+  useQuery({ queryKey: ['branding'], queryFn: async () => { const b = await get<Branding>('/api/organization/branding'); setBusinessZone(b.timeZone); return b; }, staleTime: 300_000 });

@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
 import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
@@ -112,7 +113,7 @@ export function CourseDetail() {
               <Stack direction="row" gap={1}>
                 <TextField select size="small" label="People" sx={{ flex: 1 }} value={picked} slotProps={{ select: { multiple: true } }} onChange={(e) => setPicked(e.target.value as unknown as string[])}>
                   {(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}
-                </TextField>
+                {setupOptions('user', users.data)}</TextField>
                 <Button variant="contained" disabled={!picked.length} onClick={() => run(async () => { const r = await post<{ created: number }>(`/api/training/courses/${c.id}/assign`, { userIds: picked, dueOn: null }); setMsg(`${r.created} assignment(s) created. People with open training were skipped.`); setPicked([]); })}>Assign</Button>
               </Stack>
             </Paper>}

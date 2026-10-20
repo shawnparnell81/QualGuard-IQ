@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
@@ -67,7 +68,7 @@ export function FormRecordNew() {
           </TextField>
           <TextField select label="Site" value={site} onChange={(e) => setSite(e.target.value)}>
             {(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}
-          </TextField>
+          {setupOptions('site', sites.data)}</TextField>
           <TextField label="Record title (optional)" value={title} onChange={(e) => setTitle(e.target.value)} />
           <Box><Button variant="contained" disabled={!tpl || !site} onClick={() => run(async () => {
             const r = await post<{ id: string }>('/api/forms/records', { templateId: tpl, siteId: site, departmentId: null, title: title || null });

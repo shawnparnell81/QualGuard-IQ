@@ -14,7 +14,7 @@ namespace QualGuardIQ.Api.Controllers;
 [Route("api/organization")]
 public sealed class OrganizationController(AppDbContext db, QualGuardIQ.Application.Security.IAccessService access, QualGuardIQ.Application.Abstractions.ICurrentUser current) : ControllerBase
 {
-    public sealed record BrandingDto(string ApplicationName, string OrganizationName, string? PrimaryColor, bool HasLogo = false);
+    public sealed record BrandingDto(string ApplicationName, string OrganizationName, string? PrimaryColor, bool HasLogo = false, string? TimeZone = null);
     public sealed record SettingsDto(string ApplicationName, string OrganizationName, string? PrimaryColor, string TimeZone, bool LoginHistoryEnabled, uint RowVersion,
         string? DateFormat = null, bool? EmailNotificationsEnabled = null, bool HasLogo = false);
     public sealed record SiteDto(Guid Id, string Code, string Name, string? Address, string TimeZone, bool IsArchived, IReadOnlyList<DepartmentDto> Departments);
@@ -50,7 +50,7 @@ public sealed class OrganizationController(AppDbContext db, QualGuardIQ.Applicat
     [AllowAnonymous]
     public async Task<BrandingDto> Branding(CancellationToken ct)
     {
-        var b = await db.OrganizationSettings.AsNoTracking().Select(s => new BrandingDto(s.ApplicationName, s.OrganizationName, s.PrimaryColor, s.LogoImage != null)).FirstAsync(ct);
+        var b = await db.OrganizationSettings.AsNoTracking().Select(s => new BrandingDto(s.ApplicationName, s.OrganizationName, s.PrimaryColor, s.LogoImage != null, s.TimeZone)).FirstAsync(ct);
         var primary = await db.AppearanceSettings.AsNoTracking().Where(x => x.UserId == null).Select(x => x.PrimaryColor).FirstOrDefaultAsync(ct);
         return primary is null ? b : b with { PrimaryColor = primary };
     }

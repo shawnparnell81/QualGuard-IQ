@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { GeneratedDraft } from './Generation';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -192,7 +193,7 @@ const detailLookups: [keyof NcrDetailDto, string, LookupKind][] = [['productId',
 
 function LookupSelect({ kind, label, value, onChange }: { kind: LookupKind; label: string; value: string; onChange: (v: string) => void }) {
   const rows = useLookup(kind);
-  return <TextField select label={label} value={value} onChange={(e) => onChange(e.target.value)}><MenuItem value="">None</MenuItem>{(rows.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>)}</TextField>;
+  return <TextField select label={label} value={value} onChange={(e) => onChange(e.target.value)}><MenuItem value="">None</MenuItem>{(rows.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>)}{setupOptions(kind, rows.data)}</TextField>;
 }
 
 function NcrDetailsDialog({ open, d, onClose, onSave }: { open: boolean; d: NcrDetailDto; onClose: () => void; onSave: (v: Record<string, unknown>) => Promise<void> }) {

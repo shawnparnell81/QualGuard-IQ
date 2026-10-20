@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, IconButton, Link, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
@@ -89,8 +90,8 @@ export function AuditNew() {
         <Controller name="auditType" control={control} render={({ field }) => <TextField select label="Type" {...field}>{['Internal', 'Process', 'Product', 'Supplier', 'Layered process'].map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>} />
         <TextField label="Criteria" {...register('criteria')} />
         <TextField label="Scope" multiline minRows={2} sx={{ gridColumn: '1 / -1' }} {...register('scope')} error={!!errors.scope} helperText={errors.scope?.message} />
-        <Controller name="siteId" control={control} render={({ field }) => <TextField select label="Site" {...field} error={!!errors.siteId} helperText={errors.siteId?.message}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}</TextField>} />
-        <Controller name="leadAuditorId" control={control} render={({ field }) => <TextField select label="Lead auditor" {...field} error={!!errors.leadAuditorId} helperText={errors.leadAuditorId?.message}>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>} />
+        <Controller name="siteId" control={control} render={({ field }) => <TextField select label="Site" {...field} error={!!errors.siteId} helperText={errors.siteId?.message}>{(sites.data ?? []).filter((s) => !s.isArchived).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} — {s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>} />
+        <Controller name="leadAuditorId" control={control} render={({ field }) => <TextField select label="Lead auditor" {...field} error={!!errors.leadAuditorId} helperText={errors.leadAuditorId?.message}>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>} />
         <TextField type="date" label="Start" {...register('plannedStart')} slotProps={{ inputLabel: { shrink: true } }} />
         <TextField type="date" label="End" {...register('plannedEnd')} error={!!errors.plannedEnd} helperText={errors.plannedEnd?.message} slotProps={{ inputLabel: { shrink: true } }} />
         <Box sx={{ gridColumn: '1 / -1' }}>
@@ -171,7 +172,7 @@ export function AuditDetail() {
         inputs={[{ name: 'findingType', label: 'Type', type: 'select', initial: '1', options: findingType.map((f, i) => [i, f]) },
           { name: 'checklistItemId', label: 'Checklist item (optional)', type: 'select', options: [['', 'None'], ...d.checklist.map((c) => [c.id, `${c.sequence}. ${c.question.slice(0, 60)}`] as [string, string])] },
           { name: 'clause', label: 'Clause' }, { name: 'statement', label: 'Statement of nonconformity / observation', type: 'multiline' }, { name: 'evidence', label: 'Objective evidence', type: 'multiline' },
-          { name: 'responsibleId', label: 'Responsible', type: 'select', options: (users.data ?? []).map((u) => [u.id, u.displayName]) },
+          { name: 'responsibleId', label: 'Responsible', type: 'select', setup: 'user', options: (users.data ?? []).map((u) => [u.id, u.displayName]) },
           { name: 'responseDueOn', label: 'Response due', type: 'date', initial: localDate(30) }]}
         onConfirm={(v) => run(() => post(`/api/audits/${d.id}/findings`, { ...v, findingType: Number(v.findingType), checklistItemId: v.checklistItemId || null, clause: v.clause || null, evidence: v.evidence || null }))} />
       <StepDialog open={dlg === 'report'} title="Move to reporting" intro="Every checklist item must be assessed. Findings can still be raised during reporting." confirm="Move to reporting" onClose={() => setDlg(null)}

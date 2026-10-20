@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState, type ReactNode } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, LinearProgress, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
@@ -213,7 +214,7 @@ export function FaiDetail() {
         onConfirm={async (v) => { const n = (x: string) => (x === '' ? null : Number(x)); await post(`/api/v1/fai/${f.id}/characteristics`, { ...v, balloonNumber: Number(v.balloonNumber), nominalValue: n(v.nominalValue), lowerSpecificationLimit: n(v.lowerSpecificationLimit), upperSpecificationLimit: n(v.upperSpecificationLimit),
           unitOfMeasure: nul(v.unitOfMeasure), acceptanceCriteria: nul(v.acceptanceCriteria), inspectionMethod: nul(v.inspectionMethod), drawingReference: nul(v.drawingReference), requirementSource: 'Drawing' }); refresh(); }} />
       <StepDialog open={dlg === 'start'} title="Start inspection" confirm="Start" onClose={() => setDlg(null)} inputs={[{ name: 'comment', label: 'Comment', type: 'multiline', initial: 'Starting inspection' }]} onConfirm={(v) => act('start-inspection', v)} />
-      <StepDialog open={dlg === 'submit'} title="Submit for review" confirm="Submit" onClose={() => setDlg(null)} inputs={[{ name: 'comment', label: 'Comment', type: 'multiline', initial: 'Ready for review' }, { name: 'assigneeId', label: 'Reviewer (keeps current when blank)', type: 'select', options: [['', 'Keep current'], ...(users.data ?? []).map((u) => [u.id, u.displayName] as [string, string])] }]}
+      <StepDialog open={dlg === 'submit'} title="Submit for review" confirm="Submit" onClose={() => setDlg(null)} inputs={[{ name: 'comment', label: 'Comment', type: 'multiline', initial: 'Ready for review' }, { name: 'assigneeId', label: 'Reviewer (keeps current when blank)', type: 'select', setup: 'user', options: [['', 'Keep current'], ...(users.data ?? []).map((u) => [u.id, u.displayName] as [string, string])] }]}
         onConfirm={(v) => act('submit', { comment: v.comment, assigneeId: nul(v.assigneeId) })} />
       <StepDialog open={dlg === 'request'} title="Request signatures" intro="Starts the configured approval route (quality, engineering, manufacturing)." confirm="Request" onClose={() => setDlg(null)}
         inputs={[{ name: 'approvalRole', label: 'First role', type: 'select', options: [['Quality', 'Quality']], initial: 'Quality' }, { name: 'comment', label: 'Comment', type: 'multiline' }]} onConfirm={async (v) => { await post(`/api/v1/fai/${f.id}/approvals`, v); refresh(); }} />
@@ -427,7 +428,7 @@ export function SupplierAql() {
   const m = useQuery({ queryKey: ['sup-aql', sid], enabled: !!sid, queryFn: () => Promise.all(['metrics', 'acceptance-rate', 'ppm', 'defect-trends'].map((k) => get<Series>(`/api/v1/aql/suppliers/${sid}/${k}`))) });
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Supplier trends' }]} title="Supplier AQL trends">
-      <TextField select size="small" label="Supplier" value={sid} onChange={(e) => setSid(e.target.value)} sx={{ width: 420, mb: 2 }}>{(suppliers.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>)}</TextField>
+      <TextField select size="small" label="Supplier" value={sid} onChange={(e) => setSid(e.target.value)} sx={{ width: 420, mb: 2 }}>{(suppliers.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>)}{setupOptions('supplier', suppliers.data)}</TextField>
       {sid && <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 2 }}>{(m.data ?? [undefined, undefined, undefined, undefined]).map((s, i) => <Bars key={i} s={s} />)}</Box>}
     </ModuleWorkspace>
   );

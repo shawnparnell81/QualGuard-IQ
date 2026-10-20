@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Alert, Box, Button, Chip, MenuItem, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -78,7 +79,7 @@ export function RetentionPage() {
       {tab === 'dryrun' && <>
         <Stack direction="row" spacing={1.5} sx={{ mb: 2 }} alignItems="center">
           <TextField select size="small" label="Record type" value={form.recordType} onChange={(e) => setForm({ ...form, recordType: e.target.value })} sx={{ width: 220 }}><MenuItem value="">All types</MenuItem>{(types.data ?? []).map((t) => <MenuItem key={t} value={t}>{typeLabel(t)}</MenuItem>)}</TextField>
-          <TextField select size="small" label="Site" value={form.siteId} onChange={(e) => setForm({ ...form, siteId: e.target.value })} sx={{ width: 220 }}><MenuItem value="">All my sites</MenuItem>{(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}</TextField>
+          <TextField select size="small" label="Site" value={form.siteId} onChange={(e) => setForm({ ...form, siteId: e.target.value })} sx={{ width: 220 }}><MenuItem value="">All my sites</MenuItem>{(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>
           <TextField select size="small" label="Outcome" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })} sx={{ width: 180 }}><MenuItem value="">Any</MenuItem>{retentionStatus.map((s, i) => <MenuItem key={s} value={String(i)}>{s}</MenuItem>)}</TextField>
           <Button variant="contained" onClick={() => setRun({ ...form })}>Run dry run</Button>
         </Stack>
@@ -122,7 +123,7 @@ export function ContinuityPage() {
           { header: 'Target RTO (min)', accessorKey: 'targetRecoveryMinutes' }, { header: 'Actual (min)', accessorKey: 'recoveryMinutes' }, { header: 'Result', accessorKey: 'result', cell: (x) => <StatusChip status={continuityResults[x.getValue()]} /> },
           { header: '', id: 'a', cell: (x) => x.row.original.result === 0 && <Button size="small" onClick={() => setDlg({ result: x.row.original.id })}>Record result</Button> }]} />
       <StepDialog open={dlg === 'new'} onClose={() => setDlg(null)} title="Plan exercise" confirm="Plan"
-        inputs={[{ name: 'kind', label: 'Kind', type: 'select', options: continuityKinds.map((k, i) => [i, k]), initial: '0' }, { name: 'title', label: 'Title' }, { name: 'site', label: 'Site', type: 'select', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) }, { name: 'on', label: 'Planned on', type: 'date' }, { name: 'rto', label: 'Target recovery (minutes)' }]}
+        inputs={[{ name: 'kind', label: 'Kind', type: 'select', options: continuityKinds.map((k, i) => [i, k]), initial: '0' }, { name: 'title', label: 'Title' }, { name: 'site', label: 'Site', type: 'select', setup: 'site', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) }, { name: 'on', label: 'Planned on', type: 'date' }, { name: 'rto', label: 'Target recovery (minutes)' }]}
         onConfirm={async (v) => { await post('/api/governance/continuity', { kind: Number(v.kind), title: v.title, siteId: v.site, plannedOn: v.on, targetRecoveryMinutes: v.rto ? Number(v.rto) : null }); refresh(); }} />
       <StepDialog open={typeof dlg === 'object' && dlg !== null} onClose={() => setDlg(null)} title="Record result" confirm="Record" intro="System checks are captured automatically with the result."
         inputs={[{ name: 'result', label: 'Result', type: 'select', options: [[1, 'Passed'], [2, 'Passed with issues'], [3, 'Failed']], initial: '1' }, { name: 'rec', label: 'Recovery time (minutes)' }, { name: 'loss', label: 'Data loss (minutes)' }, { name: 'findings', label: 'Findings', type: 'multiline' }]}
@@ -189,7 +190,7 @@ export function ApiAccessPage() {
           { header: '', id: 'a', cell: (x) => <Button size="small" onClick={() => r.run(() => post(`/api/admin/notification-channels/${x.row.original.id}/test`, { enableOnSuccess: true }))}>Send test</Button> }]} />}
       <StepDialog open={dlg === 'client' || dlg === 'device'} onClose={() => setDlg(null)} key={String(dlg)} title={dlg === 'device' ? 'Register MES device' : 'New API client'} confirm="Create"
         intro={dlg === 'device' ? 'An MES device sends production events with its own credential (X-Api-Key, or OAuth client credentials at /api/oauth/token). It acts as its service user, narrowed to the scopes, sites and endpoints below.' : 'The client acts as its service user (X-Api-Key header or OAuth client credentials at /api/oauth/token), narrowed by any scopes, sites and endpoints you set.'}
-        inputs={[{ name: 'name', label: 'Name' }, { name: 'user', label: 'Service user', type: 'select', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }, ...restrictionInputs(undefined, dlg === 'device')]}
+        inputs={[{ name: 'name', label: 'Name' }, { name: 'user', label: 'Service user', type: 'select', setup: 'user', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }, ...restrictionInputs(undefined, dlg === 'device')]}
         onConfirm={async (v) => { setSecret(await post('/api/admin/api-clients', { name: v.name, serviceUserId: v.user, kind: dlg === 'device' ? 1 : 0, ...body(v) })); refresh(); }} />
       <StepDialog open={!!edit} onClose={() => setDlg(null)} key={edit?.id ?? 'e'} title={`Edit ${edit ? clientKinds[edit.kind] : ''}`} confirm="Save"
         inputs={[{ name: 'name', label: 'Name', initial: edit?.name }, ...restrictionInputs(edit, edit?.kind === 1)]}
@@ -204,7 +205,7 @@ export function ApiAccessPage() {
         onConfirm={async (v) => { await post(`/api/admin/api-clients/${rev.id}/revoke`, { reason: v.reason }); refresh(); }} />
       <StepDialog open={dlg === 'channel'} onClose={() => setDlg(null)} title="New notification channel" confirm="Create"
         inputs={[{ name: 'name', label: 'Name' }, { name: 'kind', label: 'Kind', type: 'select', options: channelKinds.map((k, i) => [i, k]), initial: '2' }, { name: 'scope', label: 'Scope', type: 'select', options: scopes.map((k, i) => [i, k]), initial: '0' },
-          { name: 'site', label: 'Site (site scope)', type: 'select', options: [['', 'None'], ...(sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`] as [string, string])] }, { name: 'target', label: 'Target (HTTPS webhook or email address)' }]}
+          { name: 'site', label: 'Site (site scope)', type: 'select', setup: 'site', options: [['', 'None'], ...(sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`] as [string, string])] }, { name: 'target', label: 'Target (HTTPS webhook or email address)' }]}
         onConfirm={async (v) => { await post('/api/admin/notification-channels', { name: v.name, kind: Number(v.kind), scope: Number(v.scope), siteId: v.site || null, target: v.target }); refresh(); }} />
     </ModuleWorkspace>
   );
@@ -261,7 +262,7 @@ export function Deployments() {
           { header: 'Planned', accessorKey: 'plannedOn', cell: (x) => fmtDate(x.getValue()) }, { header: 'Status', accessorKey: 'status', cell: (x) => <StatusChip status={deployStatus[x.getValue()]} /> },
           { header: '', id: 'a', cell: (x) => (next[x.row.original.status] ?? []).map(([s, l]) => <Button key={s} size="small" onClick={() => r.run(() => post(`/api/security-governance/deployments/${x.row.original.id}/status`, { status: s, notes: null }))}>{l}</Button>) }]} />
       <StepDialog open={open} onClose={() => setOpen(false)} title="Plan deployment" confirm="Plan"
-        inputs={[{ name: 'version', label: 'Version' }, { name: 'scope', label: 'Scope', type: 'select', options: deployScopes.map((s, i) => [i, s]), initial: '0' }, { name: 'site', label: 'Site (single plant / first site)', type: 'select', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) }, { name: 'on', label: 'Planned on', type: 'date' }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
+        inputs={[{ name: 'version', label: 'Version' }, { name: 'scope', label: 'Scope', type: 'select', options: deployScopes.map((s, i) => [i, s]), initial: '0' }, { name: 'site', label: 'Site (single plant / first site)', type: 'select', setup: 'site', options: (sites.data ?? []).map((s) => [s.id, `${s.code} — ${s.name}`]) }, { name: 'on', label: 'Planned on', type: 'date' }, { name: 'notes', label: 'Notes', type: 'multiline' }]}
         onConfirm={async (v) => { await post('/api/security-governance/deployments', { version: v.version, scope: Number(v.scope), siteIds: v.site ? [v.site] : [], plannedOn: v.on || null, notes: v.notes || null }); qc.invalidateQueries({ queryKey: ['deployments'] }); }} />
     </ModuleWorkspace>
   );

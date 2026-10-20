@@ -87,7 +87,7 @@ export function Resources() {
         { header: 'Absences', id: 'a', cell: (x) => (x.row.original as any).absences.map((a: any) => <Chip key={a.id} size="small" sx={{ mr: .5 }} label={`${fmtDate(a.from)}–${fmtDate(a.to)} ${a.reason}`} />) }]} /></Section>
         <Section title="Equipment"><DataTable data={q.data.equipment} columns={[{ header: 'ID', accessorKey: 'number', cell: num }, { header: 'Name', accessorKey: 'name' }, { header: 'Status', accessorKey: 'status' }, { header: 'Calibration due', accessorKey: 'nextDueOn', cell: (x) => fmtDate(x.getValue() as string) }]} /></Section></>}
       <StepDialog open={open} onClose={() => setOpen(false)} title="Record absence" confirm="Save" intro="Absences reduce availability on the capacity board and calendar."
-        inputs={[{ name: 'who', label: 'Person', type: 'select', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }, { name: 'from', label: 'From', type: 'date' }, { name: 'to', label: 'To', type: 'date' }, { name: 'reason', label: 'Reason' }]}
+        inputs={[{ name: 'who', label: 'Person', type: 'select', setup: 'user', options: (users.data ?? []).map((u) => [u.id, u.displayName]) }, { name: 'from', label: 'From', type: 'date' }, { name: 'to', label: 'To', type: 'date' }, { name: 'reason', label: 'Reason' }]}
         onConfirm={async (v) => { await post('/api/platform/resources/absences', { kind: 0, resourceId: v.who, from: v.from, to: v.to, reason: v.reason, siteId: site }); qc.invalidateQueries({ queryKey: ['resources'] }); }} />
     </ModuleWorkspace>
   );

@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, IconButton, Link, MenuItem, Paper, Stack, Table, TableBody, TableCell,
@@ -91,7 +92,7 @@ function PartDialog({ open, onClose, onSaved, edit }: { open: boolean; onClose: 
           <TextField label="Revision" required value={f.revision} onChange={s('revision')} />
           <TextField select label="Part type" value={f.partType} onChange={s('partType')}>{partTypes.map((t) => <MenuItem key={t} value={t}>{words(t)}</MenuItem>)}</TextField>
           <TextField label="Unit of measure" value={f.unitOfMeasure} onChange={s('unitOfMeasure')} />
-          <TextField select label="Site" required value={f.siteId} onChange={s('siteId')}>{(sites.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.code} · {x.name}</MenuItem>)}</TextField>
+          <TextField select label="Site" required value={f.siteId} onChange={s('siteId')}>{(sites.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.code} · {x.name}</MenuItem>)}{setupOptions('site', sites.data)}</TextField>
           <TextField label="Product family" value={f.productFamily} onChange={s('productFamily')} />
           <TextField label="Assembly type" value={f.assemblyType} onChange={s('assemblyType')} />
           <TextField select label="Status" value={f.status} onChange={s('status')}>{masterStatuses.map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>
@@ -198,7 +199,7 @@ export function PartsListsPage() {
 function PartPicker({ value, onChange, label = 'Part' }: { value: string; onChange: (id: string, pn?: string) => void; label?: string }) {
   const parts = useQuery({ queryKey: ['sqf-part-pick'], queryFn: () => get<Paged<PartRow>>(`${S}/parts?view=active&pageSize=200`) });
   return <TextField select label={label} value={value} onChange={(e) => onChange(e.target.value, parts.data?.items.find((p) => p.id === e.target.value)?.partNumber)}>
-    <MenuItem value="">—</MenuItem>{(parts.data?.items ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{p.partNumber} · {p.name}</MenuItem>)}</TextField>;
+    <MenuItem value="">—</MenuItem>{(parts.data?.items ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{p.partNumber} · {p.name}</MenuItem>)}{setupOptions('sqfPart', parts.data?.items)}</TextField>;
 }
 
 interface ListDetail { list: { id: string; number: string; title: string; parentPartId?: string; revision: string; status: string; description?: string; listType: string; approvedAt?: string; approvedBy: string;

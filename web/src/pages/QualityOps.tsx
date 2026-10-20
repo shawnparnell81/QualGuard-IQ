@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -232,7 +233,7 @@ function EscalateDialog({ open, eventId, title, onClose, onDone }: { open: boole
           <TextField select label="Escalate to" value={target} onChange={(e) => setTarget(e.target.value)}>
             <MenuItem value="deviation">New deviation</MenuItem><MenuItem value="investigation">New investigation</MenuItem><MenuItem value="complaint">New customer complaint</MenuItem><MenuItem value="record">Existing record</MenuItem></TextField>
           {target !== 'record' && <TextField label="Title" value={t} onChange={(e) => setT(e.target.value)} />}
-          {target !== 'record' && <TextField select label="Owner" value={owner} onChange={(e) => setOwner(e.target.value)}><MenuItem value="">Me</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>}
+          {target !== 'record' && <TextField select label="Owner" value={owner} onChange={(e) => setOwner(e.target.value)}><MenuItem value="">Me</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>}
           {target === 'record' && <RecordPicker label="Find the NCR, CAPA, complaint or other record" onChange={(r) => setRec({ type: r?.type ?? '', id: r?.id ?? '' })} />}
         </Stack>
       </DialogContent>
@@ -679,7 +680,7 @@ interface EntryForm { siteId: string; departmentId: string; title: string; summa
 function LookupSelect({ kind, label, value, onChange }: { kind: 'supplier' | 'customer' | 'part'; label: string; value: string; onChange: (v: string) => void }) {
   const q = useLookup(kind);
   return <TextField select label={label} value={value} onChange={(e) => onChange(e.target.value)}><MenuItem value="">None</MenuItem>
-    {(q.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{r.partNumber ?? r.code ?? r.number ?? ''} — {r.name ?? r.legalName ?? ''}</MenuItem>)}</TextField>;
+    {(q.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{r.partNumber ?? r.code ?? r.number ?? ''} — {r.name ?? r.legalName ?? ''}</MenuItem>)}{setupOptions(kind, q.data)}</TextField>;
 }
 function EntryEditor({ def, initial, submitLabel, onSubmit, onCancel }: { def: RegDef; initial: EntryForm; submitLabel: string; onSubmit: (v: EntryForm) => Promise<void>; onCancel: () => void }) {
   const [v, setV] = useState<EntryForm>(initial);
@@ -700,7 +701,7 @@ function EntryEditor({ def, initial, submitLabel, onSubmit, onCancel }: { def: R
       <TextField type="date" label="Effective" value={v.effectiveOn} slotProps={{ inputLabel: { shrink: true } }} onChange={(e) => set('effectiveOn', e.target.value)} />
       <TextField type="date" label="Review due" value={v.reviewDueOn} slotProps={{ inputLabel: { shrink: true } }} onChange={(e) => set('reviewDueOn', e.target.value)} />
       <TextField type="date" label="Expires" value={v.expiresOn} slotProps={{ inputLabel: { shrink: true } }} onChange={(e) => set('expiresOn', e.target.value)} />
-      <TextField select label="Owner" value={v.ownerId} onChange={(e) => set('ownerId', e.target.value)}><MenuItem value="">Me</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+      <TextField select label="Owner" value={v.ownerId} onChange={(e) => set('ownerId', e.target.value)}><MenuItem value="">Me</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>
       {!initial.siteId && <SitePicker permission="qualityops.edit" value={v.siteId} onChange={(id) => set('siteId', id ?? '')} />}
       <Stack direction="row" gap={1} sx={{ gridColumn: '1 / -1' }}>
         <Button variant="contained" onClick={async () => { setErr(null); try { await onSubmit(v); } catch (e) { setErr((e as Error).message); } }}>{submitLabel}</Button><Button onClick={onCancel}>Cancel</Button>
@@ -859,8 +860,8 @@ export function SkipLotPage() {
         <TableBody>{(history.data ?? []).map((h) => <TableRow key={h.id}><TableCell>{fmtDateTime(h.occurredAt)}</TableCell><TableCell>{h.lotNumber ?? '—'}</TableCell><TableCell>{h.inspected ? 'Yes' : 'Skipped'}</TableCell><TableCell>{h.accepted == null ? '—' : h.accepted ? 'Accepted' : 'Rejected'}</TableCell>
           <TableCell>{skipLotState[h.fromState]} → {skipLotState[h.toState]}</TableCell><TableCell>{h.note}</TableCell></TableRow>)}</TableBody></Table></Section></Box>}
       <StepDialog open={dlg === 'new'} title="Add skip-lot rule" confirm="Add rule" onClose={() => setDlg(null)}
-        inputs={[{ name: 'siteId', label: 'Site', type: 'site', permission: 'inspection.edit' }, { name: 'partId', label: 'Part', type: 'select', options: (parts.data ?? []).map((p) => [p.id, `${p.partNumber} — ${p.name}`]) },
-          { name: 'supplierId', label: 'Supplier', type: 'select', options: [['', 'Any supplier'], ...(suppliers.data ?? []).map((s) => [s.id, `${s.code} — ${s.legalName}`] as [string, string])] },
+        inputs={[{ name: 'siteId', label: 'Site', type: 'site', permission: 'inspection.edit' }, { name: 'partId', label: 'Part', type: 'select', setup: 'part', options: (parts.data ?? []).map((p) => [p.id, `${p.partNumber} — ${p.name}`]) },
+          { name: 'supplierId', label: 'Supplier', type: 'select', setup: 'supplier', options: [['', 'Any supplier'], ...(suppliers.data ?? []).map((s) => [s.id, `${s.code} — ${s.legalName}`] as [string, string])] },
           { name: 'qualifyAfterLots', label: 'Qualify after (consecutive accepted lots)', initial: '5' }, { name: 'inspectEvery', label: 'Then inspect one lot in', initial: '4' }, { name: 'requalifyAfterLots', label: 'Requalify after (accepted lots)', initial: '10' }]}
         onConfirm={async (v) => { await post(`${Q}/skip-lot`, { siteId: v.siteId, partId: v.partId, supplierId: nul(v.supplierId), qualifyAfterLots: Number(v.qualifyAfterLots), inspectEvery: Number(v.inspectEvery), requalifyAfterLots: Number(v.requalifyAfterLots), active: true }); refresh(); }} />
       {rule && <SkipLotDialog rule={rule} onClose={() => setDlg(null)} onDone={refresh} />}

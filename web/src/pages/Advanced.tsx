@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, FormControlLabel, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
@@ -142,7 +143,7 @@ export function ApqpDetail() {
             <TableBody>
               {rows.map((r, i) => <TableRow key={r.id ?? `n${i}`}>
                 {cols.map(([k2, l, t]) => <TableCell key={k2} sx={{ minWidth: t === 'number' ? 56 : 120 }}>
-                  {t === 'user' ? (editable ? <TextField select size="small" variant="standard" value={r[k2] ?? ''} onChange={(e) => setCell(i, k2, e.target.value, t)} sx={{ minWidth: 120 }} slotProps={{ htmlInput: { 'aria-label': `${l} row ${i + 1}` } }}><MenuItem value="">—</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}</TextField>
+                  {t === 'user' ? (editable ? <TextField select size="small" variant="standard" value={r[k2] ?? ''} onChange={(e) => setCell(i, k2, e.target.value, t)} sx={{ minWidth: 120 }} slotProps={{ htmlInput: { 'aria-label': `${l} row ${i + 1}` } }}><MenuItem value="">—</MenuItem>{(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}{setupOptions('user', users.data)}</TextField>
                     : (users.data?.find((u) => u.id === r[k2])?.displayName ?? '—'))
                   : editable ? <TextField size="small" variant="standard" type={t} value={r[k2] ?? ''} onChange={(e) => setCell(i, k2, e.target.value, t)} slotProps={{ htmlInput: { 'aria-label': `${l} row ${i + 1}` } }} /> : (t === 'date' ? fmtDate(r[k2]) : (r[k2] ?? '—'))}</TableCell>)}
                 {kind === 'pfmea' && <>

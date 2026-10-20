@@ -1,3 +1,4 @@
+import { setupOptions } from '../components/SetupLink';
 import { useEffect, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Checkbox, FormControlLabel, IconButton, MenuItem, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from '@mui/material';
@@ -76,7 +77,7 @@ export function ReviewNew() {
       <Paper sx={{ p: 2, mb: 2, maxWidth: 820 }}>
         <TextField select fullWidth label="Participants (invited when the review is scheduled)" SelectProps={{ multiple: true }} value={people} onChange={(e) => setPeople(typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value as string[])}>
           {(users.data ?? []).map((u) => <MenuItem key={u.id} value={u.id}>{u.displayName}</MenuItem>)}
-        </TextField>
+        {setupOptions('user', users.data)}</TextField>
       </Paper>
       <SchemaForm schema={schema} submitLabel="Schedule" onCancel={() => nav('/reviews')}
         defaults={{ title: '', scheduledOn: localDate(14), periodStart: localDate(-90), periodEnd: localDate(), agenda: 'Status of actions from previous reviews\nChanges in external and internal issues\nQuality objectives and KPIs\nCustomer satisfaction and complaints\nProduct conformity and NCRs\nAudit results\nSupplier performance\nRisks and opportunities\nResource needs\nImprovement opportunities', siteId: '', departmentId: '', ownerId: '' }}
