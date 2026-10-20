@@ -79,7 +79,8 @@ test.describe('E2E 9: warehouse, scan station and shipping', () => {
     await expect(page.getByTestId('sync-done')).toHaveCount(0);
     // Connection restored: the server accepts it once and the local-only banner clears.
     await page.unroute('**/api/warehouse/moves/scan');
-    await page.getByRole('button', { name: 'Sync now' }).click();
+    // the page also retries every 30 seconds by itself, so on a slow runner it may already have sent the item before the click
+    await page.getByRole('button', { name: 'Sync now' }).click({ timeout: 5_000 }).catch(() => undefined);
     await expect(page.getByTestId('sync-done')).toContainText('Synchronized — the server accepted 1 item', { timeout: 20_000 });
     await expect(page.getByTestId('sync-pending')).toHaveCount(0);
     // Stock that is no longer there when the queued move reaches the server is a conflict for a person to review, kept apart from the pending items.

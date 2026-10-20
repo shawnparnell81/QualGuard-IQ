@@ -23,10 +23,10 @@ test.describe('E2E 53: tabs inside the application', () => {
     await box.fill('Burr on housing flange');
     await view(page).getByTestId('page-home').click();
     await expect(page).toHaveURL(/\/$/);
-    await go(page, '/capa');
-    await expect(tabFor(page, '/capa')).toHaveCount(1);
     await go(page, '/audits');
     await expect(tabFor(page, '/audits')).toHaveCount(1);
+    await go(page, '/audits/findings');
+    await expect(tabFor(page, '/audits/findings')).toHaveCount(1);
     await view(page).getByTestId('page-home').click();
     await go(page, '/calibration/equipment');
     await expect(tabs(page)).toHaveCount(4);
@@ -38,20 +38,20 @@ test.describe('E2E 53: tabs inside the application', () => {
     await expect(view(page).getByRole('textbox').first()).toHaveValue('Burr on housing flange');
     await expect(tabFor(page, '/ncr/new').getByTestId('tab-close')).toBeVisible();
 
-    // Back belongs to the tab: the CAPA tab went to Audits, the equipment tab has nowhere to go back to
-    await tabFor(page, '/audits').click();
+    // Back belongs to the tab: the audits tab went on to findings, the equipment tab has nowhere to go back to
+    await tabFor(page, '/audits/findings').click();
     await expect(view(page).getByTestId('page-back')).toBeEnabled();
     await tabFor(page, '/calibration/equipment').click();
     await expect(view(page).getByTestId('page-back')).toBeDisabled();
-    await tabFor(page, '/audits').click();
+    await tabFor(page, '/audits/findings').click();
     await view(page).getByTestId('page-back').click();
-    await expect(page).toHaveURL(/\/capa$/);
-    await expect(tabFor(page, '/capa')).toHaveAttribute('data-active', 'true');
+    await expect(page).toHaveURL(/\/audits$/);
+    await expect(tabFor(page, '/audits')).toHaveAttribute('data-active', 'true');
     await expect(view(page).getByTestId('page-back')).toBeDisabled();
     await capture(page, '02-back-and-home');
     // the browser's own back stays in step with the window address
     await page.goBack();
-    await expect(page).toHaveURL(/\/audits$/);
+    await expect(page).toHaveURL(/\/audits\/findings$/);
     await expect(tabs(page)).toHaveCount(4);
 
     // closing the tab with typing asks first

@@ -56,6 +56,8 @@ const moduleFor = (url: string) => {
   for (const m of modules) if ((path === m.basePath || path.startsWith(m.basePath + '/')) && (!best || m.basePath.length > best.basePath.length)) best = m;
   return best;
 };
+/** The area of the application an address belongs to: its module, else its first path part (my-work, account, search). */
+const areaOf = (url: string) => moduleFor(url)?.key ?? url.split(/[?#]/)[0].split('/').filter(Boolean)[0] ?? '';
 const iconFor = (t: WorkTab) => t.id === HOME_ID ? <HomeOutlined sx={{ fontSize: 16 }} /> : moduleFor(t.url)?.icon ?? <ArticleOutlined sx={{ fontSize: 16 }} />;
 const navLabels = new Map<string, string>();
 const collect = (items: { label: string; path: string; children?: { label: string; path: string }[] }[]) => items.forEach((i) => { if (!navLabels.has(i.path)) navLabels.set(i.path, i.label); if (i.children) collect(i.children); });
@@ -129,6 +131,18 @@ function Tabbed({ render, org }: { render: (location: Location) => ReactNode; or
     // browser back to the page before: pop it instead of piling it on
     const stack = cur.back ?? [];
     const popping = back || (stack.length > 0 && samePage(stack[stack.length - 1], here));
+    // going to another area of the application (top bar, Home tiles, search, account menu) opens it in a tab of its own,
+    // the way it does from Home, so the page being worked on stays open; moving within an area stays in the tab
+    if (!popping && areaOf(here) !== areaOf(cur.url)) {
+      if (hit) { commit({ ...s, activeId: hit.id }); return; }
+      if (s.tabs.length < MAX_TABS) {
+        const at = s.tabs.findIndex((t) => t.id === cur.id) + 1;
+        const t: WorkTab = { id: newId(), url: here, back: [] };
+        const tabs = [...s.tabs]; tabs.splice(at, 0, t);
+        commit({ tabs, activeId: t.id }); return;
+      }
+      setNotice(`You can have up to ${MAX_TABS} tabs open. This page opened in the current tab; close a tab to open more.`);
+    }
     const nextBack = popping ? stack.slice(0, -1) : [...stack, cur.url].slice(-50);
     commit({ ...s, tabs: s.tabs.map((t) => t.id === cur.id ? { ...t, url: here, title: undefined, back: nextBack } : t) });
     setDirty((d) => { if (!d.has(cur.id)) return d; const n = new Set(d); n.delete(cur.id); return n; });
@@ -138,9 +152,7 @@ function Tabbed({ render, org }: { render: (location: Location) => ReactNode; or
 
   const openInTab = useCallback((url: string, show = false) => {
     const s = stateRef.current;
-    const hit = s.tabs.find((t) => samePage(t.url, url));
-    if (hit && show) { activate(hit); return; }
-    if (hit) { setNotice(`${labelFor(hit)} is already open in a tab.`); return; }
+    // every open adds a tab, even for a page that is already open somewhere (a second blank form, say)
     if (s.tabs.length >= MAX_TABS) { setNotice(`You can have up to ${MAX_TABS} tabs open. Close one to open another.`); return; }
     const insertAt = Math.max(s.tabs.findIndex((t) => t.id === s.activeId) + 1, 1);
     const t: WorkTab = { id: newId(), url };
