@@ -15,8 +15,8 @@ import { HOME_ID, MAX_TABS, captureNavigation, holdsDrafts, loadState, newId, sa
 
 interface TabsApi {
   enabled: boolean;
-  /** Opens an address in another tab without leaving the current one. */
-  openInTab: (url: string) => void;
+  /** Opens an address in another tab; stays on the current one unless `show` is set. */
+  openInTab: (url: string, show?: boolean) => void;
   /** Runs a navigating handler and opens where it went in another tab. */
   openHandlerInTab: (run: () => void) => void;
   /** Shows the "open in new tab" menu for an address or handler at the pointer. */
@@ -136,15 +136,18 @@ function Tabbed({ render, org }: { render: (location: Location) => ReactNode; or
 
   const activate = useCallback((t: WorkTab) => { if (t.id !== stateRef.current.activeId) { commit({ ...stateRef.current, activeId: t.id }); nav(t.url); } }, [nav]);
 
-  const openInTab = useCallback((url: string) => {
+  const openInTab = useCallback((url: string, show = false) => {
     const s = stateRef.current;
     const hit = s.tabs.find((t) => samePage(t.url, url));
+    if (hit && show) { activate(hit); return; }
     if (hit) { setNotice(`${labelFor(hit)} is already open in a tab.`); return; }
     if (s.tabs.length >= MAX_TABS) { setNotice(`You can have up to ${MAX_TABS} tabs open. Close one to open another.`); return; }
     const insertAt = Math.max(s.tabs.findIndex((t) => t.id === s.activeId) + 1, 1);
-    const tabs = [...s.tabs]; tabs.splice(insertAt, 0, { id: newId(), url });
-    commit({ ...s, tabs });
-  }, []);
+    const t: WorkTab = { id: newId(), url };
+    const tabs = [...s.tabs]; tabs.splice(insertAt, 0, t);
+    commit({ tabs, activeId: show ? t.id : s.activeId });
+    if (show) nav(url);
+  }, [activate, nav]);
   const openHandlerInTab = useCallback((run: () => void) => { const url = captureNavigation(run); if (url) openInTab(url); }, [openInTab]);
 
   const reallyClose = useCallback((tab: WorkTab) => {

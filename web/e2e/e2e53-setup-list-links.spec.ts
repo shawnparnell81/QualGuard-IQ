@@ -13,7 +13,7 @@ async function expectOnTop(p: Page, row: string, option: RegExp) {
 const emptyList = (p: Page, url: string) => p.route(`**${url}?*`, (r) => r.fulfill({ json: { items: [], total: 0 } }));
 
 test.describe('E2E 53: pickers link to the page where their items are added', () => {
-  test('an empty list shows a note and an add link that opens in a new tab', async ({ page }) => {
+  test('an empty list shows a note and an add link that opens in a tab inside the application', async ({ page }) => {
     await signIn(page, users.author);
     await emptyList(page, '/api/master/parts');
     await page.goto('/production/work-orders/new');
@@ -23,13 +23,30 @@ test.describe('E2E 53: pickers link to the page where their items are added', ()
     const add = page.getByTestId('setup-add-part');
     await expect(add).toHaveText(/Add part/);
     await expect(add).toHaveAttribute('href', '/products/parts/new');
-    await expect(add).toHaveAttribute('target', '_blank');
     await capture(page, '01-empty-dropdown-work-order');
+    await add.click();
+    await expect(page).toHaveURL(/\/products\/parts\/new$/);
+    const strip = page.getByTestId('tab-strip');
+    await expect(strip.locator('[data-tab-url="/products/parts/new"]')).toHaveAttribute('data-active', 'true');
+    // the form is still open in its own tab
+    await strip.locator('[data-tab-url="/production/work-orders/new"]').click();
+    await expect(page).toHaveURL(/\/production\/work-orders\/new$/);
+    await expect(page.locator('[data-testid^="tab-view-"][data-active="true"]').getByLabel('Number (blank = next)')).toBeVisible();
+  });
+
+  test('with tabs switched off the add link opens a browser tab', async ({ page }) => {
+    await signIn(page, users.author);
+    await page.goto('/account/appearance');
+    await page.getByRole('switch', { name: 'Use tabs' }).uncheck();
+    await emptyList(page, '/api/master/parts');
+    await page.goto('/production/work-orders/new');
+    await openSelect(page, 'Part');
+    const add = page.getByTestId('setup-add-part');
+    await expect(add).toHaveAttribute('target', '_blank');
     const [tab] = await Promise.all([page.context().waitForEvent('page'), add.click()]);
     await tab.waitForLoadState();
     expect(new URL(tab.url()).pathname).toBe('/products/parts/new');
     await tab.close();
-    // the form is still open behind the link
     await expect(page.getByLabel('Number (blank = next)')).toBeVisible();
   });
 
