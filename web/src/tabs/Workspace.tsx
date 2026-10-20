@@ -91,6 +91,9 @@ function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
     return { tabs: [...s.tabs, t], activeId: t.id };
   });
   const [dirty, setDirty] = useState<Set<string>>(new Set());
+  // tabs restored after a reload or opened in the background load when first shown
+  const [mounted, setMounted] = useState<Set<string>>(() => new Set([state.activeId]));
+  useEffect(() => { if (!mounted.has(state.activeId)) setMounted((m) => new Set(m).add(state.activeId)); }, [state.activeId, mounted]);
   const [notice, setNotice] = useState<string | null>(null);
   const [confirm, setConfirm] = useState<WorkTab | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; target: string | (() => void) } | null>(null);
@@ -110,7 +113,7 @@ function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
     if (here === '/' || hit && cur.id === HOME_ID) { setState({ ...s, activeId: hit?.id ?? HOME_ID }); return; }
     if (cur.id === HOME_ID) {
       if (s.tabs.length >= MAX_TABS) { setNotice(`You can have up to ${MAX_TABS} tabs open. This page opened in your last tab; close a tab to open more.`); const last = s.tabs[s.tabs.length - 1]; setState({ tabs: s.tabs.map((t) => t.id === last.id ? { ...t, url: here, title: undefined, back: [...(t.back ?? []), t.url].slice(-50) } : t), activeId: last.id }); return; }
-      const t: WorkTab = { id: newId(), url: here, back: ['/'] };
+      const t: WorkTab = { id: newId(), url: here, back: [] };
       setState({ tabs: [...s.tabs, t], activeId: t.id }); return;
     }
     // browser back to the page before: pop it instead of piling it on
@@ -139,6 +142,7 @@ function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
     const i = s.tabs.findIndex((t) => t.id === tab.id);
     const tabs = s.tabs.filter((t) => t.id !== tab.id);
     setDirty((d) => { const n = new Set(d); n.delete(tab.id); return n; });
+    setMounted((m) => { const n = new Set(m); n.delete(tab.id); return n; });
     if (s.activeId === tab.id) { const next = tabs[Math.min(i, tabs.length - 1)] ?? tabs[0]; setState({ tabs, activeId: next.id }); nav(next.url); }
     else setState({ ...s, tabs });
   }, [nav]);
@@ -205,7 +209,7 @@ function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
     <Ctx.Provider value={api}>
       <TabStrip tabs={state.tabs} activeId={state.activeId} dirty={dirty} onActivate={activate} onClose={close}
         onReorder={(from, to) => setState((s) => { const tabs = [...s.tabs]; const [m] = tabs.splice(from, 1); tabs.splice(Math.max(1, to), 0, m); return { ...s, tabs }; })} />
-      {state.tabs.map((t) => (
+      {state.tabs.filter((t) => mounted.has(t.id) || t.id === state.activeId).map((t) => (
         <TabIdCtx.Provider key={t.id} value={t.id}>
           <Box data-testid={`tab-view-${t.id}`} data-active={t.id === state.activeId} hidden={t.id !== state.activeId} onInput={markDirty(t)} onChange={markDirty(t)}
             sx={{ display: t.id === state.activeId ? 'block' : 'none' }}>
