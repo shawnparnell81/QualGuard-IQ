@@ -128,7 +128,7 @@ public sealed partial class SettingsController(AppDbContext db, ICurrentUser cur
                 sessionAbsoluteHours = o.SessionAbsoluteHours, idleTimeoutHours = 8, passwordMinLength = Math.Max(8, o.Password.MinLength),
                 lockoutAttempts = Math.Max(3, o.Lockout.MaxFailedAttempts), lockoutMinutes = Math.Max(1, o.Lockout.Minutes),
             },
-            email = new { configured = !string.IsNullOrWhiteSpace(config["Email:Host"]) || !string.IsNullOrWhiteSpace(config["Email:PickupDirectory"]), from = config["Email:From"] },
+            email = new { configured = !string.IsNullOrWhiteSpace(config["Email:SmtpHost"]) || !string.IsNullOrWhiteSpace(config["Email:PickupDirectory"]), from = config["Email:From"] },
         };
     }
 }

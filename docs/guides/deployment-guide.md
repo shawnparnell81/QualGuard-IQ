@@ -30,6 +30,29 @@
 
 On a server that people reach by name, add `https` to `COMPOSE_PROFILES`, set `QG_DOMAIN` to that name and `APP_BASE_URL=https://<name>`. Caddy listens on ports 80 and 443, gets and renews a Let's Encrypt certificate (the name must resolve to the server and both ports must be reachable from the internet), adds HSTS, and sends `/api` and `/health` straight to the API with the real client address. For a server only reachable inside the company network, set `QG_TLS=tls internal`; Caddy then uses its own certificate authority, whose root certificate (in the `caddydata` volume, `/data/caddy/pki/authorities/local/root.crt`) each computer must trust once. The plain `http://localhost:<WEB_PORT>` address keeps working on the server itself. Another reverse proxy works too: terminate TLS there, add HSTS, forward to the `web` container, and list its address in `TRUSTED_PROXY_NETWORKS` if it talks to the API directly.
 
+### Production server
+
+For a cloud or company server that other people use, start the app with the production file as well:
+
+```
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+It adds two things to the standard setup:
+
+- **Log limits:** each container keeps at most `LOG_MAX_FILES` log files of `LOG_MAX_SIZE` each (5 x 20 MB by default), so logs can't fill the disk.
+- **Daily backups:** the `backup-schedule` service runs the backup every day at `BACKUP_TIME` (in `TIME_ZONE`) into `BACKUP_DIR` and removes backups older than `BACKUP_KEEP_DAYS` (14 by default; 0 keeps all). A failed backup never removes older ones. Copy the backup folder off the server as well (see the recovery guide).
+
+Steps for a new Linux server:
+
+1. Install Docker Engine with the compose plugin, and open ports 80 and 443 in the server's firewall and in the cloud provider's network rules.
+2. Point the name people will type (for example `qms.example.com`) at the server's public address.
+3. Copy the repository to the server, copy `.env.example` to `.env` and fill it in. Use long, different passwords. Set `COMPOSE_PROFILES` to include `https`, `QG_DOMAIN` to the name and `APP_BASE_URL=https://<name>`. Fill in the `SMTP_*` and `EMAIL_FROM` values so password reset emails work.
+4. Run the command above, open `https://<name>`, sign in as the first administrator and set up two-step verification.
+5. Check `https://<name>/health/ready`, then run `docker compose run --rm backup` once and test a restore on another computer.
+
+Memory: the app, worker, database and MinIO run in about 2 GB. ClamAV needs about 3 GB more, so plan on 6 GB or more with virus scanning on. Intel/AMD and ARM servers both work.
+
 ## Configuration reference
 
 | Setting | Meaning |
@@ -96,6 +119,7 @@ The migration history table is `qms.__ef_migrations`.
 - `POSTGRES_APP_PASSWORD` and `MINIO_APP_PASSWORD` set and different from the owner and root passwords.
 - `Outbound:PrinterNetworks` narrowed to the printer subnet; `Outbound:AllowedNetworks` lists only the internal systems the app must call.
 - Data Protection keys backed up with each database backup, optionally encrypted with `DataProtection:CertificatePath`.
-- Backups scheduled, copied off the host, and restore-tested (see the recovery guide).
+- Backups scheduled (`docker-compose.prod.yml` runs one daily), copied off the host, and restore-tested (see the recovery guide).
+- Container log limits on (`docker-compose.prod.yml`).
 - Time synchronization on all hosts (signatures and audit entries carry server time). Authenticator codes also depend on it.
 - `App:BaseUrl` and `Email:SmtpHost` set, so password reset links work; keep two-step verification required for administrator roles (Admin › Roles; on by default for new installations) and consider `Auth:Mfa:RequiredForAll`.
