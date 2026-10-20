@@ -73,14 +73,17 @@ const toLocation = (url: string, key: string): Location => {
  */
 export function TabbedWorkspace({ render }: { render: (location: Location | undefined) => ReactNode }) {
   const [on] = useTabsSetting();
+  const { data: brand, isPending } = useBranding();
   if (!on) return <>{render(undefined)}</>;
-  return <Tabbed render={render} />;
+  // the saved tabs belong to one user in one organization, so wait for the organization before reading them
+  if (isPending) return null;
+  const org = `${window.location.host}.${brand?.organizationName ?? ''}`;
+  return <Tabbed key={org} org={org} render={render} />;
 }
 
-function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
+function Tabbed({ render, org }: { render: (location: Location) => ReactNode; org: string }) {
   const { me } = useAuth();
-  const { data: brand } = useBranding();
-  const key = storageKey(me!.id, `${window.location.host}.${brand?.organizationName ?? ''}`);
+  const key = storageKey(me!.id, org);
   const loc = useLocation();
   const nav = useNavigate();
   const here = loc.pathname + loc.search + loc.hash;
@@ -221,7 +224,7 @@ function Tabbed({ render }: { render: (location: Location) => ReactNode }) {
           <Box data-testid={`tab-view-${t.id}`} data-active={t.id === state.activeId} hidden={t.id !== state.activeId} onInput={markDirty(t)} onChange={markDirty(t)}
             sx={{ display: t.id === state.activeId ? 'block' : 'none' }}>
             <TitleWatcher tab={t} />
-            {render(toLocation(t.url, t.id))}
+            {render(t.id === state.activeId && samePage(t.url, here) ? { ...toLocation(t.url, t.id), state: loc.state, key: loc.key } : toLocation(t.url, t.id))}
           </Box>
         </TabIdCtx.Provider>
       ))}
