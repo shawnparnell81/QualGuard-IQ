@@ -1,3 +1,4 @@
+import { PageNav } from '../tabs/Workspace';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, FormControlLabel, Link, MenuItem, Paper, Stack, Switch, Table, TableBody, TableCell, TableHead, TableRow, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
@@ -269,6 +270,7 @@ export function MySettingsPage() {
   return (
     <Box sx={{ maxWidth: 960, mx: 'auto', p: { xs: 2, sm: 4 }, display: 'grid', gap: 2.5 }}>
       <Box>
+        <Box sx={{ mb: 1 }}><PageNav /></Box>
         <Typography variant="h1">My settings</Typography>
         <Typography color="text.secondary">{me?.displayName} · {me?.email}</Typography>
       </Box>

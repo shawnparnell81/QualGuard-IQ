@@ -91,22 +91,30 @@ function UploadPanel({ onStarted }: { onStarted: (id: string) => void }) {
       fd.append('file', file); fd.append('siteId', site); fd.append('mode', mode);
       if (rowsMode) { fd.append('targetModule', target); if (templateId) fd.append('targetTemplateId', templateId); }
       onStarted(await post<string>('/api/imports', fd));
-    } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
+    } catch (e) { setError((e as Error).message || 'The upload failed. Check the file and try again.'); } finally { setBusy(false); }
   };
   const t = rowsMode ? targets.data?.find((x) => x.key === target) : undefined;
   const isBook = !!file && WHOLE_FILE.test(file.name);
   const isWord = !!file && /\.(docx|doc)$/i.test(file.name);
   const isPdf = !!file && /\.(pdf|png|jpe?g|tiff?)$/i.test(file.name);
   const isImage = !!file && /\.(png|jpe?g|tiff?)$/i.test(file.name);
+  // the reason the button can't be used yet, shown under it so the page never just does nothing
+  const blocked = !file ? 'Choose a file first.'
+    : !site ? (sites.isLoading ? 'Loading sites…' : 'Add a site under Admin › Sites & departments first, then come back to import.')
+    : rowsMode && !t ? (mode === 'master-list' ? 'Choose the master list to migrate into.' : 'Choose where to import the rows.')
+    : t?.needsTemplate && !templateId ? ((templates.data?.items.length ?? 0) === 0
+      ? `There are no released form templates yet to import rows into.${isBook ? ' To see this workbook as a form, choose "Convert to an electronic form" under What to do.' : ''}`
+      : `Choose the form template the rows go into.${isBook ? ' To see this workbook as a form instead, choose "Convert to an electronic form" under What to do.' : ''}`)
+    : null;
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Typography variant="h6" gutterBottom>Import data</Typography>
       <Box onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)} onDrop={drop} aria-label="Drop a file here"
         sx={{ border: '2px dashed', borderColor: over ? 'primary.main' : 'divider', borderRadius: 1, p: 3, textAlign: 'center', bgcolor: over ? 'action.hover' : undefined, mb: 2 }}>
         <Typography>{file ? `${file.name} (${(file.size / 1024).toFixed(1)} KB)` : 'Drop a CSV, Excel, Word or PDF file or a scanned image here, or choose one.'}</Typography>
-        <Button component="label" sx={{ mt: 1 }}>Choose file<input hidden type="file" data-testid="import-file" accept=".csv,.txt,.tsv,.xlsx,.xlsm,.xls,.docx,.doc,.pdf,.png,.jpg,.jpeg,.tif,.tiff" onChange={(e) => { const f = e.target.files?.[0] ?? null; setFile(f); if (f && !WHOLE_FILE.test(f.name) && mode !== 'master-list') setMode('records'); }} /></Button>
+        <Button component="label" sx={{ mt: 1 }}>Choose file<input hidden type="file" data-testid="import-file" accept=".csv,.txt,.tsv,.xlsx,.xlsm,.xls,.docx,.doc,.pdf,.png,.jpg,.jpeg,.tif,.tiff" onChange={(e) => { const f = e.target.files?.[0] ?? null; e.target.value = ''; setFile(f); setError(null); if (f && !WHOLE_FILE.test(f.name) && mode !== 'master-list') setMode('records'); }} /></Button>
       </Box>
-      <Stack direction={{ xs: 'column', md: 'row' }} gap={2}>
+      <Stack direction={{ xs: 'column', md: 'row' }} gap={2} flexWrap="wrap">
         <TextField select size="small" label="Site" value={site} onChange={(e) => setSiteId(e.target.value)} sx={{ minWidth: 180 }}>
           {(sites.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{s.code} · {s.name}</MenuItem>)}</TextField>
         <TextField select size="small" label="What to do" value={mode} onChange={(e) => pickMode(e.target.value)} sx={{ minWidth: 260 }} SelectProps={{ SelectDisplayProps: { 'aria-label': 'Import mode' } as object }}>
@@ -119,8 +127,9 @@ function UploadPanel({ onStarted }: { onStarted: (id: string) => void }) {
           {choices.map((x) => <MenuItem key={x.key} value={x.key}>{x.name}</MenuItem>)}</TextField>}
         {t?.needsTemplate && <TextField select size="small" label="Form template" value={templateId} onChange={(e) => setTemplateId(e.target.value)} sx={{ minWidth: 280 }}>
           {(templates.data?.items ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.number} · {x.title}</MenuItem>)}</TextField>}
-        <Button variant="contained" disabled={!file || !site || busy || (t?.needsTemplate && !templateId) || (rowsMode && !t)} onClick={start}>Upload and inspect</Button>
+        <Button variant="contained" disabled={!!blocked || busy} onClick={start} sx={{ whiteSpace: 'nowrap', flexShrink: 0 }}>{busy ? 'Uploading…' : 'Upload and inspect'}</Button>
       </Stack>
+      {file && blocked && <Typography variant="body2" color="text.secondary" sx={{ mt: 1.5 }} data-testid="import-blocked">{blocked}</Typography>}
       {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
     </Paper>
   );
@@ -187,6 +196,10 @@ export function ImportJobDetail() {
       {[3, 4, 9].includes(j.status) && <LinearProgress variant="determinate" value={j.progress} sx={{ mb: 2 }} aria-label="Progress" />}
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {j.status === 2 && <Alert severity="error" sx={{ mb: 2 }}>The file did not pass the security inspection and will not be processed.</Alert>}
+      {(j.status === 13 || (j.status === 7 && whole)) && <Alert severity="error" sx={{ mb: 2 }} data-testid="import-failed">
+        {[...j.history].reverse().find((h) => h.event === 'StatusChanged')?.message ?? `The ${fileWord} could not be processed.`}
+        {j.issues.filter((x) => x.severity === 2).slice(0, 3).map((x) => <Box key={x.id} component="div" sx={{ mt: 0.5 }}>{x.description}{x.suggestedResolution ? ` ${x.suggestedResolution}` : ''}</Box>)}
+      </Alert>}
 
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
         {j.analysis.conversion && <Tab value="conversion" label="Side-by-side preview" />}
@@ -302,7 +315,7 @@ export function ImportJobDetail() {
               <TableCell>{r.problems.length ? r.problems.join(' ') : r.duplicate ? 'Duplicate (skipped)' : r.action === 'update' ? `Updates the existing record${r.before ? ` (now: ${Object.entries(r.before).filter(([k, v]) => v !== r.values[k]).map(([k, v]) => `${j.targetFields.find((f) => f.key === k)?.label ?? k} ${v ?? 'empty'}`).join(', ') || 'no change'})` : ''}` : 'Ready'}</TableCell></TableRow>)}</TableBody>
           </Table>
         </Paper>}
-        {[6, 7].includes(j.status) && can('imports.edit') && <Stack direction="row" gap={2} alignItems="center">
+        {[6, 7].includes(j.status) && can('imports.edit') && !(whole && j.status === 7) && <Stack direction="row" gap={2} alignItems="center">
           {j.status === 7 && <FormControlLabel control={<Checkbox checked={skipInvalid} onChange={(e) => setSkipInvalid(e.target.checked)} />} label="Import only the rows without problems" />}
           {toConfirm > 0 && <Typography variant="body2" color="warning.main">Confirm the {toConfirm} detection(s) first.</Typography>}
           <Button variant="contained" disabled={working || (j.status === 7 && !skipInvalid) || toConfirm > 0} onClick={() => run(() => post(`/api/imports/${id}/submit`, { skipInvalidRows: skipInvalid }))}>Submit for approval</Button>

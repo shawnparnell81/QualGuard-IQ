@@ -1,3 +1,4 @@
+import { PageNav, useTabTitle } from '../tabs/Workspace';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import { Alert, Box, Breadcrumbs, Chip, Collapse, IconButton, Link, List, ListItemButton, ListItemText, Tab, Tabs, Tooltip, Typography, useMediaQuery } from '@mui/material';
@@ -31,6 +32,7 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
   const narrow = useMediaQuery('(max-width:899.95px)');
   const [peek, setPeek] = useState(false);
   const loc = useLocation();
+  useTabTitle(titleText);
   const qg = useTheme().qg;
   // historical records brought in by an import: shown as imported and read-only (print, export and delete stay available in the page tools)
   const pageRecord = usePageRecord(tools ? record : false);
@@ -53,11 +55,14 @@ export function ModuleWorkspace({ module, crumbs, title, actions, tabs, tab, onT
         <PrintHeading title={titleText} />
         {/* Page header: module tag and crumbs on one quiet line, then a large title beside a blue module badge. */}
         <Box sx={{ px: { xs: 2, md: 4 }, pt: 3, color: qg.header.fg }}>
-          <Breadcrumbs separator="/" sx={{ fontSize: 11.5, mb: 1.25, letterSpacing: '0.04em', color: qg.header.muted, '& .MuiBreadcrumbs-separator': { mx: 0.75, color: 'divider' } }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1.25 }}>
+          <PageNav />
+          <Breadcrumbs separator="/" sx={{ fontSize: 11.5, letterSpacing: '0.04em', color: qg.header.muted, '& .MuiBreadcrumbs-separator': { mx: 0.75, color: 'divider' } }}>
             <Link component={RouterLink} to="/" underline="hover" sx={{ color: qg.header.muted }}>Home</Link>
             <Link component={RouterLink} to={module.basePath} underline="hover" sx={{ color: qg.header.muted }}>{module.label}</Link>
             {crumbs.filter((c, i) => !(i === 0 && c.label === module.label)).map((c, i) => c.to ? <Link key={i} component={RouterLink} to={c.to} underline="hover" sx={{ color: qg.header.muted }}>{c.label}</Link> : <Typography key={i} fontSize={11.5} fontWeight={600} sx={{ color: qg.header.fg }}>{c.label}</Typography>)}
           </Breadcrumbs>
+          </Box>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, pb: tabs ? 0.5 : 2.5, flexWrap: 'wrap' }}>
             <Box aria-hidden sx={{ width: qg.icon.size, height: qg.icon.size, flexShrink: 0, display: { xs: 'none', sm: 'grid' }, placeItems: 'center', background: qg.gradient, color: '#FFFFFF', borderRadius: `${qg.icon.radius}px`, '& svg': { fontSize: qg.icon.size * 0.56 }, boxShadow: `0 8px 20px ${qg.glow}` }}>{module.icon}</Box>
             <Typography variant="h1" sx={{ flex: '1 1 320px', minWidth: 0, color: qg.header.fg }}>{title}

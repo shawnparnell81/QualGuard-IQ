@@ -195,6 +195,13 @@ public sealed partial class ExcelFormConverter
                 if (cs.Field.Type == "__running") kind = spec.Fixed ? "fixed-running" : "running";
                 SetBind(sh.Name, r, cs.C, new Bind(kind, cs.Key, spec.Key, cs.Key, r - spec.FirstRow));
             }
+        // columns dropped above (formulas outside the table, running totals) can leave the merged header row wider than the table;
+        // keep the table and drop the grouped header rather than failing the whole conversion
+        if (t.HeaderGroups is { } hg3 && hg3.Sum(g => g.Span) != t.Columns.Count + (t.FixedRows is null ? 0 : 1))
+        {
+            t.HeaderGroups = null;
+            report.Add("table", FormulaRefs.Address(sh.Name, spec.HeaderRow - 1, spec.Cols[0].C), "approximated", "The merged heading above the table did not line up with its columns and was left off; the column headings are kept.");
+        }
         def.Tables.Add(t);
         tables.Add(spec);
         var sample = !spec.Fixed && Enumerable.Range(spec.FirstRow, spec.LastRow - spec.FirstRow + 1).Any(r => spec.Cols.Any(cs => sh.At(r, cs.C) is { Formula: null } x && !Blank(x)));

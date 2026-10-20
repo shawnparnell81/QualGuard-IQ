@@ -59,8 +59,22 @@ public sealed partial class ImportCenterService
         {
             case "template":
             {
-                var x = new ExcelFormConverter(wb, new ExcelConversionOptions(es.Sheets, es.Regions, es.Title ?? Path.GetFileNameWithoutExtension(job.OriginalFileName))).Convert();
-                RunEngine(job, analysis, x.Definition, x.Report, "xlsx");
+                ExcelConversion x;
+                try
+                {
+                    x = new ExcelFormConverter(wb, new ExcelConversionOptions(es.Sheets, es.Regions, es.Title ?? Path.GetFileNameWithoutExtension(job.OriginalFileName))).Convert();
+                    RunEngine(job, analysis, x.Definition, x.Report, "xlsx");
+                }
+                catch (AppException e)
+                {
+                    // keep the workbook summary so the worksheets can be chosen and the conversion run again on this import
+                    job.Analysis = analysis.ToJsonString();
+                    var many = summary.Sheets.Count > 1 && es.Sheets is not { Count: 1 };
+                    AddIssue(job, "file", null, ImportIssueSeverity.Error, "CONVERSION", e.Message,
+                        many ? "Choose fewer worksheets under Workbook settings (for example the one form you need) and select Apply." : "Check the worksheet in the original workbook.");
+                    Transition(job, ImportJobStatus.ValidationFailed, many ? "The workbook could not be converted to one form." : "The workbook could not be converted to a form.");
+                    break;
+                }
                 analysis["conversion"] = new JsonObject
                 {
                     ["definition"] = JsonNode.Parse(FormDefinitions.Serialize(x.Definition)),

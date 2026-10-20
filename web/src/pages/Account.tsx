@@ -1,3 +1,4 @@
+import { PageNav } from '../tabs/Workspace';
 import { Alert, Box, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { get } from '../api';
@@ -19,6 +20,7 @@ export function SignInHistory() {
   const q = useQuery({ queryKey: ['sign-ins'], queryFn: () => get<{ enabled: boolean; items: SignIn[] }>('/api/account/sign-ins') });
   return (
     <Box sx={{ maxWidth: 1240, mx: 'auto', p: { xs: 2, sm: 4 } }}>
+      <Box sx={{ mb: 1 }}><PageNav /></Box>
       <Typography variant="h1" sx={{ mb: 2 }}>Sign-in history</Typography>
       {q.data && !q.data.enabled
         ? <Alert severity="info">Login history is turned off for your organization. An administrator can turn it on in Organization settings.</Alert>

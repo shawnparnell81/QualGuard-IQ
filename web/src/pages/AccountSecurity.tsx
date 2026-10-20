@@ -1,3 +1,4 @@
+import { PageNav } from '../tabs/Workspace';
 import { useState, type FormEvent, type ReactNode } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogTitle, Divider, Link, Paper, Stack, Table, TableBody, TableCell, TableHead, TableRow, Typography, useMediaQuery } from '@mui/material';
@@ -43,6 +44,7 @@ export function AccountSecurity() {
   return (
     <Box sx={{ maxWidth: 960, mx: 'auto', p: { xs: 2, sm: 4 }, display: 'grid', gap: 2.5 }}>
       <Box>
+        <Box sx={{ mb: 1 }}><PageNav /></Box>
         <Typography variant="h1">Security</Typography>
         <Typography color="text.secondary">How you sign in to {appName}. Changes here are recorded in the audit trail.</Typography>
       </Box>

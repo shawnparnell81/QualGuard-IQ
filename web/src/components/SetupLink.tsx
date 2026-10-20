@@ -3,6 +3,7 @@ import { Box, GlobalStyles, Link, Typography } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import { useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useAuth } from '../auth';
+import { useTabs } from '../tabs/Workspace';
 
 /**
  * Setup lists that feed pickers across the app. Each entry names the page where the items are added,
@@ -26,19 +27,37 @@ export const setupLists: Record<SetupKind, SetupList> = {
   course: { one: 'course', many: 'courses', path: '/training/courses/new', permission: 'training.edit', refresh: [['courses'], ['courses-all']] },
 };
 
+/** Closes the open picker list (and its invisible backdrop) so it does not cover the new tab. */
+function closePicker(from: HTMLElement) {
+  const list = from.closest('[role="listbox"], .MuiModal-root, .MuiPopover-root');
+  list?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement | null)?.blur?.();
+}
+
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
 /**
- * The add page opens in a new tab so the form being filled in is never lost.
- * When the user returns to this tab the list is fetched again, so the new item is ready to pick.
+ * The add page opens in a new tab so the form being filled in is never lost: a tab inside the application
+ * when tabs are on, otherwise a browser tab. The list is fetched again after the new item is saved
+ * (or when the user comes back to the browser tab), so the new item is ready to pick.
  */
 function useSetupLink(kind: SetupKind) {
   const { can } = useAuth();
   const qc = useQueryClient();
   const def = setupLists[kind];
+  const tabs = useTabs();
   const open = (e: MouseEvent) => {
     e.stopPropagation();
     const refresh = () => { def.refresh.forEach((k) => qc.invalidateQueries({ queryKey: k })); };
+    if (tabs && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
+      e.preventDefault();
+      closePicker(e.currentTarget as HTMLElement);
+      window.addEventListener('qg:saved', refresh);
+      // later saves elsewhere need not refresh this list, so stop listening after half an hour
+      window.setTimeout(() => window.removeEventListener('qg:saved', refresh), 30 * 60 * 1000);
+      tabs.openInTab(def.path, true);
+      return;
+    }
     window.addEventListener('focus', refresh, { once: true });
   };
   return { def, allowed: ([] as string[]).concat(def.permission).every(can), open };
