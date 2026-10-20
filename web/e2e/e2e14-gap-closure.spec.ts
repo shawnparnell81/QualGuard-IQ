@@ -42,6 +42,7 @@ test.describe('E2E 14: gap closure', () => {
     await page.getByRole('button', { name: 'Record cost' }).click();
     await dialog(page).getByLabel('Element').fill('Training');
     await dialog(page).getByLabel('Amount (USD)').fill('125');
+    await dialog(page).getByLabel('Date').fill(localDate());
     await dialog(page).getByRole('button', { name: 'Record' }).click();
     await expect(dialog(page).getByText('Select a site.')).toBeVisible();
     await shot(page, '169-gap02-coq-site-picker');
