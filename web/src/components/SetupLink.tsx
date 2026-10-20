@@ -27,6 +27,13 @@ export const setupLists: Record<SetupKind, SetupList> = {
   course: { one: 'course', many: 'courses', path: '/training/courses/new', permission: 'training.edit', refresh: [['courses'], ['courses-all']] },
 };
 
+/** Closes the open picker list (and its invisible backdrop) so it does not cover the new tab. */
+function closePicker(from: HTMLElement) {
+  const list = from.closest('[role="listbox"], .MuiModal-root, .MuiPopover-root');
+  list?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+  (document.activeElement as HTMLElement | null)?.blur?.();
+}
+
 const cap = (s: string) => s[0].toUpperCase() + s.slice(1);
 
 /**
@@ -44,6 +51,7 @@ function useSetupLink(kind: SetupKind) {
     const refresh = () => { def.refresh.forEach((k) => qc.invalidateQueries({ queryKey: k })); };
     if (tabs && !e.ctrlKey && !e.metaKey && !e.shiftKey) {
       e.preventDefault();
+      closePicker(e.currentTarget as HTMLElement);
       window.addEventListener('qg:saved', refresh);
       // later saves elsewhere need not refresh this list, so stop listening after half an hour
       window.setTimeout(() => window.removeEventListener('qg:saved', refresh), 30 * 60 * 1000);
