@@ -21,6 +21,7 @@ public sealed class AuthTests(TestApp app)
         var c = await app.AnonymousAsync();
         var b = await c.GetJsonAsync<Dictionary<string, object>>("/api/organization/branding");
         Assert.Equal("QualGuard IQ", b["applicationName"].ToString());
+        Assert.False(string.IsNullOrWhiteSpace(b["timeZone"]?.ToString())); // the web app dates "today" in this zone, as the server does
     }
 
     [Fact]

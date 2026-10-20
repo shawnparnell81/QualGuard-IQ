@@ -71,4 +71,14 @@ export const equipmentStatus = ['Active', 'Quarantined', 'OutOfService', 'Retire
 export const calResult = ['Pass', 'PassAfterAdjustment', 'OutOfTolerance', 'Fail'];
 export const impactStatus = ['Open', 'Completed'];
 /** Local calendar date (YYYY-MM-DD) offset by whole days; the server re-checks against the site's time zone. */
-export const localDate = (addDays = 0) => { const d = new Date(); d.setDate(d.getDate() + addDays); return d.toLocaleDateString('en-CA'); };
+// Business dates follow the organization's time zone (as the server does), not the browser's, so a default
+// "today" never lands on tomorrow for someone working in a different zone than the plant.
+let businessZone: string | undefined;
+export const setBusinessZone = (zone: string | null | undefined) => {
+  if (!zone) return;
+  try { new Intl.DateTimeFormat('en-CA', { timeZone: zone }); businessZone = zone; } catch { /* unknown zone: keep the browser's */ }
+};
+export const localDate = (addDays = 0) => {
+  const d = new Date(Date.now() + addDays * 86_400_000);
+  return new Intl.DateTimeFormat('en-CA', { timeZone: businessZone, year: 'numeric', month: '2-digit', day: '2-digit' }).format(d);
+};

@@ -9,7 +9,7 @@ import { modules } from '../modules/registry';
 import { ModuleWorkspace } from '../layout/ModuleWorkspace';
 import { Section, lookupLabel, useLookup } from '../components/Kit';
 import { SitePicker } from '../components/SitePicker';
-import { fmtDate, fmtDateTime } from '../components/Status';
+import { fmtDate, fmtDateTime, localDate } from '../components/Status';
 import { mono } from '../theme';
 import { useCarriers } from '../warehouse/common';
 
@@ -84,7 +84,7 @@ function NewTemplateDialog({ onClose, onCreated }: { onClose: () => void; onCrea
 
 function ManifestPanel() {
   const carriers = useCarriers();
-  const [v, setV] = useState({ siteId: '', carrierId: '', date: new Date().toLocaleDateString('en-CA') });
+  const [v, setV] = useState({ siteId: '', carrierId: '', date: localDate() });
   const issued = useQuery({ queryKey: ['manifests', v.siteId], enabled: !!v.siteId, queryFn: () => get<GeneratedRow[]>(`/api/shipping/generated-documents?siteId=${v.siteId}&kind=2`) });
   const [err, setErr] = useState<string | null>(null);
   const qc = useQueryClient();
