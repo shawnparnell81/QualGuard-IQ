@@ -39,6 +39,7 @@ export async function api<T = unknown>(method: string, url: string, body?: unkno
     const p = await r.json().catch(() => ({}));
     throw new ApiError(r.status, p.title ?? `Request failed (${r.status})`, p.errors, p.code, p);
   }
+  if (method !== 'GET') window.dispatchEvent(new Event('qg:saved'));
   if (r.status === 204) return undefined as T;
   const text = await r.text();
   return (text ? JSON.parse(text) : undefined) as T;

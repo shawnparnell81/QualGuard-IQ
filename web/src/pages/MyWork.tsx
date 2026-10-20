@@ -1,3 +1,4 @@
+import { PageNav } from '../tabs/Workspace';
 import { useState } from 'react';
 import { Box, Button, Paper, Stack, Tab, Tabs, TextField, Typography, Alert } from '@mui/material';
 import type { ColumnDef } from '@tanstack/react-table';
@@ -29,6 +30,7 @@ export function MyWork() {
   ];
   return (
     <Box sx={{ maxWidth: 1240, mx: 'auto', p: 4 }}>
+      <Box sx={{ mb: 1 }}><PageNav /></Box>
       <Typography variant="h1" sx={{ mb: 2 }}>My Work</Typography>
       <Tabs value={tab} onChange={(_, v) => setTab(v)} sx={{ mb: 2 }}>
         <Tab value="approvals" label={`Approvals (${w?.approvals.length ?? 0})`} />

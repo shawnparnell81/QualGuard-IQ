@@ -2,7 +2,8 @@ import { ReportSchedules } from './pages/ReportSchedules';
 import { MessagingAdmin, MyMessaging } from './pages/Messaging';
 import { GenerationAdmin } from './pages/Generation';
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, type Location } from 'react-router-dom';
+import { TabbedWorkspace } from './tabs/Workspace';
 import { PrintStyles } from './tools/PageTools';
 import { PreferencesSync } from './tools/PreferencesSync';
 import { Box, CircularProgress, CssBaseline, ThemeProvider } from '@mui/material';
@@ -314,8 +315,18 @@ export function App() {
             <PreferencesSync />
             <TopBar onOpenPalette={() => setPalette(true)} />
             <CommandPalette open={palette} onClose={() => setPalette(false)} />
+            <TabbedWorkspace render={(location) => <AppRoutes location={location} />} />
+          </>
+        )}
+    </ThemeProvider>
+  );
+}
+
+/** Every page of the application; each open tab renders these at its own address. */
+function AppRoutes({ location }: { location?: Location }) {
+  return (
             <Suspense fallback={<Box sx={{ display: 'grid', placeItems: 'center', height: '60vh' }}><CircularProgress /></Box>}>
-            <Routes>
+            <Routes location={location}>
               <Route path="/" element={<Home />} />
               <Route path="/my-work" element={<MyWork />} />
               <Route path="/search" element={<Search />} />
@@ -656,8 +667,5 @@ export function App() {
               <Route path="*" element={<Box sx={{ p: 6 }}>Page not found.</Box>} />
             </Routes>
             </Suspense>
-          </>
-        )}
-    </ThemeProvider>
   );
 }

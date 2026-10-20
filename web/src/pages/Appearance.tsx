@@ -1,3 +1,5 @@
+import { PageNav, useTabsSetting } from '../tabs/Workspace';
+import { FormControlLabel, Switch } from '@mui/material';
 import { useEffect, useState } from 'react';
 import { Alert, Box, Button, MenuItem, Paper, Stack, TextField, ToggleButton, ToggleButtonGroup, Typography } from '@mui/material';
 import { useQueryClient } from '@tanstack/react-query';
@@ -155,9 +157,24 @@ export function MyAppearancePage() {
   const { me } = useAuth();
   return (
     <Box sx={{ maxWidth: 1240, mx: 'auto', p: { xs: 2, sm: 4 } }}>
+      <Box sx={{ mb: 1 }}><PageNav /></Box>
       <Typography variant="h1" sx={{ mb: 0.5 }}>My appearance</Typography>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>Only changes how {me?.displayName ?? 'the application'} looks for you. Anything left on the organization default follows it.</Typography>
+      <TabsToggle />
       <AppearanceSettings scope="personal" />
     </Box>
+  );
+}
+
+/** Use tabs: keep several pages open inside the application. Saved for this person on this device. */
+function TabsToggle() {
+  const [on, setOn] = useTabsSetting();
+  return (
+    <Paper variant="outlined" sx={{ p: 2, mb: 3, display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+      <FormControlLabel control={<Switch checked={on} onChange={(e) => setOn(e.target.checked)} inputProps={{ 'aria-label': 'Use tabs' }} />} label={<Typography fontWeight={600}>Use tabs</Typography>} />
+      <Typography variant="body2" color="text.secondary" sx={{ flex: 1, minWidth: 240 }}>
+        Keep records, forms and pages open as tabs under the top bar. Ctrl-click, middle-click or right-click a link or row to open it in a new tab. Alt+W closes the tab, Alt+[ and Alt+] move between tabs.
+      </Typography>
+    </Paper>
   );
 }
