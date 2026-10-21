@@ -86,17 +86,17 @@ export function TemplateMarketplace() {
         <input ref={fileRef} type="file" hidden accept=".qgpkg,.zip" aria-label="Package file" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) importFile(f); }} />
       </Stack> : undefined}>
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg.text}
-        {msg.result && <Box sx={{ mt: 1 }}>{msg.result.templates.slice(0, 12).map((t) => <Chip key={t.key} size="small" sx={{ mr: 0.5, mb: 0.5 }} component={RouterLink} to={`/forms/templates/${t.documentId}`} clickable label={`${t.number} · ${t.title}${t.alreadyInstalled ? ' (already installed)' : ''}`} />)}{msg.result.templates.length > 12 && <Typography variant="caption"> and {msg.result.templates.length - 12} more</Typography>}</Box>}
+        {msg.result && <Box sx={{ mt: 1 }}>{msg.result.templates.slice(0, 12).map((t) => <Chip key={t.key} size="small" sx={{ mr: 0.5, mb: 0.5, maxWidth: '100%' }} component={RouterLink} to={`/forms/templates/${t.documentId}`} clickable label={`${t.number} · ${t.title}${t.alreadyInstalled ? ' (already installed)' : ''}`} />)}{msg.result.templates.length > 12 && <Typography variant="caption"> and {msg.result.templates.length - 12} more</Typography>}</Box>}
       </Alert>}
 
       {tab === 'packs' && <>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Installing creates draft form templates under document control, filed by category and industry pack. Each one goes through review and approval before it can be used. Templates already installed are not duplicated.</Typography>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2 }}>
           {(packs.data ?? []).map((p) => (
-            <Card key={`${p.key}-${p.version}-${p.origin}`} variant="outlined" sx={{ display: 'flex', flexDirection: 'column', borderColor: pack?.key === p.key && pack.version === p.version ? 'primary.main' : undefined }}>
+            <Card key={`${p.key}-${p.version}-${p.origin}`} variant="outlined" sx={{ display: 'flex', flexDirection: 'column', minWidth: 0, overflowWrap: 'anywhere', borderColor: pack?.key === p.key && pack.version === p.version ? 'primary.main' : undefined }}>
               <CardContent sx={{ flex: 1 }}>
                 <Stack direction="row" justifyContent="space-between" alignItems="flex-start" gap={1}>
-                  <Typography variant="h6" component="h2">{p.name}</Typography>
+                  <Typography variant="h6" component="h2" sx={{ minWidth: 0 }}>{p.name}</Typography>
                   <Chip size="small" label={ORIGIN[p.origin]} color={p.origin === 0 ? 'primary' : 'default'} variant={p.origin === 0 ? 'filled' : 'outlined'} />
                 </Stack>
                 <Typography variant="caption" color="text.secondary" sx={{ fontFamily: mono }}>{p.key} · {p.version}</Typography>
