@@ -67,3 +67,18 @@ signed with development keys.
   affected licences with a new key.
 - **Revoke a licence:** revoke it on the installation, or enter the licence id from a publisher revocation notice under
   "Revoke a license id". That also blocks a licence that was never activated there.
+
+## Publisher licence tool (`tools/QualGuardIQ.LicenseTool`)
+
+A stand-alone command line tool, `qglicence`, for the publisher's own computer (Windows, macOS or Linux, .NET 10 SDK):
+
+- `keygen --key-id ID --private-out FILE --public-out FILE` creates an ES256 key pair. It refuses to write inside a git
+  working tree, never overwrites an existing key, never prints the private key and writes it owner-only on Linux/macOS.
+- `issue --key FILE --key-id ID --licence-id ID --company NAME --expires yyyy-MM-dd [--tier T] [--users N] [--max-sites N]
+  [--sites a,b] [--extensions a,b|*] [--customer ID] [--deployments x,y] [--out FILE]` signs a QGL2 licence. Extensions
+  default to `*`. The licence is valid to 23:59:59 UTC on the expiry date.
+- `verify --licence FILE --public-key FILE [--customer ID] [--deployment ID]` runs the same checks the application runs.
+- `public-key --key FILE` prints the public key and fingerprint.
+
+Add `--development` (and a `dev-` key id) for test keys. The payload now also carries optional `tier`, `maxUsers`,
+`maxSites` and `sites`; licences without them still verify.

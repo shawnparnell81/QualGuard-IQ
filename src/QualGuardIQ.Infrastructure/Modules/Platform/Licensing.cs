@@ -7,9 +7,10 @@ using QualGuardIQ.Domain.Platform;
 
 namespace QualGuardIQ.Infrastructure.Modules.Platform;
 
-/// <summary>License payload. QGL1 keys carry the first five fields; QGL2 adds scope and the key environment.</summary>
+/// <summary>License payload. QGL1 keys carry the first five fields; QGL2 adds scope, the key environment and the optional product terms (tier, user and site limits, named sites).</summary>
 public sealed record LicenseClaims(string LicenseId, string Licensee, List<string> Extensions, DateTimeOffset IssuedAt, DateTimeOffset ExpiresAt,
-    string? CustomerId = null, List<string>? Deployments = null, LicenseKeyEnvironment Environment = LicenseKeyEnvironment.Production);
+    string? CustomerId = null, List<string>? Deployments = null, LicenseKeyEnvironment Environment = LicenseKeyEnvironment.Production,
+    string? Tier = null, int? MaxUsers = null, int? MaxSites = null, List<string>? Sites = null);
 
 /// <summary>QGL2 header: which publisher key signed the license and with which algorithm.</summary>
 public sealed record LicenseHeader(string Kid, string Alg);

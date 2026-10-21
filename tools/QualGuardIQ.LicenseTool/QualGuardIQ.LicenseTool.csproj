@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AssemblyName>qglicence</AssemblyName>
+    <RootNamespace>QualGuardIQ.LicenseTool</RootNamespace>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>qglicence</ToolCommandName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\QualGuardIQ.Infrastructure\QualGuardIQ.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>
