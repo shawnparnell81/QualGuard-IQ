@@ -48,7 +48,7 @@ export function SectionCard({ section, values, onChange, disabled, extra }: { se
     <Paper variant="outlined" sx={{ p: 2 }} component="section" aria-label={section.title}>
       <Typography variant="h3" sx={{ mb: 1.5 }}>{section.title}</Typography>
       {extra}
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' } }}>
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))', md: 'repeat(3, minmax(0, 1fr))' } }}>
         {section.fields.map((f) => <Box key={f.key} sx={{ gridColumn: f.kind === 'multiline' ? '1 / -1' : undefined }}>
           <FieldInput fld={f} value={values[f.key]} onChange={(v) => onChange(f.key, v)} disabled={disabled} /></Box>)}
       </Box>

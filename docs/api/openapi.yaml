@@ -9535,6 +9535,24 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  /api/auth/session:
+    get:
+      tags:
+        - Auth
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/SessionResponse'
+      security: [ ]
   /api/changes/categories:
     get:
       tags:
@@ -78529,6 +78547,18 @@ components:
           format: double
         state:
           type: string
+    SessionResponse:
+      required:
+        - authenticated
+        - user
+      type: object
+      properties:
+        authenticated:
+          type: boolean
+        user:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/MeResponse'
     SettingsDto:
       required:
         - applicationName

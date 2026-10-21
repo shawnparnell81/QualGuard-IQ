@@ -65,7 +65,7 @@ export function WarehouseOverview() {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(5, 1fr)' }, gap: 1.5, mb: 2 }}>
         {(d.data?.tiles ?? []).map((t) => <MetricTile key={t.key} label={t.label} value={t.value} unit={t.unit} num={t.numerator} den={t.denominator} note={t.note} onClick={() => nav(t.url)} />)}
       </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.2fr 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '1.2fr 1fr' }, gap: 2 }}>
         <Section title="Warehouse utilization">
           <Stack gap={1.5}>{(d.data?.utilization ?? []).map((u) => (
             <Box key={u.warehouseId} onClick={() => nav(`/warehouse/locations/${u.warehouseId}`)} sx={{ cursor: 'pointer', p: 1, borderRadius: 1, '&:hover': { bgcolor: 'action.hover' } }}>
@@ -242,7 +242,7 @@ export function LocationDetail() {
   const label = (sym: string) => `/api/trace/labels?symbology=${sym}&content=${encodeURIComponent(code)}`;
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Locations', to: '/warehouse/locations' }, { label: l.code }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{l.path}</span><Typography color="text.secondary">{l.name} · {purposes[l.purpose]}</Typography>{l.frozenByCountId && <Chip size="small" color="info" label="Frozen for count" />}</Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{l.path}</span><Typography color="text.secondary">{l.name} · {purposes[l.purpose]}</Typography>{l.frozenByCountId && <Chip size="small" color="info" label="Frozen for count" />}</Stack>}
       tabs={[{ label: 'Stock here', value: 'stock' }, { label: 'Movements', value: 'history' }, { label: 'Label', value: 'label' }, { label: 'Audit', value: 'files' }]} tab={tab} onTab={setTab}
       actions={can('inventory.edit') && <Button variant="outlined" onClick={() => setEdit(true)}>Edit</Button>}>
       <MirrorBanner siteId={l.siteId} />
@@ -332,7 +332,7 @@ export function ReceiptNew() {
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Receiving', to: '/warehouse/receipts' }, { label: 'New' }]} title="Receive material">
       <MirrorBanner siteId={siteId || undefined} />
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Paper sx={{ p: 2.5, mb: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
+      <Paper sx={{ p: 2.5, mb: 2, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2 }}>
         <TextField select label="Receipt type" value={h.kind} onChange={set('kind')} helperText={blindOk ? undefined : 'Blind receipts need the blind receiving permission.'}>{receiptKinds.map((k, i) => <MenuItem key={k} value={String(i)} disabled={i === 3 && !blindOk}>{k}</MenuItem>)}</TextField>
         <TextField select label="Purchase order" value={h.purchaseOrderId} onChange={set('purchaseOrderId')}><MenuItem value="">None</MenuItem>{(pos.data ?? []).map((x) => <MenuItem key={x.id} value={x.id}>{x.number}</MenuItem>)}</TextField>
         <TextField select label="Supplier" value={h.supplierId || po.data?.purchaseOrder.supplierId || ''} onChange={set('supplierId')}><MenuItem value="">None (blind)</MenuItem>{(sups.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{lookupLabel(s)}</MenuItem>)}{setupOptions('supplier', sups.data)}</TextField>
@@ -378,9 +378,9 @@ export function ReceiptDetailPage() {
   const sup = sups.data?.find((s) => s.id === r.supplierId);
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Receiving', to: '/warehouse/receipts' }, { label: r.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{r.number}</span><StatusChip status={receiptStatus[r.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{r.number}</span><StatusChip status={receiptStatus[r.status]} /></Stack>}
       tabs={[{ label: 'Lines & inspection', value: 'lines' }, { label: 'Labels', value: 'labels' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Box>
           {tab === 'lines' && <Stack gap={1.5}>{d.data!.lines.map((x) => (
             <Paper key={x.line.id} variant="outlined" sx={{ p: 2, borderLeft: 5, borderLeftColor: x.line.status === 2 ? tones.ok : x.line.status === 1 ? tones.warn : x.line.status >= 3 ? tones.bad : 'divider' }}>
@@ -472,13 +472,13 @@ export function HoldDetail() {
   const part = parts.data?.find((x) => x.id === d.partId);
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Holds', to: '/warehouse/holds' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><StatusChip status={holdStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.number}</span><StatusChip status={holdStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Held stock', value: 'scope' }, { label: 'Labels', value: 'labels' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>{d.ncrId && <Button component={RouterLink} to={`/ncr/${d.ncrId}`}>Open NCR</Button>}
         {can('inventory.edit') && d.status === 0 && <Button variant="outlined" component={RouterLink} to={`/warehouse/mrb/new?hold=${d.id}`}>Send to MRB</Button>}
         {can('inventory.edit') && d.status === 0 && <Button variant="contained" onClick={() => setRel(true)}>Request release</Button>}</Stack>}>
       {d.status === 1 && <Alert severity="info" sx={{ mb: 2 }}>Release is waiting for e-signed approval. Approvers see it in their approvals inbox.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Box>{tab === 'labels' ? <LabelPanel refType="InventoryHold" refId={d.id} siteId={d.siteId} types={[8, 9]} title="Hold and quarantine labels" /> : tab === 'scope' ? <DataTable data={stock.data ?? []} empty="No stock currently in scope."
           columns={[{ header: 'Part', accessorKey: 'partNumber', cell: mnum }, { header: 'Lot / serial', accessorFn: (r) => r.serialNumber ?? r.lotNumber ?? '', cell: mnum }, { header: 'Location', accessorKey: 'locationCode', cell: mnum },
             { header: 'Status', accessorKey: 'status', cell: (x) => <StockBadge status={x.getValue()} held={x.row.original.held} /> }, { header: 'On hand', accessorKey: 'onHand', cell: (x) => qty(x.getValue()) }]} />
@@ -563,11 +563,11 @@ export function MrbDetail() {
   const loc = (x?: string) => locs.data?.find((l) => l.id === x)?.code;
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'MRB', to: '/warehouse/mrb' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><StatusChip status={mrbStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.number}</span><StatusChip status={mrbStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Case', value: 'case' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={can('inventory.edit') && (d.status === 0 || d.status === 3) && <Button variant="contained" onClick={() => setProp(true)}>Propose disposition</Button>}>
       <Chevrons steps={mrbSteps} at={mrbStep(d.status)} failed={d.status === 3 ? 'Proposal rejected' : d.status === 5 ? 'Cancelled' : undefined} />
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 300px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) 300px' }, gap: 2 }}>
         <Box>
           {tab === 'case' && <Section title="Disposition">
             {d.disposition ? <Stack gap={1}><Typography variant="h6">{mrbDisp[d.disposition]}</Typography><Typography>{d.justification}</Typography>
@@ -620,14 +620,14 @@ export function RtvDetail() {
   const refresh = () => qc.invalidateQueries({ queryKey: ['wh-rtv', id] });
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Returns to vendor', to: '/warehouse/rtv' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><StatusChip status={rtvStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.number}</span><StatusChip status={rtvStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Return', value: 'ret' }, { label: 'Custody', value: 'custody' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={can('inventory.edit') && <Stack direction="row" gap={1}>
         {d.status === 0 && <Button variant="contained" onClick={() => setDlg('ship')}>Ship to supplier</Button>}
         {d.status === 1 && <Button variant="contained" onClick={() => setDlg('credit')}>Record credit</Button>}
         {(d.status === 1 || d.status === 2) && <Button variant="outlined" onClick={async () => { await post(`/api/warehouse/supplier-returns/${id}/close`, {}); refresh(); }}>Close</Button>}</Stack>}>
       <Chevrons steps={['Open', 'Shipped', 'Credited', 'Closed']} at={d.status <= 3 ? d.status : -1} failed={d.status === 4 ? 'Cancelled' : undefined} />
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 300px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) 300px' }, gap: 2 }}>
         <Box>
           {tab === 'ret' && <Section title="Reason"><Typography>{d.reason}</Typography>
             <Stack direction="row" gap={1} sx={{ mt: 2 }}>{d.mrbCaseId && <Button component={RouterLink} to={`/warehouse/mrb/${d.mrbCaseId}`}>MRB case</Button>}{d.ncrId && <Button component={RouterLink} to={`/ncr/${d.ncrId}`}>NCR</Button>}</Stack></Section>}
@@ -705,7 +705,7 @@ export function CountDetailPage() {
   const saveEntries = () => run(() => post(`/api/warehouse/counts/${id}/entries`, { entries: Object.entries(entry).filter(([, v]) => v !== '').map(([lineId, v]) => ({ lineId, partId: null, lotId: null, serialId: null, locationId: null, countedQuantity: Number(v), notes: null })) }), 'Counts saved.');
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Counts', to: '/warehouse/counts' }, { label: d.count.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.count.number}</span><StatusChip status={countStatus[d.count.status]} />{d.count.freeze && <Chip size="small" color="info" label={`${d.locationCode} frozen`} />}</Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.count.number}</span><StatusChip status={countStatus[d.count.status]} />{d.count.freeze && <Chip size="small" color="info" label={`${d.locationCode} frozen`} />}</Stack>}
       tabs={[{ label: 'Count sheet', value: 'sheet' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={open && <Stack direction="row" gap={1}><Button onClick={saveEntries} disabled={!Object.keys(entry).length}>Save counts</Button>
         <Button variant="contained" onClick={() => run(() => post(`/api/warehouse/counts/${id}/submit`, {}), 'Submitted. Variances post once the adjustment is e-signed.')}>Submit for approval</Button>
@@ -799,13 +799,13 @@ export function TransferDetail() {
   const refresh = () => { qc.invalidateQueries({ queryKey: ['wh-transfer', id] }); qc.invalidateQueries({ queryKey: ['custody'] }); };
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Transfers', to: '/warehouse/transfers' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><StatusChip status={transferStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.number}</span><StatusChip status={transferStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Chain of custody', value: 'custody' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}><Button href={`/api/warehouse/transfers/${id}/document`} target="_blank">Transfer document</Button>
         {can('inventory.edit') && d.status === 0 && <Button variant="contained" onClick={() => setShip(true)}>Ship</Button>}
         {can('inventory.edit') && d.status === 1 && <Button variant="contained" onClick={async () => { await post(`/api/warehouse/transfers/${id}/receive`, { notes: '' }); refresh(); }}>Receive</Button>}</Stack>}>
       <Chevrons steps={['Open', 'In transit', 'Received']} at={d.status <= 2 ? d.status : -1} failed={d.status === 3 ? 'Cancelled' : undefined} />
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 300px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) 300px' }, gap: 2 }}>
         <Box>
           {tab === 'custody' && <Custody url={`/api/warehouse/transfers/${id}/custody`} />}
           {tab === 'ledger' && <RefLedger refType="StockTransfer" refId={d.id} />}
@@ -857,7 +857,7 @@ export function LotMergePage() {
             <TableCell sx={{ fontFamily: mono }}>{r.lotNumber}</TableCell><TableCell>{r.revision}</TableCell><TableCell sx={{ fontFamily: mono }}>{r.locationCode}</TableCell><TableCell><StockBadge status={r.status} held={r.held} /></TableCell>
             <TableCell align="right">{qty(r.onHand)}</TableCell><TableCell align="right">{qty(r.reserved)}</TableCell></TableRow>))}
           {rows.length === 0 && <TableRow><TableCell colSpan={7}><Typography color="text.secondary" sx={{ py: 2, textAlign: 'center' }}>{part ? 'No lot-tracked stock for this part.' : 'Choose a part.'}</Typography></TableCell></TableRow>}</TableBody></Table></Paper>
-      <Paper sx={{ p: 2.5, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 2, alignItems: 'center' }}>
+      <Paper sx={{ p: 2.5, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2, alignItems: 'center' }}>
         <TextField select size="small" label="Merge into" value={f.target} onChange={(e) => setF({ ...f, target: e.target.value })}><MenuItem value="">A new lot</MenuItem>{[...new Map(chosen.map((c) => [c.lotId!, c.lotNumber])).entries()].map(([k, v]) => <MenuItem key={k} value={k}>{v}</MenuItem>)}</TextField>
         <TextField size="small" label="New lot number (blank = next)" value={f.newLot} disabled={!!f.target} onChange={(e) => setF({ ...f, newLot: e.target.value })} />
         <LocationSelect size="small" label="Put merged lot at" value={f.to} onChange={(v) => setF({ ...f, to: v })} siteId={siteId || undefined} />

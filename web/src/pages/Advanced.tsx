@@ -120,7 +120,7 @@ export function ApqpDetail() {
   const setCell = (i: number, key: string, v: string, t: string) => setDraft(rows.map((r, j) => (j === i ? { ...r, [key]: t === 'number' ? Number(v) : v } : r)));
   return (
     <ModuleWorkspace module={mod('apqp')} crumbs={[{ label: 'Planning', to: `/apqp?kind=${kind}` }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>rev {d.revision}</span><StatusChip status={apqpStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.number}</span><span>rev {d.revision}</span><StatusChip status={apqpStatus[d.status]} /></Stack>}
       actions={<Stack direction="row" gap={1}>
         <Button component={RouterLink} to={`/insights/graph?type=${kind === 'flows' ? 'ProcessFlow' : kind === 'pfmea' ? 'Pfmea' : 'ControlPlan'}&id=${d.id}`}>Relationships</Button>
         {kind !== 'flows' && can('apqp.edit') && (d.status === 0 || d.status === 2) && <Button variant="outlined" disabled={draft !== null} onClick={() => setImp(true)}>Import lines</Button>}
@@ -328,7 +328,7 @@ export function MsaDetail() {
     return attr ? { operator: op || null, part: Number(part), trial: Number(trial), value: null, attribute: v, reference: null, attributeReference: ref || null } : { operator: op || null, part: Number(part), trial: Number(trial), value: Number(v), attribute: null, reference: ref ? Number(ref) : null, attributeReference: null }; });
   const res = q.data?.result;
   return (
-    <ModuleWorkspace module={mod('spc')} crumbs={[{ label: 'Measurement systems', to: '/spc/msa' }, { label: s.number }]} title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{s.number}</span><span>{s.title}</span><StatusChip status={msaStatus[s.status]} /></Stack>}
+    <ModuleWorkspace module={mod('spc')} crumbs={[{ label: 'Measurement systems', to: '/spc/msa' }, { label: s.number }]} title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{s.number}</span><span>{s.title}</span><StatusChip status={msaStatus[s.status]} /></Stack>}
       actions={<Stack direction="row" gap={1}>{s.status === 0 && can('spc.edit') && <Button variant="contained" disabled={busy || !!q.data?.computeError} onClick={() => run(() => post(`/api/spc/msa/${id}/submit`))}>Submit for approval</Button>}
         {s.status === 2 && can('spc.edit') && <Button onClick={() => run(() => post(`/api/spc/msa/${id}/review-cycle`))}>Start review study</Button>}
         {s.status !== 0 && can('spc.edit') && <Button onClick={() => run(async () => { await post(`/api/spc/msa/${id}/recalculate`); qc.invalidateQueries({ queryKey: ['msa-results', id] }); })}>Recalculate (keeps the original)</Button>}</Stack>}>
@@ -462,9 +462,9 @@ export function CoqHome() {
         { label: 'Entries', value: 'entries' }, { label: 'Scrap', value: 'scrap' }, { label: 'Rework', value: 'rework' }]} tab={view} onTab={(v) => setP(v === 'month' ? {} : { view: v })}
       actions={can('coq.edit') ? <Button variant="contained" onClick={() => setAdd(true)}>Record cost</Button> : undefined}>
       {summary.data && !['scrap', 'rework', 'entries'].includes(view) && <>
-        <Stack direction="row" gap={2} sx={{ mb: 2 }}>
-          <Paper variant="outlined" sx={{ p: 2, minWidth: 200 }}><Typography variant="caption" color="text.secondary">Total cost of quality</Typography><Typography variant="h5" sx={{ fontFamily: mono }}>{money(total)}</Typography></Paper>
-          <Paper variant="outlined" sx={{ p: 2, minWidth: 200 }}><Typography variant="caption" color="text.secondary">Failure share</Typography><Typography variant="h5" sx={{ fontFamily: mono }}>{total ? pct((fail / total) * 100) : '—'}</Typography></Paper>
+        <Stack direction="row" gap={2} sx={{ mb: 2, flexWrap: 'wrap' }}>
+          <Paper variant="outlined" sx={{ p: 2, minWidth: { xs: 0, sm: 200 }, flex: { xs: '1 1 140px', sm: '0 0 auto' } }}><Typography variant="caption" color="text.secondary">Total cost of quality</Typography><Typography variant="h5" sx={{ fontFamily: mono }}>{money(total)}</Typography></Paper>
+          <Paper variant="outlined" sx={{ p: 2, minWidth: { xs: 0, sm: 200 }, flex: { xs: '1 1 140px', sm: '0 0 auto' } }}><Typography variant="caption" color="text.secondary">Failure share</Typography><Typography variant="h5" sx={{ fontFamily: mono }}>{total ? pct((fail / total) * 100) : '—'}</Typography></Paper>
         </Stack>
         <Paper variant="outlined" sx={{ p: 2 }}>{summary.data.length ? <StackBars rows={summary.data} /> : <Typography color="text.secondary">No costs recorded in this period.</Typography>}</Paper>
       </>}
@@ -539,7 +539,7 @@ export function InsightsHome() {
       {view === 'production' && <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 1.5 }}>{(prod.data ?? []).map((m) => <Tile key={m.key} m={m} />)}</Box>}
       {view === 'executive' && exec.data && <>
         <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))', gap: 1.5, mb: 2 }}>{exec.data.tiles.map((m) => <Tile key={m.key} m={m} />)}</Box>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
           {exec.data.openNcrsBySite && <Section title="Open NCRs by site"><Table size="small"><TableBody>{exec.data.openNcrsBySite.map((r) => <TableRow key={r.site}><TableCell>{r.site}</TableCell><TableCell sx={{ fontFamily: mono }}>{r.count}</TableCell></TableRow>)}</TableBody></Table></Section>}
           {exec.data.customerRisk && <Section title="Customers at risk"><Table size="small"><TableBody>{exec.data.customerRisk.map((r) => <TableRow key={r.customer} hover sx={{ cursor: 'pointer' }} onClick={() => nav(r.url)}><TableCell>{r.customer}</TableCell><TableCell>{r.open} open</TableCell><TableCell sx={{ color: r.overdue ? 'error.main' : undefined }}>{r.overdue} overdue</TableCell></TableRow>)}</TableBody></Table></Section>}
           {exec.data.supplierRisk && <Section title="Suppliers below target"><Table size="small"><TableBody>{exec.data.supplierRisk.map((r) => <TableRow key={r.name} hover sx={{ cursor: 'pointer' }} onClick={() => nav(r.url)}><TableCell>{r.name}</TableCell><TableCell>{scoreCell(r.overall)}</TableCell></TableRow>)}</TableBody></Table></Section>}

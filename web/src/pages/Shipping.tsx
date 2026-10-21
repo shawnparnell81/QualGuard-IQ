@@ -46,7 +46,7 @@ export function LogisticsOverview() {
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(5, 1fr)' }, gap: 1.5, mb: 2 }}>
         {lanes.map(([label, st]) => <MetricTile key={label} label={label} value={st.reduce((a, s) => a + by(s), 0)} unit="shipments" onClick={() => nav(`/shipping/shipments?status=${st[st.length - 1]}`)} />)}
       </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '1fr 1fr' }, gap: 2 }}>
         <Section title="Carrier on-time delivery (90 days)">
           <Table size="small"><TableHead><TableRow><TableCell>Carrier</TableCell><TableCell align="right">Shipments</TableCell><TableCell align="right">Delivered</TableCell><TableCell align="right">On time</TableCell><TableCell sx={{ width: 160 }} /></TableRow></TableHead>
             <TableBody>{(d.data?.carriers ?? []).map((c) => (
@@ -58,7 +58,7 @@ export function LogisticsOverview() {
         <Section title="Inbound vs outbound (30 days)"><FlowChart d={d.data} /></Section>
       </Box>
       <Section title="Logistics reports">
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1 }}>{reports.map(([k, l]) => <Button key={k} variant="outlined" component={RouterLink} to={`/reports/r/${k}`} sx={{ justifyContent: 'flex-start' }}>{l}</Button>)}</Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(4, 1fr)' }, gap: 1 }}>{reports.map(([k, l]) => <Button key={k} variant="outlined" component={RouterLink} to={`/reports/r/${k}`} sx={{ justifyContent: 'flex-start' }}>{l}</Button>)}</Box>
       </Section>
     </ModuleWorkspace>
   );
@@ -106,7 +106,7 @@ export function ShipmentNew() {
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Shipments', to: '/shipping/shipments' }, { label: 'New' }]} title="New shipment">
       {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
-      <Paper sx={{ p: 2.5, mb: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+      <Paper sx={{ p: 2.5, mb: 2, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
         <TextField select label="Type" value={h.kind} onChange={set('kind')}>{shipKinds.map((s, i) => <MenuItem key={s} value={String(i)}>{s}</MenuItem>)}</TextField>
         {(k === 0 || k === 3) && <TextField select label="Customer" value={h.customerId} onChange={set('customerId')}>{(custs.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{lookupLabel(c)}</MenuItem>)}{setupOptions('customer', custs.data)}</TextField>}
         {k === 1 && <TextField select label="Supplier" value={h.supplierId} onChange={set('supplierId')}>{(sups.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{lookupLabel(c)}</MenuItem>)}{setupOptions('supplier', sups.data)}</TextField>}
@@ -163,7 +163,7 @@ export function ShipmentDetail() {
   const staged = d.data!.picks.some((p) => p.task.quantityPicked > 0);
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Shipments', to: '/shipping/shipments' }, { label: s.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{s.number}</span><Typography color="text.secondary">{d.data!.customer ?? s.shipTo}</Typography>{s.status === 7 && <Chip color="default" label="Cancelled" />}</Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{s.number}</span><Typography color="text.secondary">{d.data!.customer ?? s.shipTo}</Typography>{s.status === 7 && <Chip color="default" label="Cancelled" />}</Stack>}
       tabs={[{ label: 'Lines', value: 'lines' }, { label: 'Pick', value: 'pick' }, { label: 'Pack', value: 'pack' }, { label: 'Verify', value: 'verify' }, { label: 'Carrier', value: 'carrier' }, { label: 'Ship & documents', value: 'ship' }, { label: 'Custody', value: 'custody' }, { label: 'Ledger', value: 'ledger' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={edit && <Stack direction="row" gap={1}>
         {s.status === 0 && <Button variant="contained" onClick={() => run(() => post(`/api/shipping/shipments/${id}/pick-list`, {}), 'Pick list built from available stock (FIFO by lot).').then(() => setTab('pick'))}>Build pick list</Button>}
@@ -172,7 +172,7 @@ export function ShipmentDetail() {
         {live && <Button color="inherit" onClick={() => setDlg('cancel')}>Cancel shipment</Button>}</Stack>}>
       <StageRail status={s.status} />
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Box>
           {tab === 'lines' && <Paper><Table size="small"><TableHead><TableRow><TableCell>#</TableCell><TableCell>Part</TableCell><TableCell>Lot</TableCell><TableCell align="right">Ordered</TableCell><TableCell align="right">Picked</TableCell><TableCell align="right">Verified</TableCell></TableRow></TableHead>
             <TableBody>{d.data!.lines.map((l) => <TableRow key={l.line.id}><TableCell>{l.line.lineNumber}</TableCell><TableCell><b style={{ fontFamily: mono }}>{l.partNumber}</b>{l.line.revision ? ` rev ${l.line.revision}` : ''} <Typography component="span" variant="body2" color="text.secondary">{l.partName}</Typography></TableCell>
@@ -215,7 +215,7 @@ function PickTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
   return <Stack gap={1.5}>
     <WorkAssign d={d} edit={edit} run={run} kind="picker" />
     {d.picks.map((p) => (
-    <Paper key={p.task.id} variant="outlined" sx={{ p: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.3fr 1fr 1fr 120px' }, gap: 1.5, alignItems: 'center', opacity: p.task.status === 1 ? 0.6 : 1 }}>
+    <Paper key={p.task.id} variant="outlined" sx={{ p: 2, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1.3fr 1fr 1fr 120px' }, gap: 1.5, alignItems: 'center', opacity: p.task.status === 1 ? 0.6 : 1 }}>
       <Box><Typography sx={{ fontFamily: mono, fontWeight: 700, fontSize: 18 }}>{p.locationCode}</Typography>
         <Typography variant="body2">{p.partNumber} · {p.serialNumber ?? p.lotNumber ?? 'no lot'} · <b>{qty(p.task.quantity)}</b></Typography>
         <Typography variant="caption" color="text.secondary">{pickStatus[p.task.status]}{p.task.pickedAt ? ` ${fmtDateTime(p.task.pickedAt)}` : ''}</Typography></Box>
@@ -286,7 +286,7 @@ function PackTab({ d, edit, run }: { d: Detail; edit: boolean; run: Run }) {
       {c.items.map((i) => <Typography key={i.id} variant="body2" sx={{ fontFamily: mono }}>{i.partNumber} {i.serialNumber ?? i.lotNumber ?? ''} × {qty(i.quantity)}</Typography>)}
       {tree(c.container.id, depth + 1)}
     </Box>));
-  return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+  return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' }, gap: 2 }}>
     <Section title="Packing tree">{d.containers.length ? tree(undefined) : <Typography color="text.secondary">Nothing packed yet.</Typography>}</Section>
     {d.containers.length > 0 && <Box sx={{ gridColumn: '1 / -1' }}><Section title="Carton and pallet labels"><Stack gap={1.5}>
       {d.containers.map((c) => <LabelPanel key={c.container.id} refType="ShipmentContainer" refId={c.container.id} siteId={d.shipment.siteId} types={[containerKinds[c.container.kind] === 'Pallet' ? 6 : 5]} title={`${containerKinds[c.container.kind]} ${c.container.number}`} />)}
@@ -311,7 +311,7 @@ function VerifyTab({ d, edit, onDone, run }: { d: Detail; edit: boolean; onDone:
   const [res, setRes] = useState<VerifyResult | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const submit = async () => { setErr(null); try { const r = await post<VerifyResult>(`/api/shipping/shipments/${d.shipment.id}/verify`, { scans: scans.map((s) => ({ code: s.code, quantity: s.quantity ?? null })) }); setRes(r); if (r.verified) onDone(); } catch (e) { setErr((e as Error).message); } };
-  return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+  return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' }, gap: 2 }}>
     <Section title="Scan cartons or items">
       {edit ? <Stack gap={1.5}>
         <ScanField label="Scan QG:CTN, QG:LOT or QG:SN" onScan={(c) => setScans([...scans, { code: c }])} autoFocus helper="Scanning a carton verifies everything packed in it." />

@@ -33,9 +33,9 @@ export function Facts({ items, children }: { items: [string, ReactNode][]; child
   return (
     <Paper sx={{ alignSelf: 'start', overflow: 'hidden' }}>
       <PanelHead title="Details" />
-      <Box component="dl" sx={{ m: 0, display: 'grid', gridTemplateColumns: 'minmax(96px, 38%) 1fr' }}>
+      <Box component="dl" sx={{ m: 0, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'minmax(96px, 38%) minmax(0, 1fr)' } }}>
         {items.map(([k, v]) => (
-          <Box key={k} sx={{ display: 'contents', '& > *': { px: 2, py: 0.9, borderTop: 1, borderColor: 'divider' } }}>
+          <Box key={k} sx={{ display: 'contents', '& > *': { px: 2, py: 0.9, borderTop: 1, borderColor: 'divider' }, '& > dd': { borderTop: { xs: 0, sm: 1 }, borderColor: 'divider' } }}>
             <Typography component="dt" variant="caption" color="text.secondary" sx={{ fontWeight: 600, bgcolor: 'background.band' }}>{k}</Typography>
             <Typography component="dd" variant="body2" sx={{ m: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{v ?? '—'}</Typography>
           </Box>
@@ -130,7 +130,7 @@ export function SchemaForm<S extends z.ZodType<FieldValues, FieldValues>>({ sche
   const site = sites.data?.find((s) => s.id === (watch('siteId' as Path<z.input<S>>) as unknown as string));
   const submit = handleSubmit(async (v) => { setError(null); try { await onSubmit(v); } catch (e) { setError((e as Error).message); } });
   return (
-    <Paper component="form" onSubmit={submit} sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+    <Paper component="form" onSubmit={submit} sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
       {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
       {fields.map((f) => f.type === 'heading'
         ? <Typography key={'h-' + f.label} variant="overline" color="text.secondary" sx={{ gridColumn: '1 / -1', mt: 1 }}>{f.label}</Typography>

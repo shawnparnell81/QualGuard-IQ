@@ -117,7 +117,7 @@ export function ObjectiveDetail() {
     unit: d.unit, direction: d.direction, frequency: d.frequency, baseline: d.baseline, target: d.target, warning: d.warning, critical: d.critical, triggerActionOnCritical: d.triggerActionOnCritical, actionPlan: d.actionPlan, startsOn: d.startsOn, endsOn: d.endsOn, rowVersion: d.rowVersion, ...o });
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Objectives', to: '/objectives' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={objectiveStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={objectiveStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Performance', value: 'performance' }, { label: 'Definition', value: 'definition' }, { label: 'Actions', value: 'actions' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1} flexWrap="wrap">
         {a('measure') && <Button variant="contained" onClick={() => setDlg('measure')}>{d.dataSource === 'manual' ? 'Record result' : 'Calculate result'}</Button>}
@@ -128,7 +128,7 @@ export function ObjectiveDetail() {
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {d.status === 1 && <Alert severity="info" sx={{ mb: 2 }}>Waiting for approval of the objective and its targets.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '290px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Metric', d.metricName], ['Data source', d.calculation ? `Calculated: ${d.calculation.label}` : 'Manual entry'], ['Direction', dirs[d.direction]], ['Frequency', freq[d.frequency]],
           ['Baseline', fmtV(d.baseline, d.unit)], ['Target', fmtV(d.target, d.unit)], ['Warning at', fmtV(d.warning, d.unit)], ['Critical at', fmtV(d.critical, d.unit)],
           ['Latest', current[0] ? <Stack direction="row" gap={1} alignItems="center"><span>{fmtV(current[0].value, d.unit)}</span><Rating r={current[0].rating} /></Stack> : '—'],

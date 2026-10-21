@@ -23,6 +23,13 @@ x-common: &common
   Seed__TimeZone: ${TIME_ZONE:-America/New_York}
   DataProtection__KeyPath: /keys
   Video__FfmpegPath: /usr/bin/ffmpeg
+  # Outgoing email (password reset links, notification copies). Leave SMTP_HOST empty to send no email.
+  Email__SmtpHost: ${SMTP_HOST:-}
+  Email__SmtpPort: ${SMTP_PORT:-587}
+  Email__UseTls: ${SMTP_USE_TLS:-true}
+  Email__Username: ${SMTP_USERNAME:-}
+  Email__Password: ${SMTP_PASSWORD:-}
+  Email__From: ${EMAIL_FROM:-no-reply@localhost}
   # Virus scanning is optional: set MALWARE_SCANNER=ClamAV and add clamav to COMPOSE_PROFILES.
   MalwareScanning__Provider: ${MALWARE_SCANNER:-None}
   MalwareScanning__ClamAV__Host: clamav

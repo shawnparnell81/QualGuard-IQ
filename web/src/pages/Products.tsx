@@ -107,11 +107,11 @@ export function ProductDetail() {
   if (!d) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'Products', to: '/products/items' }]} title="Loading">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Products', to: '/products/items' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.name}</span><StatusChip status={masterStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.name}</span><StatusChip status={masterStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={d.canEdit ? <Stack direction="row" gap={1}><Button variant="outlined" onClick={() => setDlg(true)}>Edit</Button><Button variant="contained" component={RouterLink} to={`/products/parts/new?product=${d.id}`}>Add part</Button></Stack> : undefined}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Family', fam.data?.find((f) => f.id === d.familyId)?.name ?? '—'], ['Category', d.category ?? '—'], ['Owner', d.ownerName ?? '—'], ['Site', sites.data?.find((s) => s.id === d.siteId)?.code ?? '—']]} />
         <Box sx={{ minWidth: 0 }}>
           {tab === 'overview' && <Stack gap={2}>
@@ -206,11 +206,11 @@ export function PartDetail() {
   if (!d) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'Parts', to: '/products/parts' }]} title="Loading">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Parts', to: '/products/parts' }, { label: d.partNumber }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.partNumber}</span><span>{d.name}</span><StatusChip status={`Rev ${d.revision}`} /><StatusChip status={masterStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.partNumber}</span><span>{d.name}</span><StatusChip status={`Rev ${d.revision}`} /><StatusChip status={masterStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Revisions', value: 'revs' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={d.canEdit ? <Stack direction="row" gap={1}><Button variant="outlined" onClick={() => setDlg('edit')}>Edit</Button><Button variant="contained" onClick={() => setDlg('revise')}>New revision</Button></Stack> : undefined}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', partType(d.partType)], ['Revision', d.revision], ['Unit', d.unitOfMeasure], ['Material', d.material ?? '—'], ['Special characteristics', d.hasSpecialCharacteristics ? 'Yes' : 'No'],
           ['Product', d.product ? <Link component={RouterLink} to={`/products/items/${d.product.id}`}>{d.product.number} {d.product.name}</Link> : '—']]} />
         <Box sx={{ minWidth: 0 }}>
@@ -288,7 +288,7 @@ export function CustomerDetail() {
   if (!d) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'Customers', to: '/products/customers' }]} title="Loading">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Customers', to: '/products/customers' }, { label: d.code }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.code}</span><span>{d.name}</span><StatusChip status={masterStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.code}</span><span>{d.name}</span><StatusChip status={masterStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={d.canEdit ? <Button variant="outlined" onClick={() => setDlg(true)}>Edit</Button> : undefined}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

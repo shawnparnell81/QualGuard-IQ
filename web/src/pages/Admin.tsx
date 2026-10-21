@@ -209,7 +209,7 @@ export function RolesPage() {
           <TextField label="Name" value={edit?.name ?? ''} onChange={(e) => setEdit({ ...edit!, name: e.target.value })} />
           <TextField label="Description" value={edit?.description ?? ''} onChange={(e) => setEdit({ ...edit!, description: e.target.value })} />
           <FormControlLabel control={<Switch checked={!!edit?.requiresMfa} onChange={(e) => setEdit({ ...edit!, requiresMfa: e.target.checked })} />} label="Require two-step verification for people with this role" />
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(3, 1fr)' }, gap: 1.5 }}>
             {groups.map(([g, perms]) => (
               <Paper key={g} sx={{ p: 1.5 }}>
                 {(() => {
@@ -423,7 +423,7 @@ export function SignInSecurityPage() {
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Sign-in security' }]} title="Sign-in security">
       <Err e={error} />
       {saved && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setSaved(false)}>Sign-in policy saved. People it now applies to set up two-step verification at their next sign-in.</Alert>}
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, alignItems: 'start' }}>
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' }, alignItems: 'start' }}>
         <Paper sx={{ p: 2.5 }} component="section" aria-labelledby="pol-mfa">
           <Typography variant="h3" component="h2" id="pol-mfa" sx={{ mb: 1 }}>Two-step verification</Typography>
           {c.mfaRequiredForAll && <Alert severity="info" sx={{ mb: 1 }}>Required for every account by configuration (Auth:Mfa:RequiredForAll).</Alert>}

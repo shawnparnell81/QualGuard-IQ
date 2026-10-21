@@ -38,7 +38,7 @@ export function SequflohHome() {
         {quick.filter(([, , p]) => can(p)).map(([l, to]) => <Button key={to} component={RouterLink} to={to} variant="outlined" size="small">{l}</Button>)}
       </Stack>
       <Dashboard />
-      <Box sx={{ display: 'grid', gap: 2, mt: 3, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+      <Box sx={{ display: 'grid', gap: 2, mt: 3, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' } }}>
         <List2 title="Pinned" rows={items.data?.favorites} empty="Pin SEQUFLOH pages and records with the pin button in their header." />
         <List2 title="Recently opened" rows={items.data?.recent} empty="SEQUFLOH pages and records you open appear here." />
       </Box>

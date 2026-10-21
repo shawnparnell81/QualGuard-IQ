@@ -92,7 +92,7 @@ export function visibleFields(fields: FieldDef[], values: Record<string, string 
 export function FormRenderer({ fields, values, onChange, readOnly }: { fields: FieldDef[]; values: Record<string, string | null>; onChange: (v: Record<string, string | null>) => void; readOnly: boolean }) {
   const set = (k: string, v: string | null) => onChange({ ...values, [k]: v });
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
       {visibleFields(fields, values).map((f) => {
         const v = values[f.key] ?? '';
         const label = `${f.label}${f.unit ? ` (${f.unit})` : ''}`;

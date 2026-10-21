@@ -124,7 +124,7 @@ export function NcrDetail() {
   const s = d.status;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Nonconformances', to: '/ncr' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={ncrStatus[s]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={ncrStatus[s]} /></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Actions', value: 'actions' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {approval && <Button variant="contained" color="secondary" onClick={() => setSigning(true)}>Sign disposition</Button>}
@@ -137,7 +137,7 @@ export function NcrDetail() {
         {d.allowed.includes('reopen') && <Button variant="outlined" color="warning" onClick={() => setDlg('reopen')}>Reopen</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Source', d.source], ['Severity', severity[d.severity]], ['Part / rev / lot', [d.partNumber, d.partRevision && `rev ${d.partRevision}`, d.lotNumber].filter(Boolean).join(' / ') || '—'], ['Quantity affected', d.quantityAffected ?? '—'],
           ['Product', d.productLabel ?? '—'], ['Supplier', d.supplierId ? <Link component={RouterLink} to={`/suppliers/${d.supplierId}`}>{d.supplierLabel}</Link> : '—'], ['Customer', d.customerLabel ?? '—'],
           ['PO / WO', [d.purchaseOrder, d.workOrder].filter(Boolean).join(' / ') || '—'], ['Batch / serial', [d.batchNumber, d.serialNumber].filter(Boolean).join(' / ') || '—'],
@@ -203,7 +203,7 @@ function NcrDetailsDialog({ open, d, onClose, onSave }: { open: boolean; d: NcrD
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="md" TransitionProps={{ onEnter: () => setV(init()) }}>
       <DialogTitle>Traceability and investigation</DialogTitle>
       <DialogContent>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, pt: 1 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2, pt: 1 }}>
           {detailLookups.map(([k, l, kind]) => <LookupSelect key={k} kind={kind} label={l} value={v[k]} onChange={(x) => setV({ ...v, [k]: x })} />)}
           {detailText.map(([k, l, multi]) => <TextField key={k} label={l} value={v[k]} multiline={multi} minRows={multi ? 2 : undefined} sx={multi ? { gridColumn: '1 / -1' } : undefined} onChange={(e) => setV({ ...v, [k]: e.target.value })} />)}
         </Box>
@@ -306,7 +306,7 @@ export function CapaDetail() {
   const s = d.status;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'CAPA', to: '/capa' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={capaStatus[s]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={capaStatus[s]} /></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Actions', value: 'actions' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {can('forms.edit') && <Button variant="outlined" onClick={() => run(async () => { const r = await post<{ id: string }>(`/api/forms/records/from-capa/${d.id}`, {}); nav(`/forms/records/${r.id}`); })}>CAPA report form</Button>}
@@ -317,7 +317,7 @@ export function CapaDetail() {
         {d.allowed.includes('verify') && <Button variant="contained" color="secondary" onClick={() => setDlg('verify')}>Verify effectiveness</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', d.capaType], ['Source', d.source], ['Risk', severity[d.risk]], ['Owner', d.ownerName], ['Team', d.team.map((t) => t.displayName).join(', ') || '—'], ['Site', d.siteCode],
           ['Recurrence review', fmtDate(d.recurrenceReviewOn)], ...(d.reopenCount ? [['Reopened', `${d.reopenCount}× — ${d.reopenReason ?? ''}`] as [string, string]] : []), ['Effectiveness due', fmtDate(d.effectivenessDueOn)], ['Verified by', d.verifiedByName ?? '—'], ['Closed', fmtDateTime(d.closedAt)]]}>
           <Box sx={{ mt: 2 }}><CustomFieldsPanel type="Capa" id={d.id} canEdit={d.canEdit && s < 4} /></Box>

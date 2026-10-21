@@ -99,7 +99,7 @@ export function EquipmentDetail() {
   const openIa = e.impacts.find((i) => i.status === 0);
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Equipment', to: '/calibration/equipment' }, { label: e.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{e.number}</span><span>{e.name}</span><StatusChip status={equipmentStatus[e.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{e.number}</span><span>{e.name}</span><StatusChip status={equipmentStatus[e.status]} /></Stack>}
       tabs={[...(e.requiresCalibration ? [{ label: 'Calibration history', value: 'history' }, { label: `Impact assessments (${e.impacts.length})`, value: 'impacts' }] : []),
         { label: `Maintenance (${e.maintenance.length})`, value: 'maintenance' }, { label: `Used in inspections (${e.inspections.length})`, value: 'inspections' }, { label: 'Files & history', value: 'more' }]}
       tab={!e.requiresCalibration && (tab === 'history' || tab === 'impacts') ? 'maintenance' : tab} onTab={setTab}
@@ -115,7 +115,7 @@ export function EquipmentDetail() {
       {e.status === 1 && <Alert severity="error" sx={{ mb: 2 }} action={openIa && <Button color="inherit" size="small" onClick={() => nav(`/calibration/impact/${openIa.id}`)}>Open {openIa.number}</Button>}>
         {e.recalibrateAfter ? `Quarantined after a repair on ${fmtDate(e.recalibrateAfter)}. Do not use. Return to service needs a passing calibration on or after that date.` : 'Quarantined after an out-of-tolerance result. Do not use. Return to service needs a completed impact assessment and a passing calibration.'}</Alert>}
       {e.status === 4 && <Alert severity="error" sx={{ mb: 2 }}>Down after a breakdown. Do not use until a repair is recorded.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', e.category], ['Asset number', e.assetNumber ?? '—'], ['Site', e.siteCode], ['Manufacturer / model', [e.manufacturer, e.model].filter(Boolean).join(' ') || '—'], ['Serial', e.serialNumber ?? '—'], ['Location', e.location ?? '—'], ['Range', e.measurementRange ?? '—'], ['Tolerance', e.tolerance ?? '—'],
           ...(e.requiresCalibration ? [['Interval', `${e.calibrationIntervalDays} days`], ['Last calibrated', fmtDate(e.lastCalibratedOn)], ['Next due', fmtDate(e.nextDueOn)]] as [string, string][] : [['Calibration', 'Not calibrated']] as [string, string][]),
           ['Qualified', fmtDate(e.qualifiedOn)], ['Requalify by', fmtDate(e.qualificationDueOn)], ['Downtime logged', `${e.downtime} h`], ['Owner', e.ownerName]]} />
@@ -193,13 +193,13 @@ export function ImpactDetail() {
   if (!a) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'Equipment', to: '/calibration/equipment' }]} title="Loading">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Equipment', to: '/calibration/equipment' }, { label: a.equipment.number, to: `/calibration/equipment/${a.equipment.id}` }, { label: a.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{a.number}</span><span>Impact assessment</span><StatusChip status={impactStatus[a.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{a.number}</span><span>Impact assessment</span><StatusChip status={impactStatus[a.status]} /></Stack>}
       actions={<Stack direction="row" gap={1}>
         {a.allowed.includes('ncr') && <Button variant="outlined" onClick={() => setDlg('ncr')}>Raise NCR</Button>}
         {a.allowed.includes('complete') && <Button variant="contained" onClick={() => setDlg('complete')}>Complete assessment</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '300px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '300px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Equipment', <Link component={RouterLink} to={`/calibration/equipment/${a.equipment.id}`}>{a.equipment.number} {a.equipment.name}</Link>], ['Triggering record', `${a.event.number} (${calResult[a.event.result]})`],
           ['As found', a.event.asFound ?? '—'], ['Last known good', fmtDate(a.lastKnownGoodOn) === '—' ? 'No earlier passing calibration' : fmtDate(a.lastKnownGoodOn)], ['Affected until', fmtDate(a.affectedUntil)], ['Completed', fmtDateTime(a.completedAt)]]} />
         <Stack gap={2}>

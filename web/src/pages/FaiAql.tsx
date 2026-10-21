@@ -150,7 +150,7 @@ export function FaiDetail() {
   const sig = (name: string) => [{ name: 'comment', label: 'Comment', type: 'multiline' as const }, { name: 'password', label: 'Your password (electronic signature)', type: 'password' as const, helper: name }];
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'First articles', to: '/fai' }, { label: f.faiNumber }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{f.faiNumber}</span><span>{f.title}</span><StatusChip status={words(f.status)} />{f.faiRevision > 1 && <Typography fontSize={13} color="text.secondary">rev {f.faiRevision}</Typography>}</Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{f.faiNumber}</span><span>{f.title}</span><StatusChip status={words(f.status)} />{f.faiRevision > 1 && <Typography fontSize={13} color="text.secondary">rev {f.faiRevision}</Typography>}</Stack>}
       tabs={[{ label: `Characteristics (${d.characteristics.length})`, value: 'characteristics' }, { label: 'Balloon board', value: 'board' }, { label: `Signatures (${d.approvals.length})`, value: 'approvals' }, { label: 'Drawings & revisions', value: 'drawings' }, { label: 'Files & history', value: 'more' }]}
       tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1} flexWrap="wrap">
@@ -172,7 +172,7 @@ export function FaiDetail() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {acc.failed > 0 && f.status !== 'Closed' && <Alert severity="error" sx={{ mb: 2 }}>{acc.failed} characteristic(s) failed. Each failure needs an NCR with an approved disposition before approval.</Alert>}
       {acc.missing.length > 0 && <Alert severity="warning" sx={{ mb: 2 }}>Drawing balloons without a characteristic: {acc.missing.join(', ')}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '290px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', `${f.faiType} · ${words(f.typeDetail)}`], ['Reason', words(f.reason)], ['Product', d.product?.name ?? '—'], ['Part', `${d.part.partNumber}${d.part.partRevision ? ' rev ' + d.part.partRevision : ''}`],
           ['Drawing', d.drawing.drawingNumber ? `${d.drawing.drawingNumber} rev ${d.drawing.drawingRevision ?? '—'}` : '—'], ['Supplier', d.supplier ? `${d.supplier.code} — ${d.supplier.legalName}` : '—'],
           ['Lot / serial', [f.lotNumber, f.serialNumber].filter(Boolean).join(' / ') || '—'], ['Inspector', d.inspectorName], ['Reviewer', d.reviewerName ?? '—'], ['Site', d.site?.code ?? '—'], ['Due', fmtDate(f.dueDate)],
@@ -298,8 +298,8 @@ export function AqlNew() {
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'AQL lots', to: '/aql' }, { label: 'New' }]} title="Sample a lot">
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'minmax(0, 560px) 1fr', gap: 3, alignItems: 'start' }}>
-        <Paper sx={{ p: 3, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 560px) minmax(0, 1fr)' }, gap: 3, alignItems: 'start' }}>
+        <Paper sx={{ p: 3, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
           {field('planId', 'Sampling plan', (plans.data?.items ?? []).filter((p) => p.status === 'Active').map((p) => <MenuItem key={p.id} value={p.id}>{p.name} · {p.severity} · rev {p.revision}</MenuItem>))}
           {field('partId', 'Part', (parts.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>))}
           {field('supplierId', 'Supplier', [<MenuItem key="" value="">None</MenuItem>, ...(suppliers.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>)])}
@@ -344,7 +344,7 @@ export function AqlDetail() {
   const counts: Record<string, number> = { Critical: a.criticalDefects, Major: a.majorDefects, Minor: a.minorDefects };
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'AQL lots', to: '/aql' }, { label: a.inspectionNumber }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{a.inspectionNumber}</span><span>{d.part?.partNumber}</span><StatusChip status={a.workflowState} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{a.inspectionNumber}</span><span>{d.part?.partNumber}</span><StatusChip status={a.workflowState} /></Stack>}
       tabs={[{ label: `Defects (${d.defects.length})`, value: 'defects' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1} flexWrap="wrap">
         {sampling && <Button variant="outlined" onClick={() => setDlg('defect')}>Record defect</Button>}
@@ -357,7 +357,7 @@ export function AqlDetail() {
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {a.samplingRecommendation && <Alert severity="info" sx={{ mb: 2 }}>{a.samplingRecommendation}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '290px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Plan', a.planLabel], ['Severity', a.inspectionSeverity], ['Level / letter', `${a.inspectionLevel} / ${a.codeLetter ?? '—'}`], ['Lot size', a.lotSize], ['Supplier', d.supplier ? `${d.supplier.code} — ${d.supplier.legalName}` : '—'],
           ['Lot / PO', [a.lotNumber, a.purchaseOrder].filter(Boolean).join(' / ') || '—'], ['Receiving inspection', d.inspection?.number ?? 'Standalone'], ['Inspector', d.inspectorName ?? '—'], ['Approver', d.approverName ?? '—']]} />
         <Stack gap={2} sx={{ minWidth: 0 }}>
@@ -417,7 +417,7 @@ export function FaiAqlDashboard() {
   const q = useQuery({ queryKey: ['faiaql-dash'], queryFn: () => Promise.all(names.map((n) => get<Series>(`/api/v1/dashboard/${n}`).catch(() => ({ name: n, points: [] } as Series)))) });
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Dashboard' }]} title="First article and AQL dashboard">
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 2 }}>{names.map((n, i) => <Bars key={n} s={q.data?.[i]} />)}</Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' }, gap: 2 }}>{names.map((n, i) => <Bars key={n} s={q.data?.[i]} />)}</Box>
     </ModuleWorkspace>
   );
 }
@@ -429,7 +429,7 @@ export function SupplierAql() {
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Supplier trends' }]} title="Supplier AQL trends">
       <TextField select size="small" label="Supplier" value={sid} onChange={(e) => setSid(e.target.value)} sx={{ width: 420, mb: 2 }}>{(suppliers.data ?? []).map((r) => <MenuItem key={r.id} value={r.id}>{lookupLabel(r)}</MenuItem>)}{setupOptions('supplier', suppliers.data)}</TextField>
-      {sid && <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 2 }}>{(m.data ?? [undefined, undefined, undefined, undefined]).map((s, i) => <Bars key={i} s={s} />)}</Box>}
+      {sid && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))' }, gap: 2 }}>{(m.data ?? [undefined, undefined, undefined, undefined]).map((s, i) => <Bars key={i} s={s} />)}</Box>}
     </ModuleWorkspace>
   );
 }

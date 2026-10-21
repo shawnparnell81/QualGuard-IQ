@@ -146,6 +146,9 @@ export const makeTheme = (primary?: string | null, mode: PaletteMode = 'light', 
           ':focus-visible': { outline: `2px solid ${focus}`, outlineOffset: 2 },
           a: { color: main },
           '[style*="IBM Plex Mono"]': { whiteSpace: 'nowrap' },
+          // phones: a wide table scrolls inside its own panel and a long chip shortens, so the page itself never scrolls sideways
+          '.MuiPaper-root:has(> .MuiTable-root)': { overflowX: 'auto' },
+          '.MuiChip-root': { maxWidth: '100%' },
         },
       },
       // Frosted panels with a light edge; clickable cards lift on hover with a soft blue glow.

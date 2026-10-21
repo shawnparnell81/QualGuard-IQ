@@ -113,7 +113,7 @@ export function DocumentNew({ kind }: { kind: Kind }) {
   });
   return (
     <ModuleWorkspace module={c.module} crumbs={[{ label: kind === 0 ? 'Library' : c.plural, to: c.path }, { label: 'New' }]} title={`New ${c.noun}`}>
-      <Paper component="form" onSubmit={submit} sx={{ p: 3, maxWidth: 760, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Paper component="form" onSubmit={submit} sx={{ p: 3, maxWidth: 760, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Title" sx={{ gridColumn: '1 / -1' }} {...register('title')} error={!!errors.title} helperText={errors.title?.message} />
         <Controller name="documentType" control={control} render={({ field }) => (
@@ -180,7 +180,7 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
   ];
   return (
     <ModuleWorkspace module={c.module} crumbs={[{ label: kind === 0 ? 'Library' : c.plural, to: c.path }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={docStatus[d.status]} />{d.isReference && <ReferenceChip />}</Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={docStatus[d.status]} />{d.isReference && <ReferenceChip />}</Stack>}
       tabs={tabs} tab={tab} onTab={setTab}
       actions={
         <Stack direction="row" gap={1}>
@@ -199,7 +199,7 @@ export function DocumentDetail({ kind }: { kind: Kind }) {
         <b>Reference copy.</b> Kept and controlled here for reference, with every change in the history. It isn't sent for approval and has no revision workflow: when a newer edition comes out, use Replace copy and the earlier copy is kept as superseded.
       </Alert>}
       {draftEditable && !rev.readyToSubmit && <Alert severity="info" sx={{ mb: 2 }}>{d.isReference ? `Attach the reference file to copy ${rev.revision} before releasing it.` : `${kind === 2 ? 'Define and save the form fields' : 'Attach the controlled file'} on revision ${rev.revision} before submitting it for approval.`}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px minmax(0, 1fr)' }, gap: 3 }}>
         <Paper sx={{ p: 2, alignSelf: 'start' }}>
           <Typography variant="overline" color="text.secondary">Details</Typography>
           {[

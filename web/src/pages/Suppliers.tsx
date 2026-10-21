@@ -107,7 +107,7 @@ export function SupplierDetail() {
   const today = localDate();
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Supplier register', to: '/suppliers' }, { label: d.code }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.code}</span><span>{d.legalName}</span><StatusChip status={supplierStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.code}</span><span>{d.legalName}</span><StatusChip status={supplierStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Contacts', value: 'contacts' }, { label: 'Certifications', value: 'certs' }, { label: 'Quality events', value: 'ncrs' }, { label: 'SCARs', value: 'scars' }, { label: 'Performance', value: 'perf' }, { label: 'Reviews', value: 'reviews' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {approval && <Button variant="contained" color="secondary" onClick={() => setSigning(true)}>Sign approval</Button>}
@@ -118,7 +118,7 @@ export function SupplierDetail() {
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {d.check.conditions.map((c) => <Alert key={c.condition} severity={c.restriction === 2 ? 'error' : 'warning'} sx={{ mb: 1 }}>{c.restriction === 2 ? 'Restricted — ' : 'Warning — '}{c.message}</Alert>)}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Category', d.category], ['Operating name', d.operatingName ?? '—'], ['Criticality', criticality[d.criticality]], ['Risk', criticality[d.risk]], ['Owner', d.ownerName],
           ['Approved on', fmtDate(d.approvedOn)], ['Next review', fmtDate(d.nextReviewOn)], ['Website', d.website ?? '—']]} />
         <Box sx={{ minWidth: 0 }}>
@@ -244,7 +244,7 @@ export function ScarDetail() {
   if (!d) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'Corrective action requests', to: '/suppliers/scar' }]} title="Loading">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Corrective action requests', to: '/suppliers/scar' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={scarStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={scarStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Response & review', value: 'response' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {d.allowed.includes('respond') && <Button variant="contained" onClick={() => setDlg('respond')}>Record supplier response</Button>}
@@ -252,7 +252,7 @@ export function ScarDetail() {
         {d.allowed.includes('verify') && <Button variant="contained" color="secondary" onClick={() => setDlg('verify')}>Verify effectiveness</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Supplier', <Link component={RouterLink} to={`/suppliers/${d.supplier.id}`}>{d.supplier.code} {d.supplier.legalName}</Link>],
           ['NCR', d.ncr ? <Link component={RouterLink} to={`/ncr/${d.ncr.id}`} sx={{ fontFamily: mono }}>{d.ncr.number}</Link> : '—'], ['Owner', d.ownerName], ['Issued', fmtDate(d.issuedOn)], ['Response due', fmtDate(d.responseDueOn)],
           ['Response received', fmtDate(d.responseReceivedOn)], ['Rejected responses', String(d.responseRejections)], ['Verified by', d.verifiedByName ?? '—'], ['Closed', fmtDateTime(d.closedAt)]]} />

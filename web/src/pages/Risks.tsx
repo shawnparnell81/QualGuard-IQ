@@ -161,7 +161,7 @@ export function RiskDetail() {
   const n = (v: string | undefined) => (v ? Number(v) : null);
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Risks', to: '/risks' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={riskStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={riskStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Assessment', value: 'assessment' }, { label: `Reviews (${d.reviews.length})`, value: 'reviews' }, { label: 'Mitigation actions', value: 'actions' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1} flexWrap="wrap">
         {a('edit') && <Button variant="outlined" onClick={() => setDlg('edit')}>Edit controls and plan</Button>}
@@ -176,7 +176,7 @@ export function RiskDetail() {
       {d.escalated && d.status < 4 && <Alert severity="error" sx={{ mb: 2 }}>Escalated: the rating falls in a band that requires management attention.</Alert>}
       {d.status === 2 && <Alert severity="info" sx={{ mb: 2 }}>The residual risk is waiting for acceptance approval (see Approvals in My work).</Alert>}
       {d.status < 4 && d.reviewDueOn < localDate() && <Alert severity="warning" sx={{ mb: 2 }}>The periodic review was due {fmtDate(d.reviewDueOn)}.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '290px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', kinds[d.kind]], ['Category', d.category], ['Source', d.source ?? '—'], ['Process', d.process ?? '—'], ['Product', d.productName ?? '—'], ['Owner', d.ownerName], ['Site', d.siteCode],
           ['Initial', <BandChip settings={s} label={d.initialBand} score={d.initialScore} />], ['Residual', <BandChip settings={s} label={d.residualBand} score={d.residualScore} />],
           ['Accepted', d.acceptedAt ? `${d.acceptedByName ?? ''} ${fmtDateTime(d.acceptedAt)}` : '—'], ['Review every', `${d.reviewIntervalDays} days`], ['Last review', fmtDate(d.lastReviewedOn)], ['Next review', fmtDate(d.reviewDueOn)]]} />
@@ -243,7 +243,7 @@ export function RiskSettingsPage() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {saved && <Alert severity="success" sx={{ mb: 2 }}>Saved. New ratings use these settings; existing ratings keep their recorded score until re-rated.</Alert>}
       <Alert severity="info" sx={{ mb: 2 }}>Score = probability × severity{s.useDetectability ? ' × detectability' : ''}. The band is the one with the highest minimum score that the score reaches.</Alert>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(3, 1fr)' }, gap: 2, mb: 2 }}>
         <Scale k="probability" title="Probability scale" /><Scale k="severity" title="Severity scale" />
         <Box><FormControlLabel control={<Checkbox checked={s.useDetectability} onChange={(e) => upd((c) => { c.useDetectability = e.target.checked; })} />} label="Use detectability (RPN style)" />{s.useDetectability && <Scale k="detectability" title="Detectability scale" />}</Box>
       </Box>

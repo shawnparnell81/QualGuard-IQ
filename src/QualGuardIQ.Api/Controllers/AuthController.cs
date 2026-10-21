@@ -40,6 +40,7 @@ public sealed class AuthController(
 
     public sealed record LoginRequest(string Email, string Password, string? Code = null);
     public sealed record MeResponse(Guid Id, string Email, string DisplayName, IReadOnlyList<PermissionGrant> Grants, string? PortalKind = null);
+    public sealed record SessionResponse(bool Authenticated, MeResponse? User);
     /// <summary>Returned (200) when the password was right but another step is needed. Next: "change-password", "mfa" or "enrol".</summary>
     public sealed record StepResponse(string Next, string Challenge, DateTimeOffset ExpiresAt, int ExpiresInSeconds, string Email, bool TrustAvailable, int TrustDays, string? Reason, int RecoveryCodesLeft);
     public sealed record CodeRequest(string Challenge, string Code, bool TrustDevice = false);
@@ -305,6 +306,15 @@ public sealed class AuthController(
         var user = await users.GetUserAsync(User);
         if (user is null) return Unauthorized();
         return new MeResponse(user.Id, user.Email!, user.DisplayName, await access.GetGrantsAsync(user.Id), user.PortalKind);
+    }
+
+    /// <summary>Who is signed in, if anyone. Being signed out is a normal state here, so it answers 200 rather than 401.</summary>
+    [HttpGet("session")]
+    [AllowAnonymous]
+    public async Task<SessionResponse> Session()
+    {
+        if (User.Identity?.IsAuthenticated != true || await users.GetUserAsync(User) is not { } user) return new SessionResponse(false, null);
+        return new SessionResponse(true, new MeResponse(user.Id, user.Email!, user.DisplayName, await access.GetGrantsAsync(user.Id), user.PortalKind));
     }
 
     // ---------- helpers ----------

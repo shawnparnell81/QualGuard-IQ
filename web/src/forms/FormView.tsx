@@ -268,7 +268,7 @@ function SignatureLine({ s, ctx }: { s: FormDef['signatures'][number]; ctx: Ctx 
   const lapsed = !st ? mine.filter((x) => x.valid === false).at(-1) : undefined;
   const signed = !!st?.signedAt;
   return (
-    <Paper variant="outlined" sx={{ p: 1.5, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '160px 1fr auto' }, gap: 1.5, alignItems: 'center', borderLeft: 3, borderLeftColor: signed ? 'success.main' : lapsed ? 'warning.main' : 'divider' }} aria-label={`Signature ${s.label}`}>
+    <Paper variant="outlined" sx={{ p: 1.5, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '160px 1fr auto' }, gap: 1.5, alignItems: 'center', borderLeft: 3, borderLeftColor: signed ? 'success.main' : lapsed ? 'warning.main' : 'divider' }} aria-label={`Signature ${s.label}`}>
       <Box>
         <Typography variant="body2" fontWeight={600}>{s.label}{s.required ? ' *' : ''}</Typography>
         <Typography variant="caption" color="text.secondary">{roleLabel[s.role] ?? s.role}</Typography>
@@ -387,7 +387,7 @@ export function FormView({ def, values, onChange, readOnly, recordType, recordId
           </Box>
         ))}
         {sigs.length > 0 && (boxedSigs
-          ? <Box data-signature-band={theme === 'certificate' || undefined} sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: '1fr', sm: `repeat(${Math.min(3, sigs.length)}, 1fr)` }, gap: 1.5,
+          ? <Box data-signature-band={theme === 'certificate' || undefined} sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: `repeat(${Math.min(3, sigs.length)}, 1fr)` }, gap: 1.5,
               ...(theme === 'certificate' && style !== 'signoff' ? { p: 1.5, bgcolor: alpha(edge, darkMode ? 0.1 : 0.06), borderTop: `3px double ${accent}` } : {}) }}>{sigs.map((x) => <SignatureBox key={x.key} s={x} ctx={ctx} />)}</Box>
           : <Stack gap={1} sx={{ mt: 2 }}>{sigs.map((x) => <SignatureLine key={x.key} s={x} ctx={ctx} />)}</Stack>)}
         {children.map((c, i) => <Box key={c.key} sx={{ mt: 2, pl: { sm: 2 }, borderLeft: { sm: 1 }, borderColor: 'divider' }}>{renderSection(c, `${number}${i + 1}.`, depth + 1)}</Box>)}
@@ -423,7 +423,7 @@ export function FormView({ def, values, onChange, readOnly, recordType, recordId
             <Typography component="span" sx={{ fontFamily: mono, fontWeight: 700, fontSize: 13 }}>{number}</Typography>{title('subtitle1', { textTransform: theme === 'worksheet' ? 'uppercase' : 'none', letterSpacing: theme === 'worksheet' ? 0.8 : 0 })}{chips}
           </Stack><Box sx={{ p: 2 }}>{body}</Box></>);
       case 'steps':
-        return wrap({ display: 'grid', gridTemplateColumns: '44px 1fr', columnGap: 2 }, <>
+        return wrap({ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '44px minmax(0, 1fr)' }, columnGap: 2 }, <>
           <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <Box sx={{ width: 36, height: 36, borderRadius: '50%', background: theme === 'plan' ? edge : `linear-gradient(135deg, ${accent} 0%, ${edge} 100%)`, boxShadow: `0 6px 14px ${alpha(edge, 0.3)}`, color: '#fff', display: 'grid', placeItems: 'center', fontFamily: mono, fontWeight: 700, fontSize: 14 }}>{number.replace(/\.$/, '')}</Box>
             <Box sx={{ flex: 1, width: 2, bgcolor: 'divider', mt: 0.5 }} />

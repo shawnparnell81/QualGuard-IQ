@@ -88,7 +88,7 @@ export function QualityOpsSettingsPage() {
             <TableCell><Checkbox checked={v.escalate} slotProps={{ input: { 'aria-label': `Notify approvers for ${v.name}` } }} onChange={(e) => upd((c) => { c.severities[k].escalate = e.target.checked; })} /></TableCell>
           </TableRow>)}</TableBody></Table>
       </Section></Box>
-      <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
         <Section title="Categories"><TextField fullWidth multiline minRows={5} label="One per line" value={s.categories.join('\n')} onChange={(e) => upd((c) => { c.categories = e.target.value.split('\n'); })} onBlur={() => upd((c) => { c.categories = c.categories.map((x) => x.trim()).filter(Boolean); })} /></Section>
         <Section title="Classifications"><TextField fullWidth multiline minRows={5} label="One per line" value={s.classifications.join('\n')} onChange={(e) => upd((c) => { c.classifications = e.target.value.split('\n'); })} onBlur={() => upd((c) => { c.classifications = c.classifications.map((x) => x.trim()).filter(Boolean); })} /></Section>
       </Box>
@@ -193,7 +193,7 @@ export function EventDetail() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {e.respondBy && e.status < 3 && e.respondBy < new Date().toISOString() && <Alert severity="error" sx={{ mb: 2 }}>The response time for this severity passed at {fmtDateTime(e.respondBy)}.</Alert>}
       {e.escalatedToNumber && target && <Alert severity="info" sx={{ mb: 2 }}>Escalated to <RouterLink to={target}>{e.escalatedToNumber}</RouterLink>.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '290px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Source', eventSource[e.source] + (e.externalSystem ? ` (${e.externalSystem})` : '')], ['Reference', e.clientReference ?? '—'], ['Occurred', fmtDateTime(e.occurredAt)], ['Reported by', d.reportedBy], ['Category', e.category ?? '—'],
           ['Classification', e.classification ?? '—'], ['Severity', <SeverityChip settings={s} name={e.severity} />], ['Respond by', fmtDateTime(e.respondBy)], ['Part', d.partNumber ?? '—'], ['Lot', e.lotNumber ?? '—'],
           ['Supplier', d.supplier ?? '—'], ['Customer', d.customer ?? '—'], ['Location', e.location ?? '—'], ['Process', e.process ?? '—'], ['Triaged by', d.triagedBy || '—']]} />
@@ -348,7 +348,7 @@ export function DeviationDetail() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {x.status === 2 && <Alert severity={d.inForce ? 'success' : 'warning'} sx={{ mb: 2 }}>{d.inForce ? 'This deviation is in force.' : 'Approved but not in force (outside its window or its quantity is used).'}</Alert>}
       {x.status === 1 && <Alert severity="info" sx={{ mb: 2 }}>Waiting for approval (see Approvals in My work).</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '290px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', deviationKind[x.kind]], ['Owner', d.owner], ['Part', d.partNumber ?? '—'], ['Affected lots', x.affectedLots ?? '—'], ['Window', x.effectiveFrom ? `${fmtDate(x.effectiveFrom)} – ${fmtDate(x.effectiveTo)}` : '—'],
           ['Quantity used', x.quantityLimit != null ? `${x.quantityUsed} of ${x.quantityLimit}` : String(x.quantityUsed)], ['Customer approval', x.customerApprovalRequired ? (x.customerApprovalReference ?? 'Required, not recorded') : 'Not required']]} />
         <Box sx={{ minWidth: 0 }}>
@@ -438,7 +438,7 @@ export function InvestigationDetail() {
         {a.cancel && <Button color="error" onClick={() => setDlg('cancel')}>Cancel</Button>}
       </Stack>}>
       {x.outOfSpecification && <Alert severity="error" sx={{ mb: 2 }}>Out of specification: {x.result} {x.resultUnit ?? ''} against {x.lowerLimit ?? '—'} to {x.upperLimit ?? '—'}.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '290px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', investigationKind[x.kind]], ['Lead', d.lead], ['Due', fmtDate(x.dueOn)], ['Escalation level', String(x.escalationLevel)],
           ...(lab ? [['Sample', x.sampleReference ?? '—'], ['Method', x.testMethod ?? '—'], ['Specification', x.specification ?? '—'], ['Limits', `${x.lowerLimit ?? '—'} to ${x.upperLimit ?? '—'}`], ['Result', x.result != null ? `${x.result} ${x.resultUnit ?? ''}` : '—'],
             ['Laboratory error', x.laboratoryErrorFound == null ? '—' : x.laboratoryErrorFound ? 'Yes' : 'No']] as [string, string][] : [])]} />
@@ -499,7 +499,7 @@ export function ReleaseBoard() {
   return (
     <Page crumbs={[{ label: 'Hold and release board' }]} title="Quality hold and release board"
       actions={<Stack direction="row" gap={1}><Button variant="outlined" component={RouterLink} to={`${base}/releases/all`}>All decisions</Button>{can('qualityops.edit') && <Button variant="contained" component={RouterLink} to={`${base}/releases/new`}>Request release</Button>}</Stack>}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
         <Section title={`Waiting for release (${q.data?.releases.length ?? 0})`}>
           {(q.data?.releases ?? []).length === 0 ? <Typography color="text.secondary" fontSize={14}>Nothing waiting.</Typography> : <Stack gap={1}>{q.data!.releases.map((r) =>
             <Paper key={r.id} variant="outlined" sx={{ p: 1.5, cursor: 'pointer', borderLeft: 4, borderLeftColor: r.ready ? 'success.main' : 'error.main' }} onClick={() => nav(`${base}/releases/${r.id}`)}>
@@ -564,7 +564,7 @@ export function ReleaseDetail() {
       </Stack>}>
       {x.status === 0 && d.checks.some((c) => !c.passed) && <Alert severity="error" sx={{ mb: 2 }}>Release is blocked until every check passes.</Alert>}
       {x.signatureHash && <Alert severity={d.signatureValid ? 'success' : 'error'} sx={{ mb: 2 }}>{x.decisionMeaning} by {x.decidedByName} on {fmtDateTime(x.decidedAt)}. Signature {d.signatureValid ? 'verified' : 'does not match the record'}.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '290px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', releaseKind[x.kind]], ['Part', d.partNumber ?? '—'], ['Lot', x.lotNumber ?? '—'], ['Quantity', x.quantity != null ? String(x.quantity) : '—'], ['Requested by', d.requestedBy], ['Decision comment', x.decisionComment ?? '—']]} />
         <Stack gap={2} sx={{ minWidth: 0 }}>
           <Section title={x.status === 0 ? 'Release checks (evaluated now)' : 'Release checks (at decision)'}>
@@ -688,7 +688,7 @@ function EntryEditor({ def, initial, submitLabel, onSubmit, onCancel }: { def: R
   const users = useUsers();
   const set = (k: keyof EntryForm, x: string) => setV({ ...v, [k]: x });
   return (
-    <Paper sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+    <Paper sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
       {err && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{err}</Alert>}
       <TextField label="Title *" value={v.title} onChange={(e) => set('title', e.target.value)} sx={{ gridColumn: '1 / -1' }} />
       <TextField label="Summary" multiline minRows={2} value={v.summary} onChange={(e) => set('summary', e.target.value)} sx={{ gridColumn: '1 / -1' }} />
@@ -759,7 +759,7 @@ export function RegisterEntryDetail() {
         {a.archive && <Button onClick={() => run(() => post(`${Q}/registers/entries/${x.id}/archive`))}>Archive</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '290px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Register', r.name], ['Owner', d.owner], ['Effective', fmtDate(x.effectiveOn)], ['Review due', fmtDate(x.reviewDueOn)], ['Expires', fmtDate(x.expiresOn)]]} />
         <Stack gap={2} sx={{ minWidth: 0 }}>
           <Section title="Details"><Prose label="Summary" text={x.summary} /><Facts items={r.fields.map((f) => [f.label, shown(f)] as [string, string])} /></Section>
@@ -798,7 +798,7 @@ export function ServiceLevelsPage() {
       actions={admin ? <Stack direction="row" gap={1}><Button variant="outlined" onClick={() => setDlg('calendar')}>Add calendar</Button><Button variant="contained" onClick={() => setDlg('policy')}>Add service level</Button></Stack> : undefined}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Section title="Open records against their service levels"><DataTable data={[...(status.data ?? [])].sort((a, b) => rank(a.state) - rank(b.state) || b.elapsedPercent - a.elapsedPercent)} columns={cols} empty="No open records under a service level." /></Section>
-      <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
         <Section title="Service levels">
           <Table size="small"><TableHead><TableRow><TableCell>Name</TableCell><TableCell>Module / status</TableCell><TableCell>Target</TableCell><TableCell>Active</TableCell>{admin && <TableCell />}</TableRow></TableHead>
             <TableBody>{(pol.data?.policies ?? []).map((p) => <TableRow key={p.id}><TableCell>{p.name}</TableCell><TableCell>{modOf(p.recordType)?.label ?? p.recordType} / {p.status ?? 'any open status'}</TableCell>
@@ -935,7 +935,7 @@ export function ReviewDetail() {
         {a.submit && <Button variant="contained" onClick={() => run(() => post(`${Q}/reviews/${x.id}/submit`))}>Submit for approval</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '290px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', reviewKind[x.kind]], ['Owner', d.owner], ['Period', `${fmtDate(x.periodFrom)} – ${fmtDate(x.periodTo)}`], ['Metrics as of', fmtDateTime(x.metricsAt)]]} />
         <Box sx={{ minWidth: 0 }}>
           {tab === 'metrics' && <Stack gap={2}>{Object.entries(d.metrics).map(([k, v]) => <Section key={k} title={label(k)}><MetricValue v={v} /></Section>)}</Stack>}
@@ -972,7 +972,7 @@ export function QualityAnalyticsPage() {
   return (
     <Page crumbs={[{ label: 'Analytics' }]} title="Quality analytics"
       actions={<Stack direction="row" gap={1}><TextField size="small" type="date" label="From" value={from} slotProps={{ inputLabel: { shrink: true } }} onChange={(e) => setFrom(e.target.value)} /><TextField size="small" type="date" label="To" value={to} slotProps={{ inputLabel: { shrink: true } }} onChange={(e) => setTo(e.target.value)} /></Stack>}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, 1fr)' }, gap: 2, mb: 2 }}>
         {(ready.data ?? []).map((r) => <Section key={r.kind} title={/readiness$/i.test(r.kind) ? r.kind : `${r.kind} readiness`}>
           <Stack direction="row" alignItems="baseline" gap={1}><Typography sx={{ fontSize: 36, fontWeight: 700, fontFamily: mono, color: r.factors.length === 0 ? 'text.secondary' : r.score >= 85 ? 'success.main' : r.score >= 65 ? 'warning.main' : 'error.main' }}>{r.factors.length === 0 ? '–' : Math.round(r.score)}</Typography><Typography color="text.secondary">{r.band}</Typography></Stack>
           <Table size="small"><TableBody>{r.factors.map((f) => <TableRow key={f.key}><TableCell>{f.label}</TableCell><TableCell>{f.late} late of {f.total}</TableCell><TableCell sx={{ fontFamily: mono }}>{Math.round(f.score)}</TableCell></TableRow>)}</TableBody></Table>
@@ -983,14 +983,14 @@ export function QualityAnalyticsPage() {
           <TableBody>{(cycles.data ?? []).map((c) => <TableRow key={c.module}><TableCell>{c.module}</TableCell><TableCell>{c.closed}</TableCell><TableCell>{c.averageDays.toFixed(1)} d</TableCell><TableCell>{c.medianDays.toFixed(1)} d</TableCell><TableCell>{c.p90Days.toFixed(1)} d</TableCell></TableRow>)}</TableBody></Table>
       </Section>
       <Box sx={{ mt: 2 }}><Section title="Aging and bottlenecks" action={<TextField select size="small" label="Module" value={m} onChange={(e) => setM(e.target.value)} sx={{ minWidth: 200 }}>{(mods.data ?? []).map((x) => <MenuItem key={x.key} value={x.key}>{x.label}</MenuItem>)}</TextField>}>
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 3 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) minmax(0, 1.4fr)' }, gap: 3 }}>
           <Stack gap={0.75}>{(aging.data ?? []).map((b) => <Stack key={b.band} direction="row" gap={1} alignItems="center"><Box sx={{ width: 90, fontSize: 13, color: 'text.secondary' }}>{b.band}</Box>
             <Box sx={{ height: 18, width: `${(b.count / max) * 100}%`, minWidth: 2, bgcolor: 'primary.main', borderRadius: 0.5 }} /><Box sx={{ fontFamily: mono, fontSize: 13 }}>{b.count}</Box></Stack>)}</Stack>
           <Table size="small"><TableHead><TableRow><TableCell>Status</TableCell><TableCell>Passed through</TableCell><TableCell>Average time in status</TableCell><TableCell>Longest</TableCell><TableCell>In it now</TableCell></TableRow></TableHead>
             <TableBody>{(bottle.data ?? []).map((b) => <TableRow key={b.status}><TableCell>{b.status}</TableCell><TableCell>{b.transitions}</TableCell><TableCell>{h(b.averageHours)}</TableCell><TableCell>{h(b.maxHours)}</TableCell><TableCell>{b.currentlyIn}</TableCell></TableRow>)}</TableBody></Table>
         </Box>
       </Section></Box>
-      <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Box sx={{ mt: 2, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
         <Section title="Recurrence (events and complaints)">{(rec.data ?? []).length === 0 ? <Typography color="text.secondary" fontSize={14}>No recurring groups in the window.</Typography> :
           <Table size="small"><TableHead><TableRow><TableCell>Part</TableCell><TableCell>Category</TableCell><TableCell>Count</TableCell><TableCell>Records</TableCell></TableRow></TableHead>
             <TableBody>{rec.data!.map((r) => <TableRow key={r.key}><TableCell>{r.part}</TableCell><TableCell>{r.category}</TableCell><TableCell>{r.count}{r.systemic && <> <StatusChip status="Systemic" /></>}</TableCell><TableCell sx={{ fontFamily: mono, fontSize: 12 }}>{r.records.join(', ')}</TableCell></TableRow>)}</TableBody></Table>}</Section>

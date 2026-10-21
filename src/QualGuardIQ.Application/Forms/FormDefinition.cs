@@ -787,9 +787,9 @@ public static class FormDefinitions
         // 4. top-level calculated fields (can use anything above)
         ComputeCalcs(top.Where(f => f.Type == "calc").ToList(), typed, output, errors, today, "", hidden: k => !visible.Contains(k) || (top.First(f => f.Key == k).Section is { } s && hiddenSections.Contains(s)));
 
-        // 5. cross-field checks
+        // 5. cross-field checks (applied on submit; a draft may hold dates or numbers that are still being worked out)
         var values = output.ToDictionary(kv => kv.Key, kv => (object?)(typed.TryGetValue(kv.Key, out var tv) && tv.Raw is decimal n ? n : kv.Value), StringComparer.Ordinal);
-        foreach (var f in top.Where(f => f.Checks is { Count: > 0 } && output.GetValueOrDefault(f.Key) is not null))
+        foreach (var f in top.Where(f => requireComplete && f.Checks is { Count: > 0 } && output.GetValueOrDefault(f.Key) is not null))
             foreach (var k in f.Checks!)
             {
                 var other = string.IsNullOrWhiteSpace(k.Field) ? k.Value : output.GetValueOrDefault(k.Field!);

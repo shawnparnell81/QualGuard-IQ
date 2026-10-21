@@ -72,7 +72,7 @@ export function EnterpriseOverview() {
         {rows.map((r) => (
           <Paper key={r.siteId} data-testid="site-card" onClick={() => nav(`/enterprise/war-room/${r.siteId}`)} sx={{ p: 2, cursor: 'pointer', borderTop: '3px solid', borderTopColor: 'text.secondary', '&:hover': { bgcolor: 'action.hover' } }}>
             <Stack direction="row" alignItems="baseline" gap={1}><Typography sx={{ fontFamily: mono, fontWeight: 700 }}>{r.siteCode}</Typography><Typography variant="body2" color="text.secondary" noWrap>{r.siteName}</Typography></Stack>
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, mt: 1.25 }}>
+            <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(3, 1fr)' }, gap: 1, mt: 1.25 }}>
               {([['NCR', r.openNcrs, r.overdueNcrs === 0, r.overdueNcrs < 3], ['CAPA', r.openCapas, r.overdueCapas === 0, r.overdueCapas < 3], ['Findings', r.overdueFindings, r.overdueFindings === 0, r.overdueFindings < 3],
                 ['Training', pct(r.trainingCompliancePct), r.trainingCompliancePct >= 95, r.trainingCompliancePct >= 85], ['First pass', pct(r.firstPassPct), r.firstPassPct >= 98, r.firstPassPct >= 95],
                 ['Compliance', pct(r.complianceCoveragePct), r.complianceCoveragePct >= 90, r.complianceCoveragePct >= 70]] as [string, unknown, boolean, boolean][])
@@ -113,7 +113,7 @@ export function WarRoom() {
         <Tile label="Training compliance" value={pct(m.trainingCompliancePct)} color={rag(m.trainingCompliancePct >= 95, m.trainingCompliancePct >= 85)} />
         <Tile label="Cost of quality (90 d)" value={Number(m.coq90d).toLocaleString()} />
       </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 1.5 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '1fr 1fr' }, gap: 1.5 }}>
         {list('Nonconformances', q.data.ncrs)}{list('CAPAs', q.data.capas)}{list('Audits', q.data.audits)}{list('Complaints', q.data.complaints)}{list('Supplier corrective actions', q.data.supplierIssues)}
       </Box>
     </ModuleWorkspace>
@@ -193,7 +193,7 @@ export function StandardDetail() {
   return (
     <ModuleWorkspace module={mod('enterprise')} crumbs={[{ label: 'Corporate standards', to: '/enterprise/standards' }, { label: s.number }]} title={`${s.number} — ${s.title}`}
       actions={<Button variant="contained" onClick={() => setDlg({ kind: 'rollout' })}>Roll out to a site</Button>}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Section title={`Site rollout (${verified}/${ro.data?.length ?? 0} verified)`}>
           <LinearProgress variant="determinate" value={ro.data?.length ? (100 * verified) / ro.data.length : 0} sx={{ mb: 2, height: 8, borderRadius: 1 }} />
           <Table size="small"><TableHead><TableRow>{['Site', 'Status', 'Due', 'Local procedure', 'Verified', ''].map((h) => <TableCell key={h}>{h}</TableCell>)}</TableRow></TableHead>

@@ -28,7 +28,7 @@ The script writes `/backups/qgiq-<UTC timestamp>/` containing `database.dump`, a
 (audit trail, documents, revisions, NCRs, CAPAs, audits, approvals, users). If the API variables are not set, paste
 the manifest into **Register backup** in the Recovery center.
 
-Schedule it (cron or your scheduler) at least as often as your recovery point objective, and copy the folder off the
+With `docker-compose.prod.yml` a daily backup already runs (`BACKUP_TIME`, `BACKUP_KEEP_DAYS`; see the deployment guide). Otherwise, schedule it (cron or your scheduler) at least as often as your recovery point objective, and copy the folder off the
 host.
 
 ## Proving a backup restores

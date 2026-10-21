@@ -100,11 +100,11 @@ export function CourseDetail() {
   if (!c) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'Courses', to: '/training/courses' }]} title="Loading">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Courses', to: '/training/courses' }, { label: c.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{c.number}</span><span>{c.title}</span></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{c.number}</span><span>{c.title}</span></Stack>}
       tabs={[{ label: 'Assignments', value: 'assignments' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {msg && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Document', c.documentNumber ?? '—'], ['Retrain on revision', c.retrainOnRevision ? 'Yes' : 'No'], ['Complete within', `${c.dueDays} days`], ['Valid for', c.validityMonths ? `${c.validityMonths} months` : 'No expiry'], ['Description', c.description ?? '—']]} />
         <Box sx={{ minWidth: 0 }}>
           {tab === 'assignments' && <Stack gap={2}>

@@ -105,7 +105,7 @@ function SettingsSection({ section }: { section: string }) {
         {error && <Alert severity="error">{error}</Alert>}
         {saved && <Alert severity="success">Settings saved. The change is recorded in the audit trail.</Alert>}
         <Paper variant="outlined" sx={{ p: 2.5 }}>
-          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' } }}>
             {def.fields.map((f) => {
               const v = current[f.key];
               const full = f.type === 'multiline' || f.type === 'lines' || f.type === 'permissions' || f.type === 'csv';
@@ -147,7 +147,7 @@ function RoleSuggestions({ value, onChange }: { value: Suggestion[]; onChange: (
       <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}><Typography variant="h3">Suggested permission sets</Typography>
         <Button onClick={() => onChange([...value, { name: 'New set', description: '', permissions: ['sequfloh.access'] }])}>Add set</Button></Stack>
       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Suggestions an administrator can apply to an existing QualGuard IQ role on the Module Access page. They are not roles.</Typography>
-      <Stack gap={2}>{value.map((s, i) => <Box key={i} sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: '1fr', md: '200px 1fr 2fr auto' }, alignItems: 'start' }}>
+      <Stack gap={2}>{value.map((s, i) => <Box key={i} sx={{ display: 'grid', gap: 1, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '200px 1fr 2fr auto' }, alignItems: 'start' }}>
         <TextField size="small" label="Name" value={s.name} onChange={(e) => upd(i, { name: e.target.value })} />
         <TextField size="small" label="Description" value={s.description} onChange={(e) => upd(i, { description: e.target.value })} />
         <TextField size="small" select label="Permissions" value={s.permissions} slotProps={{ select: { multiple: true, renderValue: (x) => `${(x as string[]).length} permissions` } }}
@@ -369,7 +369,7 @@ export function ModuleAccessPage() {
         {role?.isSystem && <Alert severity="info">The built-in administrator role always holds every permission.</Alert>}
         {role && <Paper variant="outlined" sx={{ p: 2 }}>
           <Stack direction="row" gap={1} sx={{ mb: 1 }}><Button size="small" disabled={role.isSystem} onClick={() => setSel([...q.data!.permissions])}>Select all</Button><Button size="small" disabled={role.isSystem} onClick={() => setSel([])}>Clear all</Button></Stack>
-          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' } }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr', lg: '1fr 1fr 1fr' } }}>
             {q.data!.permissions.map((p) => <FormControlLabel key={p} control={<Checkbox size="small" disabled={role.isSystem} checked={role.isSystem || chosen.includes(p)} onChange={() => toggle(p)} />}
               label={<Box><Typography variant="body2">{capLabel(p)}</Typography><Typography variant="caption" color="text.secondary"><Mono>{p}</Mono></Typography></Box>} />)}
           </Box>

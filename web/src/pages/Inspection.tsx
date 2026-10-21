@@ -94,7 +94,7 @@ export function PlanNew() {
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Inspection plans', to: '/inspection/plans' }, { label: 'New' }]} title="New inspection plan">
       <Paper sx={{ p: 3 }}>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 2, mb: 3 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(3, minmax(0, 1fr))' }, gap: 2, mb: 3 }}>
           {f('title', 'Title')}
           <TextField size="small" label="Inspection type" value={h.inspectionType} onChange={(e) => setH({ ...h, inspectionType: e.target.value })} helperText="Pick or type a custom type"
             slotProps={{ htmlInput: { list: 'insp-types' } }} />
@@ -144,7 +144,7 @@ export function PlanDetail() {
   const shown = tab === 'current' ? effective : tab === 'working' ? working : d.revisions.find((r) => r.id === tab);
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Inspection plans', to: '/inspection/plans' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span>{effective && <Chip size="small" label={`Rev ${effective.revision} effective`} color="success" variant="outlined" />}{d.isObsolete && <StatusChip status="Obsolete" />}</Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span>{effective && <Chip size="small" label={`Rev ${effective.revision} effective`} color="success" variant="outlined" />}{d.isObsolete && <StatusChip status="Obsolete" />}</Stack>}
       tabs={[{ label: effective ? `Effective (rev ${effective.revision})` : 'Effective', value: 'current' }, ...(working ? [{ label: `Rev ${working.revision} ${planRevStatus[working.status].toLowerCase()}`, value: 'working' }] : []),
         { label: 'Revision history', value: 'history' }, { label: 'Inspections', value: 'inspections' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
@@ -156,7 +156,7 @@ export function PlanDetail() {
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {!effective && <Alert severity="warning" sx={{ mb: 2 }}>No revision is effective yet. Inspections can start once a revision is approved.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '260px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '260px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', d.inspectionType], ['Part', d.part ? <Link component={RouterLink} to={`/products/parts/${d.part.id}`}>{d.part.partNumber} {d.part.name}</Link> : '—'], ['Product', d.product ? `${d.product.number} ${d.product.name}` : '—'], ['Owner', d.ownerName],
           ['Effective since', fmtDateTime(effective?.effectiveAt)]]} />
         <Box sx={{ minWidth: 0 }}>
@@ -273,7 +273,7 @@ export function InspectionDetail() {
     equipmentId: entry[c.id].equipmentId || null, notes: entry[c.id].notes || null })) }));
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Inspections', to: '/inspection' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.inspectionType} inspection {d.partNumber ?? ''}</span><StatusChip status={inspectionStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.inspectionType} inspection {d.partNumber ?? ''}</span><StatusChip status={inspectionStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Results', value: 'results' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {editing && <Button variant="outlined" onClick={save}>Save results</Button>}
@@ -285,7 +285,7 @@ export function InspectionDetail() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {d.supplierOverrideReason && <Alert severity="warning" sx={{ mb: 2 }}>Supplier restriction overridden: {d.supplierOverrideReason}</Alert>}
       {d.status === 2 && !d.ncr && <Alert severity="error" sx={{ mb: 2 }}>Failed. Raise an NCR to disposition the material before release or rejection.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '270px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '270px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Plan', <Link component={RouterLink} to={`/inspection/plans/${d.plan.id}`} sx={{ fontFamily: mono }}>{d.plan.number}</Link>], ['Plan revision', <b>{d.planRevision}</b>], ['Sampling', d.samplingPlan ?? '—'],
           ['Part / rev', d.partNumber ? `${d.partNumber} / ${d.partRevision ?? '—'}` : '—'], ['Supplier', d.supplierId ? <Link component={RouterLink} to={`/suppliers/${d.supplierId}`}>{d.supplierLabel}</Link> : '—'], ['Customer', d.customerLabel ?? '—'],
           ['PO / WO', [d.purchaseOrder, d.workOrder].filter(Boolean).join(' / ') || '—'], ['Lot / batch', [d.lotNumber, d.batchNumber].filter(Boolean).join(' / ') || '—'], ['Serial', d.serialNumber ?? '—'],

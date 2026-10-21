@@ -270,4 +270,21 @@ public class FormEngineTests
         var e = Assert.Throws<AppException>(() => FormDefinitions.Apply(def, new Dictionary<string, string?> { ["t"] = "25:00", ["mc"] = """["z"]""", ["em"] = "nope", ["u"] = "x", ["w"] = "javascript:alert(1)" }, false));
         foreach (var m in new[] { "Time must be a time", "Pick must be a list", "Email must be an email", "Owner must reference", "Web must be a web address" }) Assert.Contains(m, e.Message);
     }
+
+    [Fact]
+    public void Cross_field_checks_apply_on_submit_but_not_to_drafts()
+    {
+        var def = new FormDefinition
+        {
+            Fields =
+            [
+                new FormField { Key = "due", Label = "Current due date", Type = "date" },
+                new FormField { Key = "new_due", Label = "Requested due date", Type = "date", Checks = [new FieldCheck { Operator = "greaterThan", Field = "due", Message = "The requested due date must be after the current due date." }] },
+            ],
+        };
+        var input = new Dictionary<string, string?> { ["due"] = "2026-11-01", ["new_due"] = "2026-10-01" };
+        Assert.Equal("2026-10-01", FormDefinitions.Apply(def, input, requireComplete: false)["new_due"]);
+        var e = Assert.Throws<AppException>(() => FormDefinitions.Apply(def, input, requireComplete: true));
+        Assert.Contains("must be after the current due date", e.Message);
+    }
 }

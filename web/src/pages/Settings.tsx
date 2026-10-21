@@ -95,7 +95,7 @@ function GeneralTab() {
     } catch (e) { setMsg({ ok: false, text: (e as Error).message }); }
   };
   return (
-    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '3fr 2fr' }, alignItems: 'start' }}>
+    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '3fr 2fr' }, alignItems: 'start' }}>
       <Card icon={<ApartmentOutlined />} title="Organization" intro="Names and regional settings used on every page, printout and export.">
         <Box sx={{ display: 'grid', gap: 2 }}>
           {msg && <Alert severity={msg.ok ? 'success' : 'error'} data-testid="settings-msg">{msg.text}</Alert>}
@@ -200,7 +200,7 @@ function SecurityTab() {
   const s = q.data?.signIn;
   if (!s) return null;
   return (
-    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, alignItems: 'start' }}>
+    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' }, alignItems: 'start' }}>
       <Card icon={<LockOutlined />} title="Two-step verification" action={<Button size="small" component={RouterLink} to="/admin/sign-in-security">Change</Button>}>
         <Row label="Required for staff" value={yes(s.mfaRequiredForStaff)} />
         <Row label="Required for portal accounts" value={yes(s.mfaRequiredForPortal)} />
@@ -221,7 +221,7 @@ function SystemTab() {
   const d = q.data;
   if (!d) return null;
   return (
-    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, alignItems: 'start' }}>
+    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' }, alignItems: 'start' }}>
       <Card icon={<StorageOutlined />} title="File storage" intro="Where attachments, documents and imports are kept. Read-only.">
         <Row label="Storage" value={d.storage.provider} />
         <Row label="Server" value={d.storage.endpoint ?? '—'} />

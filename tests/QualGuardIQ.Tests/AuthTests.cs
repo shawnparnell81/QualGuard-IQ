@@ -16,6 +16,20 @@ public sealed class AuthTests(TestApp app)
     }
 
     [Fact]
+    public async Task Session_answers_200_whether_or_not_anyone_is_signed_in()
+    {
+        var anon = await app.AnonymousAsync();
+        var r = await anon.GetAsync("/api/auth/session");
+        Assert.Equal(HttpStatusCode.OK, r.StatusCode);
+        var s = await r.Content.ReadFromJsonAsync<Dictionary<string, System.Text.Json.JsonElement>>();
+        Assert.False(s!["authenticated"].GetBoolean());
+        var admin = await app.AdminAsync();
+        var signed = await admin.GetJsonAsync<Dictionary<string, System.Text.Json.JsonElement>>("/api/auth/session");
+        Assert.True(signed["authenticated"].GetBoolean());
+        Assert.Equal(TestApp.AdminEmail, signed["user"].GetProperty("email").GetString());
+    }
+
+    [Fact]
     public async Task Branding_is_public_and_comes_from_configuration()
     {
         var c = await app.AnonymousAsync();

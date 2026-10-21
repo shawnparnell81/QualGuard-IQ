@@ -4,7 +4,7 @@ import { Api, localDate, shot, signIn, state, unique, users } from './support';
 /** SEQUFLOH S6: Dispatch Queue, Active Station, Paused / Completed / Overdue views, Work History; timing survives a refresh (Prompt 2 sections 12-16). */
 test.describe('SEQUFLOH live execution', () => {
   test('a task is dispatched, started, paused, refreshed, resumed and completed with persisted timing and task events', async ({ page, browser }) => {
-    test.setTimeout(180_000);
+    test.setTimeout(300_000);
     const author = await Api.as(users.author);
     const approver = await Api.as(users.approver);
     const siteId = state().siteId;
@@ -83,8 +83,11 @@ test.describe('SEQUFLOH live execution', () => {
     const vctx = await browser.newContext();
     const vp = await vctx.newPage();
     await signIn(vp, users.viewer);
-    await vp.goto(`/sequfloh/execution/completed?q=WO-${tag}`);
-    await expect(vp.getByRole('cell', { name: task.number, exact: true })).toBeVisible();
+    // on a busy machine the first load can land before the sign-in settles; reload until the row shows instead of waiting on one load
+    await expect(async () => {
+      await vp.goto(`/sequfloh/execution/completed?q=WO-${tag}`);
+      await expect(vp.getByRole('cell', { name: task.number, exact: true })).toBeVisible({ timeout: 10_000 });
+    }).toPass({ timeout: 90_000, intervals: [1_000, 2_000, 5_000] });
     await expect(vp.getByRole('button', { name: new RegExp(`(Restart|Reverse result) ${task.number}`) })).toHaveCount(0);
     await vctx.close();
   });

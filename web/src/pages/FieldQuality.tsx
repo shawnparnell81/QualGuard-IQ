@@ -72,7 +72,7 @@ export function RecallNew() {
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Recalls', to: '/field/recalls' }, { label: 'New' }]} title="Open a recall">
       <Paper sx={{ p: 3, maxWidth: 860 }}>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
           <TextField label="Title" value={v.title} onChange={(e) => setV({ ...v, title: e.target.value })} sx={{ gridColumn: '1 / -1' }} />
           <TextField label="Reason" multiline minRows={3} value={v.reason} onChange={(e) => setV({ ...v, reason: e.target.value })} sx={{ gridColumn: '1 / -1' }} />
           <TextField select label="Risk rating" value={v.riskRating} onChange={(e) => setV({ ...v, riskRating: e.target.value })}>{severity.map((s, i) => <MenuItem key={s} value={String(i)}>{s}</MenuItem>)}</TextField>
@@ -125,7 +125,7 @@ export function RecallDetail() {
   const step = Math.min(r.status, 5);
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Recalls', to: '/field/recalls' }, { label: r.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{r.number}</span><span>{r.title}</span><StatusChip status={recallStatus[r.status]} />{r.isExercise && <StatusChip status="Mock recall" />}</Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{r.number}</span><span>{r.title}</span><StatusChip status={recallStatus[r.status]} />{r.isExercise && <StatusChip status="Mock recall" />}</Stack>}
       tabs={[{ label: 'Impacted parties', value: 'parties' }, { label: 'Suspect items', value: 'items' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {edit && r.status <= 1 && <Button variant="contained" disabled={busy} onClick={() => run(() => post(`/api/recalls/${id}/trace`))}>{r.status === 0 ? 'Trace lots' : 'Re-run trace'}</Button>}
@@ -146,7 +146,7 @@ export function RecallDetail() {
       <Paper sx={{ p: 2, mb: 2 }}>
         <Stepper activeStep={step} alternativeLabel>{['Opened', 'Traced', 'Contained', 'Customers notified', 'Closure signed', 'Closed'].map((l) => <Step key={l}><StepLabel>{l}</StepLabel></Step>)}</Stepper>
       </Paper>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '300px 1fr' }, gap: 2 }}>
         <Facts items={[['Risk', severity[r.riskRating]], ['Customers contained', `${done} / ${customers.length}`], ['CAPA', r.capaId ? <RouterLink to={`/capa/${r.capaId}`}>Open CAPA</RouterLink> : '—'], ['Closed', fmtDateTime(r.closedAt)]]}>
           <Box sx={{ mt: 1 }}><Prose label="Reason" text={r.reason} /><Prose label="Containment" text={r.containment} /><Prose label="Closure summary" text={r.closureSummary} /></Box>
         </Facts>
@@ -201,7 +201,7 @@ export function ReturnNew() {
   const set = (k: string) => (e: { target: { value: string } }) => setV({ ...v, [k]: e.target.value });
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Returns', to: '/field/returns' }, { label: 'New' }]} title="Authorize a return">
-      <Paper sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Paper sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField select label="Customer" value={v.customerId} onChange={set('customerId')}>{names.customers.map((c) => <MenuItem key={c.id} value={c.id}>{lookupLabel(c)}</MenuItem>)}</TextField>
         <TextField select label="Part" value={v.partId} onChange={set('partId')}><MenuItem value="">—</MenuItem>{names.parts.map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}</TextField>
@@ -242,7 +242,7 @@ export function ReturnDetail() {
   const link = (label: string, url?: string, idv?: string) => (idv ? <RouterLink to={`${url}/${idv}`}>{label}</RouterLink> : '—');
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Returns', to: '/field/returns' }, { label: r.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{r.number}</span><StatusChip status={returnStatus[r.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{r.number}</span><StatusChip status={returnStatus[r.status]} /></Stack>}
       tabs={[{ label: 'Details', value: 'details' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1} flexWrap="wrap">
         {edit && r.status === 0 && <Button variant="contained" onClick={() => setDlg('receive')}>Receive</Button>}
@@ -256,7 +256,7 @@ export function ReturnDetail() {
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Paper sx={{ p: 2, mb: 2 }}><Stepper activeStep={Math.min(r.status, 4)} alternativeLabel>{['Authorized', 'Received', 'Inspected', 'Dispositioned', 'Closed'].map((l) => <Step key={l}><StepLabel>{l}</StepLabel></Step>)}</Stepper></Paper>
-      {tab === 'details' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px 1fr' }, gap: 2 }}>
+      {tab === 'details' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '300px 1fr' }, gap: 2 }}>
         <Facts items={[['Customer', names.customer(r.customerId)], ['Part', names.part(r.partId)], ['Serial', r.serialNumber ?? '—'], ['Lot', r.lotNumber ?? '—'], ['Quantity', String(r.quantity)], ['Customer ref', r.customerReference ?? '—'],
           ['Authorized', fmtDate(r.authorizedOn)], ['Received', fmtDate(r.receivedOn)], ['Condition', r.condition ?? '—'], ['Failure confirmed', r.failureConfirmed == null ? '—' : r.failureConfirmed ? 'Yes' : 'No'], ['Disposition', returnDisposition[r.disposition]]]} />
         <Stack gap={2}>
@@ -307,7 +307,7 @@ export function WarrantyNew() {
   const fld = (k: string, label: string, type = 'text') => <TextField label={label} type={type} value={val(k)} onChange={set(k)} slotProps={type === 'date' ? { inputLabel: { shrink: true } } : undefined} />;
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Warranty', to: '/field/warranty' }, { label: 'New' }]} title={r ? `Warranty claim for ${r.number}` : 'New warranty claim'}>
-      <Paper sx={{ p: 3, maxWidth: 860, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Paper sx={{ p: 3, maxWidth: 860, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField select label="Customer" value={val('customerId')} onChange={set('customerId')}>{names.customers.map((c) => <MenuItem key={c.id} value={c.id}>{lookupLabel(c)}</MenuItem>)}</TextField>
         {fld('failureMode', 'Failure mode')}{fld('serialNumber', 'Serial')}{fld('lotNumber', 'Lot')}{fld('quantity', 'Quantity', 'number')}{fld('claimedOn', 'Claimed on', 'date')}{fld('failedOn', 'Failed on', 'date')}
@@ -347,10 +347,10 @@ export function WarrantyDetail() {
   const link = (label: string, url: string, idv?: string) => (idv ? <RouterLink to={`${url}/${idv}`}>{label}</RouterLink> : '—');
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Warranty', to: '/field/warranty' }, { label: w.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{w.number}</span><StatusChip status={claimStatus[w.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{w.number}</span><StatusChip status={claimStatus[w.status]} /></Stack>}
       tabs={[{ label: 'Details', value: 'details' }, { label: 'Files & history', value: 'files' }]} tab={tab} onTab={setTab}
       actions={canDecide ? <Button variant="contained" onClick={() => setDlg(true)}>Decide claim</Button> : undefined}>
-      {tab === 'details' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px 1fr' }, gap: 2 }}>
+      {tab === 'details' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '300px 1fr' }, gap: 2 }}>
         <Facts items={[['Customer', names.customer(w.customerId)], ['Serial', w.serialNumber ?? '—'], ['Lot', w.lotNumber ?? '—'], ['Quantity', String(w.quantity)], ['Claimed', fmtDate(w.claimedOn)], ['Failed', fmtDate(w.failedOn)], ['Supplier', names.supplier(w.supplierId)]]} />
         <Stack gap={2}>
           <Section title="Cost">
@@ -394,7 +394,7 @@ export function WarrantyMetrics() {
           <Box sx={{ height: 260 }}><ResponsiveContainer><ComposedChart data={d.trend}><CartesianGrid stroke={cc.grid} /><XAxis dataKey="period" /><YAxis yAxisId="l" /><YAxis yAxisId="r" orientation="right" /><Tooltip />
             <Bar yAxisId="l" dataKey="claims" fill={cc.accent} name="Claims" /><Line yAxisId="r" dataKey="ppm" stroke={cc.primary} name="PPM" /></ComposedChart></ResponsiveContainer></Box>
         </Section>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr 1fr' }, gap: 2, mt: 2 }}>{grp('By product', d.byProduct)}{grp('By component', d.byComponent)}{grp('By supplier', d.bySupplier)}</Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr 1fr' }, gap: 2, mt: 2 }}>{grp('By product', d.byProduct)}{grp('By component', d.byComponent)}{grp('By supplier', d.bySupplier)}</Box>
       </>}
     </ModuleWorkspace>
   );

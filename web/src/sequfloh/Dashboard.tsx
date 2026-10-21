@@ -37,7 +37,7 @@ export function Dashboard() {
       <Stat label="Pending reviews" value={d.instructions.pendingReview} to="/sequfloh/instructions/pending-review" />
       <Stat label="Pending approvals" value={d.instructions.pendingApproval} to="/sequfloh/instructions/pending-approval" />
     </Stats>
-    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' } }}>
       {d.live && <MiniList title="Assigned work" rows={d.live.myWork} empty="Nothing is assigned to you." kind="record" />}
       <MiniList title="Recently released instructions" rows={d.instructions.recentlyReleased} empty="No instructions released yet." kind="instruction" />
       <MiniList title="Recently revised instructions" rows={d.instructions.recentlyRevised} empty="No revised instructions released yet." kind="instruction" />

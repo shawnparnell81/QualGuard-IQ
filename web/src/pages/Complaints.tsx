@@ -114,7 +114,7 @@ export function ComplaintDetail() {
   const steps: [string, boolean][] = [['Containment', !!d.containment], ['Return evaluated', !d.returnExpected || !!d.returnEvaluation], ['Investigation', !!d.rootCause], ['Response sent', !!d.responseSentOn], ['Customer accepted', d.customerAccepted === true], ['Verified', !!d.verifiedAt], ['Closed', d.status === 4]];
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Complaints', to: '/complaints' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={complaintStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={complaintStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Case', value: 'case' }, { label: 'Return', value: 'return' }, { label: 'Linked records', value: 'links' }, { label: 'Actions', value: 'actions' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1} flexWrap="wrap">
         {a('contain') && <Button variant={d.containment ? 'outlined' : 'contained'} onClick={() => setDlg('contain')}>{d.containment ? 'Update containment' : 'Record containment'}</Button>}
@@ -131,7 +131,7 @@ export function ComplaintDetail() {
       <Stack direction="row" gap={0.75} sx={{ mb: 2, flexWrap: 'wrap' }}>
         {steps.map(([l, ok]) => <Box key={l} sx={{ px: 1.25, py: 0.4, fontSize: 12.5, borderRadius: 1, border: 1, borderColor: ok ? 'success.main' : 'divider', color: ok ? 'success.dark' : 'text.secondary', bgcolor: ok ? 'rgba(46,125,50,0.06)' : undefined }}>{ok ? '✓ ' : ''}{l}</Box>)}
       </Stack>
-      <Box sx={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '290px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Customer', d.customerLabel], ['Contact', d.customerContact ?? '—'], ['Customer ref.', d.customerReference ?? '—'], ['Complaint date', fmtDate(d.complaintDate)], ['Reported', fmtDate(d.reportedOn)],
           ['Response due', fmtDate(d.responseDueOn)], ['Part', d.partId ? <Link component={RouterLink} to={`/products/parts/${d.partId}`}>{d.partLabel}</Link> : d.partNumber ?? '—'], ['Revision', d.partRevision ?? '—'], ['Product', d.productLabel ?? '—'],
           ['Lot / batch', [d.lotNumber, d.batchNumber].filter(Boolean).join(' / ') || '—'], ['Serial', d.serialNumber ?? '—'], ['Quantity', d.quantity ?? '—'], ['Failure mode', d.failureMode ?? '—'],
@@ -221,7 +221,7 @@ export function ComplaintTrends() {
         <Box sx={{ height: 240 }}><ResponsiveContainer><BarChart data={t.data?.byMonth ?? []}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="month" fontSize={12} /><YAxis allowDecimals={false} fontSize={12} /><Tooltip />
           <Bar dataKey="count" name="All" fill="#37474f" /><Bar dataKey="critical" name="Critical" fill="#c62828" /></BarChart></ResponsiveContainer></Box>
       </Section>
-      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 2, mt: 2 }}>{top('By failure mode', t.data?.byFailureMode)}{top('By customer', t.data?.byCustomer)}{top('By product', t.data?.byProduct)}</Box>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(3, minmax(0, 1fr))' }, gap: 2, mt: 2 }}>{top('By failure mode', t.data?.byFailureMode)}{top('By customer', t.data?.byCustomer)}{top('By product', t.data?.byProduct)}</Box>
     </ModuleWorkspace>
   );
 }

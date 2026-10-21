@@ -33,7 +33,7 @@ function Big({ children, onClick, disabled, color = 'primary' }: { children: Rea
   return <Button fullWidth size="large" variant={color === 'primary' ? 'contained' : 'outlined'} color={color} disabled={disabled} onClick={onClick} sx={{ py: 1.8, fontSize: 17 }}>{children}</Button>;
 }
 function Step({ n, label, value, children }: { n: number; label: string; value?: string; children: ReactNode }) {
-  return <Box sx={{ display: 'grid', gridTemplateColumns: '34px 1fr', gap: 1.5, alignItems: 'start' }}>
+  return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '34px minmax(0, 1fr)' }, gap: 1.5, alignItems: 'start' }}>
     <Box sx={{ width: 34, height: 34, display: 'grid', placeItems: 'center', bgcolor: value ? 'primary.main' : 'action.hover', color: value ? 'primary.contrastText' : 'text.secondary', fontWeight: 700 }}>{n}</Box>
     <Box><Typography variant="overline" color="text.secondary">{label}</Typography>{value ? <Typography sx={{ fontFamily: mono, fontSize: 17, wordBreak: 'break-all' }}>{value}</Typography> : children}</Box>
   </Box>;
@@ -565,7 +565,7 @@ function TraceFlow({ onAction }: { onAction: (a: string, code: string) => void }
         <Box><Typography sx={{ fontFamily: mono }}>{s.locationCode}</Typography><Typography variant="caption" color="text.secondary">{s.partNumber} {s.serialNumber ?? s.lotNumber ?? ''}</Typography></Box>
         <Stack direction="row" gap={1} alignItems="center"><StockBadge status={s.status} held={s.held} /><b>{qty(s.onHand)}</b></Stack></Stack>)}</Stack>}
       {ctx.related.length > 0 && <Stack gap={0.5}>{ctx.related.map((r) => <Button key={`${r.type}${r.id}`} component={RouterLink} to={r.url} sx={{ justifyContent: 'space-between' }}><span>{r.number} · {r.title}</span><span>{r.status}</span></Button>)}</Stack>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 1 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1 }}>
         {ctx.actions.filter((a) => ['move', 'issue', 'ship', 'inspect', 'receive'].includes(a)).map((a) => <Big key={a} onClick={() => onAction(a, ctx.match.raw)}>{a[0].toUpperCase() + a.slice(1)}</Big>)}
         {ctx.match.url && <Big color="inherit" onClick={() => nav(ctx.match.url!)}>Open record</Big>}
       </Box>
