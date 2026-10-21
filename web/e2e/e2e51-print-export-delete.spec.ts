@@ -125,12 +125,13 @@ test.describe('E2E 51: print, PDF, export, delete and restore, import, settings'
     const title = unique('Wrong drawing revision used');
     const ncr = await author.post('/api/ncrs', { title, description: 'Rev C used instead of rev D.', source: 'In-process', siteId: state().siteId, detectedOn: localDate(), severity: 1 });
 
-    // without the NCR delete permission the button is there but unavailable
+    // a live NCR: without the delete live quality records permission there is no Delete, only Close out
     const ctx = await browser.newContext();
     const ap = await ctx.newPage();
     await signIn(ap, users.author);
     await ap.goto(`/ncr/${ncr.id}`);
-    await expect(button(ap, 'Delete')).toBeDisabled();
+    await expect(button(ap, 'Close out')).toBeVisible();
+    await expect(button(ap, 'Delete')).toHaveCount(0);
     expect(await author.status('POST', `/api/records/ncr/${ncr.id}/delete`, { reason: 'Created by mistake' })).toBe(403);
     await ctx.close();
 

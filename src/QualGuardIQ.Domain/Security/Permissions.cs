@@ -284,6 +284,11 @@ public static class Permissions
     public const string SequflohDeleteRecords = "sequfloh.delete_records";
     /// <summary>Delete records that are closed, approved, effective or signed (on top of the module's delete permission).</summary>
     public const string RecordsDeleteLocked = "records.delete_locked";
+    /// <summary>
+    /// Delete a live quality-event record (NCR, CAPA, complaint, SCAR and the records linked to them). Without it, a live quality-event record
+    /// can only be closed out (for example "Not required" or "No fault found") with a note.
+    /// </summary>
+    public const string RecordsDeleteLive = "records.delete_live";
 
     /// <summary>The delete permission that goes with a module's edit permission, or null when the module has none.</summary>
     public static string? DeleteFor(string editPermission)

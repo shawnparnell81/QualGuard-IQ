@@ -33,3 +33,25 @@ public class DeletedRecord
     public string? RestoredByName { get; set; }
     public string? RestoreReason { get; set; }
 }
+
+/// <summary>Why a quality-event record was closed without being worked to the end.</summary>
+public enum CloseOutOutcome { NotRequired = 0, NoFaultFound = 1, Duplicate = 2, RaisedInError = 3 }
+
+/// <summary>
+/// A live quality-event record (NCR, CAPA, complaint and the like) closed out instead of deleted: who closed it, when, the outcome and
+/// the note saying why. The record keeps its history and stays in lists with its closed status.
+/// </summary>
+public class RecordCloseOut
+{
+    public Guid Id { get; set; } = Guid.CreateVersion7();
+    public string RecordType { get; set; } = "";
+    public Guid RecordId { get; set; }
+    public Guid SiteId { get; set; }
+    public CloseOutOutcome Outcome { get; set; }
+    public string Note { get; set; } = "";
+    public string? PreviousStatus { get; set; }
+    public string NewStatus { get; set; } = "";
+    public Guid ClosedById { get; set; }
+    public string ClosedByName { get; set; } = "";
+    public DateTimeOffset ClosedAt { get; set; }
+}

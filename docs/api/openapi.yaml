@@ -40288,6 +40288,52 @@ paths:
           description: Not signed in
         '403':
           description: Missing permission or outside site scope
+  '/api/records/{type}/{id}/close-out':
+    post:
+      tags:
+        - RecordTools
+      description: Requires an authenticated user.
+      parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CloseOutRequest'
+          text/json:
+            schema:
+              $ref: '#/components/schemas/CloseOutRequest'
+          application/*+json:
+            schema:
+              $ref: '#/components/schemas/CloseOutRequest'
+        required: true
+      responses:
+        '200':
+          description: OK
+          content:
+            text/plain:
+              schema:
+                $ref: '#/components/schemas/CloseOutDto'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloseOutDto'
+            text/json:
+              schema:
+                $ref: '#/components/schemas/CloseOutDto'
+        '401':
+          description: Not signed in
+        '403':
+          description: Missing permission or outside site scope
   '/api/records/{type}/{id}/export':
     get:
       tags:
@@ -53651,6 +53697,10 @@ components:
         importedReadOnly:
           type: boolean
           default: false
+        closeOut:
+          oneOf:
+            - type: 'null'
+            - $ref: '#/components/schemas/CloseOutDto'
     CapabilityInput:
       required:
         - title
@@ -55276,6 +55326,59 @@ components:
               - integer
               - string
             format: int32
+    CloseOutDto:
+      required:
+        - id
+        - recordType
+        - recordId
+        - outcome
+        - outcomeLabel
+        - note
+        - previousStatus
+        - newStatus
+        - closedByName
+        - closedAt
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        recordType:
+          type: string
+        recordId:
+          type: string
+          format: uuid
+        outcome:
+          type: string
+        outcomeLabel:
+          type: string
+        note:
+          type: string
+        previousStatus:
+          type:
+            - 'null'
+            - string
+        newStatus:
+          type: string
+        closedByName:
+          type: string
+        closedAt:
+          type: string
+          format: date-time
+    CloseOutRequest:
+      required:
+        - outcome
+        - note
+      type: object
+      properties:
+        outcome:
+          type:
+            - 'null'
+            - string
+        note:
+          type:
+            - 'null'
+            - string
     CodeInput:
       required:
         - letter
@@ -58001,6 +58104,15 @@ components:
           type:
             - 'null'
             - string
+        draft:
+          type: boolean
+          default: false
+        critical:
+          type: boolean
+          default: false
+        canCloseOut:
+          type: boolean
+          default: false
     DeletedRecordDto:
       required:
         - id

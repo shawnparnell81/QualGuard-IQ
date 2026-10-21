@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type ReactElement, type RefObject } from 'react';
 import { flushSync } from 'react-dom';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
-import { Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, GlobalStyles, ListItemIcon, ListItemText, Menu, MenuItem, Snackbar, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, Chip, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Divider, GlobalStyles, ListItemIcon, ListItemText, Menu, MenuItem, Snackbar, TextField, Tooltip, Typography } from '@mui/material';
 import PrintOutlined from '@mui/icons-material/PrintOutlined';
 import PictureAsPdfOutlined from '@mui/icons-material/PictureAsPdfOutlined';
 import SaveAltOutlined from '@mui/icons-material/SaveAltOutlined';
 import DeleteOutline from '@mui/icons-material/DeleteOutline';
+import TaskAltOutlined from '@mui/icons-material/TaskAltOutlined';
 import UploadFileOutlined from '@mui/icons-material/UploadFileOutlined';
 import TableViewOutlined from '@mui/icons-material/TableViewOutlined';
 import DescriptionOutlined from '@mui/icons-material/DescriptionOutlined';
@@ -17,8 +18,16 @@ import { useAuth, useBranding } from '../auth';
 import { fileName, formatLabel, saveFile, type SaveFormat } from './saveFile';
 import { findTables, readFilters, readTable } from './tableText';
 
-export interface DeleteCheck { deletable: boolean; canDelete: boolean; locked: boolean; reason: string | null; deletePermission: string | null }
-export interface RecordCapabilities { type: string; typeLabel: string; id: string; number: string; title: string; status: string | null; url: string; delete: DeleteCheck; importedReadOnly?: boolean }
+export interface DeleteCheck {
+  deletable: boolean; canDelete: boolean; locked: boolean; reason: string | null; deletePermission: string | null;
+  /** Still a draft: anyone working on it may delete it. */
+  draft?: boolean;
+  /** A live quality-event record (NCR, CAPA, complaint and the like, or a record linked to one). */
+  critical?: boolean;
+  canCloseOut?: boolean;
+}
+export interface CloseOut { outcome: string; outcomeLabel: string; note: string; previousStatus: string | null; newStatus: string; closedByName: string; closedAt: string }
+export interface RecordCapabilities { type: string; typeLabel: string; id: string; number: string; title: string; status: string | null; url: string; delete: DeleteCheck; importedReadOnly?: boolean; closeOut?: CloseOut | null }
 
 const GUID = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/gi;
 
@@ -72,6 +81,7 @@ export function PageTools({ area, title, record }: { area: RefObject<HTMLElement
   const [menu, setMenu] = useState<HTMLElement | null>(null);
   const [busy, setBusy] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
@@ -133,13 +143,22 @@ export function PageTools({ area, title, record }: { area: RefObject<HTMLElement
       {imports.map(([, to, label]) => (
         <Button key={to} size="small" variant="outlined" startIcon={<UploadFileOutlined />} component={RouterLink} to={to} data-testid="tool-import">{label}</Button>
       ))}
-      {r?.delete.deletable && (
-        <Tooltip describeChild title={r.delete.canDelete ? (r.delete.locked ? 'This record is closed, approved or signed' : '') : r.delete.reason ?? ''}>
-          <span>
-            <Button size="small" variant="outlined" color="error" startIcon={<DeleteOutline />} disabled={!r.delete.canDelete} onClick={() => setDeleting(true)} data-testid="tool-delete">Delete</Button>
-          </span>
+      {r?.closeOut && (
+        <Tooltip describeChild title={`${r.closeOut.note} (${r.closeOut.closedByName}, ${new Date(r.closeOut.closedAt).toLocaleDateString()})`}>
+          <Chip size="small" color="default" icon={<TaskAltOutlined />} label={`Closed out: ${r.closeOut.outcomeLabel}`} data-testid="closed-out" />
         </Tooltip>
       )}
+      {r?.delete.canCloseOut && (
+        <Tooltip describeChild title="Close this record as not required, no fault found, a duplicate or raised in error. The note is kept in the audit trail.">
+          <Button size="small" variant="outlined" startIcon={<TaskAltOutlined />} onClick={() => setClosing(true)} data-testid="tool-close-out">Close out</Button>
+        </Tooltip>
+      )}
+      {r?.delete.deletable && r.delete.canDelete && (
+        <Tooltip describeChild title={r.delete.draft ? 'Delete this draft' : r.delete.critical ? 'This is a live quality record. Deleting it is kept in the audit trail.' : r.delete.locked ? 'This record is closed, approved or signed' : ''}>
+          <Button size="small" variant="outlined" color="error" startIcon={<DeleteOutline />} onClick={() => setDeleting(true)} data-testid="tool-delete">Delete</Button>
+        </Tooltip>
+      )}
+      {r && closing && <CloseOutDialog rec={r} onClose={() => setClosing(false)} />}
       {r && deleting && <DeleteDialog rec={r} onClose={() => setDeleting(false)} />}
       <Snackbar open={!!notice} autoHideDuration={5000} onClose={() => setNotice(null)} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
         {notice ? <Alert severity={notice.ok ? 'success' : 'error'} onClose={() => setNotice(null)} data-testid="tool-notice">{notice.text}</Alert> : undefined}
@@ -174,14 +193,61 @@ function DeleteDialog({ rec, onClose }: { rec: RecordCapabilities; onClose: () =
         <DialogContentText sx={{ mb: 2 }}>
           “{rec.title}” will disappear from lists, searches and reports. Nothing is erased: the deletion is kept in the audit trail and people allowed to delete these records can restore it from Deleted records.
         </DialogContentText>
-        {rec.delete.locked && <Alert severity="warning" sx={{ mb: 2 }}>This record is closed, approved or signed. Only delete it if it was created by mistake.</Alert>}
+        {rec.delete.critical && !rec.delete.draft && <Alert severity="warning" sx={{ mb: 2 }} data-testid="delete-live-warning">This is a live quality record. Only delete it if it should never have been raised; otherwise close it out instead.</Alert>}
+        {!rec.delete.critical && rec.delete.locked && <Alert severity="info" sx={{ mb: 2 }}>This record is approved, effective or signed. It can still be deleted; your note is kept with the deletion in the audit trail.</Alert>}
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        <TextField autoFocus fullWidth multiline minRows={3} label="Reason for deleting" required value={reason} onChange={(e) => setReason(e.target.value)}
+        <TextField autoFocus fullWidth multiline minRows={3} label={rec.delete.critical && !rec.delete.draft ? 'Reason for deleting' : 'Note: why is it being deleted?'} required value={reason} onChange={(e) => setReason(e.target.value)}
           helperText="Required. At least 5 characters. Shown in the audit trail." slotProps={{ htmlInput: { maxLength: 2000, 'data-testid': 'delete-reason' } }} />
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={busy}>Cancel</Button>
         <Button color="error" variant="contained" disabled={!ok || busy} onClick={go} data-testid="delete-confirm">Delete</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+const outcomes: [string, string, string][] = [
+  ['NotRequired', 'Not required', 'Raised, then found not to need any action.'],
+  ['NoFaultFound', 'No fault found', 'Investigated and the part, process or product was found to be good.'],
+  ['Duplicate', 'Duplicate', 'The same issue is already being handled on another record.'],
+  ['RaisedInError', 'Raised in error', 'Entered against the wrong part, customer or site.'],
+];
+
+/** Closes a live quality-event record with an outcome and a note instead of deleting it. */
+function CloseOutDialog({ rec, onClose }: { rec: RecordCapabilities; onClose: () => void }) {
+  const [outcome, setOutcome] = useState('');
+  const [note, setNote] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const qc = useQueryClient();
+  const ok = !!outcome && note.trim().length >= 5;
+  const name = `${rec.typeLabel} ${rec.number}`.trim();
+  const go = async () => {
+    setBusy(true); setError(null);
+    try {
+      await post(`/api/records/${encodeURIComponent(rec.type)}/${rec.id}/close-out`, { outcome, note: note.trim() });
+      await qc.invalidateQueries();
+      onClose();
+    } catch (e) { setError(errorText(e)); setBusy(false); }
+  };
+  return (
+    <Dialog open onClose={busy ? undefined : onClose} maxWidth="sm" fullWidth>
+      <DialogTitle>Close out {name}</DialogTitle>
+      <DialogContent>
+        <DialogContentText sx={{ mb: 2 }}>
+          A live quality record stays on file. Close it out to stop work on it; the outcome and your note are kept with the record and in the audit trail.
+        </DialogContentText>
+        {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <TextField select fullWidth label="Outcome" required value={outcome} onChange={(e) => setOutcome(e.target.value)} sx={{ mb: 2 }} slotProps={{ htmlInput: { 'data-testid': 'close-out-outcome' } }}>
+          {outcomes.map(([v, label, help]) => <MenuItem key={v} value={v}><ListItemText primary={label} secondary={help} /></MenuItem>)}
+        </TextField>
+        <TextField autoFocus fullWidth multiline minRows={3} label="Note" required value={note} onChange={(e) => setNote(e.target.value)}
+          helperText="Required. At least 5 characters. Shown in the audit trail." slotProps={{ htmlInput: { maxLength: 2000, 'data-testid': 'close-out-note' } }} />
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={busy}>Cancel</Button>
+        <Button variant="contained" disabled={!ok || busy} onClick={go} data-testid="close-out-confirm">Close out</Button>
       </DialogActions>
     </Dialog>
   );
@@ -259,6 +325,6 @@ export function PrintHeading({ title }: { title: string }) {
 /** Any delete permission the person holds (they can see Deleted records for those modules). */
 export const useCanSeeDeleted = () => {
   const { me } = useAuth();
-  return !!me?.grants.some((g) => g.permission.endsWith('.delete') || g.permission === 'sequfloh.delete_records');
+  return !!me?.grants.some((g) => g.permission.endsWith('.delete') || g.permission === 'sequfloh.delete_records' || g.permission === 'records.delete_live');
 };
 

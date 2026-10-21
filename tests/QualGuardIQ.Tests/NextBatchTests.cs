@@ -118,7 +118,7 @@ public sealed class NextBatchTests(TestApp app)
     public async Task Historical_imports_are_read_only_but_print_export_and_delete_still_work()
     {
         var site = await app.CreateSiteAsync();
-        string[] people = [Permissions.NcrView, Permissions.NcrEdit, Permissions.NcrDelete, Permissions.ImportsView, Permissions.ImportsEdit];
+        string[] people = [Permissions.NcrView, Permissions.NcrEdit, Permissions.RecordsDeleteLive, Permissions.ImportsView, Permissions.ImportsEdit];
         var (_, author) = await app.CreateUserAsync(people, site);
         var (_, approver) = await app.CreateUserAsync([Permissions.NcrView, Permissions.ImportsView, Permissions.ImportsApprove], site);
         var tag = Guid.NewGuid().ToString("N")[..6].ToUpperInvariant();
@@ -156,7 +156,7 @@ public sealed class NextBatchTests(TestApp app)
             Assert.Equal(409, ex.StatusCode);
         }
 
-        // printing and exporting still work, and so does deleting with the module's delete permission
+        // printing and exporting still work, and so does deleting with the delete live quality records permission
         Assert.Equal(HttpStatusCode.OK, (await author.GetAsync($"/api/records/Ncr/{ncr}/export?format=pdf")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await author.GetAsync($"/api/records/Ncr/{ncr}/export?format=csv")).StatusCode);
         Assert.Equal(HttpStatusCode.OK, (await author.PostAsync($"/api/records/Ncr/{ncr}/delete", new { reason = "Duplicate legacy entry" })).StatusCode);

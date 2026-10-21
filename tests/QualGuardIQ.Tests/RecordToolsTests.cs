@@ -33,14 +33,14 @@ public sealed class RecordToolsTests(TestApp app)
     {
         var site = await app.CreateSiteAsync();
         var (_, author) = await app.CreateUserAsync(NcrPeople, site);
-        var (_, deleter) = await app.CreateUserAsync([.. NcrPeople, Permissions.NcrDelete], site);
+        var (_, deleter) = await app.CreateUserAsync([.. NcrPeople, Permissions.RecordsDeleteLive], site);
         var title = "Burr " + Guid.NewGuid().ToString("N")[..8];
         var id = await NcrAsync(author, site, title);
 
         var cap = await author.GetElAsync($"/api/records/ncr/{id}/capabilities");
         Assert.True(cap.GetProperty("delete").GetProperty("deletable").GetBoolean());
         Assert.False(cap.GetProperty("delete").GetProperty("canDelete").GetBoolean());
-        Assert.Equal(Permissions.NcrDelete, cap.GetProperty("delete").GetProperty("deletePermission").GetString());
+        Assert.Equal(Permissions.RecordsDeleteLive, cap.GetProperty("delete").GetProperty("deletePermission").GetString());
         Assert.Equal(HttpStatusCode.Forbidden, (await author.PostAsync($"/api/records/ncr/{id}/delete", new { reason = "Created by mistake" })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await deleter.PostAsync($"/api/records/ncr/{id}/delete", new { reason = "  " })).StatusCode);
         Assert.Equal(HttpStatusCode.BadRequest, (await deleter.PostAsync($"/api/records/ncr/{id}/delete", new { reason = "dup" })).StatusCode);
@@ -86,19 +86,20 @@ public sealed class RecordToolsTests(TestApp app)
     public async Task Closed_records_need_the_delete_locked_permission()
     {
         var site = await app.CreateSiteAsync();
-        var (_, deleter) = await app.CreateUserAsync([.. NcrPeople, Permissions.NcrDelete], site);
-        var (_, senior) = await app.CreateUserAsync([.. NcrPeople, Permissions.NcrDelete, Permissions.RecordsDeleteLocked], site);
-        var id = await NcrAsync(deleter, site, "Closed NCR to remove");
+        string[] riskPeople = [Permissions.RisksView, Permissions.RisksEdit, Permissions.RisksDelete];
+        var (_, deleter) = await app.CreateUserAsync(riskPeople, site);
+        var (_, senior) = await app.CreateUserAsync([.. riskPeople, Permissions.RecordsDeleteLocked], site);
+        var id = (await (await deleter.PostOkAsync("/api/risks", new { kind = 1, category = "Improvement opportunity", title = "Closed risk to remove", description = "In-line gauging", siteId = site, probability = 2, severity = 3, detectability = 2 })).JsonAsync()).Id();
         using (var scope = app.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            await db.Ncrs.Where(n => n.Id == id).ExecuteUpdateAsync(s => s.SetProperty(n => n.Status, NcrStatus.Closed).SetProperty(n => n.ClosureNotes, "Closed"));
+            await db.Risks.Where(n => n.Id == id).ExecuteUpdateAsync(s => s.SetProperty(n => n.Status, RiskStatus.Closed));
         }
-        var check = (await deleter.GetElAsync($"/api/records/ncr/{id}/capabilities")).GetProperty("delete");
+        var check = (await deleter.GetElAsync($"/api/records/risk/{id}/capabilities")).GetProperty("delete");
         Assert.True(check.GetProperty("locked").GetBoolean());
         Assert.False(check.GetProperty("canDelete").GetBoolean());
-        Assert.Equal(HttpStatusCode.Forbidden, (await deleter.PostAsync($"/api/records/ncr/{id}/delete", new { reason = "Entered twice by mistake" })).StatusCode);
-        var r = await senior.PostAsync($"/api/records/ncr/{id}/delete", new { reason = "Entered twice by mistake" });
+        Assert.Equal(HttpStatusCode.Forbidden, (await deleter.PostAsync($"/api/records/risk/{id}/delete", new { reason = "Entered twice by mistake" })).StatusCode);
+        var r = await senior.PostAsync($"/api/records/risk/{id}/delete", new { reason = "Entered twice by mistake" });
         Assert.True(r.IsSuccessStatusCode, await Body(r));
         var deleted = await r.JsonAsync();
         Assert.True(deleted.GetProperty("wasLocked").GetBoolean());

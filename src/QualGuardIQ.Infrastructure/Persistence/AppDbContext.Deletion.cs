@@ -8,6 +8,7 @@ namespace QualGuardIQ.Infrastructure.Persistence;
 public partial class AppDbContext
 {
     public DbSet<DeletedRecord> DeletedRecords => Set<DeletedRecord>();
+    public DbSet<RecordCloseOut> RecordCloseOuts => Set<RecordCloseOut>();
     public DbSet<UserPreference> UserPreferences => Set<UserPreference>();
 
     /// <summary>
@@ -31,6 +32,16 @@ public partial class AppDbContext
             e.HasIndex(x => x.RecordId).IsUnique().HasFilter("\"RestoredAt\" IS NULL").HasDatabaseName("ux_deleted_records_open");
             e.HasIndex(x => new { x.RecordType, x.RecordId });
             e.HasIndex(x => x.DeletedAt);
+        });
+        b.Entity<RecordCloseOut>(e =>
+        {
+            e.ToTable("record_close_outs");
+            e.Property(x => x.RecordType).HasMaxLength(100).IsRequired();
+            e.Property(x => x.Note).HasMaxLength(2000).IsRequired();
+            e.Property(x => x.PreviousStatus).HasMaxLength(100);
+            e.Property(x => x.NewStatus).HasMaxLength(100).IsRequired();
+            e.Property(x => x.ClosedByName).HasMaxLength(200).IsRequired();
+            e.HasIndex(x => x.RecordId);
         });
         b.Entity<UserPreference>(e =>
         {

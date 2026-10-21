@@ -17,7 +17,9 @@ namespace QualGuardIQ.Api.Controllers;
 public sealed class RecordToolsController(IRecordRegistry records, RecordDeletionService deletion, RecordExportService export, RecordTypeLabels labels, AppDbContext db) : ControllerBase
 {
     public sealed record ReasonRequest(string? Reason);
-    public sealed record CapabilitiesDto(string Type, string TypeLabel, Guid Id, string Number, string Title, string? Status, string Url, DeleteCheck Delete, bool ImportedReadOnly = false);
+    public sealed record CloseOutRequest(string? Outcome, string? Note);
+    public sealed record CapabilitiesDto(string Type, string TypeLabel, Guid Id, string Number, string Title, string? Status, string Url, DeleteCheck Delete, bool ImportedReadOnly = false,
+        CloseOutDto? CloseOut = null);
 
     /// <summary>What the current user can do with the record from the shared toolbar (export is open to anyone who can view it).</summary>
     [HttpGet("{type}/{id:guid}/capabilities")]
@@ -25,7 +27,7 @@ public sealed class RecordToolsController(IRecordRegistry records, RecordDeletio
     {
         var r = await records.RequireViewAsync(type, id, ct);
         return new CapabilitiesDto(r.Type, labels.For(r.Type), r.Id, r.Number, r.Title, r.Status, r.Url, await deletion.CheckAsync(r.Type, r.Id, ct),
-            await ImportedRecords.IsReadOnlyAsync(db, r.Id, ct));
+            await ImportedRecords.IsReadOnlyAsync(db, r.Id, ct), await deletion.LatestCloseOutAsync(r.Id, ct));
     }
 
     /// <summary>
@@ -51,6 +53,11 @@ public sealed class RecordToolsController(IRecordRegistry records, RecordDeletio
 
     [HttpPost("{type}/{id:guid}/delete")]
     public Task<DeletedRecordDto> Delete(string type, Guid id, ReasonRequest req, CancellationToken ct) => deletion.DeleteAsync(type, id, req.Reason, ct);
+
+    /// <summary>Closes a live quality-event record as not required, no fault found, duplicate or raised in error, with a note (kept in the audit trail).</summary>
+    [HttpPost("{type}/{id:guid}/close-out")]
+    public Task<CloseOutDto> CloseOut(string type, Guid id, CloseOutRequest req, CancellationToken ct) => 
+        deletion.CloseOutAsync(type, id, Enum.TryParse<QualGuardIQ.Domain.Common.CloseOutOutcome>(req.Outcome, true, out var o) && !int.TryParse(req.Outcome, out _) ? o : (QualGuardIQ.Domain.Common.CloseOutOutcome)(-1), req.Note, ct);
 
     /// <summary>The record as PDF, CSV, Excel (.xlsx) or Word (.docx). Form records and Sequfloh documents print in their own layout.</summary>
     [EnableRateLimiting("processing")]
