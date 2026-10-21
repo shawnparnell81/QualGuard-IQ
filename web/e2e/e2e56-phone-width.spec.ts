@@ -43,10 +43,18 @@ test.describe('E2E 56: phone width', () => {
     const wo = await api.post<{ id: string }>('/api/production/work-orders', { number: `WO-${t}`, kind: 0, partId, revision: 'C', quantity: 10, startOn: localDate(), dueOn: localDate(7), routingRef: null,
       operations: [{ sequence: 10, name: 'Machine the outer bore', workCenter: 'CNC-1' }, { sequence: 20, name: 'Final inspection', workCenter: 'QC-1' }], siteId, departmentId: null });
 
+    const capa = await api.post<{ id: string }>('/api/capas', { title: unique('Phone width CAPA for repeated burrs on flange'), problemStatement: 'Three burr NCRs in a quarter.', capaType: 'Corrective', source: 'NCR trend', siteId, departmentId: null, ownerId: null });
+    const eq = await api.post<{ id: string }>('/api/calibration/equipment', { name: unique('Digital caliper'), manufacturer: 'Mitutoyo', model: '500-196', serialNumber: unique('SN'), location: 'Cell 3', measurementRange: '0-150 mm', tolerance: '±0.02 mm',
+      siteId, departmentId: null, ownerId: null, calibrationIntervalDays: 365, nextDueOn: localDate(30) });
+    const cp = await api.post<{ id: string }>('/api/apqp/plans', { title: unique('Phone width control plan'), siteId, phase: 2, pfmeaId: null });
+
     await signIn(page, users.admin);
     await expectFits(page, `/ncr/${ncr.id}`, 'phone-ncr-detail');
     await expectFits(page, '/ncr', 'phone-ncr-list');
     await expectFits(page, `/production/work-orders/${wo.id}`, 'phone-work-order-detail');
+    await expectFits(page, `/capa/${capa.id}`);
+    await expectFits(page, `/calibration/equipment/${eq.id}`);
+    await expectFits(page, `/apqp/plans/${cp.id}`);
     for (const p of ['/capa', '/production/work-orders', '/coq', '/platform/marketplace', '/calibration/equipment', '/documents', '/suppliers', '/audits', '/complaints', '/training']) await expectFits(page, p, `phone-list${p.replace(/\//g, '-')}`);
   });
 });
