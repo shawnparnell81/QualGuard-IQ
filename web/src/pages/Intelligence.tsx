@@ -51,7 +51,7 @@ export function KpiLibrary() {
         <TextField size="small" type="date" label="From" value={from} onChange={(e) => setFrom(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
         <TextField size="small" type="date" label="To" value={to} onChange={(e) => setTo(e.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
       </Stack>}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '260px 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '260px 1fr' }, gap: 2 }}>
         <Paper sx={{ p: 1 }}>{(defs.data ?? []).map((d) => <Box key={d.key} onClick={() => setKey(d.key)} sx={{ px: 1.5, py: 1, borderRadius: 1, cursor: 'pointer', bgcolor: d.key === key ? 'action.selected' : undefined, borderLeft: 3, borderLeftColor: d.key === key ? 'primary.main' : 'transparent' }}>
           <Typography variant="body2" sx={{ fontWeight: d.key === key ? 600 : 400 }}>{d.label}</Typography><Typography variant="caption" color="text.secondary">{d.unit}</Typography></Box>)}</Paper>
         <Stack gap={2}>
@@ -115,7 +115,7 @@ export function Assistant() {
       {view === 'executive' && <>
         <TextField size="small" type="month" label="Month" value={month} onChange={(e) => setMonth(e.target.value)} sx={{ mb: 2 }} slotProps={{ inputLabel: { shrink: true } }} />
         {exec.error && <Alert severity="error">{(exec.error as Error).message}</Alert>}
-        {exec.data && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.3fr 1fr' }, gap: 2 }}>
+        {exec.data && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '1.3fr 1fr' }, gap: 2 }}>
           <Section title={`Quality summary · ${exec.data.period}`}>
             <Typography sx={{ whiteSpace: 'pre-wrap', mb: 2 }}>{exec.data.text}</Typography>
             <Typography variant="overline" color="success.main">Highlights</Typography>{exec.data.highlights.map((h) => <Typography key={h} variant="body2">• {h}</Typography>)}
@@ -146,7 +146,7 @@ export function InvestigatePage() {
       {inv.error && <Alert severity="error">{(inv.error as Error).message}</Alert>}
       {d && <>
         <Alert severity="warning" sx={{ mb: 2 }}>{d.disclaimer}</Alert>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '1fr 1fr' }, gap: 2 }}>
           <Section title={`Similar NCRs to ${d.subject.number}`}>
             <Table size="small"><TableBody>{d.similar.map((s) => <TableRow key={s.ncr.id} hover sx={{ cursor: 'pointer' }} onClick={() => nav(s.ncr.url)}>
               <TableCell sx={{ fontFamily: mono, width: 120 }}>{s.ncr.number}</TableCell><TableCell>{s.ncr.title}<Typography variant="caption" display="block" color="text.secondary">{s.sharedTerms.join(' · ')}</Typography></TableCell>
@@ -170,7 +170,7 @@ export function RiskPage() {
   const t = useQuery({ queryKey: ['trends'], queryFn: () => get<Record<string, TrendRow[]>>('/api/intelligence/trends') });
   return (
     <ModuleWorkspace module={insights} crumbs={[{ label: 'Trends & risk' }]} title="Trends & predictive risk" tabs={riskKinds.map(([v, l]) => ({ value: v, label: l }))} tab={kind} onTab={setKind}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.4fr 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '1.4fr 1fr' }, gap: 2 }}>
         <Section title="Ranked by score">
           <Table size="small"><TableHead><TableRow><TableCell>Subject</TableCell><TableCell>Score</TableCell><TableCell>Confidence</TableCell><TableCell>Why</TableCell></TableRow></TableHead>
             <TableBody>{(r.data ?? []).map((x) => <TableRow key={x.id}><TableCell>{x.label}</TableCell>

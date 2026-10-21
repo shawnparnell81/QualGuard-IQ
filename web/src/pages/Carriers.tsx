@@ -48,7 +48,7 @@ function RequestTable({ rows }: { rows: RequestLog[] }) {
 const blankAddress: Address = { name: '', line1: '', line2: '', city: '', region: '', postalCode: '', country: 'US', phone: '', residential: false };
 function AddressFields({ value, onChange, residential }: { value: Address; onChange: (a: Address) => void; residential?: boolean }) {
   const f = (k: keyof Address) => ({ value: (value[k] as string | null | undefined) ?? '', onChange: (e: React.ChangeEvent<HTMLInputElement>) => onChange({ ...value, [k]: e.target.value }) });
-  return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+  return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.5 }}>
     <TextField size="small" label="Name / company" {...f('name')} /><TextField size="small" label="Phone" {...f('phone')} />
     <TextField size="small" label="Street" {...f('line1')} /><TextField size="small" label="Street (line 2)" {...f('line2')} />
     <TextField size="small" label="City" {...f('city')} /><TextField size="small" label="State / region" {...f('region')} />
@@ -75,7 +75,7 @@ function ConnectionDialog({ open, edit, onClose, onSaved }: { open: boolean; edi
     <DialogContent><Stack gap={2} sx={{ pt: 1 }}>
       {err && <Alert severity="error">{err}</Alert>}
       <Alert severity="info">New connections are disabled and unverified. Changing any setting later switches the connection off until a new test passes.</Alert>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 1.5 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 1.5 }}>
         <TextField select size="small" label="Carrier" value={v.carrierId} onChange={set('carrierId')}>{(carriers.data ?? []).filter((c) => c.active || c.id === v.carrierId).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}{setupOptions('carrier', carriers.data)}</TextField>
         <TextField size="small" label="Connection name" value={v.name} onChange={set('name')} />
         <TextField select size="small" label="Adapter" value={v.provider} onChange={set('provider')}>{carrierProviders.map((x, i) => <MenuItem key={x} value={String(i)}>{x}</MenuItem>)}</TextField>

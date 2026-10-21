@@ -158,7 +158,7 @@ function AuditDetailDialog({ id, onClose }: { id: number; onClose: () => void })
       <DialogTitle>Audit event</DialogTitle>
       <DialogContent>
         {q.isLoading ? <Loading /> : q.error ? <ErrorState error={q.error} retry={q.refetch} /> : d && <>
-          <Box component="dl" sx={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 1, m: 0 }}>
+          <Box component="dl" sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '160px minmax(0, 1fr)' }, gap: 1, m: 0 }}>
             {([['When', fmtDateTime(d.occurredAt)], ['Who', d.userName], ['What', words(d.action)], ['Description', d.description], ['Reason', d.reason ?? '—'], ['Record type', words(d.entityType.replace('Sequfloh', ''))],
               ['Site', d.site ?? '—'], ['Correlation', d.correlationId ?? '—']] as [string, string][]).map(([k, val]) => <Box key={k} sx={{ display: 'contents' }}>
               <Typography component="dt" variant="body2" color="text.secondary">{k}</Typography><Typography component="dd" variant="body2" sx={{ m: 0 }}>{val}</Typography></Box>)}

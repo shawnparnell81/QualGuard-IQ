@@ -113,7 +113,7 @@ export function DesignReviewList() {
   const [open, setOpen] = useState(false);
   return (
     <ModuleWorkspace module={mod('product-design')} crumbs={crumbs('Design reviews')} title="Design reviews" actions={<Button variant="contained" onClick={() => setOpen(true)}>Plan review</Button>}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(5, 1fr)' }, gap: 1.5 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(5, 1fr)' }, gap: 1.5 }}>
         {reviewKinds.map((k, i) => (
           <Paper key={k} variant="outlined" sx={{ p: 1, bgcolor: 'grey.50', minHeight: 160 }} data-testid={`gate-${k}`}>
             <Typography variant="overline" sx={{ fontWeight: 700 }}>{k}</Typography>
@@ -208,7 +208,7 @@ export function Variants() {
     <ModuleWorkspace module={mod('product-design')} crumbs={crumbs('Variants')} title="Product configuration and variants" actions={product ? <Button variant="contained" onClick={() => setOpen(true)}>New variant</Button> : undefined}>
       <TextField select size="small" label="Product" value={product} onChange={(e) => setProduct(e.target.value)} sx={{ minWidth: 320, mb: 2 }}>
         {(products.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}{setupOptions('product', products.data)}</TextField>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
         {(q.data ?? []).map((v) => <Paper key={v.id} sx={{ p: 1.5, borderTop: 3, borderColor: 'secondary.main' }}>
           <Typography sx={{ fontFamily: mono, fontWeight: 700 }}>{v.code} <Typography component="span" variant="caption">rev {v.revision}</Typography></Typography><Typography variant="body2">{v.name}</Typography>
           <Stack direction="row" gap={0.5} flexWrap="wrap" sx={{ my: 1 }}>{(v.options ?? []).map((o: string) => <Chip key={o} size="small" label={o} />)}{(v.features ?? []).map((o: string) => <Chip key={o} size="small" variant="outlined" label={o} />)}</Stack>

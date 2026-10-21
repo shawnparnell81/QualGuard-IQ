@@ -58,7 +58,7 @@ export function ComplianceHome() {
           { header: 'Evidence', id: 'm', accessorFn: (o: any) => o.mappings.length, cell: (x) => (x.getValue() ? <Chip size="small" color="success" label={`${x.getValue()} linked`} /> : <Chip size="small" label="Not mapped" />) },
           { header: '', id: 'a', cell: (x) => can('compliance.edit') && <Button size="small" onClick={() => setDlg({ map: x.row.original.obligation.id })}>Map evidence</Button> }]} />}
       {tab === 'cov' && cov.data?.disclaimer && <Alert severity="info" sx={{ mb: 2 }} data-testid="coverage-disclaimer">{cov.data.disclaimer}</Alert>}
-      {tab === 'cov' && cov.data && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+      {tab === 'cov' && cov.data && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' }, gap: 2 }}>
         <Section title="By pack"><Table size="small"><TableHead><TableRow>{['Pack', 'Content', 'Obligations', 'Mapped', 'Audited', 'Coverage'].map((h) => <TableCell key={h}>{h}</TableCell>)}</TableRow></TableHead>
           <TableBody>{cov.data.byPack.map((p: any) => <TableRow key={p.pack}><TableCell>{p.pack}</TableCell><TableCell>{p.pack === '(own)' ? <Typography variant="caption">Own</Typography> : <VerificationChip v={{ state: p.verificationState, verified: p.contentVerified, label: p.verificationLabel }} />}</TableCell><TableCell>{p.total}</TableCell><TableCell>{p.mapped}</TableCell><TableCell>{p.audited}</TableCell>
             <TableCell sx={{ minWidth: 120 }}><LinearProgress variant="determinate" value={p.total ? (100 * p.mapped) / p.total : 0} /></TableCell></TableRow>)}</TableBody></Table></Section>
@@ -152,7 +152,7 @@ export function ValidationDetail() {
       {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}
       <Stack direction="row" sx={{ mb: 2 }}>{['Planning', 'Protocol approval', 'Execution', 'Results approval', 'Released'].map((s, i) => (
         <Box key={s} sx={{ flex: 1, py: 0.75, textAlign: 'center', fontSize: 12.5, bgcolor: i < st ? 'primary.main' : i === st ? 'secondary.main' : 'action.hover', color: i <= st ? 'common.white' : 'text.secondary', clipPath: 'polygon(0 0, 94% 0, 100% 50%, 94% 100%, 0 100%, 6% 50%)' }}>{s}</Box>))}</Stack>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) 280px' }, gap: 2 }}>
         <Stack gap={2}>
           <Section title="Protocol tests" action={st === 0 && <Stack direction="row" gap={1}><Button size="small" onClick={() => setRows([...tests, { stage: 'IQ', sequence: tests.length + 1, description: '', acceptanceCriteria: '' }])}>Add test</Button>
             {rows && <Button size="small" variant="contained" onClick={() => r.run(() => put(`/api/validation/${id}/tests`, rows.map((t) => ({ stage: t.stage, sequence: Number(t.sequence), description: t.description, acceptanceCriteria: t.acceptanceCriteria }))))}>Save tests</Button>}</Stack>}>

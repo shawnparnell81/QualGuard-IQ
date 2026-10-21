@@ -84,7 +84,7 @@ export function AuditNew() {
   });
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Audit program', to: '/audits' }, { label: 'New' }]} title="Plan an audit">
-      <Paper component="form" onSubmit={submit} sx={{ p: 3, maxWidth: 860, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Paper component="form" onSubmit={submit} sx={{ p: 3, maxWidth: 860, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Title" sx={{ gridColumn: '1 / -1' }} {...register('title')} error={!!errors.title} helperText={errors.title?.message} />
         <Controller name="auditType" control={control} render={({ field }) => <TextField select label="Type" {...field}>{['Internal', 'Process', 'Product', 'Supplier', 'Layered process'].map((t) => <MenuItem key={t} value={t}>{t}</MenuItem>)}</TextField>} />
@@ -135,7 +135,7 @@ export function AuditDetail() {
   const allAssessed = rows.every((r) => r.result !== 0);
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Audit program', to: '/audits' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={auditStatus[s]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={auditStatus[s]} /></Stack>}
       tabs={[{ label: 'Checklist', value: 'checklist' }, { label: `Findings (${d.findings.length})`, value: 'findings' }, { label: 'Report', value: 'report' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         {d.allowed.includes('start') && <Button variant="contained" onClick={() => run(() => post(`/api/audits/${d.id}/start`))}>Start audit</Button>}
@@ -145,12 +145,12 @@ export function AuditDetail() {
         {d.allowed.includes('close') && <Button variant="contained" color="secondary" onClick={() => run(() => post(`/api/audits/${d.id}/close`))}>Close audit</Button>}
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', d.auditType], ['Lead auditor', d.leadName], ['Dates', `${fmtDate(d.plannedStart)} – ${fmtDate(d.plannedEnd)}`], ['Criteria', d.criteria ?? '—'], ['Scope', d.scope], ['Site', d.siteCode]]} />
         <Box sx={{ minWidth: 0 }}>
           {tab === 'checklist' && <Stack gap={1}>
             {rows.map((r, i) => (
-              <Paper key={r.id} sx={{ p: 2, display: 'grid', gridTemplateColumns: '1fr 200px', gap: 1.5 }}>
+              <Paper key={r.id} sx={{ p: 2, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(0, 1fr) 200px' }, gap: 1.5 }}>
                 <Box><Typography variant="caption" color="text.secondary">{r.sequence}. {r.clause ? `Clause ${r.clause}` : ''}</Typography><Typography variant="body2">{r.question}</Typography></Box>
                 <TextField select size="small" label="Result" value={r.result} disabled={!editing} onChange={(e) => setRows(rows.map((x, j) => j === i ? { ...x, result: Number(e.target.value) } : x))}>
                   {checklistResult.map((c, k) => <MenuItem key={k} value={k}>{c}</MenuItem>)}
@@ -194,11 +194,11 @@ export function FindingDetail() {
   if (!f) return <ModuleWorkspace module={mod()} crumbs={[{ label: 'Findings', to: '/audits/findings' }]} title="Loading">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Findings', to: '/audits/findings' }, { label: f.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{f.number}</span><span>{findingType[f.findingType]}</span><StatusChip status={findingStatus[f.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{f.number}</span><span>{findingType[f.findingType]}</span><StatusChip status={findingStatus[f.status]} /></Stack>}
       tabs={[{ label: 'Corrective actions', value: 'actions' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={f.allowed.includes('verify') ? <Button variant="contained" onClick={() => setDlg(true)}>Verify finding</Button> : undefined}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '320px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Audit', <Link component={RouterLink} to={`/audits/${f.auditId}`} sx={{ fontFamily: mono }}>{f.auditNumber}</Link>], ['Clause', f.clause ?? '—'], ['Statement', f.statement], ['Evidence', f.evidence ?? '—'],
           ['Responsible', f.responsibleName], ['Response due', fmtDate(f.responseDueOn)], ['Verification', f.verificationNotes ?? '—']]} />
         <Box sx={{ minWidth: 0 }}>

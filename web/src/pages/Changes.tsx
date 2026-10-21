@@ -101,7 +101,7 @@ export function ChangeDetail() {
   const stageIdx = d.status === 1 ? 1 : d.status === 2 ? 2 : d.status === 3 ? 3 : d.status === 4 ? 4 : d.status === 5 ? 5 : d.status === 6 ? 6 : 0;
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Changes', to: '/changes' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={changeStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={changeStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: `Affected items (${d.items.length})`, value: 'items' }, { label: 'Actions', value: 'actions' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1} flexWrap="wrap">
         {approval && <Button variant="contained" color="secondary" onClick={() => setSigning(true)}>Sign approval</Button>}
@@ -118,7 +118,7 @@ export function ChangeDetail() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       <Stack direction="row" sx={{ mb: 2 }}>{stages.map((s, i) => <Box key={s} sx={{ flex: 1, py: 0.6, textAlign: 'center', fontSize: 12.5, borderBottom: 3, borderColor: i <= stageIdx && d.status < 7 ? 'primary.main' : 'divider', color: i === stageIdx ? 'text.primary' : 'text.secondary', fontWeight: i === stageIdx ? 600 : 400 }}>{s}</Box>)}</Stack>
       {d.status === 3 && d.blockers.length > 0 && <Alert severity="warning" sx={{ mb: 2 }}><b>Implementation cannot be completed yet:</b><ul style={{ margin: '4px 0 0', paddingLeft: 18 }}>{d.blockers.map((b) => <li key={b}>{b}</li>)}</ul></Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Type', d.changeType], ['Requester', d.requesterName], ['Owner', d.ownerName], ['Site', d.siteCode], ['Risk', d.riskAssessment ? severity[d.risk] : '—'], ['Cost impact', d.costImpact?.toLocaleString() ?? '—'],
           ['Schedule impact', d.scheduleImpact ?? '—'], ['Planned effective', fmtDate(d.plannedEffectiveOn)], ['Implemented', fmtDate(d.implementedOn)], ['Verified by', d.verifiedByName ? `${d.verifiedByName} ${fmtDateTime(d.verifiedAt)}` : '—'],
           ['Effective', d.wasEffective === null ? '—' : d.wasEffective ? 'Yes' : 'No'], ['Reopened', d.reopenCount ? `${d.reopenCount}×` : '—']]} />

@@ -48,7 +48,7 @@ export function ReportCatalog() {
           <PanelHead title={c} />
           {list.data!.filter((d) => d.category === c).map((d, i) => (
             <Box key={d.key} component="button" type="button" onClick={() => nav(`/reports/r/${d.key}`)}
-              sx={{ all: 'unset', boxSizing: 'border-box', width: '100%', cursor: 'pointer', display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'minmax(220px, 32%) 1fr' }, gap: { xs: 0.25, md: 2 }, px: 2, py: 1.1, borderTop: i ? 1 : 0, borderColor: 'divider',
+              sx={{ all: 'unset', boxSizing: 'border-box', width: '100%', cursor: 'pointer', display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'minmax(220px, 32%) 1fr' }, gap: { xs: 0.25, md: 2 }, px: 2, py: 1.1, borderTop: i ? 1 : 0, borderColor: 'divider',
                 '&:hover, &:focus-visible': { bgcolor: 'action.hover' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 } }}>
               <Typography fontWeight={600} variant="body2">{d.title}</Typography><Typography variant="body2" color="text.secondary">{d.description}</Typography>
             </Box>))}

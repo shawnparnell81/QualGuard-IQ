@@ -88,7 +88,7 @@ export function FactoryCenter() {
   return (
     <ModuleWorkspace module={mod('qos')} crumbs={C('Factory center')} title="Factory quality center" actions={<SiteSelect value={site} onChange={setSite} />}>
       {q.error && <Alert severity="error">{(q.error as Error).message}</Alert>}
-      {d && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(6, 1fr)' }, gap: 1 }}>
+      {d && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(6, 1fr)' }, gap: 1 }}>
         <Lane title="Quality alerts" items={d.qualityAlerts} color="#c62828" /><Lane title="SPC" items={d.spcViolations} color="#6a1b9a" /><Lane title="Production" items={d.productionAlerts} color="#ef6c00" />
         <Lane title="NCRs" items={d.openNcrs} color="#d84315" /><Lane title="CAPAs" items={d.openCapas} color="#1565c0" /><Lane title="Suppliers" items={d.supplierIssues} color={tones.slate} />
       </Box>}
@@ -114,7 +114,7 @@ export function EnterpriseRiskMatrix() {
           </Box>
         </Box>
         <Box sx={{ flex: 1 }}><Section title="By enterprise category">
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}>{d.categories.map((c: any) => <Tile key={c.category} label={c.category} value={c.open} hint={`${c.high} high`} color={c.high ? 'error.main' : 'success.main'} />)}</Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(5, 1fr)' }, gap: 1 }}>{d.categories.map((c: any) => <Tile key={c.category} label={c.category} value={c.open} hint={`${c.high} high`} color={c.high ? 'error.main' : 'success.main'} />)}</Box>
         </Section>
           <Box sx={{ mt: 2 }}><Section title="12-month trend">
             <Stack direction="row" gap={0.5} alignItems="flex-end" sx={{ height: 90 }}>{d.trend.map((t: any) => <Box key={t.month} title={`${t.month}: ${t.open} open, ${t.opened} opened, ${t.closed} closed`} sx={{ flex: 1, bgcolor: 'primary.main', opacity: 0.75, height: `${(100 * t.open) / Math.max(1, ...d.trend.map((x: any) => x.open))}%`, minHeight: 2 }} />)}</Stack>
@@ -134,7 +134,7 @@ export function KpiFramework() {
   return (
     <ModuleWorkspace module={mod('qos')} crumbs={C('KPI framework')} title="KPI framework">
       {d.alerts.length > 0 && <Alert severity="warning" sx={{ mb: 2 }}>{d.alerts.length} KPI(s) at warning or critical: {d.alerts.map((a: any) => a.title).join(', ')}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
         {Object.entries(d.levels).map(([lvl, list]: [string, any]) => <Paper key={lvl} variant="outlined" sx={{ p: 1, bgcolor: 'grey.50' }} data-testid={`kpi-level-${lvl}`}>
           <Typography variant="overline" sx={{ fontWeight: 700 }}>{lvl}</Typography>
           <Stack gap={0.75}>{list.map((o: any) => <Paper key={o.id} sx={{ p: 1, borderLeft: 4, borderColor: rc(o.rating) }}>
@@ -206,7 +206,7 @@ export function BoardReports() {
         {kind === 'executive' && <Stack gap={1} sx={{ mt: 2 }}><Typography>Corporate score {fmt(d.sections.globalStatus.corporate.score)} across {d.sections.globalStatus.sites.length} site(s).</Typography>
           <DataTable data={d.sections.sitePerformance} empty="No sites." columns={[{ header: 'Site', accessorKey: 'siteCode', cell: num }, { header: 'Open NCRs', accessorKey: 'openNcrs' }, { header: 'Open CAPAs', accessorKey: 'openCapas' }, { header: 'Open complaints', accessorKey: 'openComplaints' }]} /></Stack>}
         {kind === 'strategic-risk' && <Stack gap={1} sx={{ mt: 2 }}>
-          <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}>{d.categories.map((c: any) => <Tile key={c.category} label={c.category} value={c.open} hint={`${c.high} high`} />)}</Box>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', sm: 'repeat(5, 1fr)' }, gap: 1 }}>{d.categories.map((c: any) => <Tile key={c.category} label={c.category} value={c.open} hint={`${c.high} high`} />)}</Box>
           <DataTable data={d.ranking} empty="No open risks." columns={[{ header: 'Risk', accessorKey: 'number', cell: num }, { header: 'Title', accessorKey: 'title' }, { header: 'Category', accessorKey: 'category' }, { header: 'Band', accessorKey: 'band' }]} /></Stack>}
       </Paper>}
     </ModuleWorkspace>

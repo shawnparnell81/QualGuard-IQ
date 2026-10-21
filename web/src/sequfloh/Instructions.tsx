@@ -207,7 +207,7 @@ export function TemplatesPage() {
     <SqfPage title="Templates" crumbs={wiCrumbs('Templates')} description="Start a work instruction from a designer template, or duplicate a released instruction as a new draft with its own number. Copies never change the source.">
       {err && <Alert severity="error" sx={{ mb: 2 }}>{err}</Alert>}
       {schemas.isLoading ? <Loading /> : schemas.error ? <ErrorState error={schemas.error} /> :
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, mb: 3 }}>
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' }, mb: 3 }}>
           {(schemas.data ?? []).map((s) => <Card key={s.type} variant="outlined">
             <CardContent>
               <Typography variant="h3" sx={{ mb: 1 }}>{s.title}</Typography>

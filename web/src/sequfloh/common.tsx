@@ -191,4 +191,4 @@ export const qs = (o: Record<string, string | number | boolean | null | undefine
   Object.entries(o).filter(([, v]) => v !== '' && v !== null && v !== undefined).map(([k, v]) => `${k}=${encodeURIComponent(String(v))}`).join('&');
 
 export const Grid = ({ children, cols = 3 }: { children: ReactNode; cols?: number }) =>
-  <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))', md: `repeat(${cols}, minmax(0, 1fr))` } }}>{children}</Box>;
+  <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(2, minmax(0, 1fr))', md: `repeat(${cols}, minmax(0, 1fr))` } }}>{children}</Box>;

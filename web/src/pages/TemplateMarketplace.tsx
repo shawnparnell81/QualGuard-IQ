@@ -91,7 +91,7 @@ export function TemplateMarketplace() {
 
       {tab === 'packs' && <>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>Installing creates draft form templates under document control, filed by category and industry pack. Each one goes through review and approval before it can be used. Templates already installed are not duplicated.</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr', lg: '1fr 1fr 1fr' }, gap: 2 }}>
           {(packs.data ?? []).map((p) => (
             <Card key={`${p.key}-${p.version}-${p.origin}`} variant="outlined" sx={{ display: 'flex', flexDirection: 'column', borderColor: pack?.key === p.key && pack.version === p.version ? 'primary.main' : undefined }}>
               <CardContent sx={{ flex: 1 }}>

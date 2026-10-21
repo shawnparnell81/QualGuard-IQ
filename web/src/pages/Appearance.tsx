@@ -114,7 +114,7 @@ export function AppearanceSettings({ scope }: { scope: Scope }) {
             const effective = own ?? familyInherited(f);
             const c = colours(effective);
             return (
-              <Box key={f} data-testid={`family-${f}`} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '220px 260px 1fr' }, gap: 1.5, alignItems: 'center', py: 1, borderTop: 1, borderColor: 'divider' }}>
+              <Box key={f} data-testid={`family-${f}`} sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '220px 260px 1fr' }, gap: 1.5, alignItems: 'center', py: 1, borderTop: 1, borderColor: 'divider' }}>
                 <Typography fontWeight={600}>{familyNames[f]}</Typography>
                 <TextField select size="small" label="Palette" fullWidth disabled={readOnly} value={own?.palette ?? 'inherit'} slotProps={{ htmlInput: { 'aria-label': `${familyNames[f]} palette` } }}
                   onChange={(e) => { const k = e.target.value as PaletteKey | 'inherit'; setFamily(f, k === 'inherit' ? null : k === 'custom' ? { palette: 'custom', edge: c.edge, accent: c.accent } : { palette: k }); }}>

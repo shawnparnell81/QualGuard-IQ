@@ -51,7 +51,7 @@ export function IndustryPackPicker({ onDone, setup }: { onDone?: () => void; set
     <Stack gap={2} data-testid="industry-pack-picker">
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} onClose={() => setMsg(null)}>{msg.text}</Alert>}
       {!s.canInstall && <Alert severity="info">You can look at the packs, but installing them needs the "Install templates" permission. An administrator can add it to your role.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, minmax(0, 1fr))', xl: 'repeat(3, minmax(0, 1fr))' }, gap: 2 }}>
         {s.packs.map((p) => {
           const on = picked.includes(p.key);
           const done = p.installedCount === p.templateCount;

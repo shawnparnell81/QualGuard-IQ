@@ -109,7 +109,7 @@ export function FormRecordDetail() {
   const dirty = JSON.stringify(values) !== JSON.stringify(d.values);
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Form records', to: '/forms/records' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={formStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{d.number}</span><span>{d.title}</span><StatusChip status={formStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Form', value: 'form' }, { label: 'Approvals', value: 'approvals' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         <Button variant="outlined" href={`/api/forms/records/${d.id}/pdf?style=standardized`} target="_blank">Print</Button>

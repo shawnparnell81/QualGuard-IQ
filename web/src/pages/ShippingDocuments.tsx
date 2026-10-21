@@ -100,7 +100,7 @@ function ManifestPanel() {
       <Stack gap={1.5}>
         <Typography variant="body2" color="text.secondary">Lists every shipment shipped with one carrier from one site on one day (site time), for the driver to sign at pickup.</Typography>
         {err && <Alert severity="error">{err}</Alert>}
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '2fr 1fr 1fr auto' }, gap: 1.5, alignItems: 'start' }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '2fr 1fr 1fr auto' }, gap: 1.5, alignItems: 'start' }}>
           <SitePicker permission="shipping.view" value={v.siteId} onChange={(id) => setV({ ...v, siteId: id ?? '' })} label="Site" required />
           <TextField select size="small" label="Carrier" value={v.carrierId} onChange={(e) => setV({ ...v, carrierId: e.target.value })}>{(carriers.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}{setupOptions('carrier', carriers.data)}</TextField>
           <TextField size="small" type="date" label="Ship date" value={v.date} onChange={(e) => setV({ ...v, date: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
@@ -194,7 +194,7 @@ function RevisionPanel({ t, r, run }: { t: TemplateRow; r: RevisionRow; run: (f:
     <Section title={`Revision ${r.revision} · ${r.state}`} action={<Button variant="outlined" href={`/api/shipping/document-template-revisions/${r.id}/preview`} target="_blank">Preview (sample data)</Button>}>
       <Stack gap={2}>
         {draft && <Typography variant="body2" color="text.secondary">Save the draft before previewing. Placeholders: {(cat.data?.placeholders ?? []).map((p) => `{${p}}`).join(' ')}</Typography>}
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
           {t.kind !== 2 && <TextField select size="small" label="Customer" disabled={!draft} value={rule.customerId} onChange={(e) => setRule({ ...rule, customerId: e.target.value })}><MenuItem value="">Any customer</MenuItem>{r.customerId && !(customers.data ?? []).some((c) => c.id === r.customerId) && <MenuItem value={r.customerId}>{r.customer}</MenuItem>}{(customers.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{lookupLabel(c)}</MenuItem>)}{setupOptions('customer', customers.data)}</TextField>}
           <TextField select size="small" label="Carrier" disabled={!draft} value={rule.carrierId} onChange={(e) => setRule({ ...rule, carrierId: e.target.value })}><MenuItem value="">Any carrier</MenuItem>{r.carrierId && !(carriers.data ?? []).some((c) => c.id === r.carrierId) && <MenuItem value={r.carrierId}>{r.carrier}</MenuItem>}{(carriers.data ?? []).map((c) => <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>)}{setupOptions('carrier', carriers.data)}</TextField>
           <TextField size="small" type="number" label="Priority" disabled={!draft} value={rule.priority} onChange={(e) => setRule({ ...rule, priority: e.target.value })} helperText="1 is tried first" />
@@ -202,7 +202,7 @@ function RevisionPanel({ t, r, run }: { t: TemplateRow; r: RevisionRow; run: (f:
         </Box>
         <TextField size="small" label="Change summary" disabled={!draft} value={rule.changeSummary} onChange={(e) => setRule({ ...rule, changeSummary: e.target.value })} />
         <Typography variant="subtitle2">Page, header and footer</Typography>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
           <TextField select size="small" label="Page size" disabled={!draft} value={layout.page.size} onChange={(e) => setLayout({ ...layout, page: { ...layout.page, size: e.target.value } })}><MenuItem value="Letter">Letter</MenuItem><MenuItem value="A4">A4</MenuItem></TextField>
           <TextField select size="small" label="Orientation" disabled={!draft} value={layout.page.orientation} onChange={(e) => setLayout({ ...layout, page: { ...layout.page, orientation: e.target.value } })}><MenuItem value="portrait">Portrait</MenuItem><MenuItem value="landscape">Landscape</MenuItem></TextField>
           <TextField size="small" type="number" label="Margin (mm)" disabled={!draft} value={layout.page.marginMm} onChange={(e) => setLayout({ ...layout, page: { ...layout.page, marginMm: Number(e.target.value) } })} />
@@ -225,7 +225,7 @@ function RevisionPanel({ t, r, run }: { t: TemplateRow; r: RevisionRow; run: (f:
               <Stack direction="row" alignItems="center" gap={1}><Typography sx={{ flex: 1 }} fontWeight={600}>{i + 1}. {info?.label ?? s.type}</Typography>
                 {draft && <><IconButton size="small" aria-label={`Move section ${i + 1} up`} disabled={i === 0} onClick={() => move(i, -1)}>↑</IconButton><IconButton size="small" aria-label={`Move section ${i + 1} down`} disabled={i === layout.sections.length - 1} onClick={() => move(i, 1)}>↓</IconButton>
                   <Button size="small" color="error" onClick={() => setLayout({ ...layout, sections: layout.sections.filter((_, j) => j !== i) })}>Remove</Button></>}</Stack>
-              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr' }, gap: 1 }}>
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 2fr' }, gap: 1 }}>
                 <TextField size="small" label="Section title" disabled={!draft} value={s.title ?? ''} onChange={(e) => setSec(i, { title: e.target.value || null })} placeholder="Default title" />
                 {info?.usesText && <TextField size="small" label={s.type === 'qr' ? 'QR content' : s.type === 'freightTerms' ? 'Default terms (when the shipment has none)' : 'Text'} disabled={!draft} value={s.text ?? ''} onChange={(e) => setSec(i, { text: e.target.value || null })} />}
                 {info?.fields && <TextField select size="small" label="Value to encode" disabled={!draft} value={s.field ?? ''} onChange={(e) => setSec(i, { field: e.target.value })}>{info.fields.map((f) => <MenuItem key={f} value={f}>{f}</MenuItem>)}</TextField>}
@@ -283,7 +283,7 @@ export function ShipmentDocumentsPanel({ shipmentId, status, edit, freightTerms,
       <Button variant="outlined" href={`/api/shipping/shipments/${shipmentId}/bill-of-lading`} target="_blank" onClick={issuedSoon}>Bill of lading (PDF)</Button>
     </Stack>
     <Box>{(choices.data ?? []).map((c) => <Typography key={c.kind} variant="body2" color="text.secondary">{docKinds[c.kind]}: {c.builtIn ? 'built-in layout' : <><b>{c.templateCode}</b> rev {c.revision} ({c.templateName})</>} — {c.reason}</Typography>)}</Box>
-    {edit && live ? <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 2fr auto' }, gap: 1.5, alignItems: 'start' }}>
+    {edit && live ? <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 2fr auto' }, gap: 1.5, alignItems: 'start' }}>
       <TextField size="small" label="Freight terms" value={terms.freightTerms} onChange={(e) => setTerms({ ...terms, freightTerms: e.target.value })} placeholder="Prepaid, Collect, Third party" />
       <TextField size="small" label="Special instructions" value={terms.specialInstructions} onChange={(e) => setTerms({ ...terms, specialInstructions: e.target.value })} multiline />
       <Button variant="outlined" onClick={async () => { setMsg(null); try { await put(`/api/shipping/shipments/${shipmentId}/shipping-terms`, { freightTerms: terms.freightTerms || null, specialInstructions: terms.specialInstructions || null }); setMsg({ ok: true, text: 'Shipping terms saved.' }); onChanged(); } catch (e) { setMsg({ ok: false, text: (e as Error).message }); } }}>Save terms</Button>

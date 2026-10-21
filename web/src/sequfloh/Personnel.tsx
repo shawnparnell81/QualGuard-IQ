@@ -35,7 +35,7 @@ export function MiniList({ title, rows, empty, kind }: { title: string; rows?: M
     </Paper>
   );
 }
-const Two = ({ children }: { children: ReactNode }) => <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>{children}</Box>;
+const Two = ({ children }: { children: ReactNode }) => <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' } }}>{children}</Box>;
 
 // ------------------------------------------------------------------ quality
 interface QDash { validationPendingReview: number; repairPendingReview: number; approvalsAwaitingQuality: number; failedValidations: number; failedFai: number; failedRepairTests: number;

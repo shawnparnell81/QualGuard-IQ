@@ -26,7 +26,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const q = useQuery({
     queryKey: ['me'],
     queryFn: async () => {
-      try { return await get<Me>('/api/auth/me'); } catch { return null; }
+      // signed out is a normal state: this endpoint answers 200 either way, so a cold visit logs no failed request
+      try { return (await get<{ authenticated: boolean; user: Me | null }>('/api/auth/session')).user ?? null; } catch { return null; }
     },
     staleTime: 60_000,
   });

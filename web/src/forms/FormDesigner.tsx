@@ -142,7 +142,7 @@ export function FormDesigner({ value, onChange }: { value: FormDef; onChange: (d
         {d.layout && <Button size="small" onClick={() => printPreview('original')}>Print preview, original look</Button>}
       </Stack>
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 1.5 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '220px minmax(0, 1fr) 300px', xl: '260px minmax(0, 1fr) 360px' }, gap: 1.5, alignItems: 'start' }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '220px minmax(0, 1fr) 300px', xl: '260px minmax(0, 1fr) 360px' }, gap: 1.5, alignItems: 'start' }}>
         <Paper variant="outlined" sx={{ maxHeight: 'calc(100vh - 160px)', overflow: 'auto', position: { md: 'sticky' }, top: 0 }} aria-label="Form structure" component="nav">
           <List dense disablePadding>
             <ListItemButton dense selected={sel.kind === 'page'} onClick={() => setSel({ kind: 'page' })}><ListItemText primary="Page and print setup" slotProps={{ primary: { fontSize: 13, fontWeight: 600 } }} /></ListItemButton>

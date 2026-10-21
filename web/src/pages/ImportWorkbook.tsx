@@ -92,7 +92,7 @@ export function ConversionPreview({ jobId, conversion, original, originalTitle =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view]);
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2 }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '1fr 1fr' }, gap: 2 }}>
       <Paper variant="outlined" sx={{ p: 1.5, minWidth: 0 }}>
         <Typography variant="subtitle1" gutterBottom>{originalTitle}</Typography>
         {original ?? <WorkbookGrid jobId={jobId} sheet={sheet} onSheet={setSheet} />}

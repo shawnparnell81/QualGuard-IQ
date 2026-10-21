@@ -35,7 +35,7 @@ export function KnowledgeLibrary() {
           <Chip label="All" color={kind == null ? 'primary' : 'default'} onClick={() => setKind(null)} />
           {knowledgeKinds.map((k, i) => <Chip key={k} label={k} color={kind === i ? 'primary' : 'default'} onClick={() => setKind(i)} />)}
         </Stack>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(3, 1fr)' }, gap: 1.5 }}>
           {(list.data ?? []).map((a) => <Paper key={a.id} sx={{ p: 1.5, cursor: 'pointer', borderTop: 3, borderColor: a.published ? 'primary.main' : 'grey.400' }} onClick={() => nav(`/knowledge/${a.id}`)} data-testid="kb-card">
             <Stack direction="row" justifyContent="space-between"><Typography variant="caption" sx={{ fontFamily: mono }}>{a.number}</Typography><Chip size="small" label={knowledgeKinds[a.kind]} /></Stack>
             <Typography sx={{ fontWeight: 600, my: 0.5 }}>{a.title}</Typography>
@@ -85,7 +85,7 @@ export function KnowledgeDetail() {
         <Box sx={{ flex: 2 }}>
           <Prose label="Content" text={a.body} />
           {a.whys?.length > 0 && <Section title="5 Why chain"><Stack gap={0.5} data-testid="why-chain">{a.whys.map((w: string, i: number) => <Paper key={i} variant="outlined" sx={{ p: 1, ml: i * 2, borderLeft: 3, borderColor: 'secondary.main' }}><Typography variant="caption" sx={{ fontFamily: mono }}>Why {i + 1}</Typography><Typography variant="body2">{w}</Typography></Paper>)}</Stack></Section>}
-          {a.fishbone && Object.keys(a.fishbone).length > 0 && <Section title="Fishbone"><Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1 }}>{Object.entries(a.fishbone).map(([c, xs]: [string, any]) => <Paper key={c} variant="outlined" sx={{ p: 1 }}><Typography variant="overline">{c}</Typography>{xs.map((x: string) => <Typography key={x} variant="body2">• {x}</Typography>)}</Paper>)}</Box></Section>}
+          {a.fishbone && Object.keys(a.fishbone).length > 0 && <Section title="Fishbone"><Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: 'repeat(3, 1fr)' }, gap: 1 }}>{Object.entries(a.fishbone).map(([c, xs]: [string, any]) => <Paper key={c} variant="outlined" sx={{ p: 1 }}><Typography variant="overline">{c}</Typography>{xs.map((x: string) => <Typography key={x} variant="body2">• {x}</Typography>)}</Paper>)}</Box></Section>}
           <Prose label="Root cause" text={a.rootCause} /><Prose label="Corrective action" text={a.correctiveAction} />
         </Box>
         <Box sx={{ flex: 1 }}><Section title="Similar knowledge and issues">
@@ -106,7 +106,7 @@ export function Playbooks() {
   return (
     <ModuleWorkspace module={mod('knowledge')} crumbs={K('Playbooks')} title="Response playbooks" actions={<Button variant="contained" onClick={() => setDlg('new')}>New playbook</Button>}>
       {r.error && <Alert severity="error" sx={{ mb: 2 }}>{r.error}</Alert>}{done && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setDone(null)}>{done}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
         {triggers.map((t, i) => <Paper key={t} variant="outlined" sx={{ p: 1, bgcolor: 'grey.50' }}><Typography variant="overline" sx={{ fontWeight: 700 }}>{t}</Typography>
           <Stack gap={1}>{(q.data ?? []).filter((p) => p.trigger === i).map((p) => <Paper key={p.id} sx={{ p: 1.25 }} data-testid="playbook">
             <Typography variant="caption" sx={{ fontFamily: mono }}>{p.number} · rev {p.revision}</Typography><Typography sx={{ fontWeight: 600 }}>{p.title}</Typography>
@@ -143,7 +143,7 @@ export function ProcessMap() {
       </Stack>
       {det.data && <Box sx={{ mt: 2 }}><Section title={`${det.data.process.code} · ${det.data.process.name}`} action={<Stack direction="row" gap={1}><Button size="small" onClick={() => setDlg('kpi')}>Link KPI</Button><Button size="small" variant="contained" onClick={() => setDlg('review')}>Record review</Button></Stack>}>
         <Facts items={[['Purpose', det.data.process.purpose ?? '—'], ['Last reviewed', fmtDate(det.data.process.lastReviewedOn) || 'never'], ['Review due', fmtDate(det.data.dashboard?.reviewDue)]]} />
-        <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1, my: 1.5 }}>{(det.data.dashboard?.metrics ?? []).map((m: any) => <Tile key={m.id} label={m.metricName} value={m.latest ?? '—'} hint={`target ${m.target} · ${m.rating ?? 'no data'}`} color={m.rating === 'Critical' ? 'error.main' : m.rating === 'Warning' ? 'warning.main' : 'success.main'} />)}</Box>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'repeat(2, minmax(0, 1fr))', md: 'repeat(4, 1fr)' }, gap: 1, my: 1.5 }}>{(det.data.dashboard?.metrics ?? []).map((m: any) => <Tile key={m.id} label={m.metricName} value={m.latest ?? '—'} hint={`target ${m.target} · ${m.rating ?? 'no data'}`} color={m.rating === 'Critical' ? 'error.main' : m.rating === 'Warning' ? 'warning.main' : 'success.main'} />)}</Box>
         <DataTable data={det.data.reviews} empty="No reviews." columns={[{ header: 'Reviewed', accessorKey: 'reviewedOn', cell: (x) => fmtDate(x.getValue()) }, { header: 'Outcome', accessorKey: 'outcome' }, { header: 'Notes', accessorKey: 'notes' }]} />
       </Section></Box>}
       <StepDialog open={dlg === 'new'} onClose={() => setDlg(null)} title="New business process" confirm="Create"

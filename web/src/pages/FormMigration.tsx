@@ -124,7 +124,7 @@ export function FormMigrationDetail() {
       {m.status === 1 && <Alert severity="info" sx={{ mb: 2 }}>Revision {m.targetRevision} is in review. It becomes effective when the approval route is complete; until then revision {m.sourceRevision} stays in use.</Alert>}
       {m.status === 4 && <Alert severity="warning" sx={{ mb: 2 }}>Rolled back {d.rolledBackAt ? fmtDateTime(d.rolledBackAt) : ''}{d.rolledBackBy ? ` by ${d.rolledBackBy}` : ''}: {d.rollbackReason}.
         {d.rollbackRevision ? ` Revision ${d.rollbackRevision} restores the original definition and goes through approval like any revision.` : ` Draft revision ${m.targetRevision} holds the original definition again.`}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '2fr 1fr' }, gap: 2, mb: 2 }}>
         <Section title="Conversion summary">
           <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1.5 }}>
             {([['Fields', String(c.summary.fields ?? 0)], ['Changed', String(c.summary.changed ?? 0)], ['Formulas kept', kept('formulasKept', 'formulas')], ['Option lists kept', kept('optionListsKept', 'optionLists')],
@@ -140,7 +140,7 @@ export function FormMigrationDetail() {
           ['Started', `${fmtDateTime(m.createdAt)} · ${m.createdBy}`],
         ]} />
       </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' }, gap: 2, mb: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '1fr 1fr' }, gap: 2, mb: 2 }}>
         <SchemaPreview documentId={m.documentId} revisionId={d.sourceRevisionId} title={`Original · revision ${m.sourceRevision}`} />
         <SchemaPreview documentId={m.documentId} revisionId={d.targetRevisionId} title={`Migrated · revision ${m.targetRevision}`} />
       </Box>

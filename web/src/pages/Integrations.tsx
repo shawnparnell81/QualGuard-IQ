@@ -70,7 +70,7 @@ function ValidationPanel({ id, edit }: { id: string; edit: boolean }) {
   return (
     <Stack gap={2} data-testid="erp-validation">
       <Alert severity={v.canEnable ? 'success' : 'warning'} data-testid="erp-gate-summary">{v.canEnable ? 'The validation gate passes for the current configuration.' : <>Cannot be enabled yet: {v.blockers.join(' ')}</>}</Alert>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' }, gap: 2 }}>
         <Section title={`Gates · ${environments[v.environment]}`} action={can('integrations.approve') && environments[v.environment] === 'Production' && !v.productionApproved && <Button size="small" variant="contained" onClick={() => setDlg('approve')}>Approve for production</Button>}>
           <Table size="small"><TableBody>
             <TableRow><TableCell>Fixture tested</TableCell><TableCell><Chip size="small" variant="outlined" label="Fixtures only" /></TableCell><TableCell><Typography variant="caption">{v.fixtureTested}</Typography></TableCell></TableRow>
@@ -319,7 +319,7 @@ export function ConnectionDetail() {
   const secretFields = (ed?.setup?.fields ?? []).filter((f) => f.isSecret);
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Connections', to: '/integrations' }, { label: x.name }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span>{x.name}</span><Chip size="small" color={x.enabled ? 'success' : 'default'} label={x.enabled ? 'On' : 'Off'} /><Typography color="text.secondary">{sysLabel(x.system)} · {x.edition}</Typography></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span>{x.name}</span><Chip size="small" color={x.enabled ? 'success' : 'default'} label={x.enabled ? 'On' : 'Off'} /><Typography color="text.secondary">{sysLabel(x.system)} · {x.edition}</Typography></Stack>}
       tabs={[{ label: 'Overview', value: 'overview' }, { label: 'Settings', value: 'settings' }, { label: 'Mappings', value: 'mappings' }, { label: 'Sync runs', value: 'runs' }, { label: 'Live validation', value: 'validation' }, { label: 'Unverified', value: 'notes' }]} tab={tab} onTab={(t) => setP({ tab: t })}
       actions={edit ? <Stack direction="row" gap={1} alignItems="center">
         {secretFields.length > 0 && <Button variant="outlined" onClick={() => setDlg('secret')}>{secretFields.some((f) => secretStored(x, f)) ? `Replace secret${secretFields.length > 1 ? 's' : ''}` : `Set secret${secretFields.length > 1 ? 's' : ''}`}</Button>}
@@ -329,7 +329,7 @@ export function ConnectionDetail() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {test && <Alert severity={test.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setTest(null)}>{test.message}</Alert>}
       {lastRun && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setLastRun(null)}>{lastRun}</Alert>}
-      {tab === 'overview' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+      {tab === 'overview' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' }, gap: 2 }}>
         <Facts items={[...(ed?.setup ? ed.setup.fields.filter((f) => !f.isSecret && (directTargets as readonly string[]).includes(f.target)).map((f) => [f.label, <span style={{ fontFamily: f.kind === 'url' ? mono : undefined }}>{(x[f.target as Direct] as string | undefined) || '—'}</span>] as [string, React.ReactNode])
             : [['Base URL', <span style={{ fontFamily: mono }}>{x.baseUrl || '—'}</span>], ['Account / tenant', x.account ?? '—'], ['Company', x.company ?? '—'], ['Client id', x.clientId ?? '—'], ['User', x.username ?? '—']] as [string, React.ReactNode][]),
           ...(ed?.setup?.fields ?? []).filter((f) => f.target.startsWith('option:') && x.options[f.target.slice(7)] != null && x.options[f.target.slice(7)] !== '').map((f) => [f.label, String(x.options[f.target.slice(7)])] as [string, string]),
@@ -423,7 +423,7 @@ export function ErpChangeDetail() {
   if (!c) return <ModuleWorkspace module={mod} crumbs={[{ label: 'Change queue', to: '/integrations/changes' }]} title="Loading…">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Change queue', to: '/integrations/changes' }, { label: c.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{c.number}</span><span>{c.action} {erpEntities[c.entity]}</span><StatusChip status={changeStatus[c.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{c.number}</span><span>{c.action} {erpEntities[c.entity]}</span><StatusChip status={changeStatus[c.status]} /></Stack>}
       actions={<Stack direction="row" gap={1}>
         {can('integrations.edit') && c.status === 0 && !c.validationErrors && <Button variant="contained" disabled={busy} onClick={() => run(() => post(`/api/integrations/changes/${id}/submit`))}>Submit for approval</Button>}
         {can('integrations.edit') && c.status === 4 && <Button variant="outlined" disabled={busy} onClick={() => run(() => post(`/api/integrations/changes/${id}/retry`))}>Retry</Button>}
@@ -431,7 +431,7 @@ export function ErpChangeDetail() {
       </Stack>}>
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {c.validationErrors && <Alert severity="warning" sx={{ mb: 2 }}>{c.validationErrors}</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '300px 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '300px 1fr' }, gap: 2 }}>
         <Facts items={[['External id', <span style={{ fontFamily: mono }}>{c.externalId}</span>], ['Local record', c.localType && c.localId ? <RouterLink to={`/records/${c.localType}/${c.localId}`}>{c.localType}</RouterLink> : 'New'], ['Queued', fmtDateTime(c.createdAt)], ['Applied', fmtDateTime(c.appliedAt)], ['Decision', c.decisionNote ?? '—']]} />
         <Section title="Field changes"><JsonDiff before={c.before} after={c.after} /></Section>
       </Box>

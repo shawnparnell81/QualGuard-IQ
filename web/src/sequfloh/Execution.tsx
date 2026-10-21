@@ -184,7 +184,7 @@ export function ActiveStationPage() {
       description="Your tasks at this station. The clock is calculated from the stored start time and accumulated durations, so refresh, sign-out or closing the browser never resets it.">
       {list.isLoading ? <Loading /> : list.error ? <ErrorState error={list.error} retry={list.refetch} /> : (list.data?.items.length ?? 0) === 0
         ? <Empty text="You have no assigned or active tasks." action={<Button component={RouterLink} to="/sequfloh/execution/dispatch">Open the Dispatch Queue</Button>} />
-        : <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '300px minmax(0, 1fr)' } }}>
+        : <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '300px minmax(0, 1fr)' } }}>
           <Paper variant="outlined" component="nav" aria-label="My station tasks">
             <List dense disablePadding>{list.data!.items.map((t) => <ListItemButton key={t.id} selected={t.id === selected} onClick={() => pick(t.id)}>
               <ListItemText primary={<Stack direction="row" gap={1} alignItems="center"><Mono>{t.number}</Mono><SqfStatus status={t.status} /></Stack>}
@@ -235,7 +235,7 @@ export function ActiveStationPage() {
               <Paper variant="outlined" sx={{ p: 2 }} component="section" aria-label="Result entry">
                 <Typography variant="h3" sx={{ mb: 1.5 }}>Result entry</Typography>
                 {!d.canEnter && <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>Results are entered while the task is in progress or pending inspection.</Typography>}
-                <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' } }}>
+                <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' } }}>
                   {r.type === 'Production' ? <TextField select size="small" label="Result" value={form.result ?? ''} disabled={!enter} onChange={(e) => { setForm({ ...form, result: e.target.value }); setDirty(true); }}>
                     {['Pending', 'Pass', 'Fail', 'Conditional'].map((x) => <MenuItem key={x} value={x}>{x}</MenuItem>)}</TextField>
                     : <Typography variant="body2">Overall result: <SqfStatus status={s(r.result)} /> — step and characteristic results are entered on the <RouterLink to={`/sequfloh/record/${r.id}?tab=${r.type === 'Fai' ? 'characteristics' : 'steps'}`}>full record</RouterLink>.</Typography>}

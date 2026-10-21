@@ -61,7 +61,7 @@ export function LiveMonitor() {
       </Stack>}>
       {q.error && <Alert severity="error">{(q.error as Error).message}</Alert>}
       <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 1.5, mb: 2 }}>{(d?.metrics ?? []).map((m) => <Gauge key={m.key} m={m} />)}</Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '1.2fr 1fr 0.8fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '1.2fr 1fr 0.8fr' }, gap: 2 }}>
         <Section title="Open nonconformances">
           <Table size="small"><TableBody>{(d?.openNcrs ?? []).map((r) => <TableRow key={r.id} hover sx={{ cursor: 'pointer' }} onClick={() => nav(r.url)}>
             <TableCell sx={{ fontFamily: mono }}>{r.number}</TableCell><TableCell>{r.title}</TableCell><TableCell><StatusChip status={r.status} /></TableCell></TableRow>)}
@@ -118,7 +118,7 @@ export function WorkOrderNew() {
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Work orders', to: '/production/work-orders' }, { label: 'New' }]} title="New work order">
       <Paper sx={{ p: 3, maxWidth: 860 }}>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
           <TextField label="Number (blank = next)" value={v.number} onChange={set('number')} />
           <TextField select label="Kind" value={v.kind} onChange={set('kind')}>{woKind.map((k, i) => <MenuItem key={k} value={i}>{k}</MenuItem>)}</TextField>
           <TextField select label="Part" value={v.partId} onChange={set('partId')}>{(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}{setupOptions('part', parts.data)}</TextField>
@@ -180,10 +180,10 @@ export function WorkOrderDetail() {
   if (!w) return <ModuleWorkspace module={mod} crumbs={[{ label: 'Work orders', to: '/production/work-orders' }]} title="Loading…">{q.error ? <Alert severity="error">{(q.error as Error).message}</Alert> : null}</ModuleWorkspace>;
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Work orders', to: '/production/work-orders' }, { label: w.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{w.number}</span><StatusChip status={woStatus[w.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{w.number}</span><StatusChip status={woStatus[w.status]} /></Stack>}
       tabs={[{ label: 'Operations', value: 'ops' }, { label: 'Entries', value: 'entries' }, { label: 'Quality records', value: 'related' }, { label: 'Label', value: 'label' }]} tab={tab} onTab={setTab}
       actions={can('production.edit') ? <Button variant="contained" component={RouterLink} to={`/production/entry?wo=${w.id}`}>Record entry</Button> : undefined}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '280px 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px 1fr' }, gap: 2 }}>
         <Facts items={[['Kind', woKind[w.kind]], ['Item', `${w.itemNumber}${w.revision ? ` rev ${w.revision}` : ''}`], ['Quantity', n(w.quantity)], ['Completed', n(w.quantityCompleted)], ['Scrapped', n(w.quantityScrapped)], ['Reworked', n(w.quantityReworked)],
           ['Start', fmtDate(w.startOn)], ['Due', fmtDate(w.dueOn)], ['Routing', w.routingRef ?? '—'], ['Source', `${w.source}${w.externalRef ? ` · ${w.externalRef}` : ''}`]]} />
         <Box>
@@ -236,7 +236,7 @@ export function PurchaseOrderNew() {
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Purchase orders', to: '/production/purchase-orders' }, { label: 'New' }]} title="New purchase order">
       <Paper sx={{ p: 3, maxWidth: 980 }}>
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
           <TextField label="PO number" value={v.number} onChange={(e) => setV({ ...v, number: e.target.value })} />
           <TextField select label="Supplier" value={v.supplierId} onChange={(e) => setV({ ...v, supplierId: e.target.value })}>{(sups.data ?? []).map((s) => <MenuItem key={s.id} value={s.id}>{lookupLabel(s)}</MenuItem>)}{setupOptions('supplier', sups.data)}</TextField>
           <TextField label="Ordered" type="date" value={v.orderedOn} onChange={(e) => setV({ ...v, orderedOn: e.target.value })} slotProps={{ inputLabel: { shrink: true } }} />
@@ -278,9 +278,9 @@ export function PurchaseOrderDetail() {
   const s = sups.data?.find((x) => x.id === p.supplierId);
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Purchase orders', to: '/production/purchase-orders' }, { label: p.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{p.number}</span><StatusChip status={poStatus[p.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{p.number}</span><StatusChip status={poStatus[p.status]} /></Stack>}
       tabs={[{ label: 'Lines', value: 'lines' }, { label: 'Receiving quality', value: 'related' }]} tab={tab} onTab={setTab}>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '280px 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '280px 1fr' }, gap: 2 }}>
         <Facts items={[['Supplier', s ? lookupLabel(s) : '—'], ['Ordered', fmtDate(p.orderedOn)], ['Source', `${p.source}${p.externalRef ? ` · ${p.externalRef}` : ''}`]]} />
         <Box>
           {tab === 'lines' && <DataTable data={q.data!.lines} columns={[{ header: 'Line', accessorKey: 'lineNumber' }, { header: 'Item', accessorFn: (r) => `${r.itemNumber}${r.revision ? ` rev ${r.revision}` : ''}` },
@@ -348,7 +348,7 @@ export function ShopFloorEntry() {
         <ToggleButtonGroup exclusive fullWidth value={kind} onChange={(_, k) => k != null && setKind(k)} sx={{ mb: 2, flexWrap: 'wrap', '& .MuiToggleButton-root': { py: 1.5, fontSize: 15 } }}>
           {entryKind.map((k, i) => <ToggleButton key={k} value={i}>{k}</ToggleButton>)}
         </ToggleButtonGroup>
-        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2 }}>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
           <TextField select label="Work order" value={woId} onChange={(e) => setWoId(e.target.value)} sx={big}><MenuItem value="">None</MenuItem>{woId && !(wos.data ?? []).some((w) => w.id === woId && (w.status < 3 || w.status === 6)) && <MenuItem value={woId}>{wo.data?.workOrder.number ?? (wos.isLoading ? 'Loading…' : 'Work order not open for entries')}</MenuItem>}{(wos.data ?? []).filter((w) => w.status < 3 || w.status === 6).map((w) => <MenuItem key={w.id} value={w.id}>{w.number} · {w.itemNumber}</MenuItem>)}</TextField>
           <TextField select label="Operation" value={v.op} onChange={set('op')} sx={big} disabled={!wo.data}><MenuItem value="">—</MenuItem>{(wo.data?.operations ?? []).map((o) => <MenuItem key={o.id} value={String(o.sequence)}>{o.sequence} · {o.name}</MenuItem>)}</TextField>
           {kind === 0 && <>

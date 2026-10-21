@@ -209,7 +209,7 @@ export function FormDesigner() {
             <Button size="small" onClick={() => set({ checks: [...(f.checks ?? []), { operator: 'greaterOrEqual', field: null, value: '', message: '' }] })}>+ Add check</Button>
           </Stack>}</Paper>
       </Box>}
-      {tab === 'preview' && <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      {tab === 'preview' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
         <Paper sx={{ p: 2 }}><Typography variant="overline">Sample entry</Typography>
           <Stack gap={1.25}>{fields.filter((x) => x.type !== 'calc' && (!preview || preview.visible.includes(x.key))).map((x) => x.type === 'choice'
             ? <TextField key={x.key} select size="small" label={x.label} value={sample[x.key] ?? ''} onChange={(e) => setSample({ ...sample, [x.key]: e.target.value })}><MenuItem value="">—</MenuItem>{(x.options ?? []).map((o) => <MenuItem key={o} value={o}>{o}</MenuItem>)}</TextField>
@@ -261,7 +261,7 @@ export function RulesStudio() {
   return (
     <ModuleWorkspace module={P()} crumbs={crumbs('Business rules')} title="Business rule engine" tabs={[{ value: 'rules', label: 'Rules' }, { value: 'log', label: 'Firing log' }]} tab={tab} onTab={setTab}
       actions={<Button variant="contained" onClick={() => { setError(null); setEdit(structuredClone(blankRule)); }}>New rule</Button>}>
-      {tab === 'rules' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(4, 1fr)' }, gap: 2 }}>
+      {tab === 'rules' && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(4, 1fr)' }, gap: 2 }}>
         {ruleKinds.map((k) => <Box key={k.k}><Typography variant="overline" sx={{ color: k.color, fontWeight: 700 }}>{k.label}</Typography>
           <Stack gap={1}>{(rules.data ?? []).filter((r) => r.kind === k.k).map((r) => <Paper key={r.id} sx={{ p: 1.25, borderTop: 3, borderColor: k.color, opacity: r.enabled ? 1 : .55 }}>
             <Typography variant="body2" sx={{ fontWeight: 600 }}>{r.name}</Typography>
@@ -423,7 +423,7 @@ export function RecoveryCenter() {
           <Typography variant="h3" sx={{ color: v ? 'text.primary' : 'error.main' }}>{ago(at)}</Typography>
           <Typography variant="caption" sx={{ fontFamily: mono }}>{v?.label ?? v?.number ?? '—'}</Typography></Paper>)}
       </Box>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '3fr 2fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '3fr 2fr' }, gap: 2 }}>
         <Paper sx={{ p: 2 }}><Typography variant="h3" sx={{ mb: 1 }}>Backup ledger</Typography>
           {(backups.data ?? []).map((b) => <Stack key={b.id} direction="row" gap={1.5} alignItems="center" sx={{ py: 1, borderBottom: 1, borderColor: 'divider' }}>
             <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: b.state === 0 ? (b.verification === 1 ? 'success.main' : 'info.main') : 'error.main' }} />
@@ -497,10 +497,10 @@ export function Marketplace() {
     <ModuleWorkspace module={P()} crumbs={crumbs('Marketplace')} title="Extensions marketplace"
       actions={<Stack direction="row" gap={1}><Button onClick={() => setManifest('')}>Import package</Button><Button variant="contained" onClick={() => setLicKey('')}>Activate license</Button></Stack>}>
       {msg && <Alert severity={msg.ok ? 'success' : 'error'} sx={{ mb: 2 }} onClose={() => setMsg(null)}>{msg.text}</Alert>}
-      <Stack direction="row" gap={1} sx={{ mb: 2 }}>
+      <Stack direction="row" gap={1} sx={{ mb: 2, flexWrap: 'wrap' }}>
         {[[null, 'All'], ['installed', 'Installed'], [0, 'Add-ons'], [1, 'Quality extensions'], [2, 'Industry packs']].map(([v, l]) => <Chip key={String(l)} label={l as string} color={kind === v ? 'primary' : 'default'} onClick={() => setKind(v as any)} />)}
       </Stack>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 2, mb: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: 'repeat(2, 1fr)', xl: 'repeat(3, 1fr)' }, gap: 2, mb: 3 }}>
         {items.map((p) => <Paper key={p.key} sx={{ p: 2, display: 'flex', flexDirection: 'column', gap: 1, borderTop: 4, borderColor: extColors[p.kind] }}>
           <Stack direction="row" alignItems="center" gap={1}><Typography variant="overline" sx={{ color: extColors[p.kind], flex: 1 }}>{extKinds[p.kind]}</Typography><Chip size="small" color={licColor[p.license]} label={p.license === 'Licensed' ? `Licensed to ${new Date(p.licensedUntil).toLocaleDateString()}` : p.license} /></Stack>
           <Typography variant="h3">{p.name}</Typography>
@@ -610,7 +610,7 @@ export function ContentLibrary() {
         <Typography variant="body2" data-testid="library-page" sx={{ fontFamily: mono }}>Page {page} of {pages}</Typography>
         <Button size="small" disabled={page >= pages} onClick={() => setPage(page + 1)}>Next</Button>
       </Stack>
-      <Box sx={{ display: 'grid', gridTemplateColumns: sel ? { xs: '1fr', lg: '1fr 1.2fr' } : '1fr', gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: sel ? { xs: 'minmax(0, 1fr)', lg: '1fr 1.2fr' } : '1fr', gap: 2 }}>
         <Paper sx={{ p: 1 }}>
           {(lib.data ?? []).map((f) => <Stack key={f.id} direction="row" gap={1.5} alignItems="center" onClick={() => setSel(f)} sx={{ p: 1, cursor: 'pointer', borderRadius: 1, bgcolor: sel?.id === f.id ? 'action.selected' : undefined, '&:hover': { bgcolor: 'action.hover' } }}>
             <Box sx={{ width: 34, height: 34, borderRadius: 1, display: 'grid', placeItems: 'center', bgcolor: f.kind === 'Video' ? '#263238' : 'primary.light', color: '#fff', fontSize: 16 }}>{kindGlyph[f.kind]}</Box>
@@ -626,7 +626,7 @@ export function ContentLibrary() {
           <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}><Typography variant="h3" sx={{ flex: 1 }}>{sel.fileName}</Typography><Button size="small" onClick={() => setSel(null)}>Close</Button></Stack>
           {sel.kind === 'Video' && <VideoPlayer key={sel.id} fileId={sel.id} fileName={sel.fileName} canEdit />}
           {sel.kind === 'Image' && <Box component="img" src={`/api/files/${sel.id}?inline=true`} alt={sel.fileName} sx={{ maxWidth: '100%', maxHeight: 360, borderRadius: 1, mb: 1 }} />}
-          <Box sx={{ display: 'grid', gridTemplateColumns: '140px 1fr', rowGap: .5, mb: 2 }}>
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '140px minmax(0, 1fr)' }, rowGap: .5, mb: 2 }}>
             <Typography variant="caption" color="text.secondary">Record</Typography><Typography variant="body2"><a href={sel.ownerUrl}>{sel.ownerNumber}</a> {sel.ownerTitle}</Typography>
             <Typography variant="caption" color="text.secondary">Kind</Typography><Typography variant="body2">{sel.kind} · {sel.contentType} · {fmtSize(sel.sizeBytes)}</Typography>
             <Typography variant="caption" color="text.secondary">Classification</Typography><Typography variant="body2">{classNames[sel.classification]}{sel.classification === 2 ? ' (opening needs edit rights on the record and is logged)' : sel.classification === 1 ? ' (opening is logged)' : ''}</Typography>

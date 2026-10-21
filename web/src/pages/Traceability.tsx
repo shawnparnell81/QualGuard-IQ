@@ -45,7 +45,7 @@ export function TraceSearch() {
         <Button type="submit" variant="contained">Trace</Button>
       </Paper>
       {r.error && <Alert severity="error">{(r.error as Error).message}</Alert>}
-      {r.data && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '340px 1fr' }, gap: 2 }}>
+      {r.data && <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '340px 1fr' }, gap: 2 }}>
         <Section title={`Matches (${r.data.matches.length})`}>
           <Stack gap={1}>{r.data.matches.map((h) => <Paper key={h.type + h.id} variant="outlined" onClick={() => nav(h.url)} sx={{ p: 1.25, cursor: 'pointer', '&:hover': { borderColor: 'primary.main' } }}>
             <Stack direction="row" justifyContent="space-between"><Typography sx={{ fontFamily: mono, fontWeight: 600 }}>{h.number}</Typography><Chip size="small" label={h.type === 'SerialUnit' ? 'Serial' : h.type} /></Stack>
@@ -110,7 +110,7 @@ export function LotNew() {
   const set = (k: string) => (e: { target: { value: string } }) => setV({ ...v, [k]: e.target.value });
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Lots & batches', to: '/trace/lots' }, { label: 'New' }]} title="New lot">
-      <Paper sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Paper sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Lot number (blank = next)" value={v.number} onChange={set('number')} />
         <TextField select label="Kind" value={v.kind} onChange={set('kind')}>{lotKind.map((k, i) => <MenuItem key={k} value={String(i)}>{k}</MenuItem>)}</TextField>
@@ -147,7 +147,7 @@ export function SerialNew() {
   const set = (k: string) => (e: { target: { value: string } }) => setV({ ...v, [k]: e.target.value });
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Serial numbers', to: '/trace/serials' }, { label: 'New' }]} title="New serial number">
-      <Paper sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+      <Paper sx={{ p: 3, maxWidth: 820, display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', sm: '1fr 1fr' }, gap: 2 }}>
         {error && <Alert severity="error" sx={{ gridColumn: '1 / -1' }}>{error}</Alert>}
         <TextField label="Serial number" value={v.serialNumber} onChange={set('serialNumber')} />
         <TextField select label="Part" value={v.partId} onChange={set('partId')}>{(parts.data ?? []).map((p) => <MenuItem key={p.id} value={p.id}>{lookupLabel(p)}</MenuItem>)}{setupOptions('part', parts.data)}</TextField>
@@ -218,7 +218,7 @@ export function TraceRecord({ kind }: { kind: 'lot' | 'serial' }) {
   const targets: [string, string][] = [...(lots.data ?? []).filter((l) => l.id !== id).map((l) => [`lot:${l.id}`, `Lot ${l.number}`] as [string, string]), ...(sers.data ?? []).filter((s) => s.id !== id).map((s) => [`serial:${s.id}`, `Serial ${s.serialNumber}`] as [string, string])];
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: kind === 'lot' ? 'Lots & batches' : 'Serial numbers', to: list }, { label: r.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono }}>{r.number}</span><Typography color="text.secondary">{r.partNumber}{r.revision ? ` rev ${r.revision}` : ''}</Typography><StatusChip status={r.status} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono }}>{r.number}</span><Typography color="text.secondary">{r.partNumber}{r.revision ? ` rev ${r.revision}` : ''}</Typography><StatusChip status={r.status} /></Stack>}
       tabs={[{ label: 'Genealogy', value: 'genealogy' }, { label: 'History', value: 'events' }, { label: 'Label', value: 'label' }, { label: 'Files & links', value: 'files' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1}>
         <Button component={RouterLink} to={`/trace?q=${encodeURIComponent(r.number)}`}>Trace search</Button>
@@ -252,7 +252,7 @@ function LabelPreview({ initial }: { initial: string }) {
   const [ok, setOk] = useState(true);
   const src = `/api/trace/labels?symbology=${sym}&content=${encodeURIComponent(content)}`;
   return (
-    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '320px 1fr' }, gap: 2 }}>
+    <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '320px 1fr' }, gap: 2 }}>
       <Paper sx={{ p: 2 }}>
         <Stack gap={2}>
           <ToggleButtonGroup exclusive size="small" value={sym} onChange={(_, s) => s && (setSym(s), setOk(true))}>{symbologies.map((s) => <ToggleButton key={s} value={s}>{s === 'Qr' ? 'QR' : s === 'DataMatrix' ? 'Data Matrix' : s.replace('Code', 'Code ')}</ToggleButton>)}</ToggleButtonGroup>
@@ -305,7 +305,7 @@ export function ScanPage() {
   }, [camera]);
   return (
     <ModuleWorkspace module={mod} crumbs={[{ label: 'Scan' }]} title="Scan a code">
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 2 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '1fr 1fr' }, gap: 2 }}>
         <Paper sx={{ p: 2 }}>
           <TextField inputRef={input} fullWidth autoFocus label="Scanner input" value={code} onChange={(e) => setCode(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && resolve(code)}
             helperText="A handheld scanner types the code and presses Enter." sx={{ '& input': { fontFamily: mono, fontSize: 20 } }} />

@@ -40,7 +40,7 @@ function Value({ v }: { v: unknown }): React.ReactNode {
   if (typeof v === 'object') {
     const o = v as Record<string, unknown>;
     if ('value' in o && 'basis' in o) return <span><b style={{ fontFamily: mono }}>{String(o.value)}</b> <Typography component="span" color="text.secondary" fontSize={12.5}>({String(o.basis)})</Typography></span>;
-    return <Box sx={{ display: 'grid', gridTemplateColumns: '200px 1fr', rowGap: 0.75, columnGap: 2 }}>{Object.entries(o).map(([k, x]) => [<Typography key={k + 'l'} variant="body2" color="text.secondary">{label(k)}</Typography>, <Box key={k + 'v'} sx={{ fontSize: 14 }}><Value v={x} /></Box>])}</Box>;
+    return <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '200px minmax(0, 1fr)' }, rowGap: 0.75, columnGap: 2 }}>{Object.entries(o).map(([k, x]) => [<Typography key={k + 'l'} variant="body2" color="text.secondary">{label(k)}</Typography>, <Box key={k + 'v'} sx={{ fontSize: 14 }}><Value v={x} /></Box>])}</Box>;
   }
   return String(v);
 }
@@ -132,7 +132,7 @@ export function ReviewDetail() {
   const sections = Object.entries(d.inputs ?? {}).filter(([k]) => k !== 'period');
   return (
     <ModuleWorkspace module={mod()} crumbs={[{ label: 'Management review', to: '/reviews' }, { label: d.number }]}
-      title={<Stack direction="row" gap={1.5} alignItems="center"><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={reviewStatus[d.status]} /></Stack>}
+      title={<Stack direction="row" gap={1.5} alignItems="center" sx={{ flexWrap: 'wrap', rowGap: 0.5 }}><span style={{ fontFamily: mono, whiteSpace: 'nowrap' }}>{d.number}</span><span>{d.title}</span><StatusChip status={reviewStatus[d.status]} /></Stack>}
       tabs={[{ label: 'Inputs', value: 'inputs' }, { label: 'Meeting', value: 'meeting' }, { label: `Decisions (${d.decisions.length})`, value: 'decisions' }, { label: 'Actions', value: 'actions' }, { label: 'Files & history', value: 'more' }]} tab={tab} onTab={setTab}
       actions={<Stack direction="row" gap={1} flexWrap="wrap">
         {a('compile') && <Button variant={d.inputs ? 'outlined' : 'contained'} onClick={() => run(() => post(`/api/reviews/${d.id}/compile`))}>{d.inputs ? 'Recompile inputs' : 'Compile inputs from records'}</Button>}
@@ -142,7 +142,7 @@ export function ReviewDetail() {
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
       {d.status === 3 && <Alert severity="success" sx={{ mb: 2 }}>Approved {fmtDateTime(d.approvedAt)}. This record and its input snapshot are locked; actions continue to be tracked.</Alert>}
       {d.status === 2 && <Alert severity="info" sx={{ mb: 2 }}>Waiting for approval of the meeting record.</Alert>}
-      <Box sx={{ display: 'grid', gridTemplateColumns: '270px 1fr', gap: 3 }}>
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: 'minmax(0, 1fr)', md: '270px minmax(0, 1fr)' }, gap: 3 }}>
         <Facts items={[['Meeting date', fmtDate(d.scheduledOn)], ['Held', fmtDate(d.heldOn)], ['Period', `${fmtDate(d.periodStart)} – ${fmtDate(d.periodEnd)}`], ['Chair', d.ownerName], ['Site', d.siteCode],
           ['Inputs compiled', fmtDateTime(d.inputsCompiledAt)], ['Participants', d.participants.map((p) => `${p.displayName}${p.attended ? ' ✓' : ''}`).join(', ') || '—']]} />
         <Box sx={{ minWidth: 0 }}>
