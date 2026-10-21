@@ -515,24 +515,24 @@ export function Marketplace() {
         </Paper>)}
       </Box>
       <Paper sx={{ p: 2 }}><Typography variant="h3" sx={{ mb: 1 }}>Licenses</Typography>
-        {(licenses.data ?? []).map((l) => { const expired = new Date(l.expiresAt) < new Date(); return <Stack key={l.id} direction="row" gap={2} alignItems="center" sx={{ py: 1, borderBottom: 1, borderColor: 'divider' }}>
-          <Typography sx={{ fontFamily: mono, minWidth: 140 }}>{l.licenseId}</Typography><Typography variant="body2" sx={{ flex: 1 }}>{l.licensee} · {l.extensions.includes('*') ? 'all extensions' : l.extensions.join(', ')}</Typography>
+        {(licenses.data ?? []).map((l) => { const expired = new Date(l.expiresAt) < new Date(); return <Stack key={l.id} direction="row" gap={2} alignItems="center" flexWrap="wrap" sx={{ py: 1, borderBottom: 1, borderColor: 'divider', overflowWrap: 'anywhere' }}>
+          <Typography sx={{ fontFamily: mono, minWidth: { xs: 0, sm: 140 } }}>{l.licenseId}</Typography><Typography variant="body2" sx={{ flex: 1 }}>{l.licensee} · {l.extensions.includes('*') ? 'all extensions' : l.extensions.join(', ')}</Typography>
           <Typography variant="caption">until {new Date(l.expiresAt).toLocaleDateString()}</Typography>
           <Chip size="small" color={l.revoked || expired ? 'error' : 'success'} label={l.revoked ? 'Revoked' : expired ? 'Expired' : 'Active'} />
           {!l.revoked && <Button size="small" color="error" onClick={() => run(() => post(`/api/platform/marketplace/licenses/${l.id}/revoke`, {}), 'License revoked.')}>Revoke</Button>}</Stack>; })}
         {licenses.data?.length === 0 && <Typography color="text.secondary">No licenses activated. Free extensions can be installed without one.</Typography>}
       </Paper>
       <Paper sx={{ p: 2, mt: 2 }} data-testid="licensing-keys">
-        <Stack direction="row" alignItems="center" gap={1} sx={{ mb: 1 }}><Typography variant="h3" sx={{ flex: 1 }}>License verification keys</Typography>
+        <Stack direction="row" alignItems="center" gap={1} flexWrap="wrap" sx={{ mb: 1 }}><Typography variant="h3" sx={{ flex: 1 }}>License verification keys</Typography>
           <Button size="small" onClick={() => setRevDlg({ licenseId: '', reason: '' })}>Revoke a license id</Button>
           <Button size="small" variant="outlined" onClick={() => setKeyDlg({ keyId: '', pem: '', env: 1, notes: '' })}>Register public key</Button></Stack>
         <Alert severity="info" sx={{ mb: 1 }}>{licensing.data?.custody} Signing: {licensing.data?.signing}</Alert>
         <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>Deployment id: {licensing.data?.deploymentId ?? 'not set'} · Customer id: {licensing.data?.customerId ?? 'not set'} · Development keys: {licensing.data?.acceptDevelopmentKeys ? 'accepted (test installation)' : 'refused'}</Typography>
-        {(licensing.data?.keys ?? []).map((k: any) => { const row = (keys.data ?? []).find((x) => x.keyId === k.keyId); return <Stack key={k.keyId} direction="row" gap={2} alignItems="center" sx={{ py: 1, borderTop: 1, borderColor: 'divider' }} data-testid="licensing-key">
-          <Typography sx={{ fontFamily: mono, minWidth: 180 }}>{k.keyId}</Typography>
+        {(licensing.data?.keys ?? []).map((k: any) => { const row = (keys.data ?? []).find((x) => x.keyId === k.keyId); return <Stack key={k.keyId} direction="row" gap={2} rowGap={1} alignItems="center" flexWrap="wrap" sx={{ py: 1, borderTop: 1, borderColor: 'divider' }} data-testid="licensing-key">
+          <Typography sx={{ fontFamily: mono, minWidth: { xs: 0, sm: 180 }, overflowWrap: 'anywhere' }}>{k.keyId}</Typography>
           <Chip size="small" variant="outlined" color={k.environment === 1 ? 'primary' : 'warning'} label={k.environment === 1 ? 'Production' : 'Development'} />
           <Chip size="small" color={k.status === 0 ? 'success' : k.status === 1 ? 'default' : 'error'} label={['Active', 'Retired', 'Revoked'][k.status]} />
-          <Typography variant="caption" sx={{ fontFamily: mono, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.algorithm} · {k.fingerprint.slice(0, 24)}… · {k.source}</Typography>
+          <Typography variant="caption" sx={{ fontFamily: mono, flex: { xs: '1 1 100%', sm: 1 }, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{k.algorithm} · {k.fingerprint.slice(0, 24)}… · {k.source}</Typography>
           {row && row.status === 0 && <Button size="small" onClick={() => run(() => post(`/api/platform/marketplace/licensing/keys/${row.id}/retire`, {}), `Key ${k.keyId} retired; licenses it signed stay valid.`)}>Retire</Button>}
           {row && row.status !== 2 && <Button size="small" color="error" onClick={() => run(() => post(`/api/platform/marketplace/licensing/keys/${row.id}/revoke`, {}), `Key ${k.keyId} revoked; licenses it signed no longer count.`)}>Revoke</Button>}
         </Stack>; })}
